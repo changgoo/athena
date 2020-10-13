@@ -1,5 +1,5 @@
 # Configured outputs
-Makefile
+Makefile*
 src/defs.hpp
 
 # Object and binary directories
