@@ -105,43 +105,11 @@ class FFT2d {
   FFT_SCALAR *sendbuf;              // buffer for remap sends
   FFT_SCALAR *recvbuf;              // buffer for remap recvs
 
-  // -------------------------------------------------------------------
-  // FFT package specific data structs
-  // set via FFT_MKL, FFT_FFTW2, FFT_FFTW3, FFT_KISS
-
-#if defined(FFT_MKL)
-  struct FFT1d {
-    int n,length,total;
-    DFTI_DESCRIPTOR *handle;
-  };
-#endif
-
-#if defined(FFT_FFTW2)
-  struct FFT1d {
-    int n,length,total;
-    fftw_plan plan_forward;
-    fftw_plan plan_backward;
-  };
-#endif
-
-#if defined(FFT_FFTW3)
   struct FFT1d {
     int n,length,total;
     FFTW_API(plan) plan_forward;
     FFTW_API(plan) plan_backward;
   };
-#endif
-
-#if defined(FFT_KISS)
-  struct FFT1d {
-    int n,length,total;
-    kiss_fft_cfg plan_forward;
-    kiss_fft_cfg plan_backward;
-  };
-#endif
-
-  // end of FFT package specific data structs
-  // -------------------------------------------------------------------
 
   FFT1d *fft_fast,*fft_slow;
 
