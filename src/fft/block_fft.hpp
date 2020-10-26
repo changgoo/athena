@@ -42,7 +42,7 @@ class BlockFFT {
 
   void LoadSource(const AthenaArray<Real> &src);
   void RetrieveResult(AthenaArray<Real> &dst);
-  virtual void ApplyKernel(int mode);
+  virtual void ApplyKernel();
 
   // data
   const int is, ie, js, je, ks, ke;

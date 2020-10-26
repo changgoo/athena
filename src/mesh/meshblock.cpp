@@ -30,6 +30,7 @@
 #include "../globals.hpp"
 #include "../gravity/gravity.hpp"
 #include "../gravity/mg_gravity.hpp"
+#include "../gravity/block_fft_gravity.hpp"
 #include "../hydro/hydro.hpp"
 #include "../orbital_advection/orbital_advection.hpp"
 #include "../parameter_input.hpp"
@@ -158,6 +159,8 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
     pbval->AdvanceCounterPhysID(CellCenteredBoundaryVariable::max_phys_id);
     if (SELF_GRAVITY_ENABLED == 2)
       pmg = new MGGravity(pmy_mesh->pmgrd, this);
+    if (SELF_GRAVITY_ENABLED == 3)
+      pfft = new BlockFFTGravity(this);
   }
   if (NSCALARS > 0) {
     // if (this->scalars_block)
@@ -284,6 +287,8 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
     pbval->AdvanceCounterPhysID(CellCenteredBoundaryVariable::max_phys_id);
     if (SELF_GRAVITY_ENABLED == 2)
       pmg = new MGGravity(pmy_mesh->pmgrd, this);
+    if (SELF_GRAVITY_ENABLED == 3)
+      pfft = new BlockFFTGravity(this);
   }
 
   if (NSCALARS > 0) {
@@ -361,6 +366,7 @@ MeshBlock::~MeshBlock() {
   delete peos;
   delete porb;
   if (SELF_GRAVITY_ENABLED) delete pgrav;
+  if (SELF_GRAVITY_ENABLED == 3) delete pfft;
   if (NSCALARS > 0) delete pscalars;
 
   // BoundaryValues should be destructed AFTER all BoundaryVariable objects are destroyed

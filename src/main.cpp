@@ -38,6 +38,7 @@
 #include "globals.hpp"
 #include "gravity/fft_gravity.hpp"
 #include "gravity/mg_gravity.hpp"
+#include "gravity/block_fft_gravity.hpp"
 #include "mesh/mesh.hpp"
 #include "outputs/io_wrapper.hpp"
 #include "outputs/outputs.hpp"
@@ -463,6 +464,8 @@ int main(int argc, char *argv[]) {
           pmesh->pfgrd->Solve(stage, 0);
         else if (SELF_GRAVITY_ENABLED == 2) // multigrid
           pmesh->pmgrd->Solve(stage);
+        else if (SELF_GRAVITY_ENABLED == 3) // fft using BlockFFT
+          pmesh->my_blocks(0)->pfft->Solve(stage);
       }
     }
 

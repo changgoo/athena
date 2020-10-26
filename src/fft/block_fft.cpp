@@ -82,9 +82,9 @@ void BlockFFT::RetrieveResult(AthenaArray<Real> &dst) {
 }
 
 //----------------------------------------------------------------------------------------
-//! \fn void BlockFFT::ApplyKernel(int mode)
+//! \fn void BlockFFT::ApplyKernel()
 //  \brief Apply kernel
 
-void BlockFFT::ApplyKernel(int mode) {
+void BlockFFT::ApplyKernel() {
   return;
 }
