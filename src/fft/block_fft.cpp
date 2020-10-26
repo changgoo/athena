@@ -58,7 +58,7 @@ void BlockFFT::LoadSource(const AthenaArray<Real> &src) {
     for (int j=js; j<=je; j++) {
       for (int i=is; i<=ie; i++) {
         int idx = (i-is) + nx1*((j-js) + nx2*(k-ks));
-        in_[idx] = {src(0,k,j,i), 0.0};
+        in_[idx] = {src(k,j,i), 0.0};
       }
     }
   }
