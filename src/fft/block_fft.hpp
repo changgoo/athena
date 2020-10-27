@@ -47,7 +47,7 @@ class BlockFFT {
   // data
   const int is, ie, js, je, ks, ke;
   const int nx1, nx2, nx3;
-  const int block_ilo, block_ihi, block_jlo, block_jhi, block_klo, block_khi;
+  const int in_ilo, in_ihi, in_jlo, in_jhi, in_klo, in_khi;
 
  protected:
   MeshBlock *pmy_block_;

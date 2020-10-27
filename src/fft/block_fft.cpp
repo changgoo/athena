@@ -28,12 +28,12 @@ BlockFFT::BlockFFT(MeshBlock *pmb) :
     pmy_block_(pmb),
     is(pmb->is), ie(pmb->ie), js(pmb->js), je(pmb->je), ks(pmb->ks), ke(pmb->ke),
     nx1(pmb->block_size.nx1), nx2(pmb->block_size.nx2), nx3(pmb->block_size.nx3),
-    block_ilo((pmb->loc.lx1)*pmb->block_size.nx1),
-    block_ihi(((pmb->loc.lx1+1)*pmb->block_size.nx1)-1),
-    block_jlo((pmb->loc.lx2)*pmb->block_size.nx2),
-    block_jhi(((pmb->loc.lx2+1)*pmb->block_size.nx2)-1),
-    block_klo((pmb->loc.lx3)*pmb->block_size.nx3),
-    block_khi(((pmb->loc.lx3+1)*pmb->block_size.nx3)-1) {
+    in_ilo((pmb->loc.lx1)*pmb->block_size.nx1),
+    in_ihi(((pmb->loc.lx1+1)*pmb->block_size.nx1)-1),
+    in_jlo((pmb->loc.lx2)*pmb->block_size.nx2),
+    in_jhi(((pmb->loc.lx2+1)*pmb->block_size.nx2)-1),
+    in_klo((pmb->loc.lx3)*pmb->block_size.nx3),
+    in_khi(((pmb->loc.lx3+1)*pmb->block_size.nx3)-1) {
   int cnt = pmb->GetNumberOfMeshBlockCells();
   in_ = new std::complex<Real>[cnt];
   out_ = new std::complex<Real>[cnt];
