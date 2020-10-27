@@ -115,8 +115,15 @@ void MGGravityDriver::Solve(int stage) {
     // assume all the data are located on the same node
     if (PARTICLES) {
       // TODO(ccyang): add gas density.
-      AthenaArray<Real> rho(pmg->pmy_block_->ppar->GetMassDensity());
-      pmg->LoadSource(rho, 0, NGHOST, four_pi_G_);
+      AthenaArray<Real> rhop(pmg->pmy_block_->ppar->GetMassDensity());
+      AthenaArray<Real> rho;
+      rho.InitWithShallowSlice(pmg->pmy_block_->phydro->u,4,IDN,1);
+
+      for (int k = pmg->pmy_block_->ks; k <= pmg->pmy_block_->ke; ++k)
+        for (int j = pmg->pmy_block_->js; j <= pmg->pmy_block_->je; ++j)
+          for (int i = pmg->pmy_block_->is; i <= pmg->pmy_block_->ie; ++i)
+            rhop(k,j,i) += rho(k,j,i);
+      pmg->LoadSource(rhop, 0, NGHOST, four_pi_G_);
     } else {
       pmg->LoadSource(pmg->pmy_block_->phydro->u, IDN, NGHOST, four_pi_G_);
     }

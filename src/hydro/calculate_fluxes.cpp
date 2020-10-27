@@ -372,7 +372,7 @@ void Hydro::CalculateFluxes(AthenaArray<Real> &w, FaceField &b,
     } // end if (order == 4)
   }
 
-  if (SELF_GRAVITY_ENABLED) AddGravityFlux(); // add gravity flux directly
+  if (SELF_GRAVITY_ENABLED && !PARTICLES) AddGravityFlux(); // add gravity flux directly
 
   if (!STS_ENABLED) { // add diffusion fluxes
     AddDiffusionFluxes();
