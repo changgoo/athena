@@ -688,6 +688,7 @@ else:
 # --grav argument
 if args['grav'] == "none":
     definitions['SELF_GRAVITY_ENABLED'] = '0'
+    definitions['NGRAV_VARIABLES'] = '0'
 else:
     if args['grav'] == "fft":
         definitions['SELF_GRAVITY_ENABLED'] = '1'
@@ -697,6 +698,7 @@ else:
 
     if args['grav'] == "mg":
         definitions['SELF_GRAVITY_ENABLED'] = '2'
+    definitions['NGRAV_VARIABLES'] = '1'
 
 # -fft argument
 makefile_options['MPIFFT_FILE'] = ' '
