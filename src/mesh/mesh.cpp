@@ -39,6 +39,7 @@
 #include "../gravity/fft_gravity.hpp"
 #include "../gravity/gravity.hpp"
 #include "../gravity/mg_gravity.hpp"
+#include "../gravity/block_fft_gravity.hpp"
 #include "../hydro/hydro.hpp"
 #include "../hydro/hydro_diffusion/hydro_diffusion.hpp"
 #include "../multigrid/multigrid.hpp"
@@ -1380,6 +1381,8 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
       pfgrd->Solve(1, 0);
     else if (SELF_GRAVITY_ENABLED == 2)
       pmgrd->Solve(1);
+    else if (SELF_GRAVITY_ENABLED == 3)
+      my_blocks(0)->pfft->Solve(1);
 
 #pragma omp parallel num_threads(nthreads)
     {
