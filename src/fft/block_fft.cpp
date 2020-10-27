@@ -46,25 +46,31 @@ BlockFFT::BlockFFT(MeshBlock *pmb) :
   out_ = new std::complex<Real>[cnt];
 
   if (ndim==3) {
+    // use Plimpton's fftMPI
     pf3d = new FFT3d(MPI_COMM_WORLD,2);
+    // set output data layout equal to slow pencil decomposition
+    // in order to prevent unnecessary data remap
+    out_ilo = pf3d->slow_ilo;
+    out_ihi = pf3d->slow_ihi;
+    out_jlo = pf3d->slow_jlo;
+    out_jhi = pf3d->slow_jhi;
+    out_klo = pf3d->slow_klo;
+    out_khi = pf3d->slow_khi;
+    int permute=2; // will make output array (slow,mid,fast) = (y,x,z) = (j,i,k)
+    int fftsize, sendsize, recvsize; // to be returned from setup
+    // setup 3D FFT
+    pf3d->setup(Nx1, Nx2, Nx3,
+                in_ilo, in_ihi, in_jlo, in_jhi, in_klo, in_khi,
+                out_ilo, out_ihi, out_jlo, out_jhi, out_klo, out_khi,
+                permute, fftsize, sendsize, recvsize);
+    if (Globals::my_rank==0) {
+      std::cout << "-----------FFT3d setup------------" << std::endl;
+      std::cout << "fftsize = " << fftsize << std::endl;
+      std::cout << "sendsize = " << sendsize << std::endl;
+      std::cout << "recvsize = " << recvsize << std::endl;
+    }
   }
-  // z-pencil decomposition in Fourier space
-  out_ilo = pf3d->slow_ilo;
-  out_ihi = pf3d->slow_ihi;
-  out_jlo = pf3d->slow_jlo;
-  out_jhi = pf3d->slow_jhi;
-  out_klo = pf3d->slow_klo;
-  out_khi = pf3d->slow_khi;
-  int permute=2, fftsize, sendsize, recvsize;
-  pf3d->setup(Nx1, Nx2, Nx3,
-              in_ilo, in_ihi, in_jlo, in_jhi, in_klo, in_khi,
-              out_ilo, out_ihi, out_jlo, out_jhi, out_klo, out_khi,
-              permute, fftsize, sendsize, recvsize);
-  if (Globals::my_rank==0) {
-    std::cout << "fftsize = " << fftsize << std::endl;
-    std::cout << "sendsize = " << sendsize << std::endl;
-    std::cout << "recvsize = " << recvsize << std::endl;
-  }
+
 //  else if (ndim==2)
 //  else if (ndim==1)
 //  else
