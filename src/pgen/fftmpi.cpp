@@ -34,8 +34,24 @@
 #endif
 
 //========================================================================================
+//! \fn void Mesh::InitUserMeshData(ParameterInput *pin)
+//  \brief Function to initialize problem-specific data in Mesh class.  Can also be used
+//  to initialize variables which are global to (and therefore can be passed to) other
+//  functions in this file.  Called in Mesh constructor.
+//========================================================================================
+
+void Mesh::InitUserMeshData(ParameterInput *pin) {
+  Real four_pi_G = pin->GetReal("problem","four_pi_G");
+  Real eps = pin->GetOrAddReal("problem","grav_eps", 0.0);
+  SetFourPiG(four_pi_G);
+  SetGravityThreshold(eps);
+  SetMeanDensity(0.0);
+  return;
+}
+
+//========================================================================================
 //! \fn void MeshBlock::ProblemGenerator(ParameterInput *pin)
-//  \brief
+//  \brief Should be used to set initial conditions.
 //========================================================================================
 
 void MeshBlock::ProblemGenerator(ParameterInput *pin) {
@@ -56,11 +72,21 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 }
 
 //========================================================================================
+//! \fn void Mesh::UserWorkInLoop()
+//  \brief Function called once every time step for user-defined work.
+//========================================================================================
+
+void Mesh::UserWorkInLoop() {
+  // do nothing
+  return;
+}
+
+//========================================================================================
 //! \fn void Mesh::UserWorkAfterLoop(ParameterInput *pin)
-//  \brief
+//  \brief Function called after main loop is finished for user-defined work.
 //========================================================================================
 
 void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
-
+  // do nothing
   return;
 }
