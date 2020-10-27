@@ -20,10 +20,13 @@
 #include <mpi.h>
 #include "ffttype.h"
 
+// Forward declaration
+class BlockFFT;
+
 namespace FFTMPI_NS {
 
 class FFT3d {
-  friend class BlockFFT;
+  friend class ::BlockFFT;
  public:
   MPI_Comm world;
   int scaled,remaponly;

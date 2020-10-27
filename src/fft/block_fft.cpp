@@ -41,12 +41,29 @@ BlockFFT::BlockFFT(MeshBlock *pmb) :
     in_jhi(((pmb->loc.lx2+1)*pmb->block_size.nx2)-1),
     in_klo((pmb->loc.lx3)*pmb->block_size.nx3),
     in_khi(((pmb->loc.lx3+1)*pmb->block_size.nx3)-1) {
-  int cnt = pmb->GetNumberOfMeshBlockCells();
+  int cnt = nx1*nx2*nx3;
   in_ = new std::complex<Real>[cnt];
   out_ = new std::complex<Real>[cnt];
 
   if (ndim==3) {
     pf3d = new FFT3d(MPI_COMM_WORLD,2);
+  }
+  // z-pencil decomposition in Fourier space
+  out_ilo = pf3d->slow_ilo;
+  out_ihi = pf3d->slow_ihi;
+  out_jlo = pf3d->slow_jlo;
+  out_jhi = pf3d->slow_jhi;
+  out_klo = pf3d->slow_klo;
+  out_khi = pf3d->slow_khi;
+  int permute=2, fftsize, sendsize, recvsize;
+  pf3d->setup(Nx1, Nx2, Nx3,
+              in_ilo, in_ihi, in_jlo, in_jhi, in_klo, in_khi,
+              out_ilo, out_ihi, out_jlo, out_jhi, out_klo, out_khi,
+              permute, fftsize, sendsize, recvsize);
+  if (Globals::my_rank==0) {
+    std::cout << "fftsize = " << fftsize << std::endl;
+    std::cout << "sendsize = " << sendsize << std::endl;
+    std::cout << "recvsize = " << recvsize << std::endl;
   }
 //  else if (ndim==2)
 //  else if (ndim==1)
