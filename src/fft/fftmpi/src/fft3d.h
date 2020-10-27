@@ -23,6 +23,7 @@
 namespace FFTMPI_NS {
 
 class FFT3d {
+  friend class BlockFFT;
  public:
   MPI_Comm world;
   int scaled,remaponly;
