@@ -59,7 +59,7 @@ class BlockFFT {
 
  protected:
   MeshBlock *pmy_block_;
-  std::complex<Real> *in_, *out_;
+  std::complex<Real> *in_;
 };
 
 #endif // FFT_BLOCK_FFT_HPP_

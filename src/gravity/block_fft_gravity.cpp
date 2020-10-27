@@ -27,9 +27,12 @@ void BlockFFTGravity::ApplyKernel() {
 }
 
 void BlockFFTGravity::Solve(int stage) {
-  AthenaArray<Real> in;
-  in.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
-  LoadSource(in);
+  AthenaArray<Real> rho;
+  rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
+  LoadSource(rho);
+  ExecuteForward();
+  ApplyKernel();
+  ExecuteBackward();
   RetrieveResult(pmy_block_->pgrav->phi);
 
   return;

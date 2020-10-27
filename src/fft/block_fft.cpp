@@ -43,7 +43,6 @@ BlockFFT::BlockFFT(MeshBlock *pmb) :
     in_khi(((pmb->loc.lx3+1)*pmb->block_size.nx3)-1) {
   int cnt = nx1*nx2*nx3;
   in_ = new std::complex<Real>[cnt];
-  out_ = new std::complex<Real>[cnt];
 
   if (ndim==3) {
     // use Plimpton's fftMPI
@@ -80,7 +79,6 @@ BlockFFT::BlockFFT(MeshBlock *pmb) :
 
 BlockFFT::~BlockFFT() {
   delete[] in_;
-  delete[] out_;
 #ifdef FFT
   fftw_cleanup();
 #endif
@@ -111,7 +109,7 @@ void BlockFFT::RetrieveResult(AthenaArray<Real> &dst) {
     for (int j=js; j<=je; j++) {
       for (int i=is; i<=ie; i++) {
         int idx = (i-is) + nx1*((j-js) + nx2*(k-ks));
-        dst(k,j,i) = std::real(out_[idx]);
+        dst(k,j,i) = std::real(in_[idx]);
       }
     }
   }
@@ -123,6 +121,17 @@ void BlockFFT::RetrieveResult(AthenaArray<Real> &dst) {
 //  \brief Forward transform
 
 void BlockFFT::ExecuteForward() {
+  // cast std::complex* to FFT_SCALAR*
+  FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR*>(in_);
+
+  if (pf3d->remap_prefast) 
+  pf3d->remap(data,data,pf3d->remap_prefast);                        // block2fast
+  pf3d->perform_ffts((FFT_DATA *) data,FFTW_FORWARD,pf3d->fft_fast); // fast_forward
+  pf3d->remap(data,data,pf3d->remap_fastmid);                        // fast2mid
+  pf3d->perform_ffts((FFT_DATA *) data,FFTW_FORWARD,pf3d->fft_mid);  // mid_forward
+  pf3d->remap(data,data,pf3d->remap_midslow);                        // mid2slow
+  pf3d->perform_ffts((FFT_DATA *) data,FFTW_FORWARD,pf3d->fft_slow); // slow_forward
+
   return;
 }
 
@@ -131,6 +140,8 @@ void BlockFFT::ExecuteForward() {
 //  \brief Apply kernel
 
 void BlockFFT::ApplyKernel() {
+  // do nothing
+  // to be overriden in the derived classes
   return;
 }
 
@@ -139,5 +150,22 @@ void BlockFFT::ApplyKernel() {
 //  \brief Backward transform
 
 void BlockFFT::ExecuteBackward() {
+  // cast std::complex* to FFT_SCALAR*
+  FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR*>(in_);
+
+  pf3d->perform_ffts((FFT_DATA *) data,FFTW_BACKWARD,pf3d->fft_slow); // slow_backward
+  pf3d->remap(data,data,pf3d->remap_slowmid);                         // slow2mid
+  pf3d->perform_ffts((FFT_DATA *) data,FFTW_BACKWARD,pf3d->fft_mid);  // mid_backward
+  pf3d->remap(data,data,pf3d->remap_midfast);                         // mid2fast
+  pf3d->perform_ffts((FFT_DATA *) data,FFTW_BACKWARD,pf3d->fft_fast); // fast_backward
+  if (pf3d->remap_postfast)
+  pf3d->remap(data,data,pf3d->remap_postfast);                        // fast2block
+
+  // multiply norm factor
+  for (int i=0;i<nx1*nx2*nx3;++i) {
+    data[2*i] /= (Nx1*Nx2*Nx3);
+    data[2*i+1] /= (Nx1*Nx2*Nx3);
+  }
+
   return;
 }
