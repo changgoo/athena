@@ -29,7 +29,12 @@ using namespace FFTMPI_NS;
 BlockFFT::BlockFFT(MeshBlock *pmb) :
     pmy_block_(pmb), ndim(pmb->pmy_mesh->ndim),
     is(pmb->is), ie(pmb->ie), js(pmb->js), je(pmb->je), ks(pmb->ks), ke(pmb->ke),
-    nx1(pmb->block_size.nx1), nx2(pmb->block_size.nx2), nx3(pmb->block_size.nx3),
+    Nx1(pmb->pmy_mesh->mesh_size.nx1),
+    Nx2(pmb->pmy_mesh->mesh_size.nx2),
+    Nx3(pmb->pmy_mesh->mesh_size.nx3),
+    nx1(pmb->block_size.nx1),
+    nx2(pmb->block_size.nx2),
+    nx3(pmb->block_size.nx3),
     in_ilo((pmb->loc.lx1)*pmb->block_size.nx1),
     in_ihi(((pmb->loc.lx1+1)*pmb->block_size.nx1)-1),
     in_jlo((pmb->loc.lx2)*pmb->block_size.nx2),

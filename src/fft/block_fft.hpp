@@ -47,9 +47,10 @@ class BlockFFT {
   virtual void ExecuteBackward();
 
   // data
-  const int is, ie, js, je, ks, ke;
-  const int nx1, nx2, nx3;
-  const int ndim;
+  const int is, ie, js, je, ks, ke; // meshblock indices
+  const int Nx1, Nx2, Nx3;          // mesh size (active zones)
+  const int nx1, nx2, nx3;          // meshblock size (active zones)
+  const int ndim;                   // number of dimensions
   const int in_ilo, in_ihi, in_jlo, in_jhi, in_klo, in_khi;
   FFT3d *pf3d;
 
