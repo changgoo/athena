@@ -62,3 +62,9 @@ meshtest.dat
 
 # compiled doxygen file
 doc/doxy*
+
+# doxygen output
+doc/html
+
+# tag file produced by ctags
+tags
