@@ -22,10 +22,12 @@
 #include "../mesh/meshblock_tree.hpp"
 #include "block_fft.hpp"
 
+using namespace FFTMPI_NS;
+
 // constructor, initializes data structures and parameters
 
 BlockFFT::BlockFFT(MeshBlock *pmb) :
-    pmy_block_(pmb),
+    pmy_block_(pmb), ndim(pmb->pmy_mesh->ndim),
     is(pmb->is), ie(pmb->ie), js(pmb->js), je(pmb->je), ks(pmb->ks), ke(pmb->ke),
     nx1(pmb->block_size.nx1), nx2(pmb->block_size.nx2), nx3(pmb->block_size.nx3),
     in_ilo((pmb->loc.lx1)*pmb->block_size.nx1),
@@ -37,6 +39,13 @@ BlockFFT::BlockFFT(MeshBlock *pmb) :
   int cnt = pmb->GetNumberOfMeshBlockCells();
   in_ = new std::complex<Real>[cnt];
   out_ = new std::complex<Real>[cnt];
+
+  if (ndim==3) {
+    pf3d = new FFT3d(MPI_COMM_WORLD,2);
+  }
+//  else if (ndim==2)
+//  else if (ndim==1)
+//  else
 }
 
 // destructor
@@ -82,9 +91,25 @@ void BlockFFT::RetrieveResult(AthenaArray<Real> &dst) {
 }
 
 //----------------------------------------------------------------------------------------
+//! \fn void BlockFFT::ExecuteForward()
+//  \brief Forward transform
+
+void BlockFFT::ExecuteForward() {
+  return;
+}
+
+//----------------------------------------------------------------------------------------
 //! \fn void BlockFFT::ApplyKernel()
 //  \brief Apply kernel
 
 void BlockFFT::ApplyKernel() {
+  return;
+}
+
+//----------------------------------------------------------------------------------------
+//! \fn void BlockFFT::ExecuteBackward()
+//  \brief Backward transform
+
+void BlockFFT::ExecuteBackward() {
   return;
 }

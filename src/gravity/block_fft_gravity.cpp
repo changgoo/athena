@@ -16,8 +16,6 @@
 #include <string>     // c_str()
 
 // Athena++ headers
-#include "../athena.hpp"
-#include "../athena_arrays.hpp"
 #include "block_fft_gravity.hpp"
 
 //----------------------------------------------------------------------------------------
@@ -29,6 +27,10 @@ void BlockFFTGravity::ApplyKernel() {
 }
 
 void BlockFFTGravity::Solve(int stage) {
+  AthenaArray<Real> in;
+  in.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
+  LoadSource(in);
+  RetrieveResult(pmy_block_->pgrav->phi);
 
   return;
 }

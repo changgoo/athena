@@ -16,6 +16,8 @@
 #include "../athena.hpp"
 #include "../athena_arrays.hpp"
 #include "../fft/block_fft.hpp"
+#include "../hydro/hydro.hpp"
+#include "gravity.hpp"
 
 //! \class BlockFFTGravity
 //  \brief minimalist FFT gravity solver for each block

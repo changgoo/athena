@@ -30,7 +30,7 @@
 #endif // MPI_PARALLEL
 #endif
 
-class MeshBlock;
+using namespace FFTMPI_NS;
 
 //! \class BlockFFT
 //  \brief
@@ -42,12 +42,16 @@ class BlockFFT {
 
   void LoadSource(const AthenaArray<Real> &src);
   void RetrieveResult(AthenaArray<Real> &dst);
+  virtual void ExecuteForward();
   virtual void ApplyKernel();
+  virtual void ExecuteBackward();
 
   // data
   const int is, ie, js, je, ks, ke;
   const int nx1, nx2, nx3;
+  const int ndim;
   const int in_ilo, in_ihi, in_jlo, in_jhi, in_klo, in_khi;
+  FFT3d *pf3d;
 
  protected:
   MeshBlock *pmy_block_;
