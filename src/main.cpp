@@ -42,6 +42,7 @@
 #include "outputs/io_wrapper.hpp"
 #include "outputs/outputs.hpp"
 #include "parameter_input.hpp"
+#include "particles/particles.hpp"
 #include "utils/utils.hpp"
 
 // MPI/OpenMP headers
@@ -67,6 +68,7 @@ int main(int argc, char *argv[]) {
   int mesh_flag = 0;  // set to <nproc> if -m <nproc> argument is on cmdline
   int wtlim = 0;
   std::uint64_t mbcnt = 0;
+  std::uint64_t npcnt = 0;
 
   //--- Step 1. --------------------------------------------------------------------------
   // Initialize MPI environment, if necessary
@@ -429,9 +431,9 @@ int main(int argc, char *argv[]) {
 
   while ((pmesh->time < pmesh->tlim) &&
          (pmesh->nlim < 0 || pmesh->ncycle < pmesh->nlim)) {
-    if (Globals::my_rank == 0)
+    if (Globals::my_rank == 0) {
       pmesh->OutputCycleDiagnostics();
-
+    }
     if (STS_ENABLED) {
       pmesh->sts_loc = TaskType::op_split_before;
       // compute nstages for this STS
@@ -472,10 +474,11 @@ int main(int argc, char *argv[]) {
     }
 
     pmesh->UserWorkInLoop();
-
+    ptlist->OutputAllTaskTime(pmesh);
     pmesh->ncycle++;
     pmesh->time += pmesh->dt;
     mbcnt += pmesh->nbtotal;
+    if (PARTICLES) npcnt += pmesh->my_blocks(0)->ppar->GetTotalNumber(pmesh);
     pmesh->step_since_lb++;
 
     pmesh->LoadBalancingAndAdaptiveMeshRefinement(pinput);
@@ -577,11 +580,17 @@ int main(int argc, char *argv[]) {
                        1.0)/static_cast<double> (CLOCKS_PER_SEC);
     std::uint64_t zonecycles = mbcnt
       *static_cast<std::uint64_t> (pmesh->my_blocks(0)->GetNumberOfMeshBlockCells());
+
     double zc_cpus = static_cast<double> (zonecycles) / cpu_time;
 
     std::cout << std::endl << "zone-cycles = " << zonecycles << std::endl;
     std::cout << "cpu time used  = " << cpu_time << std::endl;
     std::cout << "zone-cycles/cpu_second = " << zc_cpus << std::endl;
+    if (PARTICLES) {
+      double npart_cpus = npcnt / cpu_time;
+      std::cout << "total particle cycles = " << npcnt << std::endl;
+      std::cout << "particles/cpu_second = " << npart_cpus << std::endl;
+    }
 #ifdef OPENMP_PARALLEL
     double zc_omps = static_cast<double> (zonecycles) / omp_time;
     std::cout << std::endl << "omp wtime used = " << omp_time << std::endl;

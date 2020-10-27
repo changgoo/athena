@@ -39,7 +39,10 @@ TaskListStatus TaskList::DoAllAvailableTasks(MeshBlock *pmb, int stage, TaskStat
       if (ts.finished_tasks.CheckDependencies(taski.dependency)) {
         if (taski.lb_time) pmb->StartTimeMeasurement();
         ret = (this->*task_list_[i].TaskFunc)(pmb, stage);
-        if (taski.lb_time) pmb->StopTimeMeasurement();
+        if (taski.lb_time) {
+          pmb->StopTimeMeasurement();
+          taski.task_time += pmb->lb_time_;
+        }
         if (ret != TaskStatus::fail) { // success
           ts.num_tasks_left--;
           ts.finished_tasks.SetFinished(taski.task_id);
@@ -87,4 +90,53 @@ void TaskList::DoTaskListOneStage(Mesh *pmesh, int stage) {
     }
   }
   return;
+}
+
+//----------------------------------------------------------------------------------------
+//! \fn void TaskList::OutputAllTaskTime()
+//  \brief print all task_time
+
+void TaskList::OutputAllTaskTime(Mesh *pmesh) {
+  double time_per_step = 0.;
+  double all_task_time[ntasks];
+  int ntask_time = 0;
+  
+  for (int i=0; i<ntasks; i++) {
+    Task &taski = task_list_[i];
+    if (taski.lb_time) {
+      time_per_step += taski.task_time;
+      all_task_time[ntask_time] = taski.task_time;
+      ntask_time++;
+    }
+  }
+
+#ifdef MPI_PARALLEL
+  MPI_Allreduce(MPI_IN_PLACE, all_task_time, ntask_time, MPI_DOUBLE, MPI_MAX,
+    MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &time_per_step, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+#endif
+  if (Globals::my_rank == 0) {
+    FILE *fp = nullptr;
+
+    // open 'task_time.txt' file
+    if ((fp = std::fopen("task_time.txt","a")) == nullptr) {
+      std::cout << "### ERROR in function TaskList::OutputAllTaskTime" << std::endl
+                << "Cannot open task_time.txt" << std::endl;
+      return;
+    }
+
+    int j = 0;
+    std::fprintf(fp,"# ncycle=%d, TaskList=%s, time=%g\n",
+      pmesh->ncycle, task_list_name.c_str(), time_per_step);
+    for (int i=0; i<ntasks; i++) {
+      Task &taski = task_list_[i];
+      if (taski.lb_time) {
+        std::fprintf(fp,"  %20s, time=%g, fraction=%g\n",
+           taski.task_name.c_str(), all_task_time[j], all_task_time[j]/time_per_step);
+        taski.task_time = 0.; // reset task_time
+        j++;
+      }
+    }
+    std::fclose(fp);
+  }
 }

@@ -30,6 +30,7 @@
 //  FFTGravitySolverTaskList constructor
 
 FFTGravitySolverTaskList::FFTGravitySolverTaskList(ParameterInput *pin, Mesh *pm) {
+  task_list_name = "FFTGravity";
   // Now assemble list of tasks for each stage of time integrator
   {using namespace FFTGravitySolverTaskNames; // NOLINT (build/namespace)
     // compute hydro fluxes, integrate hydro variables
@@ -49,28 +50,39 @@ FFTGravitySolverTaskList::FFTGravitySolverTaskList(ParameterInput *pin, Mesh *pm
 void FFTGravitySolverTaskList::AddTask(const TaskID& id, const TaskID& dep) {
   task_list_[ntasks].task_id=id;
   task_list_[ntasks].dependency=dep;
+  task_list_[ntasks].task_name.assign("");
 
   using namespace FFTGravitySolverTaskNames; // NOLINT (build/namespace)
   if (id == CLEAR_GRAV) {
     task_list_[ntasks].TaskFunc=
         static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
         (&FFTGravitySolverTaskList::ClearFFTGravityBoundary);
+    task_list_[ntasks].lb_time = false;
+    task_list_[ntasks].task_name.append("ClearFFTGravityBoundary");
   } else if (id == SEND_GRAV_BND) {
     task_list_[ntasks].TaskFunc=
         static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
         (&FFTGravitySolverTaskList::SendFFTGravityBoundary);
+    task_list_[ntasks].lb_time = true;
+    task_list_[ntasks].task_name.append("SendFFTGravityBoundary");
   } else if (id == RECV_GRAV_BND) {
     task_list_[ntasks].TaskFunc=
         static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
         (&FFTGravitySolverTaskList::ReceiveFFTGravityBoundary);
+    task_list_[ntasks].lb_time = false;
+    task_list_[ntasks].task_name.append("ReceiveFFTGravityBoundary");
   } else if (id == SETB_GRAV_BND) {
     task_list_[ntasks].TaskFunc=
         static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
         (&FFTGravitySolverTaskList::SetFFTGravityBoundary);
+    task_list_[ntasks].lb_time = true;
+    task_list_[ntasks].task_name.append("SetFFTGravityBoundary");
   } else if (id == GRAV_PHYS_BND) {
     task_list_[ntasks].TaskFunc=
         static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
         (&FFTGravitySolverTaskList::PhysicalBoundary);
+    task_list_[ntasks].lb_time = true;
+    task_list_[ntasks].task_name.append("PhysicalBoundary");
   } else {
     std::stringstream msg;
     msg << "### FATAL ERROR in FFTGravitySolverTaskList::AddTask" << std::endl

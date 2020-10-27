@@ -196,7 +196,7 @@ void ParticleMesh::InterpolateMeshToParticles(
 
 //--------------------------------------------------------------------------------------
 //! \fn void ParticleMesh::AssignParticlesToMeshAux(
-//!              const AthenaArray<Real>& par, int p1, int p2, int ma1)
+//!        const AthenaArray<Real>& par, int p1, int ma1, int nprop) {
 //! \brief assigns par (realprop, auxprop, or work in Particles class) from property
 //!        index p1 to p2 onto meshaux from property index ma1 and up.
 

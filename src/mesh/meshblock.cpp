@@ -484,7 +484,7 @@ void MeshBlock::SetCostForLoadBalancing(double cost) {
 //  \brief reset the MeshBlock cost for automatic load balancing
 
 void MeshBlock::ResetTimeMeasurement() {
-  if (pmy_mesh->lb_automatic_) cost_ = TINY_NUMBER;
+  cost_ = TINY_NUMBER;
 }
 
 //----------------------------------------------------------------------------------------
@@ -492,13 +492,11 @@ void MeshBlock::ResetTimeMeasurement() {
 //  \brief start time measurement for automatic load balancing
 
 void MeshBlock::StartTimeMeasurement() {
-  if (pmy_mesh->lb_automatic_) {
 #ifdef OPENMP_PARALLEL
-    lb_time_ = omp_get_wtime();
+  lb_time_ = omp_get_wtime();
 #else
-    lb_time_ = static_cast<double>(clock());
+  lb_time_ = static_cast<double>(clock());
 #endif
-  }
 }
 
 //----------------------------------------------------------------------------------------
@@ -506,14 +504,12 @@ void MeshBlock::StartTimeMeasurement() {
 //  \brief stop time measurement and accumulate it in the MeshBlock cost
 
 void MeshBlock::StopTimeMeasurement() {
-  if (pmy_mesh->lb_automatic_) {
 #ifdef OPENMP_PARALLEL
-    lb_time_ = omp_get_wtime() - lb_time_;
+  lb_time_ = omp_get_wtime() - lb_time_;
 #else
-    lb_time_ = static_cast<double>(clock()) - lb_time_;
+  lb_time_ = static_cast<double>(clock()) - lb_time_;
 #endif
-    cost_ += lb_time_;
-  }
+  cost_ += lb_time_;
 }
 
 

@@ -65,6 +65,8 @@ struct Task { // aggregate and POD
   TaskID dependency; // encodes dependencies to other tasks using " " " "
   TaskStatus (TaskList::*TaskFunc)(MeshBlock*, int);  // ptr to member function
   bool lb_time; // flag for automatic load balancing based on timing
+  double task_time;
+  std::string task_name;
 };
 
 //---------------------------------------------------------------------------------------
@@ -95,9 +97,13 @@ class TaskList {
   int ntasks;     // number of tasks in this list
   int nstages;    // number of times the tasklist is repeated per each full timestep
 
+  // name
+  std::string task_list_name;
+
   // functions
   TaskListStatus DoAllAvailableTasks(MeshBlock *pmb, int stage, TaskStates &ts);
   void DoTaskListOneStage(Mesh *pmesh, int stage);
+  void OutputAllTaskTime(Mesh *pmesh);
 
  protected:
   // TODO(felker): rename to avoid confusion with class name

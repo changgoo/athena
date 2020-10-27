@@ -120,7 +120,7 @@ class MeshBlock {
   Field *pfield;
   DustParticles *ppar;
   Gravity *pgrav;
-  MGGravity* pmg;
+  MGGravity *pmg;
   PassiveScalars *pscalars;
   EquationOfState *peos;
 
