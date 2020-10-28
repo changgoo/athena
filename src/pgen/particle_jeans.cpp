@@ -21,37 +21,37 @@
 #include "../particles/particles.hpp"
 
 void Mesh::InitUserMeshData(ParameterInput *pin) {
-  Real njeans = pin->GetReal("problem","njeans");
-  Real lambda = mesh_size.x1len;
-
-  if (mesh_size.nx2 > 1) lambda = std::min(lambda,mesh_size.x2len);
-  if (mesh_size.nx3 > 1) lambda = std::min(lambda,mesh_size.x3len);
-
-  Real d0 = 1.0;
-  Real dpar0 = d0 * pin->GetOrAddReal("problem", "dtog", 1.0);
-  Real cs2;
-
-  if (NON_BAROTROPIC_EOS) {
-    Real gam = pin->GetReal("hydro","gamma");
-    Real p0 = 1.0;
-    cs2 = gam * p0 / d0;
-  } else {
-    Real iso_cs = pin->GetReal("hydro","iso_sound_speed");
-    cs2 = SQR(iso_cs);
-  }
-  Real gconst = cs2*PI*njeans*njeans/(d0*lambda*lambda);
-
   if (SELF_GRAVITY_ENABLED) {
+    Real njeans = pin->GetReal("problem","njeans");
+    Real lambda = mesh_size.x1len;
+    if (mesh_size.nx2 > 1) lambda = std::min(lambda,mesh_size.x2len);
+    if (mesh_size.nx3 > 1) lambda = std::min(lambda,mesh_size.x3len);
+
+    Real d0 = 1.0;
+    Real dpar0 = d0 * pin->GetOrAddReal("problem", "dtog", 1.0);
+    Real cs2;
+
+    if (NON_BAROTROPIC_EOS) {
+      Real gam = pin->GetReal("hydro","gamma");
+      Real p0 = 1.0;
+      cs2 = gam * p0 / d0;
+    } else {
+      Real iso_cs = pin->GetReal("hydro","iso_sound_speed");
+      cs2 = SQR(iso_cs);
+    }
+
+    Real gconst = cs2*PI*njeans*njeans/(d0*lambda*lambda);
+
     SetGravitationalConstant(gconst);
     Real eps = pin->GetOrAddReal("problem","grav_eps", 0.0);
     SetGravityThreshold(eps);
     SetMeanDensity(d0 + dpar0);
-  }
 
-  if (Globals::my_rank==0) {
-    // moved print statements here from MeshBlock::ProblemGenerator
-    std::cout << "four_pi_G " << gconst*4.0*PI << std::endl;
-    std::cout << "lambda " << lambda << std::endl;
+    if (Globals::my_rank==0) {
+      // moved print statements here from MeshBlock::ProblemGenerator
+      std::cout << "four_pi_G " << gconst*4.0*PI << std::endl;
+      std::cout << "lambda " << lambda << std::endl;
+    }
   }
   return;
 }
@@ -103,12 +103,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
   // Find the total number of particles in each direction.
   RegionSize& mesh_size = pmy_mesh->mesh_size;
-  int npx1 = (block_size.nx1 > 1) ?
-                  pin->GetOrAddInteger("problem", "npx1", mesh_size.nx1) : 1,
-      npx2 = (block_size.nx2 > 1) ?
-                  pin->GetOrAddInteger("problem", "npx2", mesh_size.nx2) : 1,
-      npx3 = (block_size.nx3 > 1) ?
-                  pin->GetOrAddInteger("problem", "npx3", mesh_size.nx3) : 1;
+  Real np_per_cell = pin->GetOrAddReal("problem", "np_per_cell",1);
+  int npx1 = (block_size.nx1 > 1) ? static_cast<int>(mesh_size.nx1*np_per_cell) : 1;
+  int npx2 = (block_size.nx2 > 1) ? static_cast<int>(mesh_size.nx2*np_per_cell) : 1;
+  int npx3 = (block_size.nx3 > 1) ? static_cast<int>(mesh_size.nx3*np_per_cell) : 1;
 
   // Uniformly separted particles, uniform mass = total mass / N particles
   // Find the mass of each particle and the distance between adjacent particles.
@@ -159,29 +157,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     }
   }
 
-  // std::cout << "rank: " << Globals::my_rank << " npar: " << ppar->npar << std::endl;
-
   // Initialize the stopping time.
   if (DustParticles::GetVariableTaus()) {
     Real taus0 = DustParticles::GetStoppingTime();
     for (int k = 0; k < npar; ++k)
       ppar->taus(k) = taus0;
   }
-}
-
-//========================================================================================
-//! \fn void MeshBlock::UserWorkInLoop()
-//  \brief Function called once every time step for user-defined work.
-//========================================================================================
-
-void Mesh::UserWorkInLoop() {
-  // std::cout << "rank: " << Globals::my_rank << " npar: " << ppar->npar << std::endl;
-
-  // if (pmy_mesh->lb_automatic_)
-  // cost_per_step = 0.;
-  // for (int i = 0; i < nblocal; ++i)
-  //   cost_per_step += costlist[i];
-  // std::cout << "rank: " << Globals::my_rank << " nb: " << nblocal
-  //           << "  cost: " << cost_per_step << std::endl;
-  return;
 }
