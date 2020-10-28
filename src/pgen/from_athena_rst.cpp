@@ -28,6 +28,11 @@
 #include "../parameter_input.hpp"
 #include "../utils/utils.hpp"
 
+//! \fn void read_rst(std::string filename, std::string field, AthenaArray<Real> &data,  
+//!                    int iu, int ju, int ku,
+//!                    int xstart = 0, int ystart = 0, int zstart = 0, int flagB = 0) 
+//! \brief Read the field values in the athena rst file 
+
 static void read_rst(std::string filename, std::string field, AthenaArray<Real> &data,  
                      int iu, int ju, int ku,
                      int xstart = 0, int ystart = 0, int zstart = 0, int flagB = 0) 
@@ -73,7 +78,7 @@ static void read_rst(std::string filename, std::string field, AthenaArray<Real> 
 
 //----------------------------------------------------------------------------------------
 //! \fn void MeshBlock::ProblemGenerator(ParameterInput *pin)
-// \brief Problem Generator to initialize mesh by reading in athena rst files
+//! \brief Problem Generator to initialize mesh by reading in athena rst files
 
 void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
