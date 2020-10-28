@@ -96,30 +96,33 @@ void TaskList::DoTaskListOneStage(Mesh *pmesh, int stage) {
 //! \fn void TaskList::OutputAllTaskTime()
 //  \brief print all task_time
 
-void TaskList::OutputAllTaskTime(Mesh *pmesh) {
+void TaskList::OutputAllTaskTime(int ncycle) {
   double time_per_step = 0.;
   double all_task_time[ntasks];
   int ntask_time = 0;
-  
+
   for (int i=0; i<ntasks; i++) {
     Task &taski = task_list_[i];
     if (taski.lb_time) {
       time_per_step += taski.task_time;
       all_task_time[ntask_time] = taski.task_time;
+      taski.task_time = 0.; // reset task_time
       ntask_time++;
     }
   }
 
 #ifdef MPI_PARALLEL
-  MPI_Allreduce(MPI_IN_PLACE, all_task_time, ntask_time, MPI_DOUBLE, MPI_MAX,
+  MPI_Allreduce(MPI_IN_PLACE, all_task_time, ntask_time, MPI_DOUBLE, MPI_SUM,
     MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &time_per_step, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &time_per_step, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 #endif
   if (Globals::my_rank == 0) {
     FILE *fp = nullptr;
-
+    char fop{ 'a' };
     // open 'task_time.txt' file
-    if ((fp = std::fopen("task_time.txt","a")) == nullptr) {
+    if (ncycle == 1) fop = 'w';
+
+    if ((fp = std::fopen("task_time.txt",&fop)) == nullptr) {
       std::cout << "### ERROR in function TaskList::OutputAllTaskTime" << std::endl
                 << "Cannot open task_time.txt" << std::endl;
       return;
@@ -127,13 +130,12 @@ void TaskList::OutputAllTaskTime(Mesh *pmesh) {
 
     int j = 0;
     std::fprintf(fp,"# ncycle=%d, TaskList=%s, time=%g\n",
-      pmesh->ncycle, task_list_name.c_str(), time_per_step);
+      ncycle, task_list_name.c_str(), time_per_step);
     for (int i=0; i<ntasks; i++) {
       Task &taski = task_list_[i];
       if (taski.lb_time) {
         std::fprintf(fp,"  %20s, time=%g, fraction=%g\n",
            taski.task_name.c_str(), all_task_time[j], all_task_time[j]/time_per_step);
-        taski.task_time = 0.; // reset task_time
         j++;
       }
     }

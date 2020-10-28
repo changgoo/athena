@@ -495,7 +495,11 @@ void MeshBlock::StartTimeMeasurement() {
 #ifdef OPENMP_PARALLEL
   lb_time_ = omp_get_wtime();
 #else
+#ifdef MPI_PARLLEL
+  lb_time_ = MPI_Wtime();
+#else
   lb_time_ = static_cast<double>(clock());
+#endif
 #endif
 }
 
@@ -507,7 +511,11 @@ void MeshBlock::StopTimeMeasurement() {
 #ifdef OPENMP_PARALLEL
   lb_time_ = omp_get_wtime() - lb_time_;
 #else
+#ifdef MPI_PARLLEL
+  lb_time_ = MPI_Wtime() - lb_time_;
+#else
   lb_time_ = static_cast<double>(clock()) - lb_time_;
+#endif
 #endif
   cost_ += lb_time_;
 }

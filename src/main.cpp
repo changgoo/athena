@@ -431,9 +431,12 @@ int main(int argc, char *argv[]) {
 
   while ((pmesh->time < pmesh->tlim) &&
          (pmesh->nlim < 0 || pmesh->ncycle < pmesh->nlim)) {
-    if (Globals::my_rank == 0) {
+    double t0, t1, t2, t2_0, t2_1, t2_2, t3, t4;
+    double dt_before, dt_turb, dt_int = 0, dt_grav = 0, dt_after;
+    t0 = MarkTime();
+    if (Globals::my_rank == 0)
       pmesh->OutputCycleDiagnostics();
-    }
+
     if (STS_ENABLED) {
       pmesh->sts_loc = TaskType::op_split_before;
       // compute nstages for this STS
@@ -456,25 +459,31 @@ int main(int argc, char *argv[]) {
       pmesh->sts_loc = TaskType::main_int;
     }
 
+    t1 = MarkTime();
     if (pmesh->turb_flag > 1) pmesh->ptrbd->Driving(); // driven turbulence
-
+    t2 = MarkTime();
+    dt_before = t1 - t0;
+    dt_turb = t2 - t1;
     for (int stage=1; stage<=ptlist->nstages; ++stage) {
+      t2_0 = MarkTime();
       ptlist->DoTaskListOneStage(pmesh, stage);
+      t2_1 = MarkTime();
       if (SELF_GRAVITY_ENABLED == 1) // fft (flag 0 for discrete kernel, 1 for continuous)
         pmesh->pfgrd->Solve(stage, 0);
       else if (SELF_GRAVITY_ENABLED == 2) // multigrid
         pmesh->pmgrd->Solve(stage);
+      t2_2 = MarkTime();
+      dt_int += t2_1 - t2_0;
+      dt_grav += t2_2 - t2_1;
     }
-
+    t3 = MarkTime();
     if (STS_ENABLED && pmesh->sts_integrator == "rkl2") {
       pmesh->sts_loc = TaskType::op_split_after;
       // take super-timestep
       for (int stage=1; stage<=pststlist->nstages; ++stage)
         pststlist->DoTaskListOneStage(pmesh, stage);
     }
-
     pmesh->UserWorkInLoop();
-    ptlist->OutputAllTaskTime(pmesh);
     pmesh->ncycle++;
     pmesh->time += pmesh->dt;
     mbcnt += pmesh->nbtotal;
@@ -482,6 +491,8 @@ int main(int argc, char *argv[]) {
     pmesh->step_since_lb++;
 
     pmesh->LoadBalancingAndAdaptiveMeshRefinement(pinput);
+
+    ptlist->OutputAllTaskTime(pmesh->ncycle);
 
     pmesh->NewTimeStep();
 
@@ -513,6 +524,12 @@ int main(int argc, char *argv[]) {
     if (SignalHandler::CheckSignalFlags() != 0) {
       break;
     }
+    t4 = MarkTime();
+    dt_after = t4-t3;
+
+    // output timing result
+    double dt_array[5] = {dt_before, dt_turb, dt_int, dt_grav, dt_after};
+    OutputLoopTime(pmesh->ncycle,dt_array);
   } // END OF MAIN INTEGRATION LOOP ======================================================
   // Make final outputs, print diagnostics, clean up and terminate
 

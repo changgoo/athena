@@ -103,7 +103,7 @@ class TaskList {
   // functions
   TaskListStatus DoAllAvailableTasks(MeshBlock *pmb, int stage, TaskStates &ts);
   void DoTaskListOneStage(Mesh *pmesh, int stage);
-  void OutputAllTaskTime(Mesh *pmesh);
+  void OutputAllTaskTime(int ncycle);
 
  protected:
   // TODO(felker): rename to avoid confusion with class name
