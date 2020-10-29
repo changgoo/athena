@@ -18,19 +18,20 @@
 #include "../fft/block_fft.hpp"
 #include "../hydro/hydro.hpp"
 #include "gravity.hpp"
+#include "../task_list/fft_grav_task_list.hpp"
 
 //! \class BlockFFTGravity
 //  \brief minimalist FFT gravity solver for each block
 
 class BlockFFTGravity : public BlockFFT {
  public:
-  BlockFFTGravity(MeshBlock *pmb)
-      : BlockFFT(pmb) {}
-  ~BlockFFTGravity() {}
+  BlockFFTGravity(MeshBlock *pmb);
+  ~BlockFFTGravity();
   void ApplyKernel() final;
   void Solve(int stage);
 
  private:
+  FFTGravitySolverTaskList *gtlist_;
 };
 
 #endif // GRAVITY_BLOCK_FFT_GRAVITY_HPP_

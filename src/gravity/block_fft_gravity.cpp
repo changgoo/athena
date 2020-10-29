@@ -20,6 +20,21 @@
 #include "../coordinates/coordinates.hpp"
 
 //----------------------------------------------------------------------------------------
+//! \fn BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb)
+//  \brief BlockFFTGravity constructor
+BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb)
+    : BlockFFT(pmb) {
+  gtlist_ = new FFTGravitySolverTaskList(NULL, pmb->pmy_mesh);
+}
+
+//----------------------------------------------------------------------------------------
+//! \fn BlockFFTGravity::~BlockFFTGravity()
+//  \brief BlockFFTGravity destructor
+BlockFFTGravity::~BlockFFTGravity() {
+  delete gtlist_;
+}
+
+//----------------------------------------------------------------------------------------
 //! \fn void BlockFFTGravity::ApplyKernel()
 //  \brief Apply kernel
 void BlockFFTGravity::ApplyKernel() {
@@ -70,6 +85,8 @@ void BlockFFTGravity::Solve(int stage) {
   ApplyKernel();
   ExecuteBackward();
   RetrieveResult(pmy_block_->pgrav->phi);
+
+  gtlist_->DoTaskListOneStage(pmy_block_->pmy_mesh, stage);
 
   return;
 }
