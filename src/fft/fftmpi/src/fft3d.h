@@ -22,11 +22,13 @@
 
 // Forward declaration
 class BlockFFT;
+class BlockFFTGravity;
 
 namespace FFTMPI_NS {
 
 class FFT3d {
   friend class ::BlockFFT;
+  friend class ::BlockFFTGravity;
  public:
   MPI_Comm world;
   int scaled,remaponly;
