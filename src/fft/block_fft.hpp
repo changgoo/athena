@@ -53,6 +53,8 @@ class BlockFFT {
   const int ndim;                   // number of dimensions
   // global index for input data layout
   const int in_ilo, in_ihi, in_jlo, in_jhi, in_klo, in_khi;
+  int out_ilo, out_ihi, out_jlo, out_jhi, out_klo, out_khi;
+  int out_nx1, out_nx2, out_nx3;
   FFT3d *pf3d;
 
  protected:

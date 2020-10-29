@@ -38,31 +38,26 @@ BlockFFTGravity::~BlockFFTGravity() {
 //! \fn void BlockFFTGravity::ApplyKernel()
 //  \brief Apply kernel
 void BlockFFTGravity::ApplyKernel() {
-  // local array size in z-pencil decomposition
-  int slow_nx1 = pf3d->slow_ihi - pf3d->slow_ilo + 1;
-  int slow_nx2 = pf3d->slow_jhi - pf3d->slow_jlo + 1;
-  int slow_nx3 = pf3d->slow_khi - pf3d->slow_klo + 1;
   int idx;
   Real kx, ky, kz;
   Real kernel;
   Real dx1sq = SQR(pmy_block_->pcoord->dx1v(NGHOST));
   Real dx2sq = SQR(pmy_block_->pcoord->dx2v(NGHOST));
   Real dx3sq = SQR(pmy_block_->pcoord->dx3v(NGHOST));
-
   //      ACTION                     (slow, mid, fast)
   // Initial block decomposition          (k,j,i)
   // Remap to x-pencil, perform FFT in i  (k,j,i)
   // Remap to y-pencil, perform FFT in j  (i,k,j)
   // Remap to z-pencil, perform FFT in k  (j,i,k)
   // Apply Kernel                         (j,i,k)
-  for (int j=0; j<slow_nx2; j++) {
-    for (int i=0; i<slow_nx1; i++) {
-      for (int k=0; k<slow_nx3; k++) {
-        idx = k + slow_nx3*(i + slow_nx1*j);
-        kx = TWO_PI*(pf3d->slow_ilo + i)/Nx1;
-        ky = TWO_PI*(pf3d->slow_jlo + j)/Nx2;
-        kz = TWO_PI*(pf3d->slow_klo + k)/Nx3;
-        if (((pf3d->slow_ilo+i) + (pf3d->slow_jlo+j) + (pf3d->slow_klo+k)) == 0) {
+  for (int j=0; j<out_nx2; j++) {
+    for (int i=0; i<out_nx1; i++) {
+      for (int k=0; k<out_nx3; k++) {
+        idx = k + out_nx3*(i + out_nx1*j);
+        kx = TWO_PI*(out_ilo + i)/Nx1;
+        ky = TWO_PI*(out_jlo + j)/Nx2;
+        kz = TWO_PI*(out_klo + k)/Nx3;
+        if (((out_ilo+i) + (out_jlo+j) + (out_klo+k)) == 0) {
           kernel = 0.0;
         }
         else {
@@ -86,7 +81,8 @@ void BlockFFTGravity::Solve(int stage) {
   ExecuteBackward();
   RetrieveResult(pmy_block_->pgrav->phi);
 
-  gtlist_->DoTaskListOneStage(pmy_block_->pmy_mesh, stage);
+  // TODO: MPI error occurs here.
+//  gtlist_->DoTaskListOneStage(pmy_block_->pmy_mesh, stage);
 
   return;
 }

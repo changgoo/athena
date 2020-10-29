@@ -46,18 +46,28 @@ BlockFFT::BlockFFT(MeshBlock *pmb) :
 
   if (ndim==3) {
     // use Plimpton's fftMPI
-    pf3d = new FFT3d(MPI_COMM_WORLD,2);
+    pf3d = new FFT3d(MPI_COMM_WORLD,2); // 2 for double precision
     // set output data layout equal to slow pencil decomposition
     // in order to prevent unnecessary data remap
-    int out_ilo = pf3d->slow_ilo;
-    int out_ihi = pf3d->slow_ihi;
-    int out_jlo = pf3d->slow_jlo;
-    int out_jhi = pf3d->slow_jhi;
-    int out_klo = pf3d->slow_klo;
-    int out_khi = pf3d->slow_khi;
     int permute=2; // will make output array (slow,mid,fast) = (y,x,z) = (j,i,k)
     int fftsize, sendsize, recvsize; // to be returned from setup
-    // setup 3D FFT
+    // preliminary setup to get domain decomposition
+    pf3d->setup(Nx1, Nx2, Nx3,
+                in_ilo, in_ihi, in_jlo, in_jhi, in_klo, in_khi,
+                in_ilo, in_ihi, in_jlo, in_jhi, in_klo, in_khi,
+                permute, fftsize, sendsize, recvsize);
+    out_ilo = pf3d->slow_ilo;
+    out_ihi = pf3d->slow_ihi;
+    out_jlo = pf3d->slow_jlo;
+    out_jhi = pf3d->slow_jhi;
+    out_klo = pf3d->slow_klo;
+    out_khi = pf3d->slow_khi;
+    out_nx1 = out_ihi - out_ilo + 1;
+    out_nx2 = out_jhi - out_jlo + 1;
+    out_nx3 = out_khi - out_klo + 1;
+    // reallocate and setup FFT
+    delete pf3d;
+    pf3d = new FFT3d(MPI_COMM_WORLD,2);
     pf3d->setup(Nx1, Nx2, Nx3,
                 in_ilo, in_ihi, in_jlo, in_jhi, in_klo, in_khi,
                 out_ilo, out_ihi, out_jlo, out_jhi, out_klo, out_khi,
