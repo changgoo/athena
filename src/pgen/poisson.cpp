@@ -28,6 +28,7 @@
 #include "../gravity/fft_gravity.hpp"
 #include "../gravity/gravity.hpp"
 #include "../gravity/mg_gravity.hpp"
+#include "../gravity/block_fft_gravity.hpp"
 #include "../hydro/hydro.hpp"
 #include "../mesh/mesh.hpp"
 #include "../multigrid/multigrid.hpp"
@@ -170,6 +171,7 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
         }
         if (SELF_GRAVITY_ENABLED == 1) pfgrd->Solve(1,1);
         else if (SELF_GRAVITY_ENABLED == 2) pmgrd->Solve(1);
+        else if (SELF_GRAVITY_ENABLED == 3) pmb->pfft->Solve(1);
       }
 
 #ifdef OPENMP_PARALLEL
