@@ -79,6 +79,7 @@ BlockFFT::BlockFFT(MeshBlock *pmb) :
 
 BlockFFT::~BlockFFT() {
   delete[] in_;
+  delete pf3d;
 #ifdef FFT
   fftw_cleanup();
 #endif
