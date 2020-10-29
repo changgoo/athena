@@ -49,12 +49,12 @@ BlockFFT::BlockFFT(MeshBlock *pmb) :
     pf3d = new FFT3d(MPI_COMM_WORLD,2);
     // set output data layout equal to slow pencil decomposition
     // in order to prevent unnecessary data remap
-    out_ilo = pf3d->slow_ilo;
-    out_ihi = pf3d->slow_ihi;
-    out_jlo = pf3d->slow_jlo;
-    out_jhi = pf3d->slow_jhi;
-    out_klo = pf3d->slow_klo;
-    out_khi = pf3d->slow_khi;
+    int out_ilo = pf3d->slow_ilo;
+    int out_ihi = pf3d->slow_ihi;
+    int out_jlo = pf3d->slow_jlo;
+    int out_jhi = pf3d->slow_jhi;
+    int out_klo = pf3d->slow_klo;
+    int out_khi = pf3d->slow_khi;
     int permute=2; // will make output array (slow,mid,fast) = (y,x,z) = (j,i,k)
     int fftsize, sendsize, recvsize; // to be returned from setup
     // setup 3D FFT
