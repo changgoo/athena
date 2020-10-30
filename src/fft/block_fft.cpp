@@ -22,8 +22,6 @@
 #include "../mesh/meshblock_tree.hpp"
 #include "block_fft.hpp"
 
-using namespace FFTMPI_NS;
-
 // constructor, initializes data structures and parameters
 
 BlockFFT::BlockFFT(MeshBlock *pmb) :
@@ -45,6 +43,7 @@ BlockFFT::BlockFFT(MeshBlock *pmb) :
   in_ = new std::complex<Real>[cnt];
 
   if (ndim==3) {
+#ifdef MPI_PARALLEL
     // use Plimpton's fftMPI
     pf3d = new FFT3d(MPI_COMM_WORLD,2); // 2 for double precision
     // set output data layout equal to slow pencil decomposition
@@ -56,6 +55,7 @@ BlockFFT::BlockFFT(MeshBlock *pmb) :
                 in_ilo, in_ihi, in_jlo, in_jhi, in_klo, in_khi,
                 in_ilo, in_ihi, in_jlo, in_jhi, in_klo, in_khi,
                 permute, fftsize, sendsize, recvsize);
+    // set global index in z-pencil decomposition
     out_ilo = pf3d->slow_ilo;
     out_ihi = pf3d->slow_ihi;
     out_jlo = pf3d->slow_jlo;
@@ -72,24 +72,30 @@ BlockFFT::BlockFFT(MeshBlock *pmb) :
                 in_ilo, in_ihi, in_jlo, in_jhi, in_klo, in_khi,
                 out_ilo, out_ihi, out_jlo, out_jhi, out_klo, out_khi,
                 permute, fftsize, sendsize, recvsize);
-    if (Globals::my_rank==0) {
-      std::cout << "-----------FFT3d setup------------" << std::endl;
-      std::cout << "fftsize = " << fftsize << std::endl;
-      std::cout << "sendsize = " << sendsize << std::endl;
-      std::cout << "recvsize = " << recvsize << std::endl;
-    }
+#else // serial
+    std::stringstream msg;
+    msg << "### FATAL ERROR in BlockFFT::BlockFFT" << std::endl
+        << "3D FFT only works with MPI " << std::endl;
+    ATHENA_ERROR(msg);
+    return;
+#endif // MPI_PARALLEL
   }
-
-//  else if (ndim==2)
-//  else if (ndim==1)
-//  else
+  else {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in BlockFFT::BlockFFT" << std::endl
+        << "BlockFFT only works in 3D" << std::endl;
+    ATHENA_ERROR(msg);
+    return;
+  }
 }
 
 // destructor
 
 BlockFFT::~BlockFFT() {
   delete[] in_;
+#ifdef MPI_PARALLEL
   delete pf3d;
+#endif // MPI_PARALLEL
 #ifdef FFT
   fftw_cleanup();
 #endif
@@ -132,6 +138,7 @@ void BlockFFT::RetrieveResult(AthenaArray<Real> &dst) {
 //  \brief Forward transform
 
 void BlockFFT::ExecuteForward() {
+#ifdef MPI_PARALLEL
   // cast std::complex* to FFT_SCALAR*
   FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR*>(in_);
 
@@ -142,6 +149,7 @@ void BlockFFT::ExecuteForward() {
   pf3d->perform_ffts((FFT_DATA *) data,FFTW_FORWARD,pf3d->fft_mid);  // mid_forward
   pf3d->remap(data,data,pf3d->remap_midslow);                        // mid2slow
   pf3d->perform_ffts((FFT_DATA *) data,FFTW_FORWARD,pf3d->fft_slow); // slow_forward
+#endif // MPI_PARALLEL
 
   return;
 }
@@ -161,6 +169,7 @@ void BlockFFT::ApplyKernel() {
 //  \brief Backward transform
 
 void BlockFFT::ExecuteBackward() {
+#ifdef MPI_PARALLEL
   // cast std::complex* to FFT_SCALAR*
   FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR*>(in_);
 
@@ -177,6 +186,7 @@ void BlockFFT::ExecuteBackward() {
     data[2*i] /= (Nx1*Nx2*Nx3);
     data[2*i+1] /= (Nx1*Nx2*Nx3);
   }
+#endif // MPI_PARALLEL
 
   return;
 }
