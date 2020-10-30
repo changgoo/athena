@@ -42,6 +42,7 @@ BlockFFT::BlockFFT(MeshBlock *pmb) :
   int cnt = nx1*nx2*nx3;
   in_ = new std::complex<Real>[cnt];
 
+#ifdef FFT
   if (ndim==3) {
 #ifdef MPI_PARALLEL
     // use Plimpton's fftMPI
@@ -87,17 +88,18 @@ BlockFFT::BlockFFT(MeshBlock *pmb) :
     ATHENA_ERROR(msg);
     return;
   }
+#endif // FFT
 }
 
 // destructor
 
 BlockFFT::~BlockFFT() {
   delete[] in_;
-#ifdef MPI_PARALLEL
-  delete pf3d;
-#endif // MPI_PARALLEL
 #ifdef FFT
   fftw_cleanup();
+#ifdef MPI_PARALLEL
+  delete pf3d;
+#endif
 #endif
 }
 
@@ -138,6 +140,7 @@ void BlockFFT::RetrieveResult(AthenaArray<Real> &dst) {
 //  \brief Forward transform
 
 void BlockFFT::ExecuteForward() {
+#ifdef FFT
 #ifdef MPI_PARALLEL
   // cast std::complex* to FFT_SCALAR*
   FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR*>(in_);
@@ -149,7 +152,8 @@ void BlockFFT::ExecuteForward() {
   pf3d->perform_ffts((FFT_DATA *) data,FFTW_FORWARD,pf3d->fft_mid);  // mid_forward
   pf3d->remap(data,data,pf3d->remap_midslow);                        // mid2slow
   pf3d->perform_ffts((FFT_DATA *) data,FFTW_FORWARD,pf3d->fft_slow); // slow_forward
-#endif // MPI_PARALLEL
+#endif
+#endif
 
   return;
 }
@@ -169,6 +173,7 @@ void BlockFFT::ApplyKernel() {
 //  \brief Backward transform
 
 void BlockFFT::ExecuteBackward() {
+#ifdef FFT
 #ifdef MPI_PARALLEL
   // cast std::complex* to FFT_SCALAR*
   FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR*>(in_);
@@ -186,7 +191,8 @@ void BlockFFT::ExecuteBackward() {
     data[2*i] /= (Nx1*Nx2*Nx3);
     data[2*i+1] /= (Nx1*Nx2*Nx3);
   }
-#endif // MPI_PARALLEL
+#endif
+#endif
 
   return;
 }
