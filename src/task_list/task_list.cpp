@@ -10,6 +10,7 @@
 // C headers
 
 // C++ headers
+#include <string> // string
 //#include <vector> // formerly needed for vector of MeshBlock ptrs in DoTaskListOneStage
 
 // Athena++ headers
@@ -94,9 +95,9 @@ void TaskList::DoTaskListOneStage(Mesh *pmesh, int stage) {
 
 //----------------------------------------------------------------------------------------
 //! \fn void TaskList::OutputAllTaskTime()
-//  \brief print all task_time
+//! \brief print all task_time
 
-void TaskList::OutputAllTaskTime(int ncycle) {
+void TaskList::OutputAllTaskTime(const int ncycle, std::string basename) {
   double time_per_step = 0.;
   double all_task_time[ntasks];
   int ntask_time = 0;
@@ -119,10 +120,17 @@ void TaskList::OutputAllTaskTime(int ncycle) {
   if (Globals::my_rank == 0) {
     FILE *fp = nullptr;
     char fop{ 'a' };
-    // open 'task_time.txt' file
-    if (ncycle == 1) fop = 'w';
+    std::string fname;
+    fname.assign(basename);
+    fname.append(".task_time.txt");
 
-    if ((fp = std::fopen("task_time.txt",&fop)) == nullptr) {
+    // open 'task_time.txt' file
+    if (newfile_) {
+      fop = 'w';
+      newfile_ = false;
+    }
+
+    if ((fp = std::fopen(fname.c_str(),&fop)) == nullptr) {
       std::cout << "### ERROR in function TaskList::OutputAllTaskTime" << std::endl
                 << "Cannot open task_time.txt" << std::endl;
       return;

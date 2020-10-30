@@ -21,7 +21,7 @@ void ChangeRunDir(const char *pdir);
 double ran2(std::int64_t *idum);
 void ShowConfig();
 double MarkTime();
-void OutputLoopTime(int ncycle, double dt_array[], std::string basename);
+void OutputLoopTime(const int ncycle, double dt_array[], std::string basename);
 
 //----------------------------------------------------------------------------------------
 //! SignalHandler

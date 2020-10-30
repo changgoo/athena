@@ -43,7 +43,7 @@ double MarkTime() {
 //----------------------------------------------------------------------------------------
 //! \fn void OutputLoopTime(Real dt_array[])
 //! \brief output loop time breakdown
-void OutputLoopTime(int ncycle, double dt_array[], std::string basename) {
+void OutputLoopTime(const int ncycle, double dt_array[], std::string basename) {
 #ifdef MPI_PARALLEL
   // pack array, MPI allreduce over array, then unpack into Mesh variables
   MPI_Allreduce(MPI_IN_PLACE, dt_array, 5, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -52,10 +52,10 @@ void OutputLoopTime(int ncycle, double dt_array[], std::string basename) {
                      + dt_array[3] + dt_array[4];
   if (Globals::my_rank == 0) {
     FILE *fp = nullptr;
+    char fop{ 'a' };
     std::string fname;
     fname.assign(basename);
     fname.append(".loop_time.txt");
-    char fop{ 'a' };
     // open 'loop_time.txt' file
     if (newfile_) {
       fop = 'w';

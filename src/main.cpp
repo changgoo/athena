@@ -492,8 +492,6 @@ int main(int argc, char *argv[]) {
 
     pmesh->LoadBalancingAndAdaptiveMeshRefinement(pinput);
 
-    ptlist->OutputAllTaskTime(pmesh->ncycle);
-
     pmesh->NewTimeStep();
 
 #ifdef ENABLE_EXCEPTIONS
@@ -529,6 +527,7 @@ int main(int argc, char *argv[]) {
 
     // output timing result
     double dt_array[5] = {dt_before, dt_turb, dt_int, dt_grav, dt_after};
+    ptlist->OutputAllTaskTime(pmesh->ncycle,pinput->GetString("job","problem_id"));
     OutputLoopTime(pmesh->ncycle,dt_array,pinput->GetString("job","problem_id"));
   } // END OF MAIN INTEGRATION LOOP ======================================================
   // Make final outputs, print diagnostics, clean up and terminate

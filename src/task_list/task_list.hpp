@@ -103,7 +103,7 @@ class TaskList {
   // functions
   TaskListStatus DoAllAvailableTasks(MeshBlock *pmb, int stage, TaskStates &ts);
   void DoTaskListOneStage(Mesh *pmesh, int stage);
-  void OutputAllTaskTime(int ncycle);
+  void OutputAllTaskTime(const int ncycle, std::string basename);
 
  protected:
   // TODO(felker): rename to avoid confusion with class name
@@ -112,6 +112,7 @@ class TaskList {
  private:
   virtual void AddTask(const TaskID& id, const TaskID& dep) = 0;
   virtual void StartupTaskList(MeshBlock *pmb, int stage) = 0;
+  bool newfile_ = true;
 };
 
 //----------------------------------------------------------------------------------------
