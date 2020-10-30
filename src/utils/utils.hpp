@@ -13,6 +13,7 @@
 // C++ headers
 #include <csignal>   // sigset_t POSIX C extension
 #include <cstdint>   // std::int64_t
+#include <string>
 
 // Athena++ headers
 
@@ -20,7 +21,7 @@ void ChangeRunDir(const char *pdir);
 double ran2(std::int64_t *idum);
 void ShowConfig();
 double MarkTime();
-void OutputLoopTime(int ncycle, double dt_array[]);
+void OutputLoopTime(int ncycle, double dt_array[], std::string basename);
 
 //----------------------------------------------------------------------------------------
 //! SignalHandler

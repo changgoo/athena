@@ -9,6 +9,7 @@
 // C headers
 
 // C++ headers
+#include <ctime>      // clock(), CLOCKS_PER_SEC, clock_t
 #include <iostream>
 #include <string>     // c_str()
 
@@ -34,7 +35,7 @@ double MarkTime() {
 #ifdef MPI_PARLLEL
   return MPI_Wtime();
 #else
-  return static_cast<double>(clock());
+  return static_cast<double> (clock())/static_cast<double> (CLOCKS_PER_SEC);
 #endif
 #endif
 }
@@ -42,15 +43,18 @@ double MarkTime() {
 //----------------------------------------------------------------------------------------
 //! \fn void OutputLoopTime(Real dt_array[])
 //! \brief output loop time breakdown
-void OutputLoopTime(int ncycle, double dt_array[]) {
-  #ifdef MPI_PARALLEL
-    // pack array, MPI allreduce over array, then unpack into Mesh variables
-    MPI_Allreduce(MPI_IN_PLACE, dt_array, 5, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  #endif
+void OutputLoopTime(int ncycle, double dt_array[], std::string basename) {
+#ifdef MPI_PARALLEL
+  // pack array, MPI allreduce over array, then unpack into Mesh variables
+  MPI_Allreduce(MPI_IN_PLACE, dt_array, 5, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+#endif
   double time_per_step = dt_array[0] + dt_array[1] + dt_array[2]
                      + dt_array[3] + dt_array[4];
   if (Globals::my_rank == 0) {
     FILE *fp = nullptr;
+    std::string fname;
+    fname.assign(basename);
+    fname.append(".loop_time.txt");
     char fop{ 'a' };
     // open 'loop_time.txt' file
     if (newfile_) {
@@ -58,7 +62,7 @@ void OutputLoopTime(int ncycle, double dt_array[]) {
       newfile_ = false;
     }
 
-    if ((fp = std::fopen("loop_time.txt",&fop)) == nullptr) {
+    if ((fp = std::fopen(fname.c_str(),&fop)) == nullptr) {
       std::cout << "### ERROR in function OutputLoopTime" << std::endl
                 << "Cannot open loop_time.txt" << std::endl;
       return;

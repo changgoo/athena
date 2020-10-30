@@ -529,7 +529,7 @@ int main(int argc, char *argv[]) {
 
     // output timing result
     double dt_array[5] = {dt_before, dt_turb, dt_int, dt_grav, dt_after};
-    OutputLoopTime(pmesh->ncycle,dt_array);
+    OutputLoopTime(pmesh->ncycle,dt_array,pinput->GetString("job","problem_id"));
   } // END OF MAIN INTEGRATION LOOP ======================================================
   // Make final outputs, print diagnostics, clean up and terminate
 
