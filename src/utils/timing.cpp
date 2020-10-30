@@ -32,7 +32,7 @@ double MarkTime() {
 #ifdef OPENMP_PARALLEL
   return omp_get_wtime();
 #else
-#ifdef MPI_PARLLEL
+#ifdef MPI_PARALLEL
   return MPI_Wtime();
 #else
   return static_cast<double> (clock())/static_cast<double> (CLOCKS_PER_SEC);
