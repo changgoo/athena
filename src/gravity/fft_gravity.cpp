@@ -72,19 +72,24 @@ void FFTGravityDriver::Solve(int stage, int mode) {
   int nbe = nbs+nblist_[Globals::my_rank]-1;
 
   // Compute mass density of particles.
-  if (PARTICLES)
-    DustParticles::FindDensityOnMesh(pmy_mesh_, false);
-
+  if (PARTICLES) {
+    if (pmy_mesh_->my_blocks(0)->ppar->GetBackReaction())
+      DustParticles::FindDensityOnMesh(pmy_mesh_, false);
+  }
   for (int nb=0; nb<pmy_mesh_->nblocal; ++nb) {
     MeshBlock *pmb = pmy_mesh_->my_blocks(nb);
     in.InitWithShallowSlice(pmb->phydro->u,4,IDN,1);
     if (PARTICLES) {
-      AthenaArray<Real> rhop(pmb->ppar->GetMassDensity());
-      for (int k = pmb->ks; k <= pmb->ke; ++k)
-        for (int j = pmb->js; j <= pmb->je; ++j)
-          for (int i = pmb->is; i <= pmb->ie; ++i)
-            rhop(k,j,i) += in(k,j,i);
-      pfb->LoadSource(rhop, 0, NGHOST, pmb->loc, pmb->block_size);
+      if (pmb->ppar->GetBackReaction()) {
+        AthenaArray<Real> rhop(pmb->ppar->GetMassDensity());
+        for (int k = pmb->ks; k <= pmb->ke; ++k)
+          for (int j = pmb->js; j <= pmb->je; ++j)
+            for (int i = pmb->is; i <= pmb->ie; ++i)
+              rhop(k,j,i) += in(k,j,i);
+        pfb->LoadSource(rhop, 0, NGHOST, pmb->loc, pmb->block_size);
+      } else {
+        pfb->LoadSource(in, 0, NGHOST, pmb->loc, pmb->block_size);
+      }
     } else {
       pfb->LoadSource(in, 0, NGHOST, pmb->loc, pmb->block_size);
     }
