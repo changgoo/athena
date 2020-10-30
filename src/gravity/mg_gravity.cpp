@@ -106,24 +106,32 @@ void MGGravityDriver::Solve(int stage) {
   for (int i=0; i<pmy_mesh_->nblocal; ++i)
     vmg_.push_back(pmy_mesh_->my_blocks(i)->pmg);
 
-  if (PARTICLES)
+  if (PARTICLES) {
     // Compute mass density of particles.
-    DustParticles::FindDensityOnMesh(pmy_mesh_, false);
+    if (pmy_mesh_->my_blocks(0)->ppar->GetBackReaction())
+      DustParticles::FindDensityOnMesh(pmy_mesh_, false);
+  }
+
+
 
   // load the source
   for (Multigrid* pmg : vmg_) {
     // assume all the data are located on the same node
     if (PARTICLES) {
       // TODO(ccyang): add gas density.
-      AthenaArray<Real> rhop(pmg->pmy_block_->ppar->GetMassDensity());
       AthenaArray<Real> rho;
       rho.InitWithShallowSlice(pmg->pmy_block_->phydro->u,4,IDN,1);
 
-      for (int k = pmg->pmy_block_->ks; k <= pmg->pmy_block_->ke; ++k)
-        for (int j = pmg->pmy_block_->js; j <= pmg->pmy_block_->je; ++j)
-          for (int i = pmg->pmy_block_->is; i <= pmg->pmy_block_->ie; ++i)
-            rhop(k,j,i) += rho(k,j,i);
-      pmg->LoadSource(rhop, 0, NGHOST, four_pi_G_);
+      if (pmy_mesh_->my_blocks(0)->ppar->GetBackReaction()) {
+        AthenaArray<Real> rhop(pmg->pmy_block_->ppar->GetMassDensity());
+        for (int k = pmg->pmy_block_->ks; k <= pmg->pmy_block_->ke; ++k)
+          for (int j = pmg->pmy_block_->js; j <= pmg->pmy_block_->je; ++j)
+            for (int i = pmg->pmy_block_->is; i <= pmg->pmy_block_->ie; ++i)
+              rhop(k,j,i) += rho(k,j,i);
+        pmg->LoadSource(rhop, 0, NGHOST, four_pi_G_);
+      } else {
+        pmg->LoadSource(rho, 0, NGHOST, four_pi_G_);
+      }
     } else {
       pmg->LoadSource(pmg->pmy_block_->phydro->u, IDN, NGHOST, four_pi_G_);
     }

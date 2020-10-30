@@ -98,7 +98,7 @@ void DustParticles::Initialize(Mesh *pm, ParameterInput *pin) {
       idpx3 = imom3;
     }
 
-    if (SELF_GRAVITY_ENABLED)
+    if (SELF_GRAVITY_ENABLED && backreaction)
       ParticleGravity::Initialize();
 
     initialized = true;
@@ -128,7 +128,7 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin)
     dpx3.InitWithShallowSlice(ppm->meshaux, 4, idpx3, 1);
   }
 
-  if (SELF_GRAVITY_ENABLED)
+  if (SELF_GRAVITY_ENABLED && backreaction)
     // Activate particle gravity.
     ppgrav = new ParticleGravity(this);
 }
@@ -148,7 +148,7 @@ DustParticles::~DustParticles() {
     dpx3.DeleteAthenaArray();
   }
 
-  if (SELF_GRAVITY_ENABLED)
+  if (SELF_GRAVITY_ENABLED && backreaction)
     delete ppgrav;
 }
 
@@ -295,7 +295,7 @@ void DustParticles::SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsr
     }
   }
 
-  if (SELF_GRAVITY_ENABLED) {
+  if (SELF_GRAVITY_ENABLED && backreaction) {
     // Add gravitational force from the Poisson solution.
     ppgrav->FindGravitationalForce(pmy_block->pgrav->phi);
     ppgrav->ExertGravitationalForce(dt);
