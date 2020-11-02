@@ -665,7 +665,9 @@ else:
 # --grav argument
 if args['grav'] == "none":
     definitions['SELF_GRAVITY_ENABLED'] = '0'
+    definitions['GRAV_BC_OPTION'] = 'GRAV_BC_UNSPECIFIED'
 else:
+    definitions['GRAV_BC_OPTION'] = 'GRAV_BC_UNSPECIFIED'
     if args['grav'] == "fft":
         definitions['SELF_GRAVITY_ENABLED'] = '1'
         if not args['fft']:
