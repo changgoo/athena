@@ -33,7 +33,15 @@ Gravity::Gravity(MeshBlock *pmb, ParameterInput *pin) :
     empty_flux{AthenaArray<Real>(), AthenaArray<Real>(), AthenaArray<Real>()},
     four_pi_G(pmb->pmy_mesh->four_pi_G_),
     grav_mean_rho(pmb->pmy_mesh->grav_mean_rho_),
-    gbvar(pmb, &phi, nullptr, empty_flux) {
+    gbvar(pmb, &phi, nullptr, empty_flux),
+    // set gravity BC = hydro BC by default
+    // reset in InitUserMeshBlockData if desired
+    grav_bcs{GetBoundaryFlag(pin->GetOrAddString("mesh", "ix1_bc", "none")),
+             GetBoundaryFlag(pin->GetOrAddString("mesh", "ox1_bc", "none")),
+             GetBoundaryFlag(pin->GetOrAddString("mesh", "ix2_bc", "none")),
+             GetBoundaryFlag(pin->GetOrAddString("mesh", "ox2_bc", "none")),
+             GetBoundaryFlag(pin->GetOrAddString("mesh", "ix3_bc", "none")),
+             GetBoundaryFlag(pin->GetOrAddString("mesh", "ox3_bc", "none"))} {
   if (four_pi_G == 0.0) {
     std::stringstream msg;
     msg << "### FATAL ERROR in Gravity::Gravity" << std::endl

@@ -43,6 +43,7 @@ class Gravity {
   // TODO(felker): consider creating a CellCentered.. derived class, and changing to
   //GravityBoundaryVariable *pgbval;
   CellCenteredBoundaryVariable gbvar;
+  BoundaryFlag grav_bcs[6];
 
   void Initialize(ParameterInput *pin);
   void Solver(const AthenaArray<Real> &u);
