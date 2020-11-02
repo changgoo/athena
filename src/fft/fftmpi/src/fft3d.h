@@ -113,6 +113,9 @@ class FFT3d {
 
   Remap *remap_prefast,*remap_fastmid,*remap_midslow,*remap_postslow;
   Remap *remap_preslow,*remap_slowmid,*remap_midfast,*remap_postfast;
+#ifdef GRAV_DISK
+  Remap *remap_premid,*remap_fastslow; // for shearing sheet gravity solver
+#endif
   int remap_preflag,remap_postflag;
 
   FFT_SCALAR *sendbuf;              // buffer for remap sends

@@ -38,9 +38,12 @@ BlockFFTGravity::~BlockFFTGravity() {
 //! \fn void BlockFFTGravity::ExecuteForward()
 //  \brief Forward transform
 void BlockFFTGravity::ExecuteForward() {
-#ifdef GRAV_PERIODIC
+#if defined(GRAV_PERIODIC)
   BlockFFT::ExecuteForward();
-#endif
+#elif defined(GRAV_DISK)
+#elif defined(GRAV_OBC)
+#else
+#endif // BC switch
 
   return;
 }
@@ -49,9 +52,12 @@ void BlockFFTGravity::ExecuteForward() {
 //! \fn void BlockFFTGravity::ExecuteBackward()
 //  \brief Backward transform
 void BlockFFTGravity::ExecuteBackward() {
-#ifdef GRAV_PERIODIC
+#if defined(GRAV_PERIODIC)
   BlockFFT::ExecuteBackward();
-#endif
+#elif defined(GRAV_DISK)
+#elif defined(GRAV_OBC)
+#else
+#endif // BC switch
 
   return;
 }
@@ -74,7 +80,7 @@ void BlockFFTGravity::ApplyKernel() {
   Real dx2sq = SQR(pmy_block_->pcoord->dx2v(NGHOST));
   Real dx3sq = SQR(pmy_block_->pcoord->dx3v(NGHOST));
 
-#ifdef GRAV_PERIODIC
+#if defined(GRAV_PERIODIC)
   for (int j=0; j<out_nx2; j++) {
     for (int i=0; i<out_nx1; i++) {
       for (int k=0; k<out_nx3; k++) {
@@ -94,7 +100,10 @@ void BlockFFTGravity::ApplyKernel() {
       }
     }
   }
-#endif
+#elif defined(GRAV_DISK)
+#elif defined(GRAV_OBC)
+#else
+#endif // BC switch
 
   return;
 }
