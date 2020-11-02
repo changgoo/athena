@@ -160,7 +160,7 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
     if (SELF_GRAVITY_ENABLED == 2)
       pmg = new MGGravity(pmy_mesh->pmgrd, this);
     if (SELF_GRAVITY_ENABLED == 3)
-      pfft = new BlockFFTGravity(this);
+      pfft = new BlockFFTGravity(this, pin);
   }
   if (NSCALARS > 0) {
     // if (this->scalars_block)
@@ -288,7 +288,7 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
     if (SELF_GRAVITY_ENABLED == 2)
       pmg = new MGGravity(pmy_mesh->pmgrd, this);
     if (SELF_GRAVITY_ENABLED == 3)
-      pfft = new BlockFFTGravity(this);
+      pfft = new BlockFFTGravity(this, pin);
   }
 
   if (NSCALARS > 0) {

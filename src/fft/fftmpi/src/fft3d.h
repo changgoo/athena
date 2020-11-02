@@ -20,6 +20,9 @@
 #include <mpi.h>
 #include "ffttype.h"
 
+// Athena++ headers
+#include "../../../athena.hpp"
+
 // Forward declaration
 class BlockFFT;
 class BlockFFTGravity;

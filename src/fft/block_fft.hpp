@@ -53,8 +53,12 @@ class BlockFFT {
   const int ndim;                   // number of dimensions
   // global index for input data layout
   const int in_ilo, in_ihi, in_jlo, in_jhi, in_klo, in_khi;
-  int out_ilo, out_ihi, out_jlo, out_jhi, out_klo, out_khi;
-  int out_nx1, out_nx2, out_nx3;
+  int fast_ilo, fast_ihi, fast_jlo, fast_jhi, fast_klo, fast_khi;
+  int fast_nx1, fast_nx2, fast_nx3;
+  int mid_ilo, mid_ihi, mid_jlo, mid_jhi, mid_klo, mid_khi;
+  int mid_nx1, mid_nx2, mid_nx3;
+  int slow_ilo, slow_ihi, slow_jlo, slow_jhi, slow_klo, slow_khi;
+  int slow_nx1, slow_nx2, slow_nx3;
 #ifdef FFT
 #ifdef MPI_PARALLEL
   FFT3d *pf3d;

@@ -20,11 +20,19 @@
 #include "../coordinates/coordinates.hpp"
 
 //----------------------------------------------------------------------------------------
-//! \fn BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb)
+//! \fn BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
 //  \brief BlockFFTGravity constructor
-BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb)
-    : BlockFFT(pmb) {
-  gtlist_ = new FFTGravitySolverTaskList(NULL, pmb->pmy_mesh);
+BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
+    : BlockFFT(pmb), I_(1.0,0.0),
+      dx1sq_(SQR(pmb->pcoord->dx1v(NGHOST))),
+      dx2sq_(SQR(pmb->pcoord->dx2v(NGHOST))),
+      dx3sq_(SQR(pmb->pcoord->dx3v(NGHOST))),
+      Lx1_(pmb->pmy_mesh->mesh_size.x1max - pmb->pmy_mesh->mesh_size.x1min),
+      Lx2_(pmb->pmy_mesh->mesh_size.x2max - pmb->pmy_mesh->mesh_size.x2min),
+      Lx3_(pmb->pmy_mesh->mesh_size.x3max - pmb->pmy_mesh->mesh_size.x3min) {
+  gtlist_ = new FFTGravitySolverTaskList(pin, pmb->pmy_mesh);
+  Omega_0_ = pin->GetOrAddReal("problem","Omega0",0.0);
+  qshear_  = pin->GetOrAddReal("problem","qshear",0.0);
 }
 
 //----------------------------------------------------------------------------------------
@@ -36,35 +44,44 @@ BlockFFTGravity::~BlockFFTGravity() {
 
 //----------------------------------------------------------------------------------------
 //! \fn void BlockFFTGravity::ExecuteForward()
-//  \brief Forward transform
+//  \brief Forward transform for shearing sheet Poisson solvers
+#ifdef GRAV_DISK
 void BlockFFTGravity::ExecuteForward() {
-#if defined(GRAV_PERIODIC)
-  BlockFFT::ExecuteForward();
-#elif defined(GRAV_DISK)
-#elif defined(GRAV_OBC)
-#else
-#endif // BC switch
+#ifdef FFT
+#ifdef MPI_PARALLEL
+  Real time = pmy_block_->pmy_mesh->time;
+
+  // cast std::complex* to FFT_SCALAR*
+  FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR*>(in_);
+
+  pf3d->remap(data,data,pf3d->remap_premid);                         // block2mid
+  // phase shift
+  for (int i=0; i<mid_nx1; i++) {
+    for (int k=0; k<mid_nx3; k++) {
+      for (int j=0; j<mid_nx2; j++) {
+        int idx = j + mid_nx2*(k + mid_nx3*i);
+        in_[idx] *=
+          std::exp(TWO_PI*I_*qshear_*Omega_0_*time*(Lx1_/Lx2_)*(Real)j*(Real)i/(Real)Nx1);
+      }
+    }
+  }
+  pf3d->perform_ffts((FFT_DATA *) data,FFTW_FORWARD,pf3d->fft_mid);  // mid_forward
+  pf3d->remap(data,data,pf3d->remap_midfast);                        // mid2fast
+  pf3d->perform_ffts((FFT_DATA *) data,FFTW_FORWARD,pf3d->fft_fast); // fast_forward
+  pf3d->remap(data,data,pf3d->remap_fastslow);                       // fast2slow
+  pf3d->perform_ffts((FFT_DATA *) data,FFTW_FORWARD,pf3d->fft_slow); // slow_forward
+#endif // MPI_PARALLEL
+#endif // FFT
 
   return;
 }
-
-//----------------------------------------------------------------------------------------
-//! \fn void BlockFFTGravity::ExecuteBackward()
-//  \brief Backward transform
-void BlockFFTGravity::ExecuteBackward() {
-#if defined(GRAV_PERIODIC)
-  BlockFFT::ExecuteBackward();
-#elif defined(GRAV_DISK)
-#elif defined(GRAV_OBC)
-#else
-#endif // BC switch
-
-  return;
-}
+#endif // GRAV_DISK
 
 //----------------------------------------------------------------------------------------
 //! \fn void BlockFFTGravity::ApplyKernel()
-//  \brief Apply kernel
+//  \brief Apply kernel for fully periodic BC
+// TODO disk BC kernel
+#if defined(GRAV_PERIODIC)||defined(GRAV_DISK)
 void BlockFFTGravity::ApplyKernel() {
   //      ACTION                     (slow, mid, fast)
   // Initial block decomposition          (k,j,i)
@@ -76,37 +93,30 @@ void BlockFFTGravity::ApplyKernel() {
   int idx;
   Real kx, ky, kz;
   Real kernel;
-  Real dx1sq = SQR(pmy_block_->pcoord->dx1v(NGHOST));
-  Real dx2sq = SQR(pmy_block_->pcoord->dx2v(NGHOST));
-  Real dx3sq = SQR(pmy_block_->pcoord->dx3v(NGHOST));
 
-#if defined(GRAV_PERIODIC)
-  for (int j=0; j<out_nx2; j++) {
-    for (int i=0; i<out_nx1; i++) {
-      for (int k=0; k<out_nx3; k++) {
-        idx = k + out_nx3*(i + out_nx1*j);
-        kx = TWO_PI*(out_ilo + i)/Nx1;
-        ky = TWO_PI*(out_jlo + j)/Nx2;
-        kz = TWO_PI*(out_klo + k)/Nx3;
-        if (((out_ilo+i) + (out_jlo+j) + (out_klo+k)) == 0) {
+  for (int j=0; j<slow_nx2; j++) {
+    for (int i=0; i<slow_nx1; i++) {
+      for (int k=0; k<slow_nx3; k++) {
+        idx = k + slow_nx3*(i + slow_nx1*j);
+        kx = TWO_PI*(slow_ilo + i)/Nx1;
+        ky = TWO_PI*(slow_jlo + j)/Nx2;
+        kz = TWO_PI*(slow_klo + k)/Nx3;
+        if (((slow_ilo+i) + (slow_jlo+j) + (slow_klo+k)) == 0) {
           kernel = 0.0;
         }
         else {
-          kernel = -pmy_block_->pgrav->four_pi_G / ((2. - 2.*std::cos(kx))/dx1sq +
-                                                    (2. - 2.*std::cos(ky))/dx2sq +
-                                                    (2. - 2.*std::cos(kz))/dx3sq);
+          kernel = -pmy_block_->pgrav->four_pi_G / ((2. - 2.*std::cos(kx))/dx1sq_ +
+                                                    (2. - 2.*std::cos(ky))/dx2sq_ +
+                                                    (2. - 2.*std::cos(kz))/dx3sq_);
         }
         in_[idx] *= kernel;
       }
     }
   }
-#elif defined(GRAV_DISK)
-#elif defined(GRAV_OBC)
-#else
-#endif // BC switch
 
   return;
 }
+#endif // GRAV_PERIODIC
 
 void BlockFFTGravity::Solve(int stage) {
   AthenaArray<Real> rho;
@@ -117,8 +127,7 @@ void BlockFFTGravity::Solve(int stage) {
   ExecuteBackward();
   RetrieveResult(pmy_block_->pgrav->phi);
 
-  // TODO: MPI error occurs here.
-//  gtlist_->DoTaskListOneStage(pmy_block_->pmy_mesh, stage);
+  gtlist_->DoTaskListOneStage(pmy_block_->pmy_mesh, stage);
 
   return;
 }

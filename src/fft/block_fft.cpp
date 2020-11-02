@@ -56,22 +56,44 @@ BlockFFT::BlockFFT(MeshBlock *pmb) :
                 in_ilo, in_ihi, in_jlo, in_jhi, in_klo, in_khi,
                 in_ilo, in_ihi, in_jlo, in_jhi, in_klo, in_khi,
                 permute, fftsize, sendsize, recvsize);
-    // set global index in z-pencil decomposition
-    out_ilo = pf3d->slow_ilo;
-    out_ihi = pf3d->slow_ihi;
-    out_jlo = pf3d->slow_jlo;
-    out_jhi = pf3d->slow_jhi;
-    out_klo = pf3d->slow_klo;
-    out_khi = pf3d->slow_khi;
-    out_nx1 = out_ihi - out_ilo + 1;
-    out_nx2 = out_jhi - out_jlo + 1;
-    out_nx3 = out_khi - out_klo + 1;
+
+    // set global index in pencil decompositions
+    fast_ilo = pf3d->fast_ilo;
+    fast_ihi = pf3d->fast_ihi;
+    fast_jlo = pf3d->fast_jlo;
+    fast_jhi = pf3d->fast_jhi;
+    fast_klo = pf3d->fast_klo;
+    fast_khi = pf3d->fast_khi;
+    fast_nx1 = fast_ihi - fast_ilo + 1;
+    fast_nx2 = fast_jhi - fast_jlo + 1;
+    fast_nx3 = fast_khi - fast_klo + 1;
+
+    mid_ilo = pf3d->mid_ilo;
+    mid_ihi = pf3d->mid_ihi;
+    mid_jlo = pf3d->mid_jlo;
+    mid_jhi = pf3d->mid_jhi;
+    mid_klo = pf3d->mid_klo;
+    mid_khi = pf3d->mid_khi;
+    mid_nx1 = mid_ihi - mid_ilo + 1;
+    mid_nx2 = mid_jhi - mid_jlo + 1;
+    mid_nx3 = mid_khi - mid_klo + 1;
+
+    slow_ilo = pf3d->slow_ilo;
+    slow_ihi = pf3d->slow_ihi;
+    slow_jlo = pf3d->slow_jlo;
+    slow_jhi = pf3d->slow_jhi;
+    slow_klo = pf3d->slow_klo;
+    slow_khi = pf3d->slow_khi;
+    slow_nx1 = slow_ihi - slow_ilo + 1;
+    slow_nx2 = slow_jhi - slow_jlo + 1;
+    slow_nx3 = slow_khi - slow_klo + 1;
+
     // reallocate and setup FFT
     delete pf3d;
     pf3d = new FFT3d(MPI_COMM_WORLD,2);
     pf3d->setup(Nx1, Nx2, Nx3,
                 in_ilo, in_ihi, in_jlo, in_jhi, in_klo, in_khi,
-                out_ilo, out_ihi, out_jlo, out_jhi, out_klo, out_khi,
+                slow_ilo, slow_ihi, slow_jlo, slow_jhi, slow_klo, slow_khi,
                 permute, fftsize, sendsize, recvsize);
 #else // serial
     std::stringstream msg;

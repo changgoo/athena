@@ -11,6 +11,7 @@
 // C headers
 
 // C++ headers
+#include <complex>
 
 // Athena++ headers
 #include "../athena.hpp"
@@ -25,15 +26,20 @@
 
 class BlockFFTGravity : public BlockFFT {
  public:
-  BlockFFTGravity(MeshBlock *pmb);
+  BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin);
   ~BlockFFTGravity();
+#ifndef GRAV_PERIODIC
   void ExecuteForward() final;
-  void ExecuteBackward() final;
+#endif
   void ApplyKernel() final;
   void Solve(int stage);
 
  private:
   FFTGravitySolverTaskList *gtlist_;
+  Real Omega_0_,qshear_;
+  Real dx1sq_,dx2sq_,dx3sq_;
+  Real Lx1_,Lx2_,Lx3_;
+  const std::complex<Real> I_;
 };
 
 #endif // GRAVITY_BLOCK_FFT_GRAVITY_HPP_
