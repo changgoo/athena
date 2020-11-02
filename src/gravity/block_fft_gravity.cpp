@@ -35,21 +35,46 @@ BlockFFTGravity::~BlockFFTGravity() {
 }
 
 //----------------------------------------------------------------------------------------
+//! \fn void BlockFFTGravity::ExecuteForward()
+//  \brief Forward transform
+void BlockFFTGravity::ExecuteForward() {
+#ifdef GRAV_PERIODIC
+  BlockFFT::ExecuteForward();
+#endif
+
+  return;
+}
+
+//----------------------------------------------------------------------------------------
+//! \fn void BlockFFTGravity::ExecuteBackward()
+//  \brief Backward transform
+void BlockFFTGravity::ExecuteBackward() {
+#ifdef GRAV_PERIODIC
+  BlockFFT::ExecuteBackward();
+#endif
+
+  return;
+}
+
+//----------------------------------------------------------------------------------------
 //! \fn void BlockFFTGravity::ApplyKernel()
 //  \brief Apply kernel
 void BlockFFTGravity::ApplyKernel() {
-  int idx;
-  Real kx, ky, kz;
-  Real kernel;
-  Real dx1sq = SQR(pmy_block_->pcoord->dx1v(NGHOST));
-  Real dx2sq = SQR(pmy_block_->pcoord->dx2v(NGHOST));
-  Real dx3sq = SQR(pmy_block_->pcoord->dx3v(NGHOST));
   //      ACTION                     (slow, mid, fast)
   // Initial block decomposition          (k,j,i)
   // Remap to x-pencil, perform FFT in i  (k,j,i)
   // Remap to y-pencil, perform FFT in j  (i,k,j)
   // Remap to z-pencil, perform FFT in k  (j,i,k)
   // Apply Kernel                         (j,i,k)
+
+  int idx;
+  Real kx, ky, kz;
+  Real kernel;
+  Real dx1sq = SQR(pmy_block_->pcoord->dx1v(NGHOST));
+  Real dx2sq = SQR(pmy_block_->pcoord->dx2v(NGHOST));
+  Real dx3sq = SQR(pmy_block_->pcoord->dx3v(NGHOST));
+
+#ifdef GRAV_PERIODIC
   for (int j=0; j<out_nx2; j++) {
     for (int i=0; i<out_nx1; i++) {
       for (int k=0; k<out_nx3; k++) {
@@ -69,6 +94,8 @@ void BlockFFTGravity::ApplyKernel() {
       }
     }
   }
+#endif
+
   return;
 }
 

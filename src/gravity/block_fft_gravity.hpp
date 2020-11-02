@@ -27,6 +27,8 @@ class BlockFFTGravity : public BlockFFT {
  public:
   BlockFFTGravity(MeshBlock *pmb);
   ~BlockFFTGravity();
+  void ExecuteForward() final;
+  void ExecuteBackward() final;
   void ApplyKernel() final;
   void Solve(int stage);
 

@@ -43,8 +43,8 @@ class BlockFFT {
   void LoadSource(const AthenaArray<Real> &src);
   void RetrieveResult(AthenaArray<Real> &dst);
   virtual void ExecuteForward();
-  virtual void ApplyKernel();
   virtual void ExecuteBackward();
+  virtual void ApplyKernel();
 
   // data
   const int is, ie, js, je, ks, ke; // meshblock indices

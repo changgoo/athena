@@ -45,6 +45,9 @@
 // include self gravity? default=0 (false)
 #define SELF_GRAVITY_ENABLED @SELF_GRAVITY_ENABLED@
 
+// set gravity boundary condition
+#define @GRAV_BC_OPTION@
+
 // include radiative transfer? default=0 (false)
 #define RADIATION_ENABLED 0
 

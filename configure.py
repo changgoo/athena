@@ -677,6 +677,9 @@ else:
 
     if args['grav'] == "blockfft":
         definitions['SELF_GRAVITY_ENABLED'] = '3'
+        # TODO in future, grav={fft, mg, fft_disk, fft_obc, ...}
+        # define GRAV_PERIODIC, GRAV_DISK, GRAV_OPEN, etc. depending on the option
+        definitions['GRAV_BC_OPTION'] = 'GRAV_PERIODIC'
         if not args['fft']:
             raise SystemExit(
                 '### CONFIGURE ERROR: FFT Poisson solver only be used with FFT')
