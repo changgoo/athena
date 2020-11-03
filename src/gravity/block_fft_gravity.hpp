@@ -28,10 +28,9 @@ class BlockFFTGravity : public BlockFFT {
  public:
   BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin);
   ~BlockFFTGravity();
-#ifndef GRAV_PERIODIC
   void ExecuteForward() final;
-#endif
   void ApplyKernel() final;
+  void ExecuteBackward() final;
   void Solve(int stage);
 
  private:
@@ -40,6 +39,7 @@ class BlockFFTGravity : public BlockFFT {
   Real dx1sq_,dx2sq_,dx3sq_;
   Real Lx1_,Lx2_,Lx3_;
   const std::complex<Real> I_;
+  std::complex<Real> *in_e_,*in_o_;
 };
 
 #endif // GRAVITY_BLOCK_FFT_GRAVITY_HPP_
