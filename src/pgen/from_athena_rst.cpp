@@ -126,6 +126,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     data.NewAthenaArray(Nz, Ny, Nx);
             
     //Read the density
+    if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0) printf("Reading density ... \n");
     read_rst(rstfile, "DENSITY", data, Nx, Ny, Nz);
     for (int k=ks; k<=ke; ++k) {
       for (int j=js; j<=je; ++j) {
@@ -134,6 +135,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     }}}
     
     //Read the x1-momentum
+    if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0) printf("Reading x1-momentum ... \n");
     read_rst(rstfile, "1-MOMENTUM", data, Nx, Ny, Nz);
     for (int k=ks; k<=ke; ++k) {
       for (int j=js; j<=je; ++j) {
@@ -142,6 +144,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     }}}
     
     //Read the x2-momentum
+    if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0) printf("Reading x2-momentum ... \n");
     read_rst(rstfile, "2-MOMENTUM", data, Nx, Ny, Nz);
     for (int k=ks; k<=ke; ++k) {
       for (int j=js; j<=je; ++j) {
@@ -150,6 +153,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     }}}
     
     //Read the x3-momentum
+    if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0) printf("Reading x3-momentum ... \n");
     read_rst(rstfile, "3-MOMENTUM", data, Nx, Ny, Nz);
     for (int k=ks; k<=ke; ++k) {
       for (int j=js; j<=je; ++j) {
@@ -158,6 +162,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     }}}
     
     //Read the energy density
+    if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0) printf("Reading energy density ... \n");
     read_rst(rstfile, "ENERGY", data, Nx, Ny, Nz);
     for (int k=ks; k<=ke; ++k) {
       for (int j=js; j<=je; ++j) {
@@ -173,6 +178,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       
       //Read the face-centered x1 B-field 
       data_b.NewAthenaArray(Nz,Ny,Nx+1);
+      if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0) printf("Reading x1 B-field ... \n");
       read_rst(rstfile, "1-FIELD", data_b, Nx+1, Ny, Nz);
       for (int k=ks; k<=ke; ++k) {
         for (int j=js; j<=je; ++j) {
@@ -183,6 +189,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     
       //Read the face-centered x2 B-field 
       data_b.NewAthenaArray(Nz,Ny+1,Nx);
+      if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0) printf("Reading x2 B-field ... \n");
       read_rst(rstfile, "2-FIELD", data_b, Nx, Ny+1, Nz);
       for (int k=ks; k<=ke; ++k) {
         for (int j=js; j<=je+1; ++j) {
@@ -193,6 +200,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     
       //Read the face-centered x3 B-field 
       data_b.NewAthenaArray(Nz+1,Ny,Nx);
+      if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0) printf("Reading x3 B-field ... \n");
       read_rst(rstfile, "3-FIELD", data_b, Nx, Ny, Nz+1);
       for (int k=ks; k<=ke+1; ++k) {
         for (int j=js; j<=je; ++j) {

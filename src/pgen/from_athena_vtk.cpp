@@ -28,18 +28,31 @@
 #include "../parameter_input.hpp"
 #include "../utils/utils.hpp"
 
-//----------------------------------------------------------------------------------------
+//function to split a string into a vector
+static std::vector<std::string> split(std::string str, char delimiter);
+//function to get rid of white space leading/trailing a string
+static void trim(std::string &s);
+static void ath_bswap(void *vdat, int len, int cnt);
+//functions to read data field from vtk files
+static void read_vtk(MeshBlock *mb, std::string vtkdir, std::string vtkfile0, std::string field, int component, AthenaArray<Real> &data);
+
 //! \fn void MeshBlock::ProblemGenerator(ParameterInput *pin)
 //! \brief Problem Generator to initialize mesh by reading in athena rst files
-
+//! 
+//! Note that this Problem Generator can be used only to read vtk files corresponding to 
+//! times t that are integer multiples of 1/Omega, where Omega is the Galactic Rotation
+                     
 void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
   int ierr;
-
+  std::string vtkdir = pin->GetString("problem", "vtk_directory");
+  std::string vtkfile0 = pin->GetString("problem", "vtk_file");
+  
   //dimensions of meshblock
   const int Nx = ie - is + 1;
   const int Ny = je - js + 1;
   const int Nz = ke - ks + 1;
+  
   //dimensions of mesh
   const int Nx_mesh = pmy_mesh->mesh_size.nx1;
   const int Ny_mesh = pmy_mesh->mesh_size.nx2;
@@ -50,89 +63,30 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   AthenaArray<Real> b; //needed for PrimitiveToConserved()
   b.NewAthenaArray(Nz,Ny,Nz);
 
-  std::stringstream msg; //error message
-  std::string vtkfile; //corresponding vtk file for this meshblock
-  std::string vtkdir = pin->GetString("problem", "vtkdirectory");
-  std::string vtkfile0 = pin->GetString("problem", "vtkfile");
   int gis = loc.lx1 * Nx;
   int gjs = loc.lx2 * Ny;
   int gks = loc.lx3 * Nz;
 
-  //TIGRESS parameters//
-  int first_id = pin->GetInteger("problem", "first_id");
-  int last_id = pin->GetInteger("problem", "last_id");
-  int tigress_xmeshblocks = pin->GetInteger("problem", "tigress_xmeshblocks");
-  int tigress_ymeshblocks = pin->GetInteger("problem", "tigress_ymeshblocks");
-  int tigress_zmeshblocks = pin->GetInteger("problem", "tigress_zmeshblocks");
-  int Nx_mesh_tigress = pin->GetInteger("problem", "tigress_Nxmesh");
-  int Ny_mesh_tigress = pin->GetInteger("problem", "tigress_Nymesh");
-  int Nz_mesh_tigress = pin->GetInteger("problem", "tigress_Nzmesh");
-  int Nx_tigress = Nx_mesh_tigress/tigress_xmeshblocks;
-  int Ny_tigress = Ny_mesh_tigress/tigress_ymeshblocks;
-  int Nz_tigress = Nz_mesh_tigress/tigress_zmeshblocks;
-
-  Real x1size = pmy_mesh->mesh_size.x1max - pmy_mesh->mesh_size.x1min;
-  Real x2size = pmy_mesh->mesh_size.x2max - pmy_mesh->mesh_size.x2min;
-  Real x3size = pmy_mesh->mesh_size.x3max - pmy_mesh->mesh_size.x3min;
-
-if ((last_id-first_id)*Nz_tigress != Nz_mesh) printf ("Grid parameter check %d \n", (last_id-first_id)*Nz_tigress);
-
   if (Globals::my_rank == 0) {
-    for(int k=first_id; k<last_id; ++k) {
-      for (int j=0; j<tigress_ymeshblocks; ++j) {
-        for (int i=0; i<tigress_xmeshblocks; ++i) {
-          //find the corespoinding athena4.2 global id
-          long int id_old = i + j * tigress_xmeshblocks 
-            + k * tigress_xmeshblocks * tigress_ymeshblocks;
-          //get vtk file name .../id#/problem-id#.????.vtk
-          std::stringstream id_str_stream;
-          id_str_stream << "id" << id_old;// id#
-          std::string id_str = id_str_stream.str();
-          std::size_t pos1 = vtkfile0.find_last_of('/');//last /
-          std::string vtk_name0 = vtkfile0.substr(pos1);// "/bala.????.vtk"
-          std::size_t pos3 = vtk_name0.find_first_of('.');
-          std::string vtk_name;
-          if (k == 0) vtk_name = vtk_name0.substr(0, pos3) + vtk_name0.substr(pos3);
-          else vtk_name = vtk_name0.substr(0, pos3) + "-" + id_str + vtk_name0.substr(pos3);
-          vtkfile = vtkdir + vtk_name;
-          if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0) printf("Reading Density in %s \n", vtkfile.c_str());
-          read_vtk(this, vtkfile, "density", 0, data, i*Nx_tigress, j*Ny_tigress, (k-first_id)*Nz_tigress);
-    }}}
+    if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0) printf("Reading density ... \n");
+    read_vtk(this, vtkdir, vtkfile0, "density", 0, data);
   }
 
-  MPI_Barrier(MPI_COMM_WORLD);
   ierr = MPI_Bcast(data.data(), Nx_mesh*Ny_mesh*Nz_mesh, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
 
   for (int k=ks; k<=ke; ++k) {
     for (int j=js; j<=je; ++j) {
       for (int i=is; i<=ie; ++i) {
         phydro->w(IDN, k, j, i) = data(k-ks+gks, j-js+gjs, i-is+gis);
+        //printf ("%e \n", data(k-ks+gks, j-js+gjs, i-is+gis));
   }}}
-
+  
+  
   if (Globals::my_rank == 0) {
-    for(int k=first_id; k<last_id; ++k) {
-      for (int j=0; j<tigress_ymeshblocks; ++j) {
-        for (int i=0; i<tigress_xmeshblocks; ++i) {
-          //find the corespoinding athena4.2 global id
-          long int id_old = i + j * tigress_xmeshblocks 
-            + k * tigress_xmeshblocks * tigress_ymeshblocks;
-          //get vtk file name .../id#/problem-id#.????.vtk
-          std::stringstream id_str_stream;
-          id_str_stream << "id" << id_old;// id#
-          std::string id_str = id_str_stream.str();
-          std::size_t pos1 = vtkfile0.find_last_of('/');//last /
-          std::string vtk_name0 = vtkfile0.substr(pos1);// "/bala.????.vtk"
-          std::size_t pos3 = vtk_name0.find_first_of('.');
-          std::string vtk_name;
-          if (k == 0) vtk_name = vtk_name0.substr(0, pos3) + vtk_name0.substr(pos3);
-          else vtk_name = vtk_name0.substr(0, pos3) + "-" + id_str + vtk_name0.substr(pos3);
-          vtkfile = vtkdir + vtk_name;
-          if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0) printf("Reading Pressure in %s \n", vtkfile.c_str());
-          read_vtk(this, vtkfile, "pressure", 0, data, i*Nx_tigress, j*Ny_tigress, (k-first_id)*Nz_tigress);
-    }}}
+    if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0) printf("Reading pressure ... \n");
+    read_vtk(this, vtkdir, vtkfile0, "pressure", 0, data);
   }
-
-  MPI_Barrier(MPI_COMM_WORLD);
+  
   ierr = MPI_Bcast(data.data(), Nx_mesh*Ny_mesh*Nz_mesh, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
 
   for (int k=ks; k<=ke; ++k) {
@@ -140,250 +94,137 @@ if ((last_id-first_id)*Nz_tigress != Nz_mesh) printf ("Grid parameter check %d \
       for (int i=is; i<=ie; ++i) {
         phydro->w(IPR, k, j, i) = data(k-ks+gks, j-js+gjs, i-is+gis);
   }}}
-
-  if (Globals::my_rank == 0) {
-    for(int k=first_id; k<last_id; ++k) {
-      for (int j=0; j<tigress_ymeshblocks; ++j) {
-        for (int i=0; i<tigress_xmeshblocks; ++i) {
-          //find the corespoinding athena4.2 global id
-          long int id_old = i + j * tigress_xmeshblocks 
-            + k * tigress_xmeshblocks * tigress_ymeshblocks;
-          //get vtk file name .../id#/problem-id#.????.vtk
-          std::stringstream id_str_stream;
-          id_str_stream << "id" << id_old;// id#
-          std::string id_str = id_str_stream.str();
-          std::size_t pos1 = vtkfile0.find_last_of('/');//last /
-          std::string vtk_name0 = vtkfile0.substr(pos1);// "/bala.????.vtk"
-          std::size_t pos3 = vtk_name0.find_first_of('.');
-          std::string vtk_name;
-          if (k == 0) vtk_name = vtk_name0.substr(0, pos3) + vtk_name0.substr(pos3);
-          else vtk_name = vtk_name0.substr(0, pos3) + "-" + id_str + vtk_name0.substr(pos3);
-          vtkfile = vtkdir + vtk_name;
-          if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0) printf("Reading velocity x in %s \n", vtkfile.c_str());
-          read_vtk(this, vtkfile, "velocity", 0, data, i*Nx_tigress, j*Ny_tigress, (k-first_id)*Nz_tigress);
-    }}}
-  }
-
-  MPI_Barrier(MPI_COMM_WORLD);
-  ierr = MPI_Bcast(data.data(), Nx_mesh*Ny_mesh*Nz_mesh, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
-
-  for (int k=ks; k<=ke; ++k) {
-    for (int j=js; j<=je; ++j) {
-      for (int i=is; i<=ie; ++i) {
-    if (pcr->v_ini > 0) phydro->w(IVX, k, j, i) = data(k-ks+gks, j-js+gjs, i-is+gis);
-    else phydro->w(IVX, k, j, i) = 0;
-  }}}
-
-  if (Globals::my_rank == 0) {
-    for(int k=first_id; k<last_id; ++k) {
-      for (int j=0; j<tigress_ymeshblocks; ++j) {
-        for (int i=0; i<tigress_xmeshblocks; ++i) {
-          //find the corespoinding athena4.2 global id
-          long int id_old = i + j * tigress_xmeshblocks 
-            + k * tigress_xmeshblocks * tigress_ymeshblocks;
-          //get vtk file name .../id#/problem-id#.????.vtk
-          std::stringstream id_str_stream;
-          id_str_stream << "id" << id_old;// id#
-          std::string id_str = id_str_stream.str();
-          std::size_t pos1 = vtkfile0.find_last_of('/');//last /
-          std::string vtk_name0 = vtkfile0.substr(pos1);// "/bala.????.vtk"
-          std::size_t pos3 = vtk_name0.find_first_of('.');
-          std::string vtk_name;
-          if (k == 0) vtk_name = vtk_name0.substr(0, pos3) + vtk_name0.substr(pos3);
-          else vtk_name = vtk_name0.substr(0, pos3) + "-" + id_str + vtk_name0.substr(pos3);
-          vtkfile = vtkdir + vtk_name;
-          if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0) printf("Reading velocity y in %s \n", vtkfile.c_str());
-          read_vtk(this, vtkfile, "velocity", 1, data, i*Nx_tigress, j*Ny_tigress, (k-first_id)*Nz_tigress);
-    }}}
-  }
-
-  MPI_Barrier(MPI_COMM_WORLD);
-  ierr = MPI_Bcast(data.data(), Nx_mesh*Ny_mesh*Nz_mesh, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
-
-  for (int k=ks; k<=ke; ++k) {
-    for (int j=js; j<=je; ++j) {
-      for (int i=is; i<=ie; ++i) {
-    if (pcr->v_ini> 0) phydro->w(IVY, k, j, i) = data(k-ks+gks, j-js+gjs, i-is+gis);
-    else phydro->w(IVY, k, j, i) = 0;
-  }}}
-
-  if (Globals::my_rank == 0) {
-    for(int k=first_id; k<last_id; ++k) {
-      for (int j=0; j<tigress_ymeshblocks; ++j) {
-        for (int i=0; i<tigress_xmeshblocks; ++i) {
-          //find the corespoinding athena4.2 global id
-          long int id_old = i + j * tigress_xmeshblocks 
-            + k * tigress_xmeshblocks * tigress_ymeshblocks;
-          //get vtk file name .../id#/problem-id#.????.vtk
-          std::stringstream id_str_stream;
-          id_str_stream << "id" << id_old;// id#
-          std::string id_str = id_str_stream.str();
-          std::size_t pos1 = vtkfile0.find_last_of('/');//last /
-          std::string vtk_name0 = vtkfile0.substr(pos1);// "/bala.????.vtk"
-          std::size_t pos3 = vtk_name0.find_first_of('.');
-          std::string vtk_name;
-          if (k == 0) vtk_name = vtk_name0.substr(0, pos3) + vtk_name0.substr(pos3);
-          else vtk_name = vtk_name0.substr(0, pos3) + "-" + id_str + vtk_name0.substr(pos3);
-          vtkfile = vtkdir + vtk_name;
-          if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0) printf("Reading velocity z in %s \n", vtkfile.c_str());
-          read_vtk(this, vtkfile, "velocity", 2, data, i*Nx_tigress, j*Ny_tigress, (k-first_id)*Nz_tigress);
-    }}}
-  }
-
-  MPI_Barrier(MPI_COMM_WORLD);
-  ierr = MPI_Bcast(data.data(), Nx_mesh*Ny_mesh*Nz_mesh, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
-
-  for (int k=ks; k<=ke; ++k) {
-    for (int j=js; j<=je; ++j) {
-      for (int i=is; i<=ie; ++i) {
-    if (pcr->v_ini > 0) phydro->w(IVZ, k, j, i) = data(k-ks+gks, j-js+gjs, i-is+gis);
-    else phydro->w(IVZ, k, j, i) = 0;
-  }}}  
-
-  if(MAGNETIC_FIELDS_ENABLED){
+  
   
   if (Globals::my_rank == 0) {
-    for(int k=first_id; k<last_id; ++k) {
-      for (int j=0; j<tigress_ymeshblocks; ++j) {
-      for (int i=0; i<tigress_xmeshblocks; ++i) {
-        //find the corespoinding athena4.2 global id
-        long int id_old = i + j * tigress_xmeshblocks 
-          + k * tigress_xmeshblocks * tigress_ymeshblocks;
-        //get vtk file name .../id#/problem-id#.????.vtk
-        std::stringstream id_str_stream;
-        id_str_stream << "id" << id_old;// id#
-        std::string id_str = id_str_stream.str();
-        std::size_t pos1 = vtkfile0.find_last_of('/');//last /
-        std::string vtk_name0 = vtkfile0.substr(pos1);// "/bala.????.vtk"
-        std::size_t pos3 = vtk_name0.find_first_of('.');
-        std::string vtk_name;
-        if (k == 0) vtk_name = vtk_name0.substr(0, pos3) + vtk_name0.substr(pos3);
-        else vtk_name = vtk_name0.substr(0, pos3) + "-" + id_str + vtk_name0.substr(pos3);
-        vtkfile = vtkdir + vtk_name;
-        if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0) printf("Reading Bx in %s \n", vtkfile.c_str());
-        read_vtk(this, vtkfile, "cell_centered_B", 0, data, i*Nx_tigress, j*Ny_tigress, (k-first_id)*Nz_tigress);
-      }}}
+    if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0) printf("Reading x1-velocity ... \n");
+    read_vtk(this, vtkdir, vtkfile0, "velocity", 0, data);
+  }
+
+  ierr = MPI_Bcast(data.data(), Nx_mesh*Ny_mesh*Nz_mesh, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
+
+  for (int k=ks; k<=ke; ++k) {
+    for (int j=js; j<=je; ++j) {
+      for (int i=is; i<=ie; ++i) {
+        phydro->w(IVX, k, j, i) = data(k-ks+gks, j-js+gjs, i-is+gis);
+  }}}
+  
+  
+  if (Globals::my_rank == 0) {
+    if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0) printf("Reading x2-velocity ... \n");
+    read_vtk(this, vtkdir, vtkfile0, "velocity", 1, data);
+  }
+
+  ierr = MPI_Bcast(data.data(), Nx_mesh*Ny_mesh*Nz_mesh, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
+
+  for (int k=ks; k<=ke; ++k) {
+    for (int j=js; j<=je; ++j) {
+      for (int i=is; i<=ie; ++i) {
+        phydro->w(IVY, k, j, i) = data(k-ks+gks, j-js+gjs, i-is+gis);
+  }}}
+
+
+  if (Globals::my_rank == 0) {
+    if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0) printf("Reading x3-velocity ... \n");
+    read_vtk(this, vtkdir, vtkfile0, "velocity", 2, data);
+  }
+  
+  ierr = MPI_Bcast(data.data(), Nx_mesh*Ny_mesh*Nz_mesh, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
+
+  for (int k=ks; k<=ke; ++k) {
+    for (int j=js; j<=je; ++j) {
+      for (int i=is; i<=ie; ++i) {
+        phydro->w(IVZ, k, j, i) = data(k-ks+gks, j-js+gjs, i-is+gis);
+  }}}
+  
+  if(MAGNETIC_FIELDS_ENABLED){
+    
+    AthenaArray<Real> data_B; //temporary array to store data of the entire face-centered magnetic field
+    
+    data_B.NewAthenaArray(Nz_mesh, Ny_mesh, Nx_mesh+2);
+    
+    if (Globals::my_rank == 0) {
+      if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0) printf("Reading x1 B-field ... \n");
+      read_vtk(this, vtkdir, vtkfile0, "cell_centered_B", 0, data);
+    }
+    
+    ierr = MPI_Bcast(data.data(), Nx_mesh*Ny_mesh*Nz_mesh, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
+    
+    for (int k=0; k<=Nz_mesh-1; ++k) {
+      for (int j=0; j<=Ny_mesh-1; ++j) {
+        for (int i=0; i<=Nx_mesh-1; ++i) {
+          data_B(k,j,i+1) = data(k,j,i);
+        }  
+      data_B(k,j,0) = data_B(k,j,Nx_mesh); //periodic boundary conditions along the x-direction
+      data_B(k,j,Nx_mesh+1) = data_B(k,j,1);
+    }}
+    
+    for (int k=ks; k<=ke; ++k) {
+      for (int j=js; j<=je; ++j) {
+        for (int i=is; i<=ie+1; ++i) {
+          pfield->b.x1f(k,j,i) = 0.5*(data_B(k-ks+gks, j-js+gjs, i-is+gis)+data_B(k-ks+gks, j-js+gjs, i+1-is+gis));  
+    }}}  
+    
+    data_B.DeleteAthenaArray();
+    
+    
+    if (Globals::my_rank == 0) {
+      if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0) printf("Reading x2 B-field ... \n");
+      read_vtk(this, vtkdir, vtkfile0, "cell_centered_B", 1, data);
     }
 
-  MPI_Barrier(MPI_COMM_WORLD);
-  ierr = MPI_Bcast(data.data(), Nx_mesh*Ny_mesh*Nz_mesh, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
-  
-  AthenaArray<Real> data_B; //temporary array to store data of the entire mesh
-  data_B.NewAthenaArray(Nz_mesh, Ny_mesh, Nx_mesh+2);
-
-  for (int k=0; k<=Nz_mesh-1; ++k) {
-    for (int j=0; j<=Ny_mesh-1; ++j) {
+    ierr = MPI_Bcast(data.data(), Nx_mesh*Ny_mesh*Nz_mesh, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
+    
+    data_B.NewAthenaArray(Nz_mesh, Ny_mesh+2, Nx_mesh);
+    
+    for (int k=0; k<=Nz_mesh-1; ++k) {
       for (int i=0; i<=Nx_mesh-1; ++i) {
-        data_B(k,j,i+1) = data(k,j,i);
+        for (int j=0; j<=Ny_mesh-1; ++j) {
+          data_B(k,j+1,i) = data(k,j,i);
       }  
-    data_B(k,j,0) = data(k,j,Nx_mesh-1); //periodic boundary conditions
-    data_B(k,j,Nx_mesh+1) = data(k,j,0);
-  }}
+      data_B(k,0,i) = data_B(k,Ny_mesh,i); //periodic boundary conditions along the y-direction
+      data_B(k,Ny_mesh+1,i) = data_B(k,1,i);
+    }}
 
-  for (int k=ks; k<=ke; ++k) {
-    for (int j=js; j<=je; ++j) {
-      for (int i=is; i<=ie+1; ++i) {
-        pfield->b.x1f(k,j,i) = 0.5*(data_B(k-ks+gks, j-js+gjs, i-is+gis)+data_B(k-ks+gks, j-js+gjs, i+1-is+gis));  
-  }}}  
+    for (int k=ks; k<=ke; ++k) {
+      for (int j=js; j<=je+1; ++j) {
+        for (int i=is; i<=ie; ++i) {
+          pfield->b.x2f(k,j,i) = 0.5*(data_B(k-ks+gks, j-js+gjs, i-is+gis)+data_B(k-ks+gks, j+1-js+gjs, i-is+gis));  
+      }}}  
 
-  data_B.DeleteAthenaArray();
+    data_B.DeleteAthenaArray();
+    
+    
+    if (Globals::my_rank == 0) {
+      if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0) printf("Reading x3 B-field ... \n");
+      read_vtk(this, vtkdir, vtkfile0, "cell_centered_B", 2, data);
+    }
 
-  if (Globals::my_rank == 0) {
-    for(int k=first_id; k<last_id; ++k) {
-      for (int j=0; j<tigress_ymeshblocks; ++j) {
-        for (int i=0; i<tigress_xmeshblocks; ++i) {
-          //find the corespoinding athena4.2 global id
-          long int id_old = i + j * tigress_xmeshblocks 
-            + k * tigress_xmeshblocks * tigress_ymeshblocks;
-          //get vtk file name .../id#/problem-id#.????.vtk
-          std::stringstream id_str_stream;
-          id_str_stream << "id" << id_old;// id#
-          std::string id_str = id_str_stream.str();
-          std::size_t pos1 = vtkfile0.find_last_of('/');//last /
-          std::string vtk_name0 = vtkfile0.substr(pos1);// "/bala.????.vtk"
-          std::size_t pos3 = vtk_name0.find_first_of('.');
-          std::string vtk_name;
-          if (k == 0) vtk_name = vtk_name0.substr(0, pos3) + vtk_name0.substr(pos3);
-          else vtk_name = vtk_name0.substr(0, pos3) + "-" + id_str + vtk_name0.substr(pos3);
-          vtkfile = vtkdir + vtk_name;
-          if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0) printf("Reading By in %s \n", vtkfile.c_str());
-          read_vtk(this, vtkfile, "cell_centered_B", 1, data, i*Nx_tigress, j*Ny_tigress, (k-first_id)*Nz_tigress);
-    }}}
-  }
-
-  MPI_Barrier(MPI_COMM_WORLD);
-  ierr = MPI_Bcast(data.data(), Nx_mesh*Ny_mesh*Nz_mesh, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
-  
-  data_B.NewAthenaArray(Nz_mesh, Ny_mesh+2, Nx_mesh);
-
-  for (int k=0; k<=Nz_mesh-1; ++k) {
+    ierr = MPI_Bcast(data.data(), Nx_mesh*Ny_mesh*Nz_mesh, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
+    
+    data_B.NewAthenaArray(Nz_mesh+2, Ny_mesh, Nx_mesh);
+    
     for (int i=0; i<=Nx_mesh-1; ++i) {
       for (int j=0; j<=Ny_mesh-1; ++j) {
-        data_B(k,j+1,i) = data(k,j,i);
-    }  
-    data_B(k,0,i) = data(k,Ny_mesh-1,i); //periodic boundary conditions
-    data_B(k,Ny_mesh+1,i) = data(k,0,i);
-  }}
+        for (int k=0; k<=Nz_mesh-1; ++k) {
+          data_B(k+1,j,i) = data(k,j,i);
+        }  
+      data_B(0,j,i) = data_B(1,j,i); //outflow boundary conditions along the z-direction
+      data_B(Nz_mesh+1,j,i) = data_B(Nz_mesh,j,i);
+    }}
 
-  for (int k=ks; k<=ke; ++k) {
-    for (int j=js; j<=je+1; ++j) {
-      for (int i=is; i<=ie; ++i) {
-        pfield->b.x2f(k,j,i) = 0.5*(data_B(k-ks+gks, j-js+gjs, i-is+gis)+data_B(k-ks+gks, j+1-js+gjs, i-is+gis));  
+    for (int k=ks; k<=ke+1; ++k) {
+      for (int j=js; j<=je; ++j) {
+        for (int i=is; i<=ie; ++i) {
+          pfield->b.x3f(k,j,i) = 0.5*(data_B(k-ks+gks, j-js+gjs, i-is+gis)+data_B(k+1-ks+gks, j-js+gjs, i-is+gis));  
     }}}  
 
-  data_B.DeleteAthenaArray();
+    data_B.DeleteAthenaArray();  
 
+    pfield->CalculateCellCenteredField(pfield->b,pfield->bcc,pcoord,is,ie,js,je,ks,ke);
 
-  if (Globals::my_rank == 0) {
-    for(int k=first_id; k<last_id; ++k) {
-      for (int j=0; j<tigress_ymeshblocks; ++j) {
-        for (int i=0; i<tigress_xmeshblocks; ++i) {
-          //find the corespoinding athena4.2 global id
-          long int id_old = i + j * tigress_xmeshblocks 
-            + k * tigress_xmeshblocks * tigress_ymeshblocks;
-          //get vtk file name .../id#/problem-id#.????.vtk
-          std::stringstream id_str_stream;
-          id_str_stream << "id" << id_old;// id#
-          std::string id_str = id_str_stream.str();
-          std::size_t pos1 = vtkfile0.find_last_of('/');//last /
-          std::string vtk_name0 = vtkfile0.substr(pos1);// "/bala.????.vtk"
-          std::size_t pos3 = vtk_name0.find_first_of('.');
-          std::string vtk_name;
-          if (k == 0) vtk_name = vtk_name0.substr(0, pos3) + vtk_name0.substr(pos3);
-          else vtk_name = vtk_name0.substr(0, pos3) + "-" + id_str + vtk_name0.substr(pos3);
-          vtkfile = vtkdir + vtk_name;
-          if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0) printf("Reading Bz in %s \n", vtkfile.c_str());
-          read_vtk(this, vtkfile, "cell_centered_B", 2, data, i*Nx_tigress, j*Ny_tigress, (k-first_id)*Nz_tigress);
-    }}}
-  }
-
-  MPI_Barrier(MPI_COMM_WORLD);
-  ierr = MPI_Bcast(data.data(), Nx_mesh*Ny_mesh*Nz_mesh, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
-  
-  data_B.NewAthenaArray(Nz_mesh+2, Ny_mesh, Nx_mesh);
-
-  for (int i=0; i<=Nx_mesh-1; ++i) {
-    for (int j=0; j<=Ny_mesh-1; ++j) {
-      for (int k=0; k<=Nz_mesh-1; ++k) {
-        data_B(k+1,j,i) = data(k,j,i);
-      }  
-    data_B(0,j,i) = data(0,j,i); //outflow boundary conditions
-    data_B(Nz_mesh+1,j,i) = data(Nz_mesh-1,j,i);
-  }}
-
-  for (int k=ks; k<=ke+1; ++k) {
-    for (int j=js; j<=je; ++j) {
-      for (int i=is; i<=ie; ++i) {
-        pfield->b.x3f(k,j,i) = 0.5*(data_B(k-ks+gks, j-js+gjs, i-is+gis)+data_B(k+1-ks+gks, j-js+gjs, i-is+gis));  
-  }}}  
-
-  data_B.DeleteAthenaArray();  
-
-  pfield->CalculateCellCenteredField(pfield->b,pfield->bcc,pcoord,is,ie,js,je,ks,ke);
-
-  }//End MHD
-
-     
+  } //End MHD */ 
+    
   data.DeleteAthenaArray();
   
   if(MAGNETIC_FIELDS_ENABLED){
@@ -393,12 +234,14 @@ if ((last_id-first_id)*Nz_tigress != Nz_mesh) printf ("Grid parameter check %d \
     peos->PrimitiveToConserved(phydro->w, b, phydro->u, pcoord,
                                      is, ie, js, je, ks, ke);
   }
-  b.DeleteAthenaArray();          
+  b.DeleteAthenaArray();         
   return;
 }
 
-static void read_vtk(MeshBlock *mb, std::string filename, std::string field,
-                    int component, AthenaArray<Real> &data, int xstart, int ystart, int zstart) 
+//! \fn void read_vtk(MeshBlock *mb, std::string vtkdir, std::string vtkfile0, 
+//!                   std::string field, int component, AthenaArray<Real> &data) 
+//! \brief Read the field values in the athena rst file 
+static void read_vtk(MeshBlock *mb, std::string vtkdir, std::string vtkfile0, std::string field, int component, AthenaArray<Real> &data) 
 {
   std::stringstream msg;
   FILE *fp = NULL;
@@ -408,12 +251,16 @@ static void read_vtk(MeshBlock *mb, std::string filename, std::string field,
   const std::string athena_header3 = "# vtk DataFile Version 3.0"; //athena4.2 header
   bool SHOW_OUTPUT = false;
   int Nx_vtk, Ny_vtk, Nz_vtk; //dimensions of vtk files
-  //dimensions of meshblock
-  int Nx_mb, Ny_mb, Nz_mb;
   
-  Nx_mb = mb->ie - mb->is + 1;
-  Ny_mb = mb->je - mb->js + 1;
-  Nz_mb = mb->ke - mb->ks + 1;
+  //dimensions of meshblock
+  int Nx_mb = mb->ie - mb->is + 1;
+  int Ny_mb = mb->je - mb->js + 1;
+  int Nz_mb = mb->ke - mb->ks + 1;
+  
+  //dimensions of mesh
+  int Nx_mesh = mb->pmy_mesh->mesh_size.nx1;
+  int Ny_mesh = mb->pmy_mesh->mesh_size.nx2;
+  int Nz_mesh = mb->pmy_mesh->mesh_size.nx3;
 
   double ox_vtk, oy_vtk, oz_vtk; //origins of vtk file
   double dx_vtk, dy_vtk, dz_vtk; //spacings of vtk file
@@ -423,9 +270,12 @@ static void read_vtk(MeshBlock *mb, std::string filename, std::string field,
   int retval, nread; //file handler return value
   float fdat, fvec[3], ften[9];//store float format scaler, vector, and tensor
 
-  if ( (fp = fopen(filename.c_str(),"r")) == NULL ) {
+  std::string vtkfile;
+  vtkfile = vtkdir + vtkfile0;
+  
+  if ( (fp = fopen(vtkfile.c_str(),"r")) == NULL ) {
     msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
-      << "Unable to open file: " << filename << std::endl;
+      << "Unable to open file: " << vtkfile << std::endl;
     throw std::runtime_error(msg.str().c_str());
   }
   //get header
@@ -461,7 +311,7 @@ static void read_vtk(MeshBlock *mb, std::string filename, std::string field,
   if (line != "BINARY") {
     fclose(fp);
     msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
-      << "Unsupported file format: " << line << std::endl;
+    << "Unsupported file format: " << line << std::endl;
     throw std::runtime_error(msg.str().c_str());
   }
 
@@ -475,7 +325,7 @@ static void read_vtk(MeshBlock *mb, std::string filename, std::string field,
   if (line != "DATASET STRUCTURED_POINTS") {
     fclose(fp);
     msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
-      << "Unsupported file data set structure: " << line << std::endl;
+    << "Unsupported file data set structure: " << line << std::endl;
     throw std::runtime_error(msg.str().c_str());
   }
 
@@ -513,113 +363,166 @@ static void read_vtk(MeshBlock *mb, std::string filename, std::string field,
     std::cout << cline;
   }
   sscanf(cline,"CELL_DATA %d\n",&cell_dat_vtk);
-
-  // Now read the rest of the data in 
-  while (true) {
- 
-      retval = fscanf(fp,"%s %s %s\n", type, variable, format);
-      if (retval == EOF) { // Assuming no errors, we are done.
-        fclose(fp); //close file
-        return;
-      }
-      if (SHOW_OUTPUT) {
-        printf("%s %s %s\n", type, variable ,format);
-      }
-      //check format
-      if (strcmp(format, "float") != 0) {
-        fclose(fp);
-        msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
-          << "expected  \"float\" format, found " << type << std::endl;
-        throw std::runtime_error(msg.str().c_str());
-      }
-      //check lookup table
-      if (strcmp(type, "SCALARS") == 0) {
-        // Read in the LOOKUP_TABLE (only default supported for now)
-        fscanf(fp,"%s %s\n", t_type, t_format);
-        if (strcmp(t_type, "LOOKUP_TABLE") != 0 || strcmp(t_format, "default") != 0 ) {
-          fclose(fp);
+  fclose(fp); //close file
+  
+  int tigress_zmeshblocks, tigress_ymeshblocks, tigress_xmeshblocks;
+  int tigress_Nx_mesh, tigress_Ny_mesh, tigress_Nz_mesh;
+  int tigress_Nx, tigress_Ny, tigress_Nz;
+  
+  tigress_Nx = Nx_vtk;
+  tigress_Ny = Ny_vtk;
+  tigress_Nz = Nz_vtk;
+  
+  tigress_Nx_mesh = Nx_mesh;
+  tigress_Ny_mesh = Ny_mesh;
+  tigress_Nz_mesh = Nz_mesh;
+  
+  tigress_xmeshblocks = tigress_Nx_mesh/tigress_Nx;
+  tigress_ymeshblocks = tigress_Ny_mesh/tigress_Ny;
+  tigress_zmeshblocks = tigress_Nz_mesh/tigress_Nz;
+  
+  if (SHOW_OUTPUT) {
+    printf ("Number of meshbloks %d %d %d \n", tigress_xmeshblocks,tigress_ymeshblocks,tigress_zmeshblocks);
+  }
+  
+  for(int k=0; k<tigress_zmeshblocks; ++k) {
+    for (int j=0; j<tigress_ymeshblocks; ++j) {
+      for (int i=0; i<tigress_xmeshblocks; ++i) {
+        //find the corespoinding athena4.2 global id
+        long int id_old = i + j * tigress_xmeshblocks 
+          + k * tigress_xmeshblocks * tigress_ymeshblocks;
+        std::stringstream id_str_stream;
+        id_str_stream << "id" << id_old;// id#
+        std::string id_str = id_str_stream.str();
+        std::size_t pos1 = vtkfile0.find_last_of('/');
+        std::string vtk_name0 = vtkfile0.substr(pos1);
+        std::size_t pos3 = vtk_name0.find_first_of('.');
+        std::string vtk_name;
+        if (k == 0) vtk_name = vtk_name0.substr(0, pos3) + vtk_name0.substr(pos3);
+        else vtk_name = vtk_name0.substr(0, pos3) + "-" + id_str + vtk_name0.substr(pos3);
+        vtkfile = vtkdir + vtk_name;
+        
+        //origin of the meshblock
+        int xstart = i*tigress_Nx;
+        int ystart = j*tigress_Ny;
+        int zstart = k*tigress_Nz;
+        
+        //Reading file
+        if ( (fp = fopen(vtkfile.c_str(),"r")) == NULL ) {
           msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
-            << "Expected \"LOOKUP_TABLE default, found " 
-            << t_type << " " << t_format << std::endl;
+            << "Unable to open file: " << vtkfile << std::endl;
           throw std::runtime_error(msg.str().c_str());
         }
-        if (SHOW_OUTPUT) {
-          printf("%s %s\n", t_type, t_format);
-        }
-      }
-
-      //determine variable type and read data
-      //read scalars
-      if (strcmp(type, "SCALARS") == 0) {
-        if (strcmp(variable, field.c_str()) == 0) {      
-          //printf("  Reading %s...\n", variable);
-          for (int k=0; k<Nz_vtk; k++) {
-            for (int j=0; j<Ny_vtk; j++) {
-              for (int i=0; i<Nx_vtk; i++) {
-                if ((nread = fread(&fdat, sizeof(float), 1, fp)) != 1) {
-                  fclose(fp);
-                  msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
-                    << "Error reading SCALARS... " << std::endl;
-                  throw std::runtime_error(msg.str().c_str());
-                }
-                ath_bswap(&fdat, sizeof(float), 1);
-                data(k+zstart, j+ystart, i+xstart) = fdat;
-              }
+        
+        do{
+          fgets(cline,256,fp);
+        }while(strncmp(cline,"CELL_DATA",9) != 0); //DA RIVEDERE!!
+        
+        // Now read the rest of the data in 
+        while (true) {
+          retval = fscanf(fp,"%s %s %s\n", type, variable, format);
+          if (retval == EOF) { // Assuming no errors, we are done.
+            fclose(fp); //close file
+            break;
+          }
+          if (SHOW_OUTPUT) {
+            printf("%s %s %s\n", type, variable ,format);
+          }
+          //check format
+          if (strcmp(format, "float") != 0) {
+            fclose(fp);
+            msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
+            << "expected  \"float\" format, found " << type << std::endl;
+            throw std::runtime_error(msg.str().c_str());
+          }
+          //check lookup table
+          if (strcmp(type, "SCALARS") == 0) {
+            // Read in the LOOKUP_TABLE (only default supported for now)
+            fscanf(fp,"%s %s\n", t_type, t_format);
+            if (strcmp(t_type, "LOOKUP_TABLE") != 0 || strcmp(t_format, "default") != 0 ) {
+              fclose(fp);
+              msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
+              << "Expected \"LOOKUP_TABLE default, found " 
+              << t_type << " " << t_format << std::endl;
+              throw std::runtime_error(msg.str().c_str());
+            }
+            if (SHOW_OUTPUT) {
+              printf("%s %s\n", t_type, t_format);
             }
           }
-          fclose(fp);
-          return;
-        } else {
-          if (SHOW_OUTPUT) printf("  Skipping %s...\n",variable);
-          fseek(fp, cell_dat_vtk*sizeof(float), SEEK_CUR);        
-        }
-      //read vectors
-      } else if (strcmp(type, "VECTORS") == 0) {
-        if (strcmp(variable, field.c_str()) == 0) {      
 
-          for (int k=0; k<Nz_vtk; k++) {
-            for (int j=0; j<Ny_vtk; j++) {
-              for (int i=0; i<Nx_vtk; i++) {
-                if ((nread = fread(&fvec, sizeof(float), 3, fp)) != 3) {
-                  fclose(fp);
-                  msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
-                    << "Error reading VECTORS... " << std::endl;
-                  throw std::runtime_error(msg.str().c_str());
+          //determine variable type and read data
+          //read scalars
+          if (strcmp(type, "SCALARS") == 0) {
+            if (strcmp(variable, field.c_str()) == 0) {      
+              //printf("  Reading %s...\n", variable);
+              for (int k=0; k<Nz_vtk; k++) {
+                for (int j=0; j<Ny_vtk; j++) {
+                  for (int i=0; i<Nx_vtk; i++) {
+                    if ((nread = fread(&fdat, sizeof(float), 1, fp)) != 1) {
+                      fclose(fp);
+                      msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
+                      << "Error reading SCALARS... " << std::endl;
+                      throw std::runtime_error(msg.str().c_str());
+                    }
+                    ath_bswap(&fdat, sizeof(float), 1);
+                    data(k+zstart, j+ystart, i+xstart) = fdat;
+                  }
                 }
-                ath_bswap(&fvec, sizeof(float), 3);
-                data(k+zstart, j+ystart, i+xstart) = fvec[component];
               }
+              fclose(fp);
+              break;
+            } else {
+              if (SHOW_OUTPUT) printf("  Skipping %s...\n",variable);
+              fseek(fp, cell_dat_vtk*sizeof(float), SEEK_CUR);        
             }
-          }
-          fclose(fp);
-          return;
-        } else {
-          if (SHOW_OUTPUT) printf("  Skipping %s...\n", variable);
-          fseek(fp, 3*cell_dat_vtk*sizeof(float), SEEK_CUR);        
-        }
-      //read tensors, not supported yet
-      } else if (strcmp(type, "TENSORS") == 0) {
-        if (strcmp(variable, field.c_str()) == 0) {      
-          fclose(fp);
-          msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
-            << "TENSORS reading not supported." << std::endl;
-          throw std::runtime_error(msg.str().c_str());
-        } else {
-          if (SHOW_OUTPUT) printf("  Skipping %s...\n", variable);
-          fseek(fp, 9*cell_dat_vtk*sizeof(float), SEEK_CUR);        
-        }
-      } else {
-          fclose(fp);
-          msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
+          //read vectors
+          } else if (strcmp(type, "VECTORS") == 0) {
+            if (strcmp(variable, field.c_str()) == 0) {      
+              for (int k=0; k<Nz_vtk; k++) {
+                for (int j=0; j<Ny_vtk; j++) {
+                  for (int i=0; i<Nx_vtk; i++) {
+                    if ((nread = fread(&fvec, sizeof(float), 3, fp)) != 3) {
+                      fclose(fp);
+                      msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
+                      << "Error reading VECTORS... " << std::endl;
+                      throw std::runtime_error(msg.str().c_str());
+                    }
+                    ath_bswap(&fvec, sizeof(float), 3);
+                    data(k+zstart, j+ystart, i+xstart) = fvec[component];
+                  }
+                }
+              }
+              fclose(fp);
+              break;
+            } else {
+              if (SHOW_OUTPUT) printf("  Skipping %s...\n", variable);
+              fseek(fp, 3*cell_dat_vtk*sizeof(float), SEEK_CUR);        
+              }
+            //read tensors, not supported yet
+          } else if (strcmp(type, "TENSORS") == 0) {
+            if (strcmp(variable, field.c_str()) == 0) {      
+              fclose(fp);
+              msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
+              << "TENSORS reading not supported." << std::endl;
+              throw std::runtime_error(msg.str().c_str());
+            } else {
+              if (SHOW_OUTPUT) printf("  Skipping %s...\n", variable);
+              fseek(fp, 9*cell_dat_vtk*sizeof(float), SEEK_CUR);        
+            }
+          } else {
+            fclose(fp);
+            msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
             << "Input type not supported: " << type << std::endl;
-          throw std::runtime_error(msg.str().c_str());
-      }
-    }
+            throw std::runtime_error(msg.str().c_str());
+          }
+        }
+  }}}
+  
 }
 
 //======================================================================================
 //! \fn static void ath_bswap(void *vdat, int len, int cnt)
-
 //!  \brief Swap bytes, code stolen from Athena4.2, NEMO
 //======================================================================================
 static void ath_bswap(void *vdat, int len, int cnt)
