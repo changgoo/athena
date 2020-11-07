@@ -74,12 +74,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
   ierr = MPI_Bcast(data.data(), Nx_mesh*Ny_mesh*Nz_mesh, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
 
-  for (int k=ks; k<=ke; ++k) {
-    for (int j=js; j<=je; ++j) {
-      for (int i=is; i<=ie; ++i) {
+  for (int k=ks; k<=ke; ++k) 
+    for (int j=js; j<=je; ++j) 
+      for (int i=is; i<=ie; ++i) 
         phydro->w(IDN, k, j, i) = data(k-ks+gks, j-js+gjs, i-is+gis);
-        //printf ("%e \n", data(k-ks+gks, j-js+gjs, i-is+gis));
-  }}}
   
   
   if (Globals::my_rank == 0) {
@@ -89,11 +87,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   
   ierr = MPI_Bcast(data.data(), Nx_mesh*Ny_mesh*Nz_mesh, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
 
-  for (int k=ks; k<=ke; ++k) {
-    for (int j=js; j<=je; ++j) {
-      for (int i=is; i<=ie; ++i) {
+  for (int k=ks; k<=ke; ++k) 
+    for (int j=js; j<=je; ++j) 
+      for (int i=is; i<=ie; ++i) 
         phydro->w(IPR, k, j, i) = data(k-ks+gks, j-js+gjs, i-is+gis);
-  }}}
   
   
   if (Globals::my_rank == 0) {
@@ -103,11 +100,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
   ierr = MPI_Bcast(data.data(), Nx_mesh*Ny_mesh*Nz_mesh, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
 
-  for (int k=ks; k<=ke; ++k) {
-    for (int j=js; j<=je; ++j) {
-      for (int i=is; i<=ie; ++i) {
+  for (int k=ks; k<=ke; ++k) 
+    for (int j=js; j<=je; ++j) 
+      for (int i=is; i<=ie; ++i) 
         phydro->w(IVX, k, j, i) = data(k-ks+gks, j-js+gjs, i-is+gis);
-  }}}
   
   
   if (Globals::my_rank == 0) {
@@ -117,11 +113,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
   ierr = MPI_Bcast(data.data(), Nx_mesh*Ny_mesh*Nz_mesh, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
 
-  for (int k=ks; k<=ke; ++k) {
-    for (int j=js; j<=je; ++j) {
-      for (int i=is; i<=ie; ++i) {
+  for (int k=ks; k<=ke; ++k) 
+    for (int j=js; j<=je; ++j) 
+      for (int i=is; i<=ie; ++i) 
         phydro->w(IVY, k, j, i) = data(k-ks+gks, j-js+gjs, i-is+gis);
-  }}}
 
 
   if (Globals::my_rank == 0) {
@@ -131,11 +126,11 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   
   ierr = MPI_Bcast(data.data(), Nx_mesh*Ny_mesh*Nz_mesh, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
 
-  for (int k=ks; k<=ke; ++k) {
-    for (int j=js; j<=je; ++j) {
-      for (int i=is; i<=ie; ++i) {
+  for (int k=ks; k<=ke; ++k) 
+    for (int j=js; j<=je; ++j) 
+      for (int i=is; i<=ie; ++i) 
         phydro->w(IVZ, k, j, i) = data(k-ks+gks, j-js+gjs, i-is+gis);
-  }}}
+  
   
   if(MAGNETIC_FIELDS_ENABLED){
     
@@ -155,15 +150,15 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         for (int i=0; i<=Nx_mesh-1; ++i) {
           data_B(k,j,i+1) = data(k,j,i);
         }  
-      data_B(k,j,0) = data_B(k,j,Nx_mesh); //periodic boundary conditions along the x-direction
-      data_B(k,j,Nx_mesh+1) = data_B(k,j,1);
-    }}
+        data_B(k,j,0) = data_B(k,j,Nx_mesh); //periodic boundary conditions along the x-direction
+        data_B(k,j,Nx_mesh+1) = data_B(k,j,1);
+      }
+    }
     
-    for (int k=ks; k<=ke; ++k) {
-      for (int j=js; j<=je; ++j) {
-        for (int i=is; i<=ie+1; ++i) {
+    for (int k=ks; k<=ke; ++k) 
+      for (int j=js; j<=je; ++j) 
+        for (int i=is; i<=ie+1; ++i) 
           pfield->b.x1f(k,j,i) = 0.5*(data_B(k-ks+gks, j-js+gjs, i-is+gis)+data_B(k-ks+gks, j-js+gjs, i+1-is+gis));  
-    }}}  
     
     data_B.DeleteAthenaArray();
     
@@ -181,16 +176,16 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       for (int i=0; i<=Nx_mesh-1; ++i) {
         for (int j=0; j<=Ny_mesh-1; ++j) {
           data_B(k,j+1,i) = data(k,j,i);
-      }  
-      data_B(k,0,i) = data_B(k,Ny_mesh,i); //periodic boundary conditions along the y-direction
-      data_B(k,Ny_mesh+1,i) = data_B(k,1,i);
-    }}
+        }  
+        data_B(k,0,i) = data_B(k,Ny_mesh,i); //periodic boundary conditions along the y-direction
+        data_B(k,Ny_mesh+1,i) = data_B(k,1,i);
+      }
+    }
 
-    for (int k=ks; k<=ke; ++k) {
-      for (int j=js; j<=je+1; ++j) {
-        for (int i=is; i<=ie; ++i) {
+    for (int k=ks; k<=ke; ++k) 
+      for (int j=js; j<=je+1; ++j) 
+        for (int i=is; i<=ie; ++i) 
           pfield->b.x2f(k,j,i) = 0.5*(data_B(k-ks+gks, j-js+gjs, i-is+gis)+data_B(k-ks+gks, j+1-js+gjs, i-is+gis));  
-      }}}  
 
     data_B.DeleteAthenaArray();
     
@@ -209,15 +204,15 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         for (int k=0; k<=Nz_mesh-1; ++k) {
           data_B(k+1,j,i) = data(k,j,i);
         }  
-      data_B(0,j,i) = data_B(1,j,i); //outflow boundary conditions along the z-direction
-      data_B(Nz_mesh+1,j,i) = data_B(Nz_mesh,j,i);
-    }}
+        data_B(0,j,i) = data_B(1,j,i); //outflow boundary conditions along the z-direction
+        data_B(Nz_mesh+1,j,i) = data_B(Nz_mesh,j,i);
+      }
+    }
 
-    for (int k=ks; k<=ke+1; ++k) {
-      for (int j=js; j<=je; ++j) {
-        for (int i=is; i<=ie; ++i) {
+    for (int k=ks; k<=ke+1; ++k)
+      for (int j=js; j<=je; ++j)
+        for (int i=is; i<=ie; ++i) 
           pfield->b.x3f(k,j,i) = 0.5*(data_B(k-ks+gks, j-js+gjs, i-is+gis)+data_B(k+1-ks+gks, j-js+gjs, i-is+gis));  
-    }}}  
 
     data_B.DeleteAthenaArray();  
 
@@ -271,7 +266,7 @@ static void read_vtk(MeshBlock *mb, std::string vtkdir, std::string vtkfile0, st
   float fdat, fvec[3], ften[9];//store float format scaler, vector, and tensor
 
   std::string vtkfile;
-  vtkfile = vtkdir + vtkfile0;
+  vtkfile = vtkdir + "id0/" + vtkfile0;
   
   if ( (fp = fopen(vtkfile.c_str(),"r")) == NULL ) {
     msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
@@ -388,19 +383,18 @@ static void read_vtk(MeshBlock *mb, std::string vtkdir, std::string vtkfile0, st
   for(int k=0; k<tigress_zmeshblocks; ++k) {
     for (int j=0; j<tigress_ymeshblocks; ++j) {
       for (int i=0; i<tigress_xmeshblocks; ++i) {
-        //find the corespoinding athena4.2 global id
+        //find the corresponding athena4.2 global id
         long int id_old = i + j * tigress_xmeshblocks 
           + k * tigress_xmeshblocks * tigress_ymeshblocks;
         std::stringstream id_str_stream;
-        id_str_stream << "id" << id_old;// id#
+        id_str_stream << "id" << id_old; // id#
         std::string id_str = id_str_stream.str();
-        std::size_t pos1 = vtkfile0.find_last_of('/');
-        std::string vtk_name0 = vtkfile0.substr(pos1);
-        std::size_t pos3 = vtk_name0.find_first_of('.');
+        std::string vtk_name0 = vtkfile0;
+        std::size_t pos1 = vtk_name0.find_first_of('.');
         std::string vtk_name;
-        if (k == 0) vtk_name = vtk_name0.substr(0, pos3) + vtk_name0.substr(pos3);
-        else vtk_name = vtk_name0.substr(0, pos3) + "-" + id_str + vtk_name0.substr(pos3);
-        vtkfile = vtkdir + vtk_name;
+        if (k == 0) vtk_name = vtk_name0.substr(0, pos1) + vtk_name0.substr(pos1);
+        else vtk_name = vtk_name0.substr(0, pos1) + "-" + id_str + vtk_name0.substr(pos1);
+        vtkfile = vtkdir + id_str + "/" + vtk_name;
         
         //origin of the meshblock
         int xstart = i*tigress_Nx;
@@ -416,7 +410,7 @@ static void read_vtk(MeshBlock *mb, std::string vtkdir, std::string vtkfile0, st
         
         do{
           fgets(cline,256,fp);
-        }while(strncmp(cline,"CELL_DATA",9) != 0); //DA RIVEDERE!!
+        }while(strncmp(cline,"CELL_DATA",9) != 0); 
         
         // Now read the rest of the data in 
         while (true) {
@@ -517,7 +511,9 @@ static void read_vtk(MeshBlock *mb, std::string vtkdir, std::string vtkfile0, st
             throw std::runtime_error(msg.str().c_str());
           }
         }
-  }}}
+      }
+    }
+  }
   
 }
 
