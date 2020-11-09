@@ -59,10 +59,8 @@ class BlockFFT {
   int mid_nx1, mid_nx2, mid_nx3;
   int slow_ilo, slow_ihi, slow_jlo, slow_jhi, slow_klo, slow_khi;
   int slow_nx1, slow_nx2, slow_nx3;
-#ifdef FFT
-#ifdef MPI_PARALLEL
+#if defined(FFT) && defined(MPI_PARALLEL)
   FFT3d *pf3d;
-#endif
 #endif
 
  protected:

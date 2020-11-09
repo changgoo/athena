@@ -108,6 +108,25 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           Real a0 = pin->GetOrAddReal("problem","a0",1.0);
           den = (4.0*SQR(a0)*r2-6.0*a0)*std::exp(-a0*r2);
           phia = four_pi_G*std::exp(-a0*r2);
+        } else if (iprob == 4) {
+          Real h = pin->GetOrAddReal("problem","h",0.5);
+          Real q = pin->GetOrAddReal("problem","qshear",0);
+          Real omg = pin->GetOrAddReal("problem","Omega0",0);
+          Real t0 = pin->GetOrAddReal("time","start_time",0);
+          Real qomt = q*omg*t0;
+          Real ky0 = TWO_PI/x2size;
+          Real ky = std::sqrt(1. + SQR(qomt))*ky0;
+          if (std::abs(z) < h) {
+            den = (2.0 + std::cos(ky0*(y+qomt*x)))/(2.*h);
+            phia = (SQR(z)+SQR(h))/(2.*h) - 1./(2.*h*SQR(ky))*
+              (1.-std::exp(-ky*h)*std::cosh(ky*z))*std::cos(ky0*(y+qomt*x));
+          }
+          else {
+            den = 0.0;
+            phia = std::abs(z) - std::exp(-ky*std::abs(z))/(2.*h*SQR(ky))*
+              std::sinh(ky*h)*std::cos(ky0*(y+qomt*x));
+          }
+          phia *= four_pi_G;
         }
 
         if (nlim > 0) {

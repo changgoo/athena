@@ -23,7 +23,7 @@
 //! \fn BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
 //  \brief BlockFFTGravity constructor
 BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
-    : BlockFFT(pmb), I_(1.0,0.0),
+    : BlockFFT(pmb), I_(0.0,1.0),
       dx1sq_(SQR(pmb->pcoord->dx1v(NGHOST))),
       dx2sq_(SQR(pmb->pcoord->dx2v(NGHOST))),
       dx3sq_(SQR(pmb->pcoord->dx3v(NGHOST))),
@@ -35,13 +35,6 @@ BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
   qshear_  = pin->GetOrAddReal("problem","qshear",0.0);
   in_e_ = new std::complex<Real>[nx1*nx2*nx3];
   in_o_ = new std::complex<Real>[nx1*nx2*nx3];
-  if (Nx3 != slow_nx3) {
-    std::stringstream msg;
-    msg << "### FATAL ERROR in BlockFFTGravity::BlockFFTGravity" << std::endl
-        << "Something wrong with z-pencil decomposition" << std::endl;
-    ATHENA_ERROR(msg);
-    return;
-  }
 }
 
 //----------------------------------------------------------------------------------------
@@ -66,22 +59,24 @@ void BlockFFTGravity::ExecuteForward() {
   // cast std::complex* to FFT_SCALAR*
   FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR*>(in_);
 
-  pf3d->remap(data,data,pf3d->remap_premid);                         // block2mid
-  // phase shift
+  pf3d->remap(data,data,pf3d->remap_premid); // block2mid
+  pf3d->perform_ffts((FFT_DATA *) data,FFTW_FORWARD,pf3d->fft_mid);  // mid_forward
+  // apply phase shift for shearing BC
   for (int i=0; i<mid_nx1; i++) {
     for (int k=0; k<mid_nx3; k++) {
       for (int j=0; j<mid_nx2; j++) {
         int idx = j + mid_nx2*(k + mid_nx3*i);
-        in_[idx] *= std::exp(TWO_PI*I_*qomt*(Lx1_/Lx2_)*(Real)j*(Real)i/(Real)Nx1);
+        in_[idx] *= std::exp(-TWO_PI*I_*qomt*(Lx1_/Lx2_)*
+            (Real)(mid_jlo+j)*(Real)(mid_ilo+i)/(Real)Nx1);
       }
     }
   }
-  pf3d->perform_ffts((FFT_DATA *) data,FFTW_FORWARD,pf3d->fft_mid);  // mid_forward
   pf3d->remap(data,data,pf3d->remap_midfast);                        // mid2fast
   pf3d->perform_ffts((FFT_DATA *) data,FFTW_FORWARD,pf3d->fft_fast); // fast_forward
   pf3d->remap(data,data,pf3d->remap_fastslow);                       // fast2slow
-  std::memcpy(in_e_, in_, sizeof(std::complex<Real>)*nx1*nx2*nx3);
-  std::memcpy(in_o_, in_, sizeof(std::complex<Real>)*nx1*nx2*nx3);
+  std::memcpy(in_e_, in_, sizeof(std::complex<Real>)*nx1*nx2*nx3); // even term (l=2p)
+  std::memcpy(in_o_, in_, sizeof(std::complex<Real>)*nx1*nx2*nx3); // odd term (l=2p+1)
+  // apply odd term phase shift for vertical open BC
   for (int j=0; j<slow_nx2; j++) {
     for (int i=0; i<slow_nx1; i++) {
       for (int k=0; k<slow_nx3; k++) {
@@ -90,8 +85,9 @@ void BlockFFTGravity::ExecuteForward() {
       }
     }
   }
-  pf3d->perform_ffts(reinterpret_cast<FFT_DATA*>(in_e_),FFTW_FORWARD,pf3d->fft_slow); // slow_forward
-  pf3d->perform_ffts(reinterpret_cast<FFT_DATA*>(in_o_),FFTW_FORWARD,pf3d->fft_slow); // slow_forward
+  // slow_forward
+  pf3d->perform_ffts(reinterpret_cast<FFT_DATA*>(in_e_),FFTW_FORWARD,pf3d->fft_slow);
+  pf3d->perform_ffts(reinterpret_cast<FFT_DATA*>(in_o_),FFTW_FORWARD,pf3d->fft_slow);
 #endif // MPI_PARALLEL
 #endif // FFT
 #else
@@ -105,14 +101,19 @@ void BlockFFTGravity::ExecuteForward() {
 //! \fn void BlockFFTGravity::ExecuteBackward()
 //  \brief Backward transform for shearing sheet Poisson solvers
 void BlockFFTGravity::ExecuteBackward() {
+#if defined(FFT) && defined(MPI_PARALLEL)
+
 #ifdef GRAV_DISK
-#ifdef FFT
-#ifdef MPI_PARALLEL
+  Real time = pmy_block_->pmy_mesh->time;
+  Real qomt = qshear_*Omega_0_*time;
+
   // cast std::complex* to FFT_SCALAR*
   FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR*>(in_);
 
-  pf3d->perform_ffts(reinterpret_cast<FFT_DATA*>(in_e_),FFTW_BACKWARD,pf3d->fft_slow); // slow_backward
-  pf3d->perform_ffts(reinterpret_cast<FFT_DATA*>(in_o_),FFTW_BACKWARD,pf3d->fft_slow); // slow_backward
+  // slow_backward
+  pf3d->perform_ffts(reinterpret_cast<FFT_DATA*>(in_e_),FFTW_BACKWARD,pf3d->fft_slow);
+  pf3d->perform_ffts(reinterpret_cast<FFT_DATA*>(in_o_),FFTW_BACKWARD,pf3d->fft_slow);
+  // combine even and odd terms for vertical open BC
   for (int j=0; j<slow_nx2; j++) {
     for (int i=0; i<slow_nx1; i++) {
       for (int k=0; k<slow_nx3; k++) {
@@ -121,22 +122,31 @@ void BlockFFTGravity::ExecuteBackward() {
       }
     }
   }
-  pf3d->remap(data,data,pf3d->remap_slowmid);                         // slow2mid
-  pf3d->perform_ffts((FFT_DATA *) data,FFTW_BACKWARD,pf3d->fft_mid);  // mid_backward
-  pf3d->remap(data,data,pf3d->remap_midfast);                         // mid2fast
+  pf3d->remap(data,data,pf3d->remap_slowfast);                        // slow2fast
   pf3d->perform_ffts((FFT_DATA *) data,FFTW_BACKWARD,pf3d->fft_fast); // fast_backward
-  if (pf3d->remap_postfast)
-  pf3d->remap(data,data,pf3d->remap_postfast);                        // fast2block
+  pf3d->remap(data,data,pf3d->remap_fastmid);                         // fast2mid
+  // apply phase shift for shearing BC
+  for (int i=0; i<mid_nx1; i++) {
+    for (int k=0; k<mid_nx3; k++) {
+      for (int j=0; j<mid_nx2; j++) {
+        int idx = j + mid_nx2*(k + mid_nx3*i);
+        in_[idx] *= std::exp(TWO_PI*I_*qomt*(Lx1_/Lx2_)*
+            (Real)(mid_jlo+j)*(Real)(mid_ilo+i)/(Real)Nx1);
+      }
+    }
+  }
+  pf3d->perform_ffts((FFT_DATA *) data,FFTW_BACKWARD,pf3d->fft_mid); // mid_backward
+  if (pf3d->remap_postmid)
+  pf3d->remap(data,data,pf3d->remap_postmid);                        // mid2block
 
   // multiply norm factor
-  for (int i=0;i<2*nx1*nx2*nx3;++i) {
-    data[i] *= Lx3_/(2.0*Nx1*Nx2*SQR(Nx3));
-  }
-#endif // MPI_PARALLEL
-#endif // FFT
+  for (int i=0;i<2*nx1*nx2*nx3;++i) data[i] *= Lx3_/(2.0*Nx1*Nx2*SQR(Nx3));
+
 #else
   BlockFFT::ExecuteBackward();
 #endif // GRAV_BC_OPTIONS
+
+#endif // FFT & MPI_PARALLEL
 
   return;
 }
@@ -180,24 +190,31 @@ void BlockFFTGravity::ApplyKernel() {
   Real kernel_e,kernel_o;
   Real time = pmy_block_->pmy_mesh->time;
   Real qomt = qshear_*Omega_0_*time;
+
   for (int j=0; j<slow_nx2; j++) {
     for (int i=0; i<slow_nx1; i++) {
       for (int k=0; k<slow_nx3; k++) {
         int idx = k + slow_nx3*(i + slow_nx1*j);
-        kx = TWO_PI*(slow_ilo + i)/Nx1;
-        ky = TWO_PI*(slow_jlo + j)/Nx2;
-        kz = TWO_PI*(slow_klo + k)/Nx3;
-        kxy = std::sqrt((2. - 2.*std::cos(kx + qomt*(Lx1_/Lx2_)*(Nx2/Nx1)*ky))/dx1sq_ +
+        kx = TWO_PI*(Real)(slow_ilo + i)/((Real)Nx1);
+        ky = TWO_PI*(Real)(slow_jlo + j)/((Real)Nx2);
+        kz = TWO_PI*(Real)(slow_klo + k)/((Real)Nx3);
+
+        kxy = std::sqrt((2. - 2.*std::cos(kx + qomt*(Lx1_/Lx2_)*((Real)(Nx2)/(Real)(Nx1))*ky))/dx1sq_ +
                         (2. - 2.*std::cos(ky))/dx2sq_);
-        if (kxy==0) {
-          kernel_e = 0;
-          kernel_o = -four_pi_G*(Lx3_/Nx3) / (1. - std::cos(kz+PI/Nx3));
+
+        // continuous kernel
+//        kxy = std::sqrt( SQR(TWO_PI*(slow_ilo+i)/Lx1_ + qomt*TWO_PI*(slow_jlo+j)/Lx2_)
+//                       + SQR(TWO_PI*(slow_jlo+j)/Lx2_) );
+
+        if ((slow_ilo+i==0)&&(slow_jlo+j==0)) {
+          kernel_e = k==0 ? 0.5*four_pi_G*Lx3_*(Real)(Nx3) : 0;
+          kernel_o = -four_pi_G*(Lx3_/(Real)(Nx3)) / (1. - std::cos(kz+PI/(Real)(Nx3)));
         }
         else {
           kernel_e = -0.5*four_pi_G/kxy*(1. - std::exp(-kxy*Lx3_))*
-            std::sinh(kxy*Lx3_/Nx3) / (std::cosh(kxy*Lx3_/Nx3) - std::cos(kz));
+            std::sinh(kxy*Lx3_/(Real)(Nx3)) / (std::cosh(kxy*Lx3_/(Real)(Nx3)) - std::cos(kz));
           kernel_o = -0.5*four_pi_G/kxy*(1. + std::exp(-kxy*Lx3_))*
-            std::sinh(kxy*Lx3_/Nx3) / (std::cosh(kxy*Lx3_/Nx3) - std::cos(kz+PI/Nx3));
+            std::sinh(kxy*Lx3_/(Real)(Nx3)) / (std::cosh(kxy*Lx3_/(Real)(Nx3)) - std::cos(kz+PI/(Real)(Nx3)));
         }
         in_e_[idx] *= kernel_e;
         in_o_[idx] *= kernel_o;
