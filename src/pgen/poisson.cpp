@@ -120,11 +120,15 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
             den = (2.0 + std::cos(ky0*(y+qomt*x)))/(2.*h);
             phia = (SQR(z)+SQR(h))/(2.*h) - 1./(2.*h*SQR(ky))*
               (1.-std::exp(-ky*h)*std::cosh(ky*z))*std::cos(ky0*(y+qomt*x));
+            // TODO 2D solution
+//            phia = -1.0/(2.*h*SQR(ky))*std::cos(ky0*(y+qomt*x));
           }
           else {
             den = 0.0;
             phia = std::abs(z) - std::exp(-ky*std::abs(z))/(2.*h*SQR(ky))*
               std::sinh(ky*h)*std::cos(ky0*(y+qomt*x));
+            // TODO 2D solution
+//            phia = 0;
           }
           phia *= four_pi_G;
         }

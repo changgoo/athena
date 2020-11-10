@@ -53,8 +53,6 @@ void BlockFFTGravity::ExecuteForward() {
 #ifdef GRAV_DISK
 #ifdef FFT
 #ifdef MPI_PARALLEL
-  Real time = pmy_block_->pmy_mesh->time;
-  Real qomt = qshear_*Omega_0_*time;
 
   // cast std::complex* to FFT_SCALAR*
   FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR*>(in_);
@@ -66,7 +64,7 @@ void BlockFFTGravity::ExecuteForward() {
     for (int k=0; k<mid_nx3; k++) {
       for (int j=0; j<mid_nx2; j++) {
         int idx = j + mid_nx2*(k + mid_nx3*i);
-        in_[idx] *= std::exp(-TWO_PI*I_*qomt*(Lx1_/Lx2_)*
+        in_[idx] *= std::exp(-TWO_PI*I_*rshear_*
             (Real)(mid_jlo+j)*(Real)(mid_ilo+i)/(Real)Nx1);
       }
     }
@@ -74,6 +72,7 @@ void BlockFFTGravity::ExecuteForward() {
   pf3d->remap(data,data,pf3d->remap_midfast);                        // mid2fast
   pf3d->perform_ffts((FFT_DATA *) data,FFTW_FORWARD,pf3d->fft_fast); // fast_forward
   pf3d->remap(data,data,pf3d->remap_fastslow);                       // fast2slow
+  // TODO comment out below to disable z transform for 2D solver
   std::memcpy(in_e_, in_, sizeof(std::complex<Real>)*nx1*nx2*nx3); // even term (l=2p)
   std::memcpy(in_o_, in_, sizeof(std::complex<Real>)*nx1*nx2*nx3); // odd term (l=2p+1)
   // apply odd term phase shift for vertical open BC
@@ -102,14 +101,12 @@ void BlockFFTGravity::ExecuteForward() {
 //  \brief Backward transform for shearing sheet Poisson solvers
 void BlockFFTGravity::ExecuteBackward() {
 #if defined(FFT) && defined(MPI_PARALLEL)
-
 #ifdef GRAV_DISK
-  Real time = pmy_block_->pmy_mesh->time;
-  Real qomt = qshear_*Omega_0_*time;
 
   // cast std::complex* to FFT_SCALAR*
   FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR*>(in_);
 
+  // TODO comment out below to disable z transform for 2D solver
   // slow_backward
   pf3d->perform_ffts(reinterpret_cast<FFT_DATA*>(in_e_),FFTW_BACKWARD,pf3d->fft_slow);
   pf3d->perform_ffts(reinterpret_cast<FFT_DATA*>(in_o_),FFTW_BACKWARD,pf3d->fft_slow);
@@ -130,7 +127,7 @@ void BlockFFTGravity::ExecuteBackward() {
     for (int k=0; k<mid_nx3; k++) {
       for (int j=0; j<mid_nx2; j++) {
         int idx = j + mid_nx2*(k + mid_nx3*i);
-        in_[idx] *= std::exp(TWO_PI*I_*qomt*(Lx1_/Lx2_)*
+        in_[idx] *= std::exp(TWO_PI*I_*rshear_*
             (Real)(mid_jlo+j)*(Real)(mid_ilo+i)/(Real)Nx1);
       }
     }
@@ -140,7 +137,10 @@ void BlockFFTGravity::ExecuteBackward() {
   pf3d->remap(data,data,pf3d->remap_postmid);                        // mid2block
 
   // multiply norm factor
+  // TODO comment out below to disable z transform for 2D solver
   for (int i=0;i<2*nx1*nx2*nx3;++i) data[i] *= Lx3_/(2.0*Nx1*Nx2*SQR(Nx3));
+  //TODO norm factor for 2D solver
+//  for (int i=0;i<2*nx1*nx2*nx3;++i) data[i] *= 1.0/(Nx1*Nx2);
 
 #else
   BlockFFT::ExecuteBackward();
@@ -154,7 +154,6 @@ void BlockFFTGravity::ExecuteBackward() {
 //----------------------------------------------------------------------------------------
 //! \fn void BlockFFTGravity::ApplyKernel()
 //  \brief Apply kernel for fully periodic BC
-// TODO disk BC kernel
 void BlockFFTGravity::ApplyKernel() {
   //      ACTION                     (slow, mid, fast)
   // Initial block decomposition          (k,j,i)
@@ -188,8 +187,6 @@ void BlockFFTGravity::ApplyKernel() {
 #elif defined(GRAV_DISK)
   Real kx,ky,kz,kxy;
   Real kernel_e,kernel_o;
-  Real time = pmy_block_->pmy_mesh->time;
-  Real qomt = qshear_*Omega_0_*time;
 
   for (int j=0; j<slow_nx2; j++) {
     for (int i=0; i<slow_nx1; i++) {
@@ -199,13 +196,15 @@ void BlockFFTGravity::ApplyKernel() {
         ky = TWO_PI*(Real)(slow_jlo + j)/((Real)Nx2);
         kz = TWO_PI*(Real)(slow_klo + k)/((Real)Nx3);
 
-        kxy = std::sqrt((2. - 2.*std::cos(kx + qomt*(Lx1_/Lx2_)*((Real)(Nx2)/(Real)(Nx1))*ky))/dx1sq_ +
+        kxy = std::sqrt((2. - 2.*std::cos(kx + rshear_*((Real)(Nx2)/(Real)(Nx1))*ky))/dx1sq_ +
                         (2. - 2.*std::cos(ky))/dx2sq_);
 
         // continuous kernel
 //        kxy = std::sqrt( SQR(TWO_PI*(slow_ilo+i)/Lx1_ + qomt*TWO_PI*(slow_jlo+j)/Lx2_)
 //                       + SQR(TWO_PI*(slow_jlo+j)/Lx2_) );
 
+
+        // TODO comment out below to disable z transform for 2D solver
         if ((slow_ilo+i==0)&&(slow_jlo+j==0)) {
           kernel_e = k==0 ? 0.5*four_pi_G*Lx3_*(Real)(Nx3) : 0;
           kernel_o = -four_pi_G*(Lx3_/(Real)(Nx3)) / (1. - std::cos(kz+PI/(Real)(Nx3)));
@@ -218,6 +217,16 @@ void BlockFFTGravity::ApplyKernel() {
         }
         in_e_[idx] *= kernel_e;
         in_o_[idx] *= kernel_o;
+
+        // TODO this is temporary 2D solver
+//        if ((slow_ilo+i==0)&&(slow_jlo+j==0)) {
+//          kernel_e = 0.0;
+//        }
+//        else {
+//          kernel_e = -four_pi_G/SQR(kxy);
+//        }
+//        in_[idx] *= kernel_e;
+
       }
     }
   }
@@ -234,6 +243,14 @@ void BlockFFTGravity::ApplyKernel() {
 }
 
 void BlockFFTGravity::Solve(int stage) {
+  Real time = pmy_block_->pmy_mesh->time;
+  Real qomt = qshear_*Omega_0_*time;
+  int p = std::nearbyint(qomt*Lx1_/Lx2_*(Real)Nx2);
+  // force sheared distance == (integer) * dy
+  rshear_ = (Real)p/(Real)Nx2;
+  // continuous sheared distance (this introduces unwanted harmonic solutions)
+//  rshear_ = qomt*Lx1_/Lx2_;
+
   AthenaArray<Real> rho;
   rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
   LoadSource(rho);
