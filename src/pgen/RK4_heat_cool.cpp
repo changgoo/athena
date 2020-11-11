@@ -237,8 +237,8 @@ void Cooling(MeshBlock *pmb, const Real t, const Real dt,
 	//std::cout << "P_i=" << P << std::endl;
 
         // calculate temperature in physical units before cooling
-        Real T_before = (mu/muH) * P/rho;
-        Real nH = rho;
+        Real T_before = (mu/muH) * P/rho_half;
+        Real nH = rho_half;
 
         Real T_update = 0.;
         T_update += T_before;
@@ -250,13 +250,13 @@ void Cooling(MeshBlock *pmb, const Real t, const Real dt,
         T_update += (k1 + 2.*k2 + 2.*k3 + k4)/6.0 * dt*time_scale; 
 
         // dont cool below cooling floor and find new internal thermal energy 
-        Real u_after = (Pconv*std::max(T_update,T_floor) * rho *(muH/mu))/(gamma_adi-1.0);
+        Real u_after = (Pconv*std::max(T_update,T_floor) * rho_half *(muH/mu))/(gamma_adi-1.0);
 
         // temperature ceiling 
         Real delta_e_ceil = 0.0;
         if (T_update > T_max){
           delta_e_ceil -= u_after;
-          u_after = Pconv*(std::min(T_update,T_max) * rho* (muH/mu))/(gamma_adi-1.0);
+          u_after = Pconv*(std::min(T_update,T_max) * rho_half* (muH/mu))/(gamma_adi-1.0);
           delta_e_ceil += u_after;
           T_update = T_max;
         }
