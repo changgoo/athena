@@ -28,7 +28,7 @@
 #include "../parameter_input.hpp"
 #include "../utils/utils.hpp"
 
-//! \fn void read_rst(std::string filename, std::string field, AthenaArray<Real> &data,  
+//! \fn void read_rst(std::string filename, std::string field, AthenaArray<Real> &data) 
 //!                    int iu, int ju, int ku,
 //!                    int xstart = 0, int ystart = 0, int zstart = 0, int flagB = 0) 
 //! \brief Read the field values in the athena rst file 
@@ -84,9 +84,14 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
   std::stringstream msg; //error message
   std::string rstfile; //corresponding rst file for this meshblock
+  
+  //! Path for the directory where the rst files are stored
   std::string rstdir = pin->GetString("problem", "rst_directory");
+  //! Name of the first rst file 
   std::string rstfile0 = pin->GetString("problem", "rst_file");
-
+  //! If flag is equal to 0 the root propcessor reads all the rst files and then broadcast the field information to the other processors, 
+  //! while if flag is equal to 1 each meshblock reads one rst file (note that in this case the number of meshblocks in the new simulations 
+  //! must be the same as in the athena simulation).
   int flag = pin->GetOrAddInteger("problem", "flag_rst", 0);
   
   //dimensions of meshblock

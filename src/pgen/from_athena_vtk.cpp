@@ -3,7 +3,7 @@
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
-//! \file from_athena_rst.cpp
+//! \file from_athena_vtk.cpp
 //! \brief problem generator, initialize mesh by reading in athena rst files.
 //======================================================================================
 
@@ -45,7 +45,11 @@ static void read_vtk(MeshBlock *mb, std::string vtkdir, std::string vtkfile0, st
 void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
   int ierr;
+  
+  //! Path for the directory where all the id folders are stored
+  int a;
   std::string vtkdir = pin->GetString("problem", "vtk_directory");
+  //! Name of the file in the id0 folder  
   std::string vtkfile0 = pin->GetString("problem", "vtk_file");
   
   //dimensions of meshblock
@@ -242,6 +246,7 @@ static void read_vtk(MeshBlock *mb, std::string vtkdir, std::string vtkfile0, st
   FILE *fp = NULL;
   char cline[256], type[256], variable[256], format[256], t_type[256], t_format[256];
   std::string line;
+  
   const std::string athena_header = "# vtk DataFile Version 2.0"; //athena4.2 header
   const std::string athena_header3 = "# vtk DataFile Version 3.0"; //athena4.2 header
   bool SHOW_OUTPUT = false;
