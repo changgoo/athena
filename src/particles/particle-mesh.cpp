@@ -158,47 +158,114 @@ Real ParticleMesh::FindMaximumWeight() const {
 void ParticleMesh::InterpolateMeshToParticles(
          const AthenaArray<Real>& meshsrc, int ms1,
          AthenaArray<Real>& par, int p1, int nprop) {
-  // Zero out the particle arrays.
+  // Transpose meshsrc.
+  int nx1 = meshsrc.GetDim1(), nx2 = meshsrc.GetDim2(), nx3 = meshsrc.GetDim3();
+  AthenaArray<Real> u;
+  u.NewAthenaArray(nx3,nx2,nx1,nprop);
   for (int n = 0; n < nprop; ++n)
-#pragma ivdep
-    std::fill(&par(p1+n,0), &par(p1+n,ppar_->npar), 0.0);
+    for (int k = 0; k < nx3; ++k)
+      for (int j = 0; j < nx2; ++j)
+        for (int i = 0; i < nx1; ++i)
+          u(k,j,i,n) = meshsrc(ms1+n,k,j,i);
+
+  // Allocate space for SIMD.
+  Real **w1 __attribute__((aligned(64))) = new Real*[npc1_];
+  Real **w2 __attribute__((aligned(64))) = new Real*[npc2_];
+  Real **w3 __attribute__((aligned(64))) = new Real*[npc3_];
+  for (int i = 0; i < npc1_; ++i)
+    w1[i] = new Real[SIMD_WIDTH];
+  for (int i = 0; i < npc2_; ++i)
+    w2[i] = new Real[SIMD_WIDTH];
+  for (int i = 0; i < npc3_; ++i)
+    w3[i] = new Real[SIMD_WIDTH];
+  Real imb1v[SIMD_WIDTH] __attribute__((aligned(64)));
+  Real imb2v[SIMD_WIDTH] __attribute__((aligned(64)));
+  Real imb3v[SIMD_WIDTH] __attribute__((aligned(64)));
 
   // Loop over each particle.
-  for (int k = 0; k < ppar_->npar; ++k) {
-    // Find the domain the particle influences.
-    Real xi1 = ppar_->xi1(k), xi2 = ppar_->xi2(k), xi3 = ppar_->xi3(k);
-    int ix1 = static_cast<int>(xi1 - dxi1_),
-        ix2 = static_cast<int>(xi2 - dxi2_),
-        ix3 = static_cast<int>(xi3 - dxi3_);
-    xi1 = ix1 + 0.5 - xi1;
-    xi2 = ix2 + 0.5 - xi2;
-    xi3 = ix3 + 0.5 - xi3;
+  int npar = ppar_->npar;
+  for (int k = 0; k < npar; k += SIMD_WIDTH) {
+#pragma omp simd simdlen(SIMD_WIDTH)
+    for (int kk = 0; kk < std::min(SIMD_WIDTH, npar-k); ++kk) {
+      int kkk = k + kk;
 
-    // Weight each cell and accumulate the mesh properties onto the particles.
-#pragma loop count (NPC)
-    for (int ipc3 = 0; ipc3 < npc3_; ++ipc3) {
-#pragma loop count (NPC)
-      for (int ipc2 = 0; ipc2 < npc2_; ++ipc2) {
-#pragma loop count (NPC)
-        for (int ipc1 = 0; ipc1 < npc1_; ++ipc1) {
-          Real w = (active1_ ? _WeightFunction(xi1 + ipc1) : 1.0) *
-                   (active2_ ? _WeightFunction(xi2 + ipc2) : 1.0) *
-                   (active3_ ? _WeightFunction(xi3 + ipc3) : 1.0);
-          int imb1 = ix1 + ipc1, imb2 = ix2 + ipc2, imb3 = ix3 + ipc3;
+      // Find the domain the particle influences.
+      Real xi1 = ppar_->xi1(kkk), xi2 = ppar_->xi2(kkk), xi3 = ppar_->xi3(kkk);
+      int imb1 = static_cast<int>(xi1 - dxi1_),
+          imb2 = static_cast<int>(xi2 - dxi2_),
+          imb3 = static_cast<int>(xi3 - dxi3_);
+      xi1 = imb1 + 0.5 - xi1;
+      xi2 = imb2 + 0.5 - xi2;
+      xi3 = imb3 + 0.5 - xi3;
 
-          for (int n = 0; n < nprop; ++n)
-            par(p1+n,k) += w * meshsrc(ms1+n,imb3,imb2,imb1);
+      imb1v[kk] = imb1;
+      imb2v[kk] = imb2;
+      imb3v[kk] = imb3;
+
+      // Weigh each cell.
+#pragma loop count (NPC)
+      for (int i = 0; i < npc1_; ++i)
+        w1[i][kk] = active1_ ? _WeightFunction(xi1 + i) : 1.0;
+#pragma loop count (NPC)
+      for (int i = 0; i < npc2_; ++i)
+        w2[i][kk] = active2_ ? _WeightFunction(xi2 + i) : 1.0;
+#pragma loop count (NPC)
+      for (int i = 0; i < npc3_; ++i)
+        w3[i][kk] = active3_ ? _WeightFunction(xi3 + i) : 1.0;
+    }
+
+#pragma ivdep
+    for (int kk = 0; kk < std::min(SIMD_WIDTH, npar-k); ++kk) {
+      int kkk = k + kk;
+
+      // Initiate interpolation.
+      Real *pd = new Real[nprop];
+      for (int i = 0; i < nprop; ++i)
+        pd[i] = 0.0;
+
+      int imb1 = imb1v[kk], imb2 = imb2v[kk], imb3 = imb3v[kk];
+
+#pragma loop count (NPC)
+      for (int ipc3 = 0; ipc3 < npc3_; ++ipc3) {
+#pragma loop count (NPC)
+        for (int ipc2 = 0; ipc2 < npc2_; ++ipc2) {
+#pragma loop count (NPC)
+          for (int ipc1 = 0; ipc1 < npc1_; ++ipc1) {
+            Real w = w1[ipc1][kk] * w2[ipc2][kk] * w3[ipc3][kk];
+
+            // Interpolate meshsrc to particles.
+            for (int n = 0; n < nprop; ++n)
+              pd[n] += w * u(imb3+ipc3,imb2+ipc2,imb1+ipc1,n);
+          }
         }
       }
+
+      // Record the final interpolated properties.
+      for (int n = 0; n < nprop; ++n)
+        par(p1+n,kkk) = pd[n];
+
+      delete [] pd;
     }
   }
+
+  // Release working arrays.
+  u.DeleteAthenaArray();
+  for (int i = 0; i < npc1_; ++i)
+    delete [] w1[i];
+  for (int i = 0; i < npc2_; ++i)
+    delete [] w2[i];
+  for (int i = 0; i < npc3_; ++i)
+    delete [] w3[i];
+  delete [] w1;
+  delete [] w2;
+  delete [] w3;
 }
 
 //--------------------------------------------------------------------------------------
 //! \fn void ParticleMesh::AssignParticlesToMeshAux(
-//!        const AthenaArray<Real>& par, int p1, int ma1, int nprop) {
+//       const AthenaArray<Real>& par, int p1, int ma1, int nprop)
 //! \brief assigns par (realprop, auxprop, or work in Particles class) from property
-//!        index p1 to p2 onto meshaux from property index ma1 and up.
+//!        index p1 to p1+nprop-1 onto meshaux from property index ma1 and up.
 
 void ParticleMesh::AssignParticlesToMeshAux(
          const AthenaArray<Real>& par, int p1, int ma1, int nprop) {
@@ -208,43 +275,95 @@ void ParticleMesh::AssignParticlesToMeshAux(
 #pragma ivdep
   std::fill(&meshaux(ma1,0,0,0), &meshaux(ma1+nprop,0,0,0), 0.0);
 
+  // Allocate space for SIMD.
+  Real **w1 __attribute__((aligned(64))) = new Real*[npc1_];
+  Real **w2 __attribute__((aligned(64))) = new Real*[npc2_];
+  Real **w3 __attribute__((aligned(64))) = new Real*[npc3_];
+  for (int i = 0; i < npc1_; ++i)
+    w1[i] = new Real[SIMD_WIDTH];
+  for (int i = 0; i < npc2_; ++i)
+    w2[i] = new Real[SIMD_WIDTH];
+  for (int i = 0; i < npc3_; ++i)
+    w3[i] = new Real[SIMD_WIDTH];
+  Real imb1v[SIMD_WIDTH] __attribute__((aligned(64)));
+  Real imb2v[SIMD_WIDTH] __attribute__((aligned(64)));
+  Real imb3v[SIMD_WIDTH] __attribute__((aligned(64)));
+
   // Loop over each particle.
-  for (int k = 0; k < ppar_->npar; ++k) {
-    // Find the domain the particle influences.
-    Real xi1 = ppar_->xi1(k), xi2 = ppar_->xi2(k), xi3 = ppar_->xi3(k);
-    int ix1 = static_cast<int>(xi1 - dxi1_),
-        ix2 = static_cast<int>(xi2 - dxi2_),
-        ix3 = static_cast<int>(xi3 - dxi3_);
-    xi1 = ix1 + 0.5 - xi1;
-    xi2 = ix2 + 0.5 - xi2;
-    xi3 = ix3 + 0.5 - xi3;
+  int npar = ppar_->npar;
+  for (int k = 0; k < npar; k += SIMD_WIDTH) {
+#pragma omp simd simdlen(SIMD_WIDTH)
+    for (int kk = 0; kk < std::min(SIMD_WIDTH, npar-k); ++kk) {
+      int kkk = k + kk;
 
-    // Fetch properties of the particle for assignment.
-    Real *p = new Real[nprop];
-    for (int n = 0; n < nprop; ++n)
-      p[n] = par(p1+n,k);
+      // Find the domain the particle influences.
+      Real xi1 = ppar_->xi1(kkk), xi2 = ppar_->xi2(kkk), xi3 = ppar_->xi3(kkk);
+      int imb1 = static_cast<int>(xi1 - dxi1_),
+          imb2 = static_cast<int>(xi2 - dxi2_),
+          imb3 = static_cast<int>(xi3 - dxi3_);
+      xi1 = imb1 + 0.5 - xi1;
+      xi2 = imb2 + 0.5 - xi2;
+      xi3 = imb3 + 0.5 - xi3;
 
-    // Weight each cell and accumulate particle property onto meshaux.
+      imb1v[kk] = imb1;
+      imb2v[kk] = imb2;
+      imb3v[kk] = imb3;
+
+      // Weigh each cell.
 #pragma loop count (NPC)
-    for (int ipc3 = 0; ipc3 < npc3_; ++ipc3) {
+      for (int i = 0; i < npc1_; ++i)
+        w1[i][kk] = active1_ ? _WeightFunction(xi1 + i) : 1.0;
 #pragma loop count (NPC)
-      for (int ipc2 = 0; ipc2 < npc2_; ++ipc2) {
+      for (int i = 0; i < npc2_; ++i)
+        w2[i][kk] = active2_ ? _WeightFunction(xi2 + i) : 1.0;
 #pragma loop count (NPC)
-        for (int ipc1 = 0; ipc1 < npc1_; ++ipc1) {
-          Real w = (active1_ ? _WeightFunction(xi1 + ipc1) : 1.0) *
-                   (active2_ ? _WeightFunction(xi2 + ipc2) : 1.0) *
-                   (active3_ ? _WeightFunction(xi3 + ipc3) : 1.0);
-          int ima1 = ix1 + ipc1, ima2 = ix2 + ipc2, ima3 = ix3 + ipc3;
+      for (int i = 0; i < npc3_; ++i)
+        w3[i][kk] = active3_ ? _WeightFunction(xi3 + i) : 1.0;
+    }
 
-          weight(ima3,ima2,ima1) += w;
+#pragma ivdep
+    for (int kk = 0; kk < std::min(SIMD_WIDTH, npar-k); ++kk) {
+      int kkk = k + kk;
 
-          for (int n = 0; n < nprop; ++n)
-            meshaux(ma1+n,ima3,ima2,ima1) += w * p[n];
+      // Fetch particle properties.
+      Real *ps = new Real[nprop];
+      for (int i = 0; i < nprop; ++i)
+        ps[i] = par(p1+i,kkk);
+
+      int imb1 = imb1v[kk], imb2 = imb2v[kk], imb3 = imb3v[kk];
+
+#pragma loop count (NPC)
+      for (int ipc3 = 0; ipc3 < npc3_; ++ipc3) {
+#pragma loop count (NPC)
+        for (int ipc2 = 0; ipc2 < npc2_; ++ipc2) {
+#pragma loop count (NPC)
+          for (int ipc1 = 0; ipc1 < npc1_; ++ipc1) {
+            Real w = w1[ipc1][kk] * w2[ipc2][kk] * w3[ipc3][kk];
+
+            // Record the weights.
+            weight(imb3+ipc3,imb2+ipc2,imb1+ipc1) += w;
+
+            // Assign particles to meshaux.
+            for (int n = 0; n < nprop; ++n)
+              meshaux(ma1+n,imb3+ipc3,imb2+ipc2,imb1+ipc1) += w * ps[n];
+          }
         }
       }
+
+      delete [] ps;
     }
-    delete [] p;
   }
+
+  // Release working array.
+  for (int i = 0; i < npc1_; ++i)
+    delete [] w1[i];
+  for (int i = 0; i < npc2_; ++i)
+    delete [] w2[i];
+  for (int i = 0; i < npc3_; ++i)
+    delete [] w3[i];
+  delete [] w1;
+  delete [] w2;
+  delete [] w3;
 
   // Treat neighbors of different levels.
   if (pmesh_->multilevel)
