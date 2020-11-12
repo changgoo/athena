@@ -51,7 +51,7 @@ turb_flag     = 0			# option for turning on turbulence 0=off 1=decaying 2=driven
 
 time_scale    = 3.086e13      		# to translate pc/(km/s) to seconds (*almost* Myrs to secs)
 rho_0         = 10      		# initial density meant to be in cm^-3
-pgas_0        = 3000 			# initial gas pressure meant to be in kB K cm^-3 
+pgas_0        = 30000 			# initial gas pressure meant to be in kB K cm^-3 
 T_PE          = 15000   		# temperature below which PE heating is applied
 Gamma         = 2e-26			# heating rate in ergs / sec
 cfl_cool      = 1.0     		# min dt_hydro/dt_cool

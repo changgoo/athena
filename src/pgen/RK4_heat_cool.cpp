@@ -36,21 +36,21 @@ static Real cfl_cool, dt_cutoff;
 // Global variables --- cooling
 static int nfit_cool = 12;
 static Real T_cooling_curve[12] = 
-  {0.99999999e2,
+  {0.99999999e1,
    1.0e+02, 6.0e+03, 1.75e+04, 
    4.0e+04, 8.7e+04, 2.30e+05, 
    3.6e+05, 1.5e+06, 3.50e+06, 
    2.6e+07, 1.0e+12};
 
 static Real lambda_cooling_curve[12] = 
-  { 3.720076376848256e-71,
+  { 1e-30,
     1.00e-27,   2.00e-26,   1.50e-22,
     1.20e-22,   5.25e-22,   5.20e-22,
     2.25e-22,   1.25e-22,   3.50e-23,
     2.10e-23,   4.12e-21};
 
 static Real exponent_cooling_curve[12] = 
-  {1e10,
+  {3.,
    0.73167566,  8.33549431, -0.26992783,  
    1.89942352, -0.00984338, -1.8698263 , 
    -0.41187018, -1.50238273, -0.25473349,  
@@ -231,9 +231,10 @@ void Cooling(MeshBlock *pmb, const Real t, const Real dt,
         Real &m3 = cons(IM3,k,j,i);
 
         Real kinetic = (SQR(m1) + SQR(m2) + SQR(m3)) / (2.0 * rho);
-        Real u = e - kinetic;
+        //Real u = e - kinetic;
 	//Real P = u * (gamma_adi-1.0)/Pconv;
 	Real P = pgas_half/Pconv;
+	Real u = pgas_half/(gamma_adi - 1.0);
 	//std::cout << "P_i=" << P << std::endl;
 
         // calculate temperature in physical units before cooling
@@ -250,8 +251,8 @@ void Cooling(MeshBlock *pmb, const Real t, const Real dt,
         T_update += (k1 + 2.*k2 + 2.*k3 + k4)/6.0 * dt*time_scale; 
 
         // dont cool below cooling floor and find new internal thermal energy 
-	Real P_after = (Pconv*std::max(T_update,T_floor) * rho_half *(muH/mu));
-        Real u_after = P_after/(gamma_adi-1.0);
+	Real P_after = (std::max(T_update,T_floor) * rho_half *(muH/mu));
+        Real u_after = Pconv*P_after/(gamma_adi-1.0);
 
         // temperature ceiling 
         Real delta_e_ceil = 0.0;
