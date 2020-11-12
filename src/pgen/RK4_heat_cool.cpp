@@ -27,7 +27,7 @@ static Real rho_0, pgas_0; // in code units
 static Real time_scale;//, vel_scale, length_scale; 
 static const Real mu=0.62; // mean molecular weight
 static const Real muH=1.4; // mean molecular weight per H
-static const Real Pconv=1.;//169.739; // kB K cm^-3 -> code energy density
+static const Real Pconv=169.739; // kB K cm^-3 -> code energy density
 static const Real mp = 1.67373522381e-24; // proton mass in grams
 static const Real kb = 1.3806488e-16; // Boltzmann's in ergs/K
 static Real Gamma, T_PE, T_floor, T_max;
@@ -250,7 +250,8 @@ void Cooling(MeshBlock *pmb, const Real t, const Real dt,
         T_update += (k1 + 2.*k2 + 2.*k3 + k4)/6.0 * dt*time_scale; 
 
         // dont cool below cooling floor and find new internal thermal energy 
-        Real u_after = (Pconv*std::max(T_update,T_floor) * rho_half *(muH/mu))/(gamma_adi-1.0);
+	Real P_after = (Pconv*std::max(T_update,T_floor) * rho_half *(muH/mu));
+        Real u_after = P_after/(gamma_adi-1.0);
 
         // temperature ceiling 
         Real delta_e_ceil = 0.0;
@@ -340,9 +341,9 @@ static Real Lambda_T(const Real T)
 static Real tcool(const Real T, const Real nH)
 {
   if (T < T_PE){
-    return (kb * T) / ( (gamma_adi-1.0) * (mu/muH) * (nH*Lambda_T(T) - Gamma) );
+    return (kb * T) / ( (gamma_adi-1.0) * (mu/muH) * (nH * Lambda_T(T) - Gamma) );
   } else {
-    return (kb * T) / ( (gamma_adi-1.0) * (mu/muH) * (nH*Lambda_T(T)) );
+    return (kb * T) / ( (gamma_adi-1.0) * (mu/muH) * nH * Lambda_T(T) );
   }
 }
 // ============================================================================
