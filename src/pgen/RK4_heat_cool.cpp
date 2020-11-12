@@ -232,8 +232,8 @@ void Cooling(MeshBlock *pmb, const Real t, const Real dt,
 
         Real kinetic = (SQR(m1) + SQR(m2) + SQR(m3)) / (2.0 * rho);
         Real u = e - kinetic;
-	Real P = u * (gamma_adi-1.0)/Pconv;
-	//Real P = pgas_half/Pconv;
+	//Real P = u * (gamma_adi-1.0)/Pconv;
+	Real P = pgas_half/Pconv;
 	//std::cout << "P_i=" << P << std::endl;
 
         // calculate temperature in physical units before cooling
