@@ -24,17 +24,17 @@
 #include "../hydro/hydro.hpp"              // Hydro
 #include "../mesh/mesh.hpp"
 #include "../parameter_input.hpp"          // ParameterInput
-#include "../utils/units.hpp"
+#include "../utils/units.hpp"              // Units, Constants
 
 // Global variables --- hydro & units
+// Pointer to unit class. Need to decide if we want to attach this to Mesh or MeshBlock
+// Removed redundant global variables for units and constants
+Units *punit;
+
 static Real gamma_adi;
-static Real rho_0, pgas_0; // in code units
-static Real time_scale; //, vel_scale, length_scale;
 static const Real mu = 0.62; // mean molecular weight
 static const Real muH = 1.4; // mean molecular weight per H
-static const Real Pconv = 169.739; // kB K cm^-3 -> code energy density
-static const Real mp = 1.67373522381e-24; // proton mass in grams
-static const Real kb = 1.3806488e-16; // Boltzmann's in ergs/K
+static const Real mean_mass_per_H = muH*Constants::mH; // mean mass per H
 static Real Gamma, T_PE, T_floor, T_max;
 static Real cfl_cool, dt_cutoff;
 
@@ -94,27 +94,28 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 #endif
   }
 
-  Real dunit = muH*Constants::mH;
-  Real lunit = Constants::pc;
-  Real vunit = Constants::kms;
+  // set density, length, and velocity units
+  Real dunit = mean_mass_per_H; // denisty in code units is number density of hydrogen
+  Real lunit = Constants::pc; // length in code units is parsec
+  Real vunit = Constants::kms; // velocity in code units is km/s
 
-  Units *punit = new Units(dunit, lunit, vunit);
+  // initialize the unit class
+  punit = new Units(dunit, lunit, vunit, mu);
 
+  // print out units and constants in code units
+  if (Globals::my_rank == 0) {
+    punit->PrintCodeUnits();
+    punit->PrintConstantsInCodeUnits();
+  }
   // Read general parameters from input file
   gamma_adi     = pin->GetReal("hydro", "gamma");
-  // (1 erg/K)/kB //length_scale/vel_scale;
-  time_scale    = pin->GetReal("problem", "time_scale");
-  rho_0         = pin->GetReal("problem", "rho_0"); // measured in m_p muH cm^-3
-  pgas_0        = pin->GetReal("problem", "pgas_0"); // measured in kB K cm^-3
+
   // temperature below which PE heating is applied
   T_PE          = pin->GetReal("problem", "T_PE");
   Gamma         = pin->GetReal("problem", "Gamma"); //heating rate in ergs / sec
   cfl_cool      = pin->GetReal("problem", "cfl_cool"); // min dt_hydro/dt_cool
   T_floor       = pin->GetReal("problem", "T_floor");
   T_max         = pin->GetReal("problem", "T_max");
-
-  punit->PrintCodeUnits();
-  punit->PrintConstantsInCodeUnits();
 
   // Enroll source function
   EnrollUserExplicitSourceFunction(Cooling);
@@ -168,13 +169,28 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     ku += (NGHOST);
   }
 
+
+  Real rho_0   = pin->GetReal("problem", "rho_0"); // measured in m_p muH cm^-3
+  Real pgas_0  = pin->GetReal("problem", "pgas_0"); // measured in kB K cm^-3
+
+  std::cout << "in c.g.s. " << "nH = " << rho_0
+            << " P/k = " << pgas_0
+            << " T[K] = " << pgas_0/rho_0*(mu/muH) << std::endl;
+  rho_0 *= mean_mass_per_H/punit->Density;
+  pgas_0 *= Constants::kB/punit->Pressure;
+  std::cout << "in code units" << "den = " << rho_0
+            << " P = " << pgas_0
+            << " T[K] = " << pgas_0/rho_0*punit->Temperature << std::endl;
+
+
+
   // Initialize primitive values
   for (int k = kl; k <= ku; ++k) {
     Real z = pcoord->x3v(k);
     for (int j = jl; j <= ju; ++j) {
       for (int i = il; i <= iu; ++i) {
         phydro->w(IDN,k,j,i) = rho_0;
-        phydro->w(IPR,k,j,i) = pgas_0*Pconv;
+        phydro->w(IPR,k,j,i) = pgas_0;
         phydro->w(IVX,k,j,i) = 0.0;
         phydro->w(IVY,k,j,i) = 0.0;
         phydro->w(IVZ,k,j,i) = 0.0;
@@ -215,6 +231,11 @@ void Cooling(MeshBlock *pmb, const Real t, const Real dt,
   int js = pmb->js, je = pmb->je;
   int ks = pmb->ks, ke = pmb->ke;
 
+  // set conversion factors
+  // this should be one for our typical unit choice but put it here to make it clear
+  Real to_nH = punit->Density/mean_mass_per_H;
+  // this is obvious for a fixed mu
+  Real to_Kelvin = punit->Temperature;
   for (int k = ks; k <= ke; ++k) {
     for (int j = js; j <= je; ++j) {
       for (int i = is; i <= ie; ++i) {
@@ -224,32 +245,36 @@ void Cooling(MeshBlock *pmb, const Real t, const Real dt,
 
         Real u = P_before/(gamma_adi - 1.0); // internal energy in code units
 
-        // calculate temperature and density in physical units before cooling
-        Real T_before = (mu/muH) * P_before/rho_before/Pconv;
-        Real n_before = rho_before;
+        // calculate nH, temperature, dt in physical units before cooling
+        Real nH_before = rho_before*to_nH;
+        Real T_before = P_before/rho_before*punit->Temperature;
+        Real dt_ = dt*punit->Time;
 
         Real T_update = 0.;
         T_update += T_before;
         // dT/dt = - T/tcool(T,nH) ---- RK4
-        Real k1 = -1.0 * (T_update/tcool(T_update, n_before));
-        Real k2 = -1.0 * (T_update + 0.5*dt*time_scale * k1)/tcool(T_update +
-          0.5*dt*time_scale * k1, n_before);
-        Real k3 = -1.0 * (T_update + 0.5*dt*time_scale * k2)/tcool(T_update +
-          0.5*dt*time_scale * k2, n_before);
-        Real k4 = -1.0 * (T_update + dt*time_scale * k3)/tcool(T_update +
-          dt*time_scale * k3, n_before);
-        T_update += (k1 + 2.*k2 + 2.*k3 + k4)/6.0 * dt*time_scale;
+        // everythin here must be in physical units (c.g.s.)
+        Real k1 = -1.0 * (T_update/tcool(T_update, nH_before));
+        Real k2 = -1.0 * (T_update + 0.5*dt_*k1) /
+                  tcool(T_update + 0.5*dt_*k1, nH_before);
+        Real k3 = -1.0 * (T_update + 0.5*dt_*k2) /
+                  tcool(T_update + 0.5*dt_*k2, nH_before);
+        Real k4 = -1.0 * (T_update + dt_*k3) /
+                  tcool(T_update + dt_*k3, nH_before);
+        T_update += (k1 + 2.*k2 + 2.*k3 + k4)/6.0 * dt_;
 
         // dont cool below cooling floor and find new internal thermal energy
-        Real P_after = (std::max(T_update,T_floor) * rho_before * (muH/mu));
-        Real u_after = Pconv*P_after/(gamma_adi-1.0);
+        // Note (muH/mu) is absorbed into the Temperature unit for a fixed mu
+        // Both P and u are in code units
+        Real P_after = (std::max(T_update,T_floor)/punit->Temperature * rho_before);
+        Real u_after = P_after/(gamma_adi-1.0);
 
         // temperature ceiling
         Real delta_e_ceil = 0.0;
         if (T_update > T_max) {
           delta_e_ceil -= u_after;
-          P_after = (T_max * rho_before * (muH/mu));
-          u_after = Pconv*P_after/(gamma_adi-1.0);
+          P_after = (T_max * rho_before * punit->Temperature);
+          u_after = P_after/(gamma_adi-1.0);
           delta_e_ceil += u_after;
           T_update = T_max;
         }
@@ -291,12 +316,12 @@ Real cooling_timestep(MeshBlock *pmb) {
       for (int i=pmb->is; i<=pmb->ie; ++i) {
         Real Press = pmb->phydro->w(IPR,k,j,i);
         Real rho = pmb->phydro->w(IDN,k,j,i);
-        Real T_before = (mu/muH) * Press/(rho*Pconv);
-        Real nH = rho;
+        Real T_before = Press/rho*punit->Temperature;
+        Real nH = rho*(punit->Density/mean_mass_per_H);
         if (T_before > 1.01 * T_floor) {
-          min_dt = std::min(min_dt, cfl_cool * std::abs(tcool(T_before,nH))/time_scale);
+          min_dt = std::min(min_dt, cfl_cool * std::abs(tcool(T_before,nH))/punit->Time);
         }
-        min_dt = std::max(dt_cutoff,min_dt);
+        // min_dt = std::max(dt_cutoff,min_dt);
       }
     }
   }
@@ -327,11 +352,9 @@ static Real Lambda_T(const Real T) {
 //! \brief tcool = e / (n^2*Cool - heat)
 //========================================================================================
 static Real tcool(const Real T, const Real nH) {
-  if (T < T_PE) {
-    return (kb * T) / ( (gamma_adi-1.0) * (mu/muH) * (nH * Lambda_T(T) - Gamma) );
-  } else {
-    return (kb * T) / ( (gamma_adi-1.0) * (mu/muH) * nH * Lambda_T(T) );
-  }
+  Real netcool = nH*Lambda_T(T);
+  if (T < T_PE) netcool -= Gamma;
+  return (Constants::kB*T)/((gamma_adi-1.0)*(mu/muH)*netcool);
 }
 
 //========================================================================================

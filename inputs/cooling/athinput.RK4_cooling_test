@@ -8,7 +8,7 @@ problem_id = cooling_rk4 # problem ID: basename of output filenames
 
 <output1>
 file_type  = hst        # History data dump
-dt         = 0.01       # time increment between outputs
+dt         = 0          # time increment between outputs
 
 <time>
 cfl_number = 0.3        # The Courant, Friedrichs, & Lewy (CFL) Number
@@ -43,12 +43,11 @@ iso_sound_speed = 0.4082482905   # equivalent to sqrt(gamma*p/d) for p=0.1, d=1
 
 <problem>
 turb_flag     = 0         # option for turning on turbulence 0=off 1=decaying 2=driven
-time_scale    = 3.086e13  # to translate pc/(km/s) to seconds (*almost* Myrs to secs)
-rho_0         = 10        # initial density meant to be in cm^-3
+rho_0         = 0.1        # initial density meant to be in cm^-3
 pgas_0        = 30000     # initial gas pressure meant to be in kB K cm^-3
 T_PE          = 15000     # temperature below which PE heating is applied
 Gamma         = 2e-26     # heating rate in ergs / sec
-cfl_cool      = 1.0       # min dt_hydro/dt_cool
+cfl_cool      = 0.1       # min dt_hydro/dt_cool
 T_floor       = 10        # temperature floor
-T_max         = 1000000   # temperature ceiling
+T_max         = 1e8       # temperature ceiling
 dedt          = 0         # energy injection rate for turbulence
