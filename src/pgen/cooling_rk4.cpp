@@ -24,6 +24,7 @@
 #include "../hydro/hydro.hpp"              // Hydro
 #include "../mesh/mesh.hpp"
 #include "../parameter_input.hpp"          // ParameterInput
+#include "../utils/units.hpp"
 
 // Global variables --- hydro & units
 static Real gamma_adi;
@@ -93,6 +94,12 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 #endif
   }
 
+  Real dunit = muH*Constants::mH;
+  Real lunit = Constants::pc;
+  Real vunit = Constants::kms;
+
+  Units *punit = new Units(dunit, lunit, vunit);
+
   // Read general parameters from input file
   gamma_adi     = pin->GetReal("hydro", "gamma");
   // (1 erg/K)/kB //length_scale/vel_scale;
@@ -105,6 +112,9 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   cfl_cool      = pin->GetReal("problem", "cfl_cool"); // min dt_hydro/dt_cool
   T_floor       = pin->GetReal("problem", "T_floor");
   T_max         = pin->GetReal("problem", "T_max");
+
+  punit->PrintCodeUnits();
+  punit->PrintConstantsInCodeUnits();
 
   // Enroll source function
   EnrollUserExplicitSourceFunction(Cooling);
