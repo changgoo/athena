@@ -128,7 +128,15 @@ class Coordinates {
   virtual void AddCoordTermsDivergence_STS(const Real dt, int stage,
                              const AthenaArray<Real> *flux,
                              AthenaArray<Real> &u, AthenaArray<Real> &flux_div);
+  
+  // coordinate source term for cosmic rays
+  virtual void AddCoordTermsDivergence(int flag, const AthenaArray<Real> &u_cr, 
+                             AthenaArray<Real> &coord_src);
 
+  // subtract coordinate source term for grad_pc
+  virtual void AddCoordTermsDivergence(const AthenaArray<Real> &u_cr, 
+                             AthenaArray<Real> &grad_pc);
+                             
   // ...to determine if index is a pole
   bool IsPole(int j);
 
@@ -335,10 +343,17 @@ class Cylindrical : public Coordinates {
   // ...to compute geometrical source terms
   void AddCoordTermsDivergence(const Real dt, const AthenaArray<Real> *flux,
                      const AthenaArray<Real> &prim, const AthenaArray<Real> &bcc,
-                     AthenaArray<Real> &u) final;
+                     AthenaArray<Real> &u);
   void AddCoordTermsDivergence_STS(const Real dt, int stage,
                      const AthenaArray<Real> *flux,
-                     AthenaArray<Real> &u, AthenaArray<Real> &flux_div) final;
+                     AthenaArray<Real> &u, AthenaArray<Real> &flux_div) final;                  
+  // coordinate source term for cosmic rays
+  void AddCoordTermsDivergence(int flag, const AthenaArray<Real> &u_cr, 
+                               AthenaArray<Real> &coord_src);
+  // subtract coordinate source term for grad_pc
+  void AddCoordTermsDivergence(const AthenaArray<Real> &u_cr, 
+                                AthenaArray<Real> &grad_pc);
+                                                                            
 };
 
 //----------------------------------------------------------------------------------------
@@ -396,7 +411,13 @@ class SphericalPolar : public Coordinates {
   // ...to compute geometrical source terms
   void AddCoordTermsDivergence(const Real dt, const AthenaArray<Real> *flux,
                      const AthenaArray<Real> &prim, const AthenaArray<Real> &bcc,
-                     AthenaArray<Real> &u) final;
+                     AthenaArray<Real> &u);
+  // coordinate source term for cosmic rays
+  void AddCoordTermsDivergence(int flag, const AthenaArray<Real> &u_cr, 
+                              AthenaArray<Real> &coord_src);
+  // subtract coordinate source term for grad_pc
+  void AddCoordTermsDivergence(const AthenaArray<Real> &u_cr, 
+                              AthenaArray<Real> &grad_pc); 
   void AddCoordTermsDivergence_STS(const Real dt, int stage,
                      const AthenaArray<Real> *flux,
                      AthenaArray<Real> &u, AthenaArray<Real> &flux_div) final;

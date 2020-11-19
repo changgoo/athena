@@ -1380,6 +1380,8 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
         // and (conserved variable) passive scalar masses:
         if (NSCALARS > 0)
           pmb->pscalars->sbvar.SendBoundaryBuffers();
+        if(CR_ENABLED)
+          pmb->pcr->cr_bvar.SendBoundaryBuffers();
       }
 
       // wait to receive conserved variables
@@ -1391,6 +1393,8 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
           pmb->pfield->fbvar.ReceiveAndSetBoundariesWithWait();
         if (NSCALARS > 0)
           pmb->pscalars->sbvar.ReceiveAndSetBoundariesWithWait();
+        if(CR_ENABLED)
+          pmb->pcr->cr_bvar.ReceiveAndSetBoundariesWithWait();
         if (SHEARING_BOX) {
           pmb->phydro->hbvar.AddHydroShearForInit();
         }
@@ -1510,7 +1514,17 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
 
         pbval->ApplyPhysicalBoundaries(time, 0.0, pbval->bvars_main_int);
       }
-
+      
+      // calculate opacity
+      if(CR_ENABLED){
+        for(int i=0; i<nmb; ++i){
+          pmb=pmb_array[i]; ph=pmb->phydro;
+          CosmicRay *pcr = pmb->pcr;
+          pf=pmb->pfield;
+          pcr->UpdateOpacity(pmb,pcr->u_cr,ph->w,pf->bcc);
+        }
+      }
+      
       // Calc initial diffusion coefficients
 #pragma omp for private(pmb,ph,pf)
       for (int i=0; i<nblocal; ++i) {
@@ -1757,6 +1771,8 @@ void Mesh::CorrectMidpointInitialCondition() {
     // and (conserved variable) passive scalar masses:
     if (NSCALARS > 0)
       pmb->pscalars->sbvar.SendBoundaryBuffers();
+    if(CR_ENABLED)
+      pmb->pcr->cr_bvar.SendBoundaryBuffers();
   }
 
   // wait to receive conserved variables
@@ -1770,6 +1786,8 @@ void Mesh::CorrectMidpointInitialCondition() {
       pmb->pfield->fbvar.ReceiveAndSetBoundariesWithWait();
     if (NSCALARS > 0)
       pmb->pscalars->sbvar.ReceiveAndSetBoundariesWithWait();
+    if(CR_ENABLED)
+      pmb->pcr->cr_bvar.ReceiveAndSetBoundariesWithWait();
     if (SHEARING_BOX) {
       pmb->phydro->hbvar.AddHydroShearForInit();
     }
@@ -1819,6 +1837,9 @@ void Mesh::ReserveMeshBlockPhysIDs() {
   if (NSCALARS > 0) {
     ReserveTagPhysIDs(CellCenteredBoundaryVariable::max_phys_id);
   }
+  if(CR_ENABLED){
+    ReserveTagPhysIDs(CellCenteredBoundaryVariable::max_phys_id);
+  }  
 #endif
   return;
 }

@@ -113,7 +113,14 @@ void BoundaryValues::ProlongateBoundaries(const Real time, const Real dt,
     pf = pmb->pfield;
     pfbvar = dynamic_cast<FaceCenteredBoundaryVariable *>(bvars_main_int[1]);
   }
-
+  
+  CosmicRay *pcr=nullptr;
+  CellCenteredBoundaryVariable *pcrbvar = nullptr;
+  if(CR_ENABLED){
+    pcr = pmb->pcr;
+    pcrbvar = &(pcr->cr_bvar); 
+  }
+  
   // For each finer neighbor, to prolongate a boundary we need to fill one more cell
   // surrounding the boundary zone to calculate the slopes ("ghost-ghost zone"). 3x steps:
   for (int n=0; n<nneighbor; n++) {
@@ -192,7 +199,9 @@ void BoundaryValues::ProlongateBoundaries(const Real time, const Real dt,
       ps = pmb->pscalars;
       ps->sbvar.var_cc = &(ps->coarse_r_);
     }
-
+    if(CR_ENABLED)
+      pcrbvar->var_cc = &(pcr->coarse_cr_);
+    
     // Step 2. Re-apply physical boundaries on the coarse boundary:
     ApplyPhysicalBoundariesOnCoarseLevel(nb, time, dt, si, ei, sj, ej, sk, ek,
                                          bvars_subset);
@@ -206,7 +215,9 @@ void BoundaryValues::ProlongateBoundaries(const Real time, const Real dt,
       ps = pmb->pscalars;
       ps->sbvar.var_cc = &(ps->r);
     }
-
+    if(CR_ENABLED)
+      pcrbvar->var_cc = &(pcr->u_cr);
+    
     // Step 3. Finally, the ghost-ghost zones are ready for prolongation:
     ProlongateGhostCells(nb, si, ei, sj, ej, sk, ek);
   } // end loop over nneighbor
@@ -326,6 +337,10 @@ void BoundaryValues::ApplyPhysicalBoundariesOnCoarseLevel(
     pf = pmb->pfield;
   }
 
+  CosmicRay *pcr = nullptr;
+  if(CR_ENABLED)
+    pcr = pmb->pcr;
+  
   // convert the ghost zone and ghost-ghost zones into primitive variables
   // this includes cell-centered field calculation
   int f1m = 0, f1p = 0, f2m = 0, f2p = 0, f3m = 0, f3p = 0;

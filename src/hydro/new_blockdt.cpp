@@ -58,6 +58,10 @@ void Hydro::NewBlockTimeStep() {
   Real min_dt_parabolic  = real_max;
   Real min_dt_user  = real_max;
 
+  Real cspeed = 0.0;
+  if(CR_ENABLED)
+    cspeed = std::max(cspeed,pmb->pcr->vmax);
+  
   // TODO(felker): skip this next loop if pm->fluid_setup == FluidFormulation::disabled
   FluidFormulation fluid_status = pmb->pmy_mesh->fluid_setup;
   for (int k=ks; k<=ke; ++k) {

@@ -172,6 +172,11 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
 
   peos = new EquationOfState(this, pin);
 
+  if(CR_ENABLED){
+    pcr = new CosmicRay(this, pin);
+    pbval->AdvanceCounterPhysID(CellCenteredBoundaryVariable::max_phys_id);
+  }
+  
   // Create user mesh data
   InitUserMeshBlockData(pin);
 
@@ -287,6 +292,11 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
 
   peos = new EquationOfState(this, pin);
 
+  if(CR_ENABLED){
+    pcr = new CosmicRay(this, pin);
+    pbval->AdvanceCounterPhysID(CellCenteredBoundaryVariable::max_phys_id);
+  }
+  
   InitUserMeshBlockData(pin);
 
   std::size_t os = 0;
@@ -315,6 +325,12 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
     os += pfield->b.x3f.GetSizeInBytes();
   }
 
+  if(CR_ENABLED){
+    std::memcpy(pcr->u_cr.data(), &(mbdata[os]), pcr->u_cr.GetSizeInBytes());
+    std::memcpy(pcr->u_cr1.data(), &(mbdata[os]), pcr->u_cr1.GetSizeInBytes());
+    os += pcr->u_cr.GetSizeInBytes();   
+  }
+  
   // (conserved variable) Passive scalars:
   if (NSCALARS > 0) {
     std::memcpy(pscalars->s.data(), &(mbdata[os]), pscalars->s.GetSizeInBytes());
@@ -351,6 +367,7 @@ MeshBlock::~MeshBlock() {
   delete peos;
   if (SELF_GRAVITY_ENABLED) delete pgrav;
   if (NSCALARS > 0) delete pscalars;
+  if (CR_ENABLED) delete pcr;
 
   // BoundaryValues should be destructed AFTER all BoundaryVariable objects are destroyed
   delete pbval;
@@ -451,6 +468,8 @@ std::size_t MeshBlock::GetBlockSizeInBytes() {
     size += pgrav->phi.GetSizeInBytes();
   if (NSCALARS > 0)
     size += pscalars->s.GetSizeInBytes();
+  if (CR_ENABLED)
+    size += pcr->u_cr.GetSizeInBytes();
 
   // calculate user MeshBlock data size
   for (int n=0; n<nint_user_meshblock_data_; n++)
