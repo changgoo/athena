@@ -36,7 +36,6 @@ Units::Units(Real dunit, Real lunit, Real vunit, Real mu0) {
   fixed_mu = true;
 
   SetUnitsConstants();
-
 }
 
 void Units::SetUnitsConstants() {
