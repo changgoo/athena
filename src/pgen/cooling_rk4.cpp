@@ -37,10 +37,14 @@ CoolingFunctionBase *pcool;
 
 // explicit cooling solver using RK4 method for integration
 // slightly modified to update T*(n/n_H) rather than T itself
-void Cooling(MeshBlock *pmb, const Real t, const Real dt,
+void Cooling_RK4(MeshBlock *pmb, const Real t, const Real dt,
        const AthenaArray<Real> &prim,const AthenaArray<Real> &prim_scalar,
        const AthenaArray<Real> &bcc, AthenaArray<Real> &cons,
        AthenaArray<Real> &cons_scalar);
+void Cooling_Euler(MeshBlock *pmb, const Real t, const Real dt,
+      const AthenaArray<Real> &prim,const AthenaArray<Real> &prim_scalar,
+      const AthenaArray<Real> &bcc, AthenaArray<Real> &cons,
+      AthenaArray<Real> &cons_scalar);
 Real CoolingLosses(MeshBlock *pmb, int iout);
 static Real cooling_timestep(MeshBlock *pmb);
 
@@ -108,7 +112,22 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   }
 
   // Enroll source function
-  EnrollUserExplicitSourceFunction(Cooling);
+  // currently, two cooling solvers are supported (euler, rk4)
+  std::string coolsolver = pin->GetOrAddString("cooling", "solver", "euler");
+  if (coolsolver.compare("euler") == 0) {
+    EnrollUserExplicitSourceFunction(Cooling_Euler);
+    std::cout << "Cooling solver is set to Euler" << std::endl;
+  } else if (coolsolver.compare("rk4") ==0) {
+    EnrollUserExplicitSourceFunction(Cooling_RK4);
+    std::cout << "Cooling solver is set to RK4" << std::endl;
+  } else {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in ProblemGenerator" << std::endl
+        << "coolsolver = " << coolsolver.c_str() << " is not supported" << std::endl;
+    throw std::runtime_error(msg.str().c_str());
+    return;
+  }
+
 
   // Enroll timestep so that dt <= min t_cool
   EnrollUserTimeStepFunction(cooling_timestep);
@@ -204,14 +223,105 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 }
 
 //========================================================================================
-//! \fn void Cooling(MeshBlock *pmb, const Real t, const Real dt,
+//! \fn void Cooling_Euler(MeshBlock *pmb, const Real t, const Real dt,
 //!       const AthenaArray<Real> &prim, const AthenaArray<Real> &prim_scalar,
 //!       const AthenaArray<Real> &bcc, AthenaArray<Real> &cons,
 //!       AthenaArray<Real> &cons_scalar)
 //! \brief function for cooling source term
 //!        must use prim to set cons
 //========================================================================================
-void Cooling(MeshBlock *pmb, const Real t, const Real dt,
+void Cooling_Euler(MeshBlock *pmb, const Real t, const Real dt,
+       const AthenaArray<Real> &prim, const AthenaArray<Real> &prim_scalar,
+       const AthenaArray<Real> &bcc, AthenaArray<Real> &cons,
+       AthenaArray<Real> &cons_scalar) {
+  // Determine which part of step this is
+  bool predict_step = prim.data() == pmb->phydro->w.data();
+
+  AthenaArray<Real> edot;
+  edot.InitWithShallowSlice(pmb->user_out_var, 4, 0, 1);
+
+  Real delta_e_block = 0.0;
+  Real delta_e_ceil_block  = 0.0;
+
+  // Extract indices
+  int is = pmb->is, ie = pmb->ie;
+  int js = pmb->js, je = pmb->je;
+  int ks = pmb->ks, ke = pmb->ke;
+
+  // get dt in physical units
+  Real dt_ = dt*punit->Time;
+
+  for (int k = ks; k <= ke; ++k) {
+    for (int j = js; j <= je; ++j) {
+      for (int i = is; i <= ie; ++i) {
+        // Extract rho and P from previous steps
+        const Real P_before = prim(IPR,k,j,i);
+        const Real rho_before = prim(IDN,k,j,i);
+
+        Real gamma_adi = pcool->gamma_adi;
+        Real u = P_before/(gamma_adi - 1.0); // internal energy in code units
+
+        // calculate nH in physical units before cooling
+        // not necessary for our typical choice but added here for completeness
+        Real nH_before = rho_before*pcool->to_nH;
+        // T here is not T = P/(n*k_B) but T*(n/nH)=P/(n_H*k_B)
+        Real T_before = P_before*pcool->to_pok/nH_before;
+
+        Real T_update = T_before - T_before/tcool(pcool, rho_before, P_before)*dt_;
+
+        // dont cool below cooling floor and find new internal thermal energy
+        Real T_floor = pcool->Get_Tfloor();
+        Real T_max = pcool->Get_Tmax();
+
+        // Both P and u are in code units
+        Real P_after = std::max(T_update,T_floor)*nH_before/pcool->to_pok;
+        Real u_after = P_after/(gamma_adi-1.0);
+
+        // temperature ceiling
+        Real delta_e_ceil = 0.0;
+        if (T_update > T_max) {
+          delta_e_ceil -= u_after;
+          // Both P and u are in code units
+          P_after = T_max*nH_before/pcool->to_pok;
+          u_after = P_after/(gamma_adi-1.0);
+          delta_e_ceil += u_after;
+          T_update = T_max;
+        }
+
+        // double check that you aren't cooling away all internal thermal energy
+        Real delta_e = u_after - u;
+
+        // change internal energy
+        cons(IEN,k,j,i) += delta_e;
+
+        // store edot
+        edot(k,j,i) = delta_e / dt;
+
+        // gather total cooling and total ceiling
+        if (!predict_step) {
+          delta_e_block += delta_e;
+          delta_e_ceil_block += delta_e_ceil;
+        }
+      }
+    }
+  }
+  // add cooling and ceiling to hist outputs
+  pmb->ruser_meshblock_data[0](0) += delta_e_block;
+  pmb->ruser_meshblock_data[0](1) += delta_e_ceil_block;
+  // Free arrays
+  edot.DeleteAthenaArray();
+  return;
+}
+
+//========================================================================================
+//! \fn void Cooling_RK4(MeshBlock *pmb, const Real t, const Real dt,
+//!       const AthenaArray<Real> &prim, const AthenaArray<Real> &prim_scalar,
+//!       const AthenaArray<Real> &bcc, AthenaArray<Real> &cons,
+//!       AthenaArray<Real> &cons_scalar)
+//! \brief function for cooling source term
+//!        must use prim to set cons
+//========================================================================================
+void Cooling_RK4(MeshBlock *pmb, const Real t, const Real dt,
        const AthenaArray<Real> &prim, const AthenaArray<Real> &prim_scalar,
        const AthenaArray<Real> &bcc, AthenaArray<Real> &cons,
        AthenaArray<Real> &cons_scalar) {
