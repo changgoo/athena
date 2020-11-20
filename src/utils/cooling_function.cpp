@@ -79,7 +79,7 @@ PiecewiseLinearFits::PiecewiseLinearFits(ParameterInput *pin) :
 //! - input rho, Press in code units
 //! - return Lambda in erg cm^3 / s
 //========================================================================================
-Real PiecewiseLinearFits::Lambda_T(const Real rho, const Real Press){
+Real PiecewiseLinearFits::Lambda_T(const Real rho, const Real Press) {
   Real T = GetTemperature(rho,Press);
   int k, n=nfit_cool-1;
   // first find the temperature bin
@@ -103,8 +103,10 @@ Real PiecewiseLinearFits::Lambda_T(const Real rho, const Real Press){
 //========================================================================================
 Real PiecewiseLinearFits::Gamma_T(const Real rho, const Real Press) {
   Real T = GetTemperature(rho,Press);
-  if (T < T_PE) return Gamma0;
-  else return 0.0;
+  if (T < T_PE)
+    return Gamma0;
+  else
+    return 0.0;
 }
 
 //========================================================================================

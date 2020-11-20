@@ -20,7 +20,7 @@
 //! \brief Base class for Cooling Functions
 class CoolingFunctionBase {
  public:
-  CoolingFunctionBase(ParameterInput *pin);
+  explicit CoolingFunctionBase(ParameterInput *pin);
   ~CoolingFunctionBase();
 
   void Initialize(Real mu, Real muH);
@@ -47,7 +47,7 @@ class CoolingFunctionBase {
 
   Real T_max, T_floor, cfl_cool, gamma_adi;
 
-private:
+ private:
   Real mu,muH;
 };
 
@@ -62,7 +62,7 @@ private:
 //========================================================================================
 class PiecewiseLinearFits : public CoolingFunctionBase {
  public:
-  PiecewiseLinearFits(ParameterInput *pin);
+  explicit PiecewiseLinearFits(ParameterInput *pin);
   // ~PiecewiseLinearFits() override { delete punit; }
 
   Real Lambda_T(const Real rho, const Real Press) override;
@@ -114,7 +114,7 @@ class PiecewiseLinearFits : public CoolingFunctionBase {
 //========================================================================================
 class TigressClassic : public CoolingFunctionBase {
  public:
-  TigressClassic(ParameterInput *pin);
+  explicit TigressClassic(ParameterInput *pin);
   // ~TigressClassic() override { delete punit; }
 
   Real Lambda_T(const Real rho, const Real Press) override;
@@ -124,10 +124,10 @@ class TigressClassic : public CoolingFunctionBase {
 
   void SetHeatRatio(Real hr) { heat_ratio = hr; }
 
-  Real GetHeatRatio(){ return heat_ratio;}
+  Real GetHeatRatio() { return heat_ratio;}
   Real GetTemperature(const Real rho, const Real Press) override;
 
-private:
+ private:
   Real heat_ratio;
   Real mu, muH;
   const Real mumin=0.6182, mumax=1.295;

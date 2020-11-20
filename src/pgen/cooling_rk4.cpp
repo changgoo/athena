@@ -10,10 +10,10 @@
 // C++ headers
 #include <algorithm>  // min()
 #include <cmath>      // abs(), pow(), sqrt()
+#include <fstream>    // ofstream
 #include <sstream>    // stringstream
 #include <stdexcept>  // runtime_error
 #include <string>     // string
-#include <fstream>
 
 // Athena++ headers
 #include "../athena.hpp"                   // macros, enums, declarations
@@ -25,9 +25,8 @@
 #include "../hydro/hydro.hpp"              // Hydro
 #include "../mesh/mesh.hpp"
 #include "../parameter_input.hpp"          // ParameterInput
-#include "../utils/units.hpp"              // Units, Constants
 #include "../utils/cooling_function.hpp"   // Cooling function namespace
-
+#include "../utils/units.hpp"              // Units, Constants
 
 // Global variables ---
 // Pointer to unit class. This is now attached to the Cooling class
