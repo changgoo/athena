@@ -20,6 +20,7 @@
 #include "../hydro/hydro_diffusion/hydro_diffusion.hpp"
 #include "../mesh/mesh.hpp"
 #include "../parameter_input.hpp"
+#include "../cr/cr.hpp"
 #include "coordinates.hpp"
 
 //----------------------------------------------------------------------------------------

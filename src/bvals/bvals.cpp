@@ -39,6 +39,7 @@
 #include "../scalars/scalars.hpp"
 #include "../utils/buffer_utils.hpp"
 #include "bvals.hpp"
+#include "../cr/cr.hpp"
 
 // MPI header
 #ifdef MPI_PARALLEL
@@ -348,7 +349,7 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
   if (apply_bndry_fn_[BoundaryFace::inner_x1]) {
     DispatchBoundaryFunctions(pmb, pco, time, dt,
                               pmb->is, pmb->ie, bjs, bje, bks, bke, NGHOST,
-                              ph->w, pf->b, BoundaryFace::inner_x1,
+                              ph->w, pf->b, pf->bcc, pcr->u_cr, BoundaryFace::inner_x1,
                               bvars_subset);
     // KGF: COUPLING OF QUANTITIES (must be manually specified)
     if (MAGNETIC_FIELDS_ENABLED) {
@@ -368,7 +369,7 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
   if (apply_bndry_fn_[BoundaryFace::outer_x1]) {
     DispatchBoundaryFunctions(pmb, pco, time, dt,
                               pmb->is, pmb->ie, bjs, bje, bks, bke, NGHOST,
-                              ph->w, pf->b, BoundaryFace::outer_x1,
+                              ph->w, pf->b, pf->bcc, pcr->u_cr, BoundaryFace::outer_x1,
                               bvars_subset);
     // KGF: COUPLING OF QUANTITIES (must be manually specified)
     if (MAGNETIC_FIELDS_ENABLED) {
@@ -389,7 +390,7 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
     if (apply_bndry_fn_[BoundaryFace::inner_x2]) {
       DispatchBoundaryFunctions(pmb, pco, time, dt,
                                 bis, bie, pmb->js, pmb->je, bks, bke, NGHOST,
-                                ph->w, pf->b, BoundaryFace::inner_x2,
+                                ph->w, pf->b, pf->bcc, pcr->u_cr, BoundaryFace::inner_x2,
                                 bvars_subset);
       // KGF: COUPLING OF QUANTITIES (must be manually specified)
       if (MAGNETIC_FIELDS_ENABLED) {
@@ -409,7 +410,7 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
     if (apply_bndry_fn_[BoundaryFace::outer_x2]) {
       DispatchBoundaryFunctions(pmb, pco, time, dt,
                                 bis, bie, pmb->js, pmb->je, bks, bke, NGHOST,
-                                ph->w, pf->b, BoundaryFace::outer_x2,
+                                ph->w, pf->b, pf->bcc, pcr->u_cr, BoundaryFace::outer_x2,
                                 bvars_subset);
       // KGF: COUPLING OF QUANTITIES (must be manually specified)
       if (MAGNETIC_FIELDS_ENABLED) {
@@ -434,7 +435,7 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
     if (apply_bndry_fn_[BoundaryFace::inner_x3]) {
       DispatchBoundaryFunctions(pmb, pco, time, dt,
                                 bis, bie, bjs, bje, pmb->ks, pmb->ke, NGHOST,
-                                ph->w, pf->b, BoundaryFace::inner_x3,
+                                ph->w, pf->b, pf->bcc, pcr->u_cr, BoundaryFace::inner_x3,
                                 bvars_subset);
       // KGF: COUPLING OF QUANTITIES (must be manually specified)
       if (MAGNETIC_FIELDS_ENABLED) {
@@ -454,7 +455,7 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
     if (apply_bndry_fn_[BoundaryFace::outer_x3]) {
       DispatchBoundaryFunctions(pmb, pco, time, dt,
                                 bis, bie, bjs, bje, pmb->ks, pmb->ke, NGHOST,
-                                ph->w, pf->b, BoundaryFace::outer_x3,
+                                ph->w, pf->b, pf->bcc, pcr->u_cr, BoundaryFace::outer_x3,
                                 bvars_subset);
       // KGF: COUPLING OF QUANTITIES (must be manually specified)
       if (MAGNETIC_FIELDS_ENABLED) {
@@ -478,7 +479,8 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
 void BoundaryValues::DispatchBoundaryFunctions(
     MeshBlock *pmb, Coordinates *pco, Real time, Real dt,
     int il, int iu, int jl, int ju, int kl, int ku, int ngh,
-    AthenaArray<Real> &prim, FaceField &b, BoundaryFace face,
+    AthenaArray<Real> &prim, FaceField &b, AthenaArray<Real> &bcc, 
+    AthenaArray<Real> &u_cr, BoundaryFace face,
     std::vector<BoundaryVariable *> bvars_subset) {
   if (block_bcs[face] ==  BoundaryFlag::user) {  // user-enrolled BCs
     pmy_mesh_->BoundaryFunction_[face](pmb, pco, prim, b, time, dt,

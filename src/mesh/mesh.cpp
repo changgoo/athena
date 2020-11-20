@@ -47,6 +47,7 @@
 #include "../reconstruct/reconstruction.hpp"
 #include "../scalars/scalars.hpp"
 #include "../utils/buffer_utils.hpp"
+#include "../cr/cr.hpp"
 #include "mesh.hpp"
 #include "mesh_refinement.hpp"
 #include "meshblock_tree.hpp"
@@ -1115,6 +1116,23 @@ void Mesh::EnrollUserBoundaryFunction(BoundaryFace dir, BValFunc my_bc) {
   return;
 }
 
+void Mesh::EnrollUserCRBoundaryFunction(BoundaryFace dir, CRBoundaryFunc my_bc) {
+  std::stringstream msg;
+  if (dir < 0 || dir > 5) {
+    msg << "### FATAL ERROR in EnrollUserCRBoundaryCondition function" << std::endl
+        << "dirName = " << dir << " not valid" << std::endl;
+    ATHENA_ERROR(msg);
+  }
+  if (mesh_bcs[dir] != BoundaryFlag::user) {
+    msg << "### FATAL ERROR in EnrollUserCRBoundaryFunction" << std::endl
+        << "The boundary condition flag must be set to the string 'user' in the "
+        << " <mesh> block in the input file to use user-enrolled BCs" << std::endl;
+    ATHENA_ERROR(msg);
+  }
+  CRBoundaryFunc_[static_cast<int>(dir)]=my_bc;
+  return;
+}
+
 //----------------------------------------------------------------------------------------
 //! \fn void Mesh::EnrollUserMGGravityBoundaryFunction(BoundaryFace dir
 //                                                     MGBoundaryFunc my_bc)
@@ -1517,8 +1535,8 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
       
       // calculate opacity
       if(CR_ENABLED){
-        for(int i=0; i<nmb; ++i){
-          pmb=pmb_array[i]; ph=pmb->phydro;
+        for(int i=0; i<nblocal; ++i){
+          pmb=my_blocks(i); ph=pmb->phydro;
           CosmicRay *pcr = pmb->pcr;
           pf=pmb->pfield;
           pcr->UpdateOpacity(pmb,pcr->u_cr,ph->w,pf->bcc);

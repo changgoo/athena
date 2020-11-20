@@ -44,6 +44,7 @@ class Reconstruction;
 class Hydro;
 class Field;
 class PassiveScalars;
+class CosmicRay;
 class Gravity;
 class MGGravity;
 class MGGravityDriver;
@@ -120,6 +121,7 @@ class MeshBlock {
   MGGravity* pmg;
   PassiveScalars *pscalars;
   EquationOfState *peos;
+  CosmicRay *pcr;
 
   // functions
   std::size_t GetBlockSizeInBytes();
@@ -134,7 +136,10 @@ class MeshBlock {
                    FaceField &b_in1, FaceField &b_in2,
                    FaceField &b_in3, FaceField &b_in4,
                    const Real wght[5]);
+  void WeightedAve(AthenaArray<Real> &u_out, AthenaArray<Real> &u_in1,
+                   AthenaArray<Real> &u_in2, const Real wght[3]);
 
+                                    
   // inform MeshBlock which arrays contained in member Hydro, Field, Particles,
   // ... etc. classes are the "primary" representations of a quantity. when registered,
   // that data are used for (1) load balancing (2) (future) dumping to restart file
@@ -192,6 +197,7 @@ class Mesh {
   friend class MeshRefinement;
   friend class HydroSourceTerms;
   friend class Hydro;
+  friend class CosmicRay;
   friend class FFTDriver;
   friend class FFTGravityDriver;
   friend class TurbulenceDriver;
@@ -315,6 +321,7 @@ class Mesh {
   ConductionCoeffFunc ConductionCoeff_;
   FieldDiffusionCoeffFunc FieldDiffusivity_;
   MGBoundaryFunc MGGravityBoundaryFunction_[6];
+  CRBoundaryFunc CRBoundaryFunc_[6];
 
   void AllocateRealUserMeshDataField(int n);
   void AllocateIntUserMeshDataField(int n);
@@ -352,9 +359,11 @@ class Mesh {
   // often used (not defined) in prob file in ../pgen/
   void EnrollUserBoundaryFunction(BoundaryFace face, BValFunc my_func);
   void EnrollUserMGGravityBoundaryFunction(BoundaryFace dir, MGBoundaryFunc my_bc);
+  void EnrollUserCRBoundaryFunction(BoundaryFace face, CRBoundaryFunc my_func);
   // DEPRECATED(felker): provide trivial overload for old-style BoundaryFace enum argument
   void EnrollUserBoundaryFunction(int face, BValFunc my_func);
   void EnrollUserMGGravityBoundaryFunction(int dir, MGBoundaryFunc my_bc);
+  void EnrollUserCRBoundaryFunction(int face, CRBoundaryFunc my_func);
 
   void EnrollUserRefinementCondition(AMRFlagFunc amrflag);
   void EnrollUserMeshGenerator(CoordinateDirection dir, MeshGenFunc my_mg);

@@ -184,6 +184,17 @@ class TimeIntegratorTaskList : public TaskList {
   TaskStatus ReceiveScalars(MeshBlock *pmb, int stage);
   TaskStatus SetBoundariesScalars(MeshBlock *pmb, int stage);
 
+  // Tasks functionc for cosmic rays
+  TaskStatus CalculateCRFlux(MeshBlock *pmb, int stage);
+  TaskStatus IntegrateCR(MeshBlock *pmb, int stage);
+  TaskStatus AddSourceTermsCR(MeshBlock *pmb, int stage);
+  TaskStatus SendCRFlux(MeshBlock *pmb, int stage);
+  TaskStatus ReceiveAndCorrectCRFlux(MeshBlock *pmb, int stage);
+  TaskStatus SendCR(MeshBlock *pmb, int stage);
+  TaskStatus ReceiveCR(MeshBlock *pmb, int stage);
+  TaskStatus SetBoundariesCR(MeshBlock *pmb, int stage);
+  TaskStatus CROpacity(MeshBlock *pmb, int stage);
+  
  private:
   IntegratorWeight stage_wghts[MAX_NSTAGE];
 
@@ -245,39 +256,47 @@ const TaskID CALC_HYDFLX(2);
 const TaskID CALC_FLDFLX(3);
 const TaskID CALC_RADFLX(4);
 const TaskID CALC_CHMFLX(5);
+const TaskID CALC_CRFLX(6);
 
-const TaskID SEND_HYDFLX(6);
-const TaskID SEND_FLDFLX(7);
+const TaskID SEND_HYDFLX(7);
+const TaskID SEND_FLDFLX(8);
+const TaskID SEND_CRFLX(9);
 // const TaskID SEND_RADFLX(8);
 // const TaskID SEND_CHMFLX(9);
 
 const TaskID RECV_HYDFLX(10);
 const TaskID RECV_FLDFLX(11);
+const TaskID RECV_CRFLX(12);
 // const TaskID RECV_RADFLX(12);
 // const TaskID RECV_CHMFLX(13);
 
 const TaskID SRCTERM_HYD(14);
+const TaskID SRCTERM_CR(15);
 // const TaskID SRCTERM_FLD(15);
 // const TaskID SRCTERM_RAD(16);
 // const TaskID SRCTERM_CHM(17);
 
 const TaskID INT_HYD(18);
 const TaskID INT_FLD(19);
+const TaskID INT_CR(20);
 // const TaskID INT_RAD(20);
 // const TaskID INT_CHM(21);
 
 const TaskID SEND_HYD(22);
 const TaskID SEND_FLD(23);
+const TaskID SEND_CR(24);
 // const TaskID SEND_RAD(24);
 // const TaskID SEND_CHM(25);
 
 const TaskID RECV_HYD(26);
 const TaskID RECV_FLD(27);
+const TaskID RECV_CR(28);
 // const TaskID RECV_RAD(28);
 // const TaskID RECV_CHM(29);
 
 const TaskID SETB_HYD(30);
 const TaskID SETB_FLD(31);
+const TaskID SETB_CR(32);
 // const TaskID SETB_RAD(32);
 // const TaskID SETB_CHM(33);
 
@@ -308,6 +327,7 @@ const TaskID RECV_SCLR(54);
 const TaskID SETB_SCLR(55);
 const TaskID DIFFUSE_SCLR(56);
 
+const TaskID CR_OPACITY(57);
 // const TaskID RECV_SCLRSH(57);
 // const TaskID SEND_SCLRSH(58);
 

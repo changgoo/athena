@@ -25,6 +25,8 @@
 #include "../hydro/hydro.hpp"
 #include "../hydro/hydro_diffusion/hydro_diffusion.hpp"
 #include "../hydro/srcterms/hydro_srcterms.hpp"
+#include "../cr/cr.hpp"
+#include "../cr/integrators/cr_integrators.hpp"
 #include "../mesh/mesh.hpp"
 #include "../parameter_input.hpp"
 #include "../reconstruct/reconstruction.hpp"
@@ -285,7 +287,7 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
 
     TaskID src_term = SRCTERM_HYD;
     if(CR_ENABLED)
-      src_term = (src_term | SRCTERM_CRTC);
+      src_term = (src_term | SRCTERM_CR);
 
     AddTask(SEND_HYD,src_term);
     AddTask(RECV_HYD,NONE);
@@ -369,7 +371,7 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
       // prolongate, compute new primitives
       if (pm->multilevel) { // SMR or AMR
         TaskID setb=(SEND_HYD|SETB_HYD);
-        if(CR_ENABLED+TC_ENABLED)
+        if(CR_ENABLED)
           setb=(setb|SEND_CR|SETB_CR);   
         if (NSCALARS > 0) {
           AddTask(PROLONG,(setb|SETB_SCLR|SEND_SCLR));

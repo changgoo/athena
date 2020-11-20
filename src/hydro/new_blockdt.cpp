@@ -22,6 +22,7 @@
 #include "../field/field_diffusion/field_diffusion.hpp"
 #include "../mesh/mesh.hpp"
 #include "../scalars/scalars.hpp"
+#include "../cr/cr.hpp"
 #include "hydro.hpp"
 #include "hydro_diffusion/hydro_diffusion.hpp"
 

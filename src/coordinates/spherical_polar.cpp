@@ -23,6 +23,7 @@
 #include "../hydro/hydro.hpp"
 #include "../hydro/hydro_diffusion/hydro_diffusion.hpp"
 #include "../mesh/mesh.hpp"
+#include "../cr/cr.hpp"
 #include "../parameter_input.hpp"
 #include "coordinates.hpp"
 

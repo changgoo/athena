@@ -164,7 +164,7 @@ void CRIntegrator::CalculateFluxes(AthenaArray<Real> &w,
 
       }// end MHD
 
-      / need to add additional sound speed for stability
+      // need to add additional sound speed for stability
       for(int i=0; i<ncells1; ++i){
          Real cr_sound_x = vel_flx_flag_ * sqrt((4.0/9.0) * cr(CRE,k,j,i)/w(IDN,k,j,i)) * pcr->v_diff(0,k,j,i)/(pcr->vmax * sqrt(1./3.)); 
          pcr->v_diff(0,k,j,i) += cr_sound_x;
