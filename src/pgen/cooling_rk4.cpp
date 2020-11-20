@@ -13,6 +13,7 @@
 #include <sstream>    // stringstream
 #include <stdexcept>  // runtime_error
 #include <string>     // string
+#include <fstream>
 
 // Athena++ headers
 #include "../athena.hpp"                   // macros, enums, declarations
@@ -25,52 +26,31 @@
 #include "../mesh/mesh.hpp"
 #include "../parameter_input.hpp"          // ParameterInput
 #include "../utils/units.hpp"              // Units, Constants
+#include "../utils/cooling_function.hpp"   // Cooling function namespace
 
-// Global variables --- hydro & units
-// Pointer to unit class. Need to decide if we want to attach this to Mesh or MeshBlock
-// Removed redundant global variables for units and constants
+
+// Global variables ---
+// Pointer to unit class. This is now attached to the Cooling class
 Units *punit;
+// Pointer to Cooling function class,
+// will be set to specific function depending on the input parameter (cooling/coolftn).
+CoolingFunctionBase *pcool;
 
-static Real gamma_adi;
-static const Real mu = 0.62; // mean molecular weight
-static const Real muH = 1.4; // mean molecular weight per H
-static const Real mean_mass_per_H = muH*Constants::mH; // mean mass per H
-static Real Gamma, T_PE, T_floor, T_max;
-static Real cfl_cool, dt_cutoff;
-
-// Global variables --- cooling
-static int nfit_cool = 12;
-static Real T_cooling_curve[12] =
-  {0.99999999e1,
-   1.0e+02, 6.0e+03, 1.75e+04,
-   4.0e+04, 8.7e+04, 2.30e+05,
-   3.6e+05, 1.5e+06, 3.50e+06,
-   2.6e+07, 1.0e+12};
-
-static Real lambda_cooling_curve[12] =
-  { 1e-30,
-    1.00e-27,   2.00e-26,   1.50e-22,
-    1.20e-22,   5.25e-22,   5.20e-22,
-    2.25e-22,   1.25e-22,   3.50e-23,
-    2.10e-23,   4.12e-21};
-
-static Real exponent_cooling_curve[12] =
-  {3.,
-   0.73167566,  8.33549431, -0.26992783,
-   1.89942352, -0.00984338, -1.8698263 ,
-   -0.41187018, -1.50238273, -0.25473349,
-   0.5000359, 0.5 };
-
-static Real Lambda_T(const Real T);
-static Real tcool(const Real T, const Real nH);
-
+// explicit cooling solver using RK4 method for integration
+// slightly modified to update T*(n/n_H) rather than T itself
 void Cooling(MeshBlock *pmb, const Real t, const Real dt,
        const AthenaArray<Real> &prim,const AthenaArray<Real> &prim_scalar,
        const AthenaArray<Real> &bcc, AthenaArray<Real> &cons,
        AthenaArray<Real> &cons_scalar);
-
-static Real cooling_timestep(MeshBlock *pmb);
 Real CoolingLosses(MeshBlock *pmb, int iout);
+static Real cooling_timestep(MeshBlock *pmb);
+
+// calculate tcool = e/L(rho, P)
+static Real tcool(CoolingFunctionBase *pcool, const Real rho, const Real Press);
+
+// Utility functions for debugging
+void PrintCoolingFunction(CoolingFunctionBase *pcool, std::string coolftn);
+void PrintParameters(CoolingFunctionBase *pcool, const Real rho, const Real Press);
 
 //========================================================================================
 //! \fn void Mesh::InitUserMeshData(ParameterInput *pin)
@@ -87,35 +67,46 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   if (turb_flag != 0) {
 #ifndef FFT
     std::stringstream msg;
-    msg << "### FATAL ERROR in TurbulenceDriver::TurbulenceDriver" << std::endl
+    msg << "### FATAL ERROR in ProblemGenerator " << std::endl
         << "non zero Turbulence flag is set without FFT!" << std::endl;
     throw std::runtime_error(msg.str().c_str());
     return;
 #endif
   }
 
-  // set density, length, and velocity units
-  Real dunit = mean_mass_per_H; // denisty in code units is number density of hydrogen
-  Real lunit = Constants::pc; // length in code units is parsec
-  Real vunit = Constants::kms; // velocity in code units is km/s
+  // initialize cooling function
+  // currently, two cooling functions supported (tigress, plf)
+  std::string coolftn = pin->GetOrAddString("cooling", "coolftn", "tigress");
 
-  // initialize the unit class
-  punit = new Units(dunit, lunit, vunit, mu);
+  if (coolftn.compare("tigress") == 0) {
+    pcool = new TigressClassic(pin);
+    std::cout << "Cooling function is set to TigressClassic" << std::endl;
+  } else if (coolftn.compare("plf") ==0) {
+    pcool = new PiecewiseLinearFits(pin);
+    std::cout << "Cooling function is set to PiecewiseLinearFits" << std::endl;
+  } else {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in ProblemGenerator" << std::endl
+        << "coolftn = " << coolftn.c_str() << " is not supported" << std::endl;
+    throw std::runtime_error(msg.str().c_str());
+    return;
+  }
 
-  // print out units and constants in code units
+  // shorhand for unit class
+  // not unit class is initialized within cooling function constructor
+  // to use appropreate mu and muH
+  punit = pcool->punit;
+
+
+  // show some values for sanity check.
   if (Globals::my_rank == 0) {
+    // dump cooling function used in ascii format to e.g., tigress_coolftn.txt
+    PrintCoolingFunction(pcool,coolftn);
+
+    // print out units and constants in code units
     punit->PrintCodeUnits();
     punit->PrintConstantsInCodeUnits();
   }
-  // Read general parameters from input file
-  gamma_adi     = pin->GetReal("hydro", "gamma");
-
-  // temperature below which PE heating is applied
-  T_PE          = pin->GetReal("problem", "T_PE");
-  Gamma         = pin->GetReal("problem", "Gamma"); //heating rate in ergs / sec
-  cfl_cool      = pin->GetReal("problem", "cfl_cool"); // min dt_hydro/dt_cool
-  T_floor       = pin->GetReal("problem", "T_floor");
-  T_max         = pin->GetReal("problem", "T_max");
 
   // Enroll source function
   EnrollUserExplicitSourceFunction(Cooling);
@@ -169,24 +160,32 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     ku += (NGHOST);
   }
 
-
   Real rho_0   = pin->GetReal("problem", "rho_0"); // measured in m_p muH cm^-3
   Real pgas_0  = pin->GetReal("problem", "pgas_0"); // measured in kB K cm^-3
 
-  std::cout << "in c.g.s. " << "nH = " << rho_0
-            << " P/k = " << pgas_0
-            << " T[K] = " << pgas_0/rho_0*(mu/muH) << std::endl;
-  rho_0 *= mean_mass_per_H/punit->Density;
-  pgas_0 *= Constants::kB/punit->Pressure;
-  std::cout << "in code units" << "den = " << rho_0
-            << " P = " << pgas_0
-            << " T[K] = " << pgas_0/rho_0*punit->Temperature << std::endl;
+  // below is for sanity check. Uncomment if needed
+  // Real mu = pcool->Get_mu(rho_0, pgas_0/pcool->to_pok);
+  // Real muH = pcool->Get_muH();
+  // Real T = pgas_0/rho_0*(mu/muH);
+  //
+  // std::cout << "============== Check Initialization ===============" << std::endl
+  //           << " Input (nH, P/k, T) in cgs = " << rho_0 << " " << pgas_0
+  //           << " " << T << std::endl
+  //           << "  mu = " << mu << " mu(punit) = " << punit->mu
+  //           << " muH = " << muH << std::endl;
+  //           // << " tcool = " << tcool(pcool, T, rho_0) << std::endl;
 
+  rho_0 /= pcool->to_nH; // to code units
+  pgas_0 /= pcool->to_pok; // to code units
 
-
+  // PrintParameters(pcool,rho_0,pgas_0);
+  // T = pcool->GetTemperature(rho_0,pgas_0);
+  // Real nH = rho_0*pcool->to_nH;
+  // std::cout << "  Tempearture = " << T << std::endl;
+  // std::cout << " tcool = " << tcool(pcool, rho_0, pgas_0) << std::endl;
+  // std::cout << " sound speed = " << std::sqrt(pgas_0/rho_0) << std::endl;
   // Initialize primitive values
   for (int k = kl; k <= ku; ++k) {
-    Real z = pcoord->x3v(k);
     for (int j = jl; j <= ju; ++j) {
       for (int i = il; i <= iu; ++i) {
         phydro->w(IDN,k,j,i) = rho_0;
@@ -210,7 +209,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 //!       const AthenaArray<Real> &prim, const AthenaArray<Real> &prim_scalar,
 //!       const AthenaArray<Real> &bcc, AthenaArray<Real> &cons,
 //!       AthenaArray<Real> &cons_scalar)
-//! \brief Source function for cooling
+//! \brief function for cooling source term
 //!        must use prim to set cons
 //========================================================================================
 void Cooling(MeshBlock *pmb, const Real t, const Real dt,
@@ -231,11 +230,9 @@ void Cooling(MeshBlock *pmb, const Real t, const Real dt,
   int js = pmb->js, je = pmb->je;
   int ks = pmb->ks, ke = pmb->ke;
 
-  // set conversion factors
-  // this should be one for our typical unit choice but put it here to make it clear
-  Real to_nH = punit->Density/mean_mass_per_H;
-  // this is obvious for a fixed mu
-  Real to_Kelvin = punit->Temperature;
+  // get dt in physical units
+  Real dt_ = dt*punit->Time;
+
   for (int k = ks; k <= ke; ++k) {
     for (int j = js; j <= je; ++j) {
       for (int i = is; i <= ie; ++i) {
@@ -243,37 +240,43 @@ void Cooling(MeshBlock *pmb, const Real t, const Real dt,
         const Real P_before = prim(IPR,k,j,i);
         const Real rho_before = prim(IDN,k,j,i);
 
+        Real gamma_adi = pcool->gamma_adi;
         Real u = P_before/(gamma_adi - 1.0); // internal energy in code units
 
-        // calculate nH, temperature, dt in physical units before cooling
-        Real nH_before = rho_before*to_nH;
-        Real T_before = P_before/rho_before*punit->Temperature;
-        Real dt_ = dt*punit->Time;
+        // calculate nH in physical units before cooling
+        // not necessary for our typical choice but added here for completeness
+        Real nH_before = rho_before*pcool->to_nH;
+        // T here is not T = P/(n*k_B) but T*(n/nH)=P/(n_H*k_B)
+        Real T_before = P_before*pcool->to_pok/nH_before;
 
         Real T_update = 0.;
         T_update += T_before;
-        // dT/dt = - T/tcool(T,nH) ---- RK4
-        // everythin here must be in physical units (c.g.s.)
-        Real k1 = -1.0 * (T_update/tcool(T_update, nH_before));
-        Real k2 = -1.0 * (T_update + 0.5*dt_*k1) /
-                  tcool(T_update + 0.5*dt_*k1, nH_before);
-        Real k3 = -1.0 * (T_update + 0.5*dt_*k2) /
-                  tcool(T_update + 0.5*dt_*k2, nH_before);
-        Real k4 = -1.0 * (T_update + dt_*k3) /
-                  tcool(T_update + dt_*k3, nH_before);
+        // dT/dt = - T/tcool(P(T,nH),nH) ---- RK4
+        // T and k are in physical units,
+        // but rho and P passed into tcool function are in code units
+        Real k1 = -1.0 * (T_update/tcool(pcool, rho_before, P_before));
+        Real T2 = T_update + 0.5*dt_*k1, P2 = T2*nH_before/pcool->to_pok;
+        Real k2 = -1.0 * T2 / tcool(pcool, rho_before, P2);
+        Real T3 = T_update + 0.5*dt_*k2, P3 = T3*nH_before/pcool->to_pok;
+        Real k3 = -1.0 * T3 / tcool(pcool, rho_before, P3);
+        Real T4 = T_update + dt_*k3, P4 = T4*nH_before/pcool->to_pok;
+        Real k4 = -1.0 * T4 / tcool(pcool, rho_before, P4);
         T_update += (k1 + 2.*k2 + 2.*k3 + k4)/6.0 * dt_;
 
         // dont cool below cooling floor and find new internal thermal energy
-        // Note (muH/mu) is absorbed into the Temperature unit for a fixed mu
+        Real T_floor = pcool->Get_Tfloor();
+        Real T_max = pcool->Get_Tmax();
+
         // Both P and u are in code units
-        Real P_after = (std::max(T_update,T_floor)/punit->Temperature * rho_before);
+        Real P_after = std::max(T_update,T_floor)*nH_before/pcool->to_pok;
         Real u_after = P_after/(gamma_adi-1.0);
 
         // temperature ceiling
         Real delta_e_ceil = 0.0;
         if (T_update > T_max) {
           delta_e_ceil -= u_after;
-          P_after = (T_max * rho_before * punit->Temperature);
+          // Both P and u are in code units
+          P_after = T_max*nH_before/pcool->to_pok;
           u_after = P_after/(gamma_adi-1.0);
           delta_e_ceil += u_after;
           T_update = T_max;
@@ -309,17 +312,20 @@ void Cooling(MeshBlock *pmb, const Real t, const Real dt,
 //! \brief Function to calculate the timestep required to resolve cooling
 //!        tcool = 3/2 P/Edot_cool
 //========================================================================================
-Real cooling_timestep(MeshBlock *pmb) {
+static Real cooling_timestep(MeshBlock *pmb) {
   Real min_dt=1.0e10;
   for (int k=pmb->ks; k<=pmb->ke; ++k) {
     for (int j=pmb->js; j<=pmb->je; ++j) {
       for (int i=pmb->is; i<=pmb->ie; ++i) {
         Real Press = pmb->phydro->w(IPR,k,j,i);
         Real rho = pmb->phydro->w(IDN,k,j,i);
-        Real T_before = Press/rho*punit->Temperature;
-        Real nH = rho*(punit->Density/mean_mass_per_H);
+        Real T_before = pcool->GetTemperature(rho, Press);
+        // Real nH = rho*pcool->to_nH;
+        Real T_floor = pcool->Get_Tfloor();
         if (T_before > 1.01 * T_floor) {
-          min_dt = std::min(min_dt, cfl_cool * std::abs(tcool(T_before,nH))/punit->Time);
+          Real dtcool = pcool->cfl_cool*std::abs(tcool(pcool,rho,Press))
+                       /pcool->punit->Time;
+          min_dt = std::min(min_dt, dtcool);
         }
         // min_dt = std::max(dt_cutoff,min_dt);
       }
@@ -329,32 +335,19 @@ Real cooling_timestep(MeshBlock *pmb) {
 }
 
 //========================================================================================
-//! \fn static Real Lambda_T(const Real T)
-//! \brief piecewise power-law fit to the cooling curve with
-//!        temperature in K and L in erg cm^3 / s
+//! \fn static Real tcool(CoolingFunctionBase *pcool, const Real rho, const Real Press)
+//! \brief tcool = e / (n^2*Cool - n*heat)
+//! \note
+//! - input rho and P are in code Units
+//! - output tcool is in second
 //========================================================================================
-static Real Lambda_T(const Real T) {
-  int k, n=nfit_cool-1;
-  // first find the temperature bin
-  for (k=n; k>=0; k--) {
-    if (T >= T_cooling_curve[k]) break;
-  }
-  if (T > T_cooling_curve[0]) {
-    return (lambda_cooling_curve[k] *
-      pow(T/T_cooling_curve[k], exponent_cooling_curve[k]));
-  } else {
-    return 1.0e-50;
-  }
-}
-
-//========================================================================================
-//! \fn static Real tcool(const Real T, const Real nH)
-//! \brief tcool = e / (n^2*Cool - heat)
-//========================================================================================
-static Real tcool(const Real T, const Real nH) {
-  Real netcool = nH*Lambda_T(T);
-  if (T < T_PE) netcool -= Gamma;
-  return (Constants::kB*T)/((gamma_adi-1.0)*(mu/muH)*netcool);
+static Real tcool(CoolingFunctionBase *pcool, const Real rho, const Real Press) {
+  Real nH = rho*pcool->to_nH;
+  Real cool = nH*nH*pcool->Lambda_T(rho, Press);
+  Real heat = nH*pcool->Gamma_T(rho, Press);
+  Real eint = Press*pcool->punit->Pressure/(pcool->gamma_adi-1);
+  Real tcool = eint/(cool - heat);
+  return tcool;
 }
 
 //========================================================================================
@@ -367,4 +360,52 @@ Real CoolingLosses(MeshBlock *pmb, int iout) {
   Real delta_e = pmb->ruser_meshblock_data[0](iout);
   pmb->ruser_meshblock_data[0](iout) = 0.0;
   return delta_e;
+}
+
+//========================================================================================
+//! \fn void PrintCoolingFunction(CoolingFunctionBase *pcool,std::string coolftn)
+//! \brief private function to check cooling and heating functions
+//========================================================================================
+void PrintCoolingFunction(CoolingFunctionBase *pcool,std::string coolftn) {
+  Real Pok = 3.e3;
+  std::string coolfilename(coolftn);
+  coolfilename.append("_coolftn.txt");
+  std::ofstream coolfile (coolfilename.c_str());
+  coolfile << "rho,Press,Temp,cool,heat,tcool" << "\n";
+
+  for (int i=0; i<1000; ++i) {
+    Real logn = 5.0*((static_cast<Real>(i)/500.)-1.0)-2; // logn = -7 ~ 3
+    Real rho = std::pow(10,logn);
+    Real Press = Pok/pcool->to_pok;
+    Real Temp = pcool->GetTemperature(rho, Press);
+    Real cool = pcool->Lambda_T(rho,Press);
+    Real heat = pcool->Gamma_T(rho,Press);
+    Real t_cool = tcool(pcool,rho,Press);
+    coolfile << rho << "," << Press << "," << Temp << ","
+             << cool << "," << heat << "," << t_cool << "\n";
+  }
+}
+
+//========================================================================================
+//! \fn void PrintParameters(CoolingFunctionBase *pcool, const Real rho,
+//!       const Real Press)
+//! \brief print function for sanity check
+//========================================================================================
+void PrintParameters(CoolingFunctionBase *pcool, const Real rho, const Real Press) {
+  Real Temp_K = pcool->GetTemperature(rho, Press);
+  Real nH = rho*pcool->to_nH;
+  Real pok = Press*pcool->to_pok;
+  Real cool = pcool->Lambda_T(rho,Press);
+  Real heat = pcool->Gamma_T(rho,Press);
+  Real netcool = nH*(nH*cool-heat);
+  Real mu = pcool->Get_mu(rho,Press);
+  Real muH = pcool->Get_muH();
+
+  std::cout << "============== Cooling Parameters =============" << std::endl
+            << " Input (rho, P) in code = " << rho << " " << Press << std::endl
+            << " Converted (nH, P/k, T) = " << nH << " " << pok
+            << " " << Temp_K << std::endl
+            << "  mu = " << mu << "  muH = " << muH << std::endl
+            << "  cool = " << cool << "  heat = " << heat
+            << "  netcool = " << netcool << std::endl;
 }

@@ -8,11 +8,11 @@ problem_id = cooling_rk4 # problem ID: basename of output filenames
 
 <output1>
 file_type  = hst        # History data dump
-dt         = 0          # time increment between outputs
+dt         = 1.e-8      # time increment between outputs
 
 <time>
 cfl_number = 0.3        # The Courant, Friedrichs, & Lewy (CFL) Number
-nlim       = -1         # cycle limit
+nlim       = 1000       # cycle limit
 tlim       = 2.0        # time limit
 integrator  = vl2       # time integration algorithm
 xorder      = 2         # order of spatial reconstruction
@@ -41,13 +41,19 @@ ox3_bc     = periodic   # outer-X3 boundary flag
 gamma           = 1.666666666667 # gamma = C_p/C_v
 iso_sound_speed = 0.4082482905   # equivalent to sqrt(gamma*p/d) for p=0.1, d=1
 
+<cooling>
+coolftn       = tigress   # tigress or plf
+cfl_cool      = 0.1       # min dt_hydro/dt_cool
+T_floor       = 10        # temperature floor
+T_max         = 1e8       # temperature ceiling
+
+T_PE          = 15000     # temperature below which PE heating is applied, if plf
+Gamma         = 2e-26     # heating rate in ergs / sec, if plf
+
+heat_ratio    = 1.0       # Gamma/Gamma0, if tigress
+
 <problem>
 turb_flag     = 0         # option for turning on turbulence 0=off 1=decaying 2=driven
 rho_0         = 0.1        # initial density meant to be in cm^-3
 pgas_0        = 30000     # initial gas pressure meant to be in kB K cm^-3
-T_PE          = 15000     # temperature below which PE heating is applied
-Gamma         = 2e-26     # heating rate in ergs / sec
-cfl_cool      = 0.1       # min dt_hydro/dt_cool
-T_floor       = 10        # temperature floor
-T_max         = 1e8       # temperature ceiling
 dedt          = 0         # energy injection rate for turbulence
