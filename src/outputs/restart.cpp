@@ -27,6 +27,7 @@
 #include "../mesh/mesh.hpp"
 #include "../parameter_input.hpp"
 #include "../scalars/scalars.hpp"
+#include "../cr/cr.hpp"
 #include "outputs.hpp"
 
 
@@ -170,6 +171,11 @@ void RestartOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool force_wr
       pdata += pmb->pfield->b.x3f.GetSizeInBytes();
     }
 
+    if(CR_ENABLED){
+      std::memcpy(pdata,pmb->pcr->u_cr.data(),pmb->pcr->u_cr.GetSizeInBytes());
+      pdata += pmb->pcr->u_cr.GetSizeInBytes(); 
+    }
+    
     // (conserved variable) Passive scalars:
     if (NSCALARS > 0) {
       AthenaArray<Real> &s = pmb->pscalars->s;
