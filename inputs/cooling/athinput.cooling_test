@@ -1,10 +1,10 @@
 <comment>
 problem   = cooling in a  turbulent gas
 reference = El Badry et al. 2019 (for now)
-configure = --prob cooling_rk4
+configure = --prob cooling
 
 <job>
-problem_id = cooling_rk4 # problem ID: basename of output filenames
+problem_id = cooling # problem ID: basename of output filenames
 
 <output1>
 file_type  = hst        # History data dump
