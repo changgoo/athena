@@ -48,7 +48,7 @@ def prepare(**kwargs):
     # to athena.configure(). Any number of --<key>=<value> command-line arguments can also
     # be supplied. Note athena.configure() expects the values only to be quoted, e.g.
     # --<key>='<value>'.
-    athena.configure('-hdf5',prob='cooling',**kwargs)
+    athena.configure(prob='cooling',**kwargs)
 
     # Call make as though we ran
     #     make clean
@@ -78,7 +78,8 @@ def run(**kwargs):
                  'mesh/nx2=1',
                  'mesh/nx3=1',
                  'cooling/coolftn=tigress',
-                 'cooling/solver=rk4',
+                 'cooling/solver=euler',
+                 #'cooling/cfl_cool=0.05',
                  'problem/turb_flag=0',
                  'problem/rho_0=1.0',
                  'problem/pgas_0=3000']
@@ -111,20 +112,19 @@ def analyze():
     # This is the result of an Euler cooling integration done separately in 
     # Python with a much smaller time step. Make sure the that file that is being 
     # compared matches the inputs given above in the "run()" function
-    (t_ref, T_ref) = np.loadtxt('data/tigress_pok3e3_nH1e0.txt')
-
+    (t_ref, T_ref) = np.loadtxt('data/ref_cooling_soltuions/tigress_pok3e3_nH1e0.txt').T
 
     # Read in the data produced during this test. This will usually be stored in the
     # tst/regression/bin/ directory, but again we omit the first part of the path. Note
     # the file name is what we expect based on the job/problem_id field supplied in run().
-    (t_sol,Etot_sol) = np.loadtxt('bin/cooling.hst',usecols=(0,9))
+    (t_sol,mass_sol,Etot_sol) = np.loadtxt('bin/cooling.hst',usecols=(0,2,9)).T
     # default volume of the simulation domain
     vol = 8 
     # default conversion factor from code to kB K cm^-3 if using TIGRESS Units
-    Pconv = 1.696742e+02
+    Pconv = 1.729586e+02
     # density, pressure, and T_mu of the solution
-    rho = mass/vol
-    P = (2./3)*Pconv*Etot/vol
+    rho = mass_sol/vol
+    P = (2./3)*Pconv*Etot_sol/vol
     T_sol = P/rho
 
     # Next we compute the differences between the reference arrays and the newly created
@@ -140,7 +140,8 @@ def analyze():
     #     \int |f(x)| dx.
     # (Note neither comparison.l1_diff() nor comparison.l1_norm() divides by the length of
     # the domain.)
-    error_rel_T = error_abs_T / comparison.l1_norm(t_ref, T_ref)
+    Tref2 = (T_ref[1:] + T_ref[:-1])/2.
+    error_rel_T = error_abs_T / comparison.l1_norm(t_ref, Tref2)
 
     # Finally, we test that the relative errors in the two quantities are no more than 1%.
     # If they are, we return False at the very end of the function and file; otherwise
@@ -154,7 +155,8 @@ def analyze():
     # The main test script will record the result and delete both tst/regression/bin/ and
     # obj/ folders before proceeding on to the next test.
     analyze_status = True
-    if error_rel_T > 0.01 or np.isnan(error_rel_e):
+    if error_rel_T > 0.01 or np.isnan(error_rel_T):
+        print("Realtive errorr is ",error_rel_T)
         analyze_status = False
 
     # Note, if the problem generator in question outputs a unique CSV file containing

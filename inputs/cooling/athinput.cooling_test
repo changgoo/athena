@@ -57,5 +57,5 @@ heat_ratio    = 1.0       # Gamma/Gamma0, if tigress
 <problem>
 turb_flag     = 0         # option for turning on turbulence 0=off 1=decaying 2=driven
 rho_0         = 0.1        # initial density meant to be in cm^-3
-pgas_0        = 30000     # initial gas pressure meant to be in kB K cm^-3
+pgas_0        = 3000     # initial gas pressure meant to be in kB K cm^-3
 dedt          = 0         # energy injection rate for turbulence
