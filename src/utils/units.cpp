@@ -86,7 +86,9 @@ void Units::PrintCodeUnits() {
   else
     std::cout << "    for mu = 1.0 (temperature conversion is non-trivial for general mu)"
               << std::endl;
-  std::cout << std::defaultfloat << "====================================" << std::endl;
+  // taken out as defaultfloat not supported in perseus GCC (LTL Nov 19, 2020)
+  //std::cout << std::defaultfloat << "====================================" << std::endl;
+  std::cout << "====================================" << std::endl;
 }
 
 void Units::PrintConstantsInCodeUnits() {
@@ -103,5 +105,7 @@ void Units::PrintConstantsInCodeUnits() {
   std::cout << "c in code = " << c_in_code << std::endl;
 
   std::cout << "P/kB conversion = " << Pressure/Constants::kB << std::endl;
-  std::cout << std::defaultfloat << "====================================" << std::endl;
+  // taken out as defaultfloat not supported in perseus GCC (LTL Nov 19, 2020)
+  //std::cout << std::defaultfloat << "====================================" << std::endl;
+  std::cout << "====================================" << std::endl;
 }

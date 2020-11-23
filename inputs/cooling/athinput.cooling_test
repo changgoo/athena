@@ -42,8 +42,8 @@ gamma           = 1.666666666667 # gamma = C_p/C_v
 iso_sound_speed = 0.4082482905   # equivalent to sqrt(gamma*p/d) for p=0.1, d=1
 
 <cooling>
-coolftn       = tigress   # tigress or plf
-solver        = rk4       # euler or rk4
+coolftn       = tigress	# tigress or plf
+solver        = rk4	# euler or rk4
 
 cfl_cool      = 0.1       # min dt_hydro/dt_cool
 T_floor       = 10        # temperature floor

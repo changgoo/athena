@@ -90,7 +90,7 @@ Real PiecewiseLinearFits::Lambda_T(const Real rho, const Real Press) {
     return (lambda_cooling_curve[k] *
       std::pow(T/T_cooling_curve[k], exponent_cooling_curve[k]));
   } else {
-    return 1.0e-50;
+    return 1.0e-30;
   }
 }
 
@@ -131,7 +131,7 @@ Real PiecewiseLinearFits::GetTemperature(const Real rho, const Real Press) {
 //!   relation between T_1 --> T, where T_1 = (P*Punit)/(rho*rhounit)*(1.0*m_H/k_B)
 //!   or T_1 = P/rho*punit->Temperature as mu = 1 is used to set Units classs
 //! - muH = 1.4271, mu = T/T_1
-//! - allow time-dependent, spatially varing heating (SetHeatRatio to change heat_ratio)
+//! - allow time-dependent, spatially varying heating (SetHeatRatio to change heat_ratio)
 //========================================================================================
 TigressClassic::TigressClassic(ParameterInput *pin) :
   CoolingFunctionBase(pin),

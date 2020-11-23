@@ -95,7 +95,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     return;
   }
 
-  // shorhand for unit class
+  // shorthand for unit class
   // not unit class is initialized within cooling function constructor
   // to use appropreate mu and muH
   punit = pcool->punit;
@@ -182,26 +182,26 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real pgas_0  = pin->GetReal("problem", "pgas_0"); // measured in kB K cm^-3
 
   // below is for sanity check. Uncomment if needed
-  // Real mu = pcool->Get_mu(rho_0, pgas_0/pcool->to_pok);
-  // Real muH = pcool->Get_muH();
-  // Real T = pgas_0/rho_0*(mu/muH);
+  Real mu = pcool->Get_mu(rho_0, pgas_0/pcool->to_pok);
+  Real muH = pcool->Get_muH();
+  Real T = pgas_0/rho_0*(mu/muH);
   //
-  // std::cout << "============== Check Initialization ===============" << std::endl
-  //           << " Input (nH, P/k, T) in cgs = " << rho_0 << " " << pgas_0
-  //           << " " << T << std::endl
-  //           << "  mu = " << mu << " mu(punit) = " << punit->mu
-  //           << " muH = " << muH << std::endl;
-  //           // << " tcool = " << tcool(pcool, T, rho_0) << std::endl;
+  std::cout << "============== Check Initialization ===============" << std::endl
+            << " Input (nH, P/k, T) in cgs = " << rho_0 << " " << pgas_0
+            << " " << T << std::endl
+            << "  mu = " << mu << " mu(punit) = " << punit->mu
+            << " muH = " << muH << std::endl;
+            // << " tcool = " << tcool(pcool, T, rho_0) << std::endl;
 
   rho_0 /= pcool->to_nH; // to code units
   pgas_0 /= pcool->to_pok; // to code units
 
-  // PrintParameters(pcool,rho_0,pgas_0);
-  // T = pcool->GetTemperature(rho_0,pgas_0);
-  // Real nH = rho_0*pcool->to_nH;
-  // std::cout << "  Tempearture = " << T << std::endl;
-  // std::cout << " tcool = " << tcool(pcool, rho_0, pgas_0) << std::endl;
-  // std::cout << " sound speed = " << std::sqrt(pgas_0/rho_0) << std::endl;
+  PrintParameters(pcool,rho_0,pgas_0);
+  T = pcool->GetTemperature(rho_0,pgas_0);
+  Real nH = rho_0*pcool->to_nH;
+  std::cout << "  Tempearture = " << T << std::endl;
+  std::cout << " tcool = " << tcool(pcool, rho_0, pgas_0) << std::endl;
+  std::cout << " sound speed = " << std::sqrt(pgas_0/rho_0) << std::endl;
   // Initialize primitive values
   for (int k = kl; k <= ku; ++k) {
     for (int j = jl; j <= ju; ++j) {
@@ -480,7 +480,7 @@ void PrintCoolingFunction(CoolingFunctionBase *pcool,std::string coolftn) {
   std::string coolfilename(coolftn);
   coolfilename.append("_coolftn.txt");
   std::ofstream coolfile (coolfilename.c_str());
-  coolfile << "rho,Press,Temp,cool,heat,tcool" << "\n";
+  coolfile << "#rho,Press,Temp,cool,heat,tcool" << "\n";
 
   for (int i=0; i<1000; ++i) {
     Real logn = 5.0*((static_cast<Real>(i)/500.)-1.0)-2; // logn = -7 ~ 3
