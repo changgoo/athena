@@ -48,7 +48,7 @@ def prepare(**kwargs):
     # to athena.configure(). Any number of --<key>=<value> command-line arguments can also
     # be supplied. Note athena.configure() expects the values only to be quoted, e.g.
     # --<key>='<value>'.
-    athena.configure(prob='cooling',**kwargs)
+    athena.configure(prob='cooling', **kwargs)
 
     # Call make as though we ran
     #     make clean
@@ -79,7 +79,6 @@ def run(**kwargs):
                  'mesh/nx3=1',
                  'cooling/coolftn=tigress',
                  'cooling/solver=euler',
-                 #'cooling/cfl_cool=0.05',
                  'problem/turb_flag=0',
                  'problem/rho_0=1.0',
                  'problem/pgas_0=3000']
@@ -106,20 +105,20 @@ def analyze():
     (test fails).
     """
 
-    # Read in reference data. Which is in Physical units of Myrs (for t_ref) and Kelvin 
+    # Read in reference data. Which is in Physical units of Myrs (for t_ref) and Kelvin
     # for T_ref (which is actually T_mu when doing the comparison of the TIGRESS classic
-    # cooling function). 
-    # This is the result of an Euler cooling integration done separately in 
-    # Python with a much smaller time step. Make sure the that file that is being 
+    # cooling function).
+    # This is the result of an Euler cooling integration done separately in
+    # Python with a much smaller time step. Make sure the that file that is being
     # compared matches the inputs given above in the "run()" function
     (t_ref, T_ref) = np.loadtxt('data/ref_cooling_soltuions/tigress_pok3e3_nH1e0.txt').T
 
     # Read in the data produced during this test. This will usually be stored in the
     # tst/regression/bin/ directory, but again we omit the first part of the path. Note
     # the file name is what we expect based on the job/problem_id field supplied in run().
-    (t_sol,mass_sol,Etot_sol) = np.loadtxt('bin/cooling.hst',usecols=(0,2,9)).T
+    (t_sol, mass_sol, Etot_sol) = np.loadtxt('bin/cooling.hst', usecols=(0, 2, 9)).T
     # default volume of the simulation domain
-    vol = 8 
+    vol = 8
     # default conversion factor from code to kB K cm^-3 if using TIGRESS Units
     Pconv = 1.729586e+02
     # density, pressure, and T_mu of the solution
@@ -134,7 +133,7 @@ def analyze():
     # interface locations and N volume-averaged quantities. The two datasets can have
     # different values of N.
     error_abs_T = comparison.l1_diff(t_ref, T_ref, t_sol, T_sol)
- 
+
     # The errors are more meaningful if we account for the length of the domain and the
     # typical magnitude of the function itself. Fortunately, comparison.l1_norm() computes
     #     \int |f(x)| dx.
@@ -156,7 +155,7 @@ def analyze():
     # obj/ folders before proceeding on to the next test.
     analyze_status = True
     if error_rel_T > 0.01 or np.isnan(error_rel_T):
-        print("Realtive errorr is ",error_rel_T)
+        print("Relative errorr is ", error_rel_T)
         analyze_status = False
 
     # Note, if the problem generator in question outputs a unique CSV file containing
