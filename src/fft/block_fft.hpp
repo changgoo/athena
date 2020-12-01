@@ -27,7 +27,7 @@
 #include <mpi.h>
 #include "fftmpi/src/fft2d.h"
 #include "fftmpi/src/fft3d.h"
-using namespace FFTMPI_NS;
+// using namespace FFTMPI_NS;
 #endif // MPI_PARALLEL
 #endif
 
@@ -37,7 +37,7 @@ using namespace FFTMPI_NS;
 
 class BlockFFT {
  public:
-  BlockFFT(MeshBlock *pmb);
+  explicit BlockFFT(MeshBlock *pmb);
   virtual ~BlockFFT();
 
   void LoadSource(const AthenaArray<Real> &src);
@@ -60,7 +60,7 @@ class BlockFFT {
   int slow_ilo, slow_ihi, slow_jlo, slow_jhi, slow_klo, slow_khi;
   int slow_nx1, slow_nx2, slow_nx3;
 #if defined(FFT) && defined(MPI_PARALLEL)
-  FFT3d *pf3d;
+  FFTMPI_NS::FFT3d *pf3d;
 #endif
 
  protected:

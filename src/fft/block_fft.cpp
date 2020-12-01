@@ -102,8 +102,7 @@ BlockFFT::BlockFFT(MeshBlock *pmb) :
     ATHENA_ERROR(msg);
     return;
 #endif // MPI_PARALLEL
-  }
-  else {
+  } else {
     std::stringstream msg;
     msg << "### FATAL ERROR in BlockFFT::BlockFFT" << std::endl
         << "BlockFFT only works in 3D" << std::endl;
@@ -166,14 +165,18 @@ void BlockFFT::ExecuteForward() {
 #ifdef MPI_PARALLEL
   // cast std::complex* to FFT_SCALAR*
   FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR*>(in_);
-
-  if (pf3d->remap_prefast) 
-  pf3d->remap(data,data,pf3d->remap_prefast);                        // block2fast
-  pf3d->perform_ffts((FFT_DATA *) data,FFTW_FORWARD,pf3d->fft_fast); // fast_forward
-  pf3d->remap(data,data,pf3d->remap_fastmid);                        // fast2mid
-  pf3d->perform_ffts((FFT_DATA *) data,FFTW_FORWARD,pf3d->fft_mid);  // mid_forward
-  pf3d->remap(data,data,pf3d->remap_midslow);                        // mid2slow
-  pf3d->perform_ffts((FFT_DATA *) data,FFTW_FORWARD,pf3d->fft_slow); // slow_forward
+  // block2fast
+  if (pf3d->remap_prefast) pf3d->remap(data,data,pf3d->remap_prefast);
+  // fast_forward
+  pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data),FFTW_FORWARD,pf3d->fft_fast);
+  // fast2mid
+  pf3d->remap(data,data,pf3d->remap_fastmid);
+  // mid_forward
+  pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data),FFTW_FORWARD,pf3d->fft_mid);
+  // mid2slow
+  pf3d->remap(data,data,pf3d->remap_midslow);
+  // slow_forward
+  pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data),FFTW_FORWARD,pf3d->fft_slow);
 #endif
 #endif
 
@@ -200,16 +203,21 @@ void BlockFFT::ExecuteBackward() {
   // cast std::complex* to FFT_SCALAR*
   FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR*>(in_);
 
-  pf3d->perform_ffts((FFT_DATA *) data,FFTW_BACKWARD,pf3d->fft_slow); // slow_backward
-  pf3d->remap(data,data,pf3d->remap_slowmid);                         // slow2mid
-  pf3d->perform_ffts((FFT_DATA *) data,FFTW_BACKWARD,pf3d->fft_mid);  // mid_backward
-  pf3d->remap(data,data,pf3d->remap_midfast);                         // mid2fast
-  pf3d->perform_ffts((FFT_DATA *) data,FFTW_BACKWARD,pf3d->fft_fast); // fast_backward
-  if (pf3d->remap_postfast)
-  pf3d->remap(data,data,pf3d->remap_postfast);                        // fast2block
+  // slow_backward
+  pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data),FFTW_BACKWARD,pf3d->fft_slow);
+  // slow2mid
+  pf3d->remap(data,data,pf3d->remap_slowmid);
+  // mid_backward
+  pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data),FFTW_BACKWARD,pf3d->fft_mid);
+  // mid2fast
+  pf3d->remap(data,data,pf3d->remap_midfast);
+  // fast_backward
+  pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data),FFTW_BACKWARD,pf3d->fft_fast);
+  // fast2block
+  if (pf3d->remap_postfast) pf3d->remap(data,data,pf3d->remap_postfast);
 
   // multiply norm factor
-  for (int i=0;i<nx1*nx2*nx3;++i) {
+  for (int i=0; i<nx1*nx2*nx3; ++i) {
     data[2*i] /= (Nx1*Nx2*Nx3);
     data[2*i+1] /= (Nx1*Nx2*Nx3);
   }

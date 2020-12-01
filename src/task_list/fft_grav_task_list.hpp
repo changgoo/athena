@@ -57,5 +57,5 @@ const TaskID GRAV_PHYS_BND(5);
 
 const TaskID SEND_GRAV_SH(6);
 const TaskID RECV_GRAV_SH(7);
-}
+} // namespace FFTGravitySolverTaskNames
 #endif // TASK_LIST_FFT_GRAV_TASK_LIST_HPP_
