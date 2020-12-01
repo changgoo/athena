@@ -33,6 +33,8 @@ class FFTGravitySolverTaskList : public TaskList {
   TaskStatus ClearFFTGravityBoundary(MeshBlock *pmb, int stage);
   TaskStatus SendFFTGravityBoundary(MeshBlock *pmb, int stage);
   TaskStatus ReceiveFFTGravityBoundary(MeshBlock *pmb, int stage);
+  TaskStatus SendFFTGravityShear(MeshBlock *pmb, int stage);
+  TaskStatus ReceiveFFTGravityShear(MeshBlock *pmb, int stage);
   TaskStatus SetFFTGravityBoundary(MeshBlock *pmb, int stage);
   TaskStatus PhysicalBoundary(MeshBlock *pmb, int stage);
 
@@ -52,5 +54,8 @@ const TaskID SEND_GRAV_BND(2);
 const TaskID RECV_GRAV_BND(3);
 const TaskID SETB_GRAV_BND(4);
 const TaskID GRAV_PHYS_BND(5);
+
+const TaskID SEND_GRAV_SH(6);
+const TaskID RECV_GRAV_SH(7);
 }
 #endif // TASK_LIST_FFT_GRAV_TASK_LIST_HPP_

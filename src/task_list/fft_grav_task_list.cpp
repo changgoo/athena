@@ -36,7 +36,13 @@ FFTGravitySolverTaskList::FFTGravitySolverTaskList(ParameterInput *pin, Mesh *pm
     AddTask(SEND_GRAV_BND,NONE);
     AddTask(RECV_GRAV_BND,NONE);
     AddTask(SETB_GRAV_BND,(RECV_GRAV_BND|SEND_GRAV_BND));
-    AddTask(GRAV_PHYS_BND,SETB_GRAV_BND);
+    if (SHEARING_BOX) { // Shearingbox BC for Hydro
+      AddTask(SEND_GRAV_SH,SETB_GRAV_BND);
+      AddTask(RECV_GRAV_SH,SETB_GRAV_BND);
+      AddTask(GRAV_PHYS_BND,(SEND_GRAV_SH|RECV_GRAV_SH));
+    } else {
+      AddTask(GRAV_PHYS_BND,SETB_GRAV_BND);
+    }
     AddTask(CLEAR_GRAV, GRAV_PHYS_BND);
   } // end of using namespace block
 }
@@ -67,6 +73,14 @@ void FFTGravitySolverTaskList::AddTask(const TaskID& id, const TaskID& dep) {
     task_list_[ntasks].TaskFunc=
         static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
         (&FFTGravitySolverTaskList::SetFFTGravityBoundary);
+  } else if (id == SEND_GRAV_SH) {
+    task_list_[ntasks].TaskFunc=
+        static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
+        (&FFTGravitySolverTaskList::SendFFTGravityShear);
+  } else if (id == RECV_GRAV_SH) {
+    task_list_[ntasks].TaskFunc=
+        static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
+        (&FFTGravitySolverTaskList::ReceiveFFTGravityShear);
   } else if (id == GRAV_PHYS_BND) {
     task_list_[ntasks].TaskFunc=
         static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
@@ -82,7 +96,11 @@ void FFTGravitySolverTaskList::AddTask(const TaskID& id, const TaskID& dep) {
 }
 
 void FFTGravitySolverTaskList::StartupTaskList(MeshBlock *pmb, int stage) {
+  // Compute Shear call is not necessary since Solve is called after time integrator
+  // in which shear parameter is set for the corresponding stage.
+  // This is valid only if the Poisson solver is called at every substep
   pmb->pgrav->gbvar.StartReceiving(BoundaryCommSubset::all);
+
   return;
 }
 
@@ -102,6 +120,30 @@ TaskStatus FFTGravitySolverTaskList::ReceiveFFTGravityBoundary(MeshBlock *pmb,
   if (!ret)
     return TaskStatus::fail;
   return TaskStatus::success;
+}
+
+TaskStatus FFTGravitySolverTaskList::SendFFTGravityShear(MeshBlock *pmb, int stage) {
+  if (stage <= nstages) {
+    pmb->pgrav->gbvar.SendShearingBoxBoundaryBuffers();
+  } else {
+    return TaskStatus::fail;
+  }
+  return TaskStatus::success;
+}
+
+TaskStatus FFTGravitySolverTaskList::ReceiveFFTGravityShear(MeshBlock *pmb, int stage) {
+  bool ret;
+  ret = false;
+  if (stage <= nstages) {
+    ret = pmb->pgrav->gbvar.ReceiveShearingBoxBoundaryBuffers();
+  } else {
+    return TaskStatus::fail;
+  }
+  if (ret) {
+    return TaskStatus::success;
+  } else {
+    return TaskStatus::fail;
+  }
 }
 
 TaskStatus FFTGravitySolverTaskList::SetFFTGravityBoundary(MeshBlock *pmb, int stage) {
