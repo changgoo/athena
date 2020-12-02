@@ -46,7 +46,7 @@ BlockFFT::BlockFFT(MeshBlock *pmb) :
   if (ndim==3) {
 #ifdef MPI_PARALLEL
     // use Plimpton's fftMPI
-    pf3d = new FFT3d(MPI_COMM_WORLD,2); // 2 for double precision
+    pf3d = new FFTMPI_NS::FFT3d(MPI_COMM_WORLD,2); // 2 for double precision
     // set output data layout equal to slow pencil decomposition
     // in order to prevent unnecessary data remap
     int permute=2; // will make output array (slow,mid,fast) = (y,x,z) = (j,i,k)
@@ -90,7 +90,7 @@ BlockFFT::BlockFFT(MeshBlock *pmb) :
 
     // reallocate and setup FFT
     delete pf3d;
-    pf3d = new FFT3d(MPI_COMM_WORLD,2);
+    pf3d = new FFTMPI_NS::FFT3d(MPI_COMM_WORLD,2);
     pf3d->setup(Nx1, Nx2, Nx3,
                 in_ilo, in_ihi, in_jlo, in_jhi, in_klo, in_khi,
                 slow_ilo, slow_ihi, slow_jlo, slow_jhi, slow_klo, slow_khi,
