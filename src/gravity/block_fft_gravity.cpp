@@ -33,6 +33,7 @@ BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
   gtlist_ = new FFTGravitySolverTaskList(pin, pmb->pmy_mesh);
   Omega_0_ = pin->GetOrAddReal("problem","Omega0",0.0);
   qshear_  = pin->GetOrAddReal("problem","qshear",0.0);
+  in2_ = new std::complex<Real>[nx1*nx2*nx3];
   in_e_ = new std::complex<Real>[nx1*nx2*nx3];
   in_o_ = new std::complex<Real>[nx1*nx2*nx3];
 }
@@ -42,6 +43,7 @@ BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
 //  \brief BlockFFTGravity destructor
 BlockFFTGravity::~BlockFFTGravity() {
   delete gtlist_;
+  delete[] in2_;
   delete[] in_e_;
   delete[] in_o_;
 }
@@ -53,7 +55,7 @@ void BlockFFTGravity::ExecuteForward() {
 #if defined(FFT) && defined(MPI_PARALLEL)
 #if defined(GRAV_PERIODIC)
   if (SHEARING_BOX) {
-    FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR*>(in_);
+    FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR *>(in_);
     // block2mid
     pf3d->remap(data,data,pf3d->remap_premid);
     // mid_forward
@@ -81,7 +83,7 @@ void BlockFFTGravity::ExecuteForward() {
   }
 
 #elif defined(GRAV_DISK)
-  FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR*>(in_);
+  FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR *>(in_);
   // block2mid
   pf3d->remap(data,data,pf3d->remap_premid);
   // mid_forward
@@ -180,7 +182,7 @@ void BlockFFTGravity::ExecuteBackward() {
   // slow2fast
   pf3d->remap(data,data,pf3d->remap_slowfast);
   // fast_backward
-  pf3d->perform_ffts(reinterpret_cast<FFT_DATA*>(data),FFTW_BACKWARD,pf3d->fft_fast);
+  pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data),FFTW_BACKWARD,pf3d->fft_fast);
   // fast2mid
   pf3d->remap(data,data,pf3d->remap_fastmid);
   // apply phase shift for shearing BC
@@ -233,8 +235,10 @@ void BlockFFTGravity::ApplyKernel() {
         kx = TWO_PI*(Real)(slow_ilo + i)/(Real)Nx1;
         ky = TWO_PI*(Real)(slow_jlo + j)/(Real)Nx2;
         kz = TWO_PI*(Real)(slow_klo + k)/(Real)Nx3;
-        if (SHEARING_BOX) kxt = kx + rshear_*(Real)(Nx2)/(Real)(Nx1)*ky;
-        else kxt = kx;
+        if (SHEARING_BOX)
+          kxt = kx + rshear_*(Real)(Nx2)/(Real)(Nx1)*ky;
+        else
+          kxt = kx;
         if (((slow_ilo+i) + (slow_jlo+j) + (slow_klo+k)) == 0) {
           kernel = 0.0;
         } else {
@@ -290,18 +294,39 @@ void BlockFFTGravity::ApplyKernel() {
 void BlockFFTGravity::Solve(int stage) {
   Real time = pmy_block_->pmy_mesh->time;
   Real qomt = qshear_*Omega_0_*time;
-  int p = std::nearbyint(qomt*Lx1_/Lx2_*(Real)Nx2);
-  // force sheared distance == (integer) * dy
-  rshear_ = (Real)p/(Real)Nx2;
+  AthenaArray<Real> rho;
+  Real p,eps;
+
   // continuous sheared distance (this introduces unwanted harmonic solutions)
 //  rshear_ = qomt*Lx1_/Lx2_;
 
-  AthenaArray<Real> rho;
+  // left integer point
+  p = std::floor(qomt*Lx1_/Lx2_*(Real)Nx2);
+  eps = qomt*Lx1_/Lx2_*(Real)Nx2 - p;
+  rshear_ = p/(Real)Nx2;
   rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
   LoadSource(rho);
   ExecuteForward();
   ApplyKernel();
   ExecuteBackward();
+  std::memcpy(in2_, in_, sizeof(std::complex<Real>)*nx1*nx2*nx3);
+
+  // right integer point
+  p = std::floor(qomt*Lx1_/Lx2_*(Real)Nx2) + 1.;
+  rshear_ = p/(Real)Nx2;
+  rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
+  LoadSource(rho);
+  ExecuteForward();
+  ApplyKernel();
+  ExecuteBackward();
+
+  // linear interpolation in time
+  FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR *>(in_);
+  FFT_SCALAR *data2 = reinterpret_cast<FFT_SCALAR *>(in2_);
+  for (int i=0; i<2*nx1*nx2*nx3; ++i) {
+    data[i] = (1.-eps)*data2[i] + eps*data[i];
+  }
+
   RetrieveResult(pmy_block_->pgrav->phi);
 
   gtlist_->DoTaskListOneStage(pmy_block_->pmy_mesh, stage);
