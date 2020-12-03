@@ -12,6 +12,7 @@
 
 // C++ headers
 #include <cstdint>      // std::uint64_t
+#include <string>     // c_str()
 
 // Athena++ headers
 #include "../athena.hpp"
@@ -28,6 +29,10 @@ class MeshBlock;
 class FFTGravitySolverTaskList : public TaskList {
  public:
   FFTGravitySolverTaskList(ParameterInput *pin, Mesh *pm);
+
+  // data
+  std::string integrator;
+  Real beta[MAX_NSTAGE];
 
   // functions
   TaskStatus ClearFFTGravityBoundary(MeshBlock *pmb, int stage);
