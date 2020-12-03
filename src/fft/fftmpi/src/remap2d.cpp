@@ -56,7 +56,7 @@ using namespace FFTMPI_NS;
        style of pack/unpack methods
        0 = array
        1 = pointer
-       2 = memcpy 
+       2 = memcpy
 ------------------------------------------------------------------------- */
 
 /* ----------------------------------------------------------------------
@@ -128,7 +128,7 @@ Remap2d::~Remap2d()
   memory->sfree(unpackplan);
 
   // free internal arrays for collective commm
-    
+
   if (collective) {
     memory->sfree(sendcnts);
     memory->sfree(recvcnts);
@@ -157,7 +157,7 @@ Remap2d::~Remap2d()
    nqty                 # of datums per element
    permute              permutation in storage order of indices on output
                           0 = no permutation
-			  1 = permute = slow->fast, fast->slow
+                          1 = permute = slow->fast, fast->slow
    memoryflag           user provides buffer memory or system does
                           0 = caller will provide memory
                           1 = system provides memory internally
@@ -169,7 +169,7 @@ Remap2d::~Remap2d()
 
 void Remap2d::setup(int in_ilo, int in_ihi, int in_jlo, int in_jhi,
                     int out_ilo, int out_ihi, int out_jlo, int out_jhi,
-                    int nqty, int user_permute, int user_memoryflag, 
+                    int nqty, int user_permute, int user_memoryflag,
                     int &user_sendsize, int &user_recvsize)
 {
   int i,iproc,ibuf,sendsize,recvsize;
@@ -201,11 +201,11 @@ void Remap2d::setup(int in_ilo, int in_ihi, int in_jlo, int in_jhi,
 
   // combine output extents across all procs
 
-  inarray = (struct extent_2d *) 
+  inarray = (struct extent_2d *)
     memory->smalloc(nprocs*sizeof(struct extent_2d));
   if (!inarray) error->one("Could not allocate inarray");
 
-  outarray = (struct extent_2d *) 
+  outarray = (struct extent_2d *)
     memory->smalloc(nprocs*sizeof(struct extent_2d));
   if (!outarray) error->one("Could not allocate outarray");
 
@@ -382,7 +382,7 @@ void Remap2d::setup(int in_ilo, int in_ihi, int in_jlo, int in_jhi,
   // setup for collective communication
   // pgroup = list of procs I communicate with during remap
   // ngroup = # of procs in pgroup
-  
+
   if (collective) {
 
     // pflag = 1 if proc is in group
@@ -446,14 +446,14 @@ void Remap2d::setup(int in_ilo, int in_ihi, int in_jlo, int in_jhi,
     pgroup = (int *) memory->srealloc(pgroup,ngroup*sizeof(int));
 
     ngroup = 0;
-    for (i = 0; i < nprocs; i++) 
+    for (i = 0; i < nprocs; i++)
       if (pflag[i]) pgroup[ngroup++] = i;
 
     memory->sfree(pflag);
 
     // create all2all communicators for the remap
     // based on the group each proc belongs to
-    
+
     MPI_Group orig_group,new_group;
     MPI_Comm_group(world,&orig_group);
     MPI_Group_incl(orig_group,ngroup,pgroup,&new_group);
@@ -467,7 +467,7 @@ void Remap2d::setup(int in_ilo, int in_ihi, int in_jlo, int in_jhi,
     for (int i = 0; i < nsend; i++) sendsize += send_size[i];
     recvsize = 0;
     for (int i = 0; i < nrecv; i++) recvsize += recv_size[i];
-    
+
     if (memoryflag && sendsize) {
       sendbuf = (FFT_SCALAR *) memory->smalloc(sendsize*sizeof(FFT_SCALAR));
       if (!sendbuf) error->one("Could not allocate sendbuf array");
@@ -561,7 +561,7 @@ void Remap2d::setup(int in_ilo, int in_ihi, int in_jlo, int in_jhi,
   }
 
   // allocated only for collective commm
-    
+
   if (collective) memusage += 7*ngroup * sizeof(int);
 }
 
@@ -579,7 +579,7 @@ void Remap2d::setup(int in_ilo, int in_ihi, int in_jlo, int in_jhi,
                   user_sendbuf and user_recvbuf are not used, can be NULL
 ------------------------------------------------------------------------- */
 
-void Remap2d::remap(FFT_SCALAR *in, FFT_SCALAR *out, 
+void Remap2d::remap(FFT_SCALAR *in, FFT_SCALAR *out,
                     FFT_SCALAR *user_sendbuf, FFT_SCALAR *user_recvbuf)
 {
   int isend,irecv;
@@ -649,7 +649,7 @@ void Remap2d::remap(FFT_SCALAR *in, FFT_SCALAR *out,
       MPI_Alltoallv(sendbuf,sendcnts,senddispls,MPI_FFT_SCALAR,
                     recvbuf,recvcnts,recvdispls,MPI_FFT_SCALAR,
                     newcomm);
-      
+
     // unpack the data from recvbuf into out
 
     offset = 0;

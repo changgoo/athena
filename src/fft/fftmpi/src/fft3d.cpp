@@ -214,9 +214,9 @@ FFT3d::~FFT3d()
 ------------------------------------------------------------------------- */
 
 void FFT3d::setup(int user_nfast, int user_nmid, int user_nslow,
-                  int user_in_ilo, int user_in_ihi, int user_in_jlo, 
+                  int user_in_ilo, int user_in_ihi, int user_in_jlo,
                   int user_in_jhi, int user_in_klo, int user_in_khi,
-                  int user_out_ilo, int user_out_ihi, int user_out_jlo, 
+                  int user_out_ilo, int user_out_ihi, int user_out_jlo,
                   int user_out_jhi, int user_out_klo, int user_out_khi,
                   int user_permute,
                   int &user_fftsize, int &user_sendsize, int &user_recvsize)
@@ -306,7 +306,7 @@ void FFT3d::setup(int user_nfast, int user_nmid, int user_nslow,
   procfactors(nfast,nmid,1,
               npslow1,npslow2,npslow3,ipslow1,ipslow2,ipslow3);
 
-  if (exchange) 
+  if (exchange)
     procfactors(nfast,nmid,nslow,
                 npbrick1,npbrick2,npbrick3,ipbrick1,ipbrick2,ipbrick3);
   else npbrick1 = npbrick2 = npbrick3 = 0;
@@ -354,7 +354,7 @@ void FFT3d::setup(int user_nfast, int user_nmid, int user_nslow,
   // slow indices = data layout before/after 3rd set of FFTs
   // if final layout is slow pencil with permute=2, set slow = out
 
-  if (permute == 2 && out_klo == 0 && out_khi == nslow-1) flag = 0; 
+  if (permute == 2 && out_klo == 0 && out_khi == nslow-1) flag = 0;
   else flag = 1;
   MPI_Allreduce(&flag,&allflag,1,MPI_INT,MPI_MAX,world);
 
@@ -412,14 +412,14 @@ void FFT3d::setup(int user_nfast, int user_nmid, int user_nslow,
   // fastsize/midsize/slowsize = # of data points in fast/mid/slow layout
   // maxsize = max of all these sizes, returned to caller
 
-  insize = (in_ihi-in_ilo+1) * (in_jhi-in_jlo+1) * 
+  insize = (in_ihi-in_ilo+1) * (in_jhi-in_jlo+1) *
     (in_khi-in_klo+1);
-  outsize = (out_ihi-out_ilo+1) * (out_jhi-out_jlo+1) * 
+  outsize = (out_ihi-out_ilo+1) * (out_jhi-out_jlo+1) *
     (out_khi-out_klo+1);
 
-  fastsize = (fast_ihi-fast_ilo+1) * (fast_jhi-fast_jlo+1) * 
+  fastsize = (fast_ihi-fast_ilo+1) * (fast_jhi-fast_jlo+1) *
     (fast_khi-fast_klo+1);
-  midsize = (mid_ihi-mid_ilo+1) * (mid_jhi-mid_jlo+1) * 
+  midsize = (mid_ihi-mid_ilo+1) * (mid_jhi-mid_jlo+1) *
     (mid_khi-mid_klo+1);
   slowsize = (slow_ihi-slow_ilo+1) * (slow_jhi-slow_jlo+1) *
     (slow_khi-slow_klo+1);
@@ -640,7 +640,7 @@ void FFT3d::only_1d_ffts(FFT_SCALAR *in, int flag)
 void FFT3d::only_remaps(FFT_SCALAR *in, FFT_SCALAR *out, int flag)
 {
   if (!setupflag) error->all("Cannot perform FFT remap before setup");
-  if (!setup_memory_flag) 
+  if (!setup_memory_flag)
     error->all("Cannot perform FFT remap before setup_memory");
 
   FFT_SCALAR *data = out;
@@ -680,7 +680,7 @@ void FFT3d::only_remaps(FFT_SCALAR *in, FFT_SCALAR *out, int flag)
 void FFT3d::only_one_remap(FFT_SCALAR *in, FFT_SCALAR *out, int flag, int which)
 {
   if (!setupflag) error->all("Cannot perform an FFT remap before setup");
-  if (!setup_memory_flag) 
+  if (!setup_memory_flag)
     error->all("Cannot perform an FFT remap before setup_memory");
 
   if (flag == 1 || inout_layout_same) {
@@ -736,17 +736,17 @@ void FFT3d::only_one_remap(FFT_SCALAR *in, FFT_SCALAR *out, int flag, int which)
 ------------------------------------------------------------------------- */
 
 void FFT3d::tune(int user_nfast, int user_nmid, int user_nslow,
-		 int user_in_ilo, int user_in_ihi, int user_in_jlo, 
-		 int user_in_jhi, int user_in_klo, int user_in_khi,
-		 int user_out_ilo, int user_out_ihi, int user_out_jlo, 
-		 int user_out_jhi, int user_out_klo, int user_out_khi,
-		 int user_permute,
-		 int &user_fftsize, int &user_sendsize, int &user_recvsize,
-                 int flag, int niter, double tmax, int tflag)
+     int user_in_ilo, int user_in_ihi, int user_in_jlo,
+     int user_in_jhi, int user_in_klo, int user_in_khi,
+     int user_out_ilo, int user_out_ihi, int user_out_jlo,
+     int user_out_jhi, int user_out_klo, int user_out_khi,
+     int user_permute,
+     int &user_fftsize, int &user_sendsize, int &user_recvsize,
+     int flag, int niter, double tmax, int tflag)
 {
   if (setupflag) error->all("FFT is already setup");
   if (flag < -1 || flag > 1) error->all("Invalid flag arg for FFT tune");
-  if (niter <= 0 || tmax < 0.0) 
+  if (niter <= 0 || tmax < 0.0)
     error->all("Invalid niter/tmax args for FFT tune");
   if (tflag < 0 || tflag > 1) error->all("Invalid tflag arg for FFT tune");
 
@@ -766,7 +766,7 @@ void FFT3d::tune(int user_nfast, int user_nmid, int user_nslow,
 
   MPI_Barrier(world);
   double time1 = MPI_Wtime();
-  
+
   setup(user_nfast,user_nmid,user_nslow,
         user_in_ilo,user_in_ihi,user_in_jlo,
         user_in_jhi,user_in_klo,user_in_khi,
@@ -779,7 +779,7 @@ void FFT3d::tune(int user_nfast, int user_nmid, int user_nslow,
   double timesetup = time2-time1;
 
   if (user_fftsize > maxfftsize) {
-    data = (FFT_SCALAR *) 
+    data = (FFT_SCALAR *)
       memory->srealloc(data,user_fftsize*2*sizeof(FFT_SCALAR));
     for (int i = 2*maxfftsize; i < 2*user_fftsize; i++) data[i] = 0.0;
     maxfftsize = user_fftsize;
@@ -867,7 +867,7 @@ void FFT3d::tune(int user_nfast, int user_nmid, int user_nslow,
   //   and initial run was not with defaults:
   // perform additional default run
 
-  } else if (nruns-1 == 1 && (collective != cdefault || 
+  } else if (nruns-1 == 1 && (collective != cdefault ||
                               exchange != edefault || packflag != pdefault)) {
     ntrial = 1;
     cstart = cdefault;
@@ -909,7 +909,7 @@ void FFT3d::tune(int user_nfast, int user_nmid, int user_nslow,
               user_out_jhi,user_out_klo,user_out_khi,
               user_permute,user_fftsize,user_sendsize,user_recvsize);
         if (user_fftsize > maxfftsize) {
-          data = (FFT_SCALAR *) 
+          data = (FFT_SCALAR *)
             memory->srealloc(data,user_fftsize*2*sizeof(FFT_SCALAR));
           for (int i = 2*maxfftsize; i < 2*user_fftsize; i++) data[i] = 0.0;
           maxfftsize = user_fftsize;
@@ -918,10 +918,10 @@ void FFT3d::tune(int user_nfast, int user_nmid, int user_nslow,
         tune_trial(data,niter,flag,tflag,tfft[ntrial],t1d[ntrial],tremap[ntrial],
                    tremap1[ntrial],tremap2[ntrial],
                    tremap3[ntrial],tremap4[ntrial]);
-        
+
         deallocate_setup();
         if (memoryflag) deallocate_setup_memory();
-        
+
         if (tfft[ntrial] < besttime) {
           besttime = tfft[ntrial];
           cbest = cflag;
@@ -952,24 +952,24 @@ void FFT3d::tune(int user_nfast, int user_nmid, int user_nslow,
             user_out_jhi,user_out_klo,user_out_khi,
             user_permute,user_fftsize,user_sendsize,user_recvsize);
       if (user_fftsize > maxfftsize) {
-        data = (FFT_SCALAR *) 
+        data = (FFT_SCALAR *)
           memory->srealloc(data,user_fftsize*2*sizeof(FFT_SCALAR));
         for (int i = 2*maxfftsize; i < 2*user_fftsize; i++) data[i] = 0.0;
         maxfftsize = user_fftsize;
       }
-      
+
       tune_trial(data,niter,flag,tflag,tfft[ntrial],t1d[ntrial],tremap[ntrial],
                  tremap1[ntrial],tremap2[ntrial],
                  tremap3[ntrial],tremap4[ntrial]);
-      
+
       deallocate_setup();
       if (memoryflag) deallocate_setup_memory();
-      
+
       if (tfft[ntrial] < besttime) {
         besttime = tfft[ntrial];
         pbest = pflag;
       }
-      
+
       ntrial++;
     }
   }
@@ -1008,16 +1008,16 @@ void FFT3d::tune(int user_nfast, int user_nmid, int user_nslow,
   time1 = MPI_Wtime();
 
   setup(user_nfast, user_nmid, user_nslow,
-	user_in_ilo, user_in_ihi, user_in_jlo, 
-	user_in_jhi, user_in_klo, user_in_khi,
-	user_out_ilo, user_out_ihi, user_out_jlo, 
-	user_out_jhi, user_out_klo, user_out_khi,
-	user_permute, user_fftsize, user_sendsize, user_recvsize);
+  user_in_ilo, user_in_ihi, user_in_jlo,
+  user_in_jhi, user_in_klo, user_in_khi,
+  user_out_ilo, user_out_ihi, user_out_jlo,
+  user_out_jhi, user_out_klo, user_out_khi,
+  user_permute, user_fftsize, user_sendsize, user_recvsize);
 
   MPI_Barrier(world);
   time2 = MPI_Wtime();
   setuptime = time2-time1;
-}  
+}
 
 /* ----------------------------------------------------------------------
    perform a timing trial for tune() method
@@ -1026,13 +1026,13 @@ void FFT3d::tune(int user_nfast, int user_nmid, int user_nslow,
    nper = # of iterations in trial
    flag = 1,-1 for forward/reverse FFT, 0 for both
    tflag = 1 if also test 1d FFTs and remaps
-   return: 
+   return:
    time for 3d FFT, 1d FFTs, all remaps, each of 4 remaps
 ------------------------------------------------------------------------- */
 
 void FFT3d::tune_trial(FFT_SCALAR *data, int nper, int flag, int tflag,
                        double &time3d, double &time1d, double &timeremap,
-                       double &timeremap1, double &timeremap2, 
+                       double &timeremap1, double &timeremap2,
                        double &timeremap3, double &timeremap4)
 {
   double time1,time2;
@@ -1040,15 +1040,15 @@ void FFT3d::tune_trial(FFT_SCALAR *data, int nper, int flag, int tflag,
   MPI_Barrier(world);
   time1 = MPI_Wtime();
 
-  if (flag) 
-    for (int i = 0; i < nper; i++) 
+  if (flag)
+    for (int i = 0; i < nper; i++)
       compute(data,data,flag);
   else {
     for (int i = 0; i < nper; i++) {
       compute(data,data,1);
       compute(data,data,-1);
     }
-  } 
+  }
 
   MPI_Barrier(world);
   time2 = MPI_Wtime();
@@ -1103,7 +1103,7 @@ void FFT3d::tune_trial(FFT_SCALAR *data, int nper, int flag, int tflag,
       time2 = time1;
     }
 
-  } else time1d = timeremap = 
+  } else time1d = timeremap =
            timeremap1 = timeremap2 = timeremap3 = timeremap4 = 0.0;
 }
 
@@ -1123,7 +1123,7 @@ void FFT3d::tune_trial(FFT_SCALAR *data, int nper, int flag, int tflag,
 void FFT3d::remap(FFT_SCALAR *in, FFT_SCALAR *out, Remap *remap)
 {
   remap->remap3d->remap(in,out,sendbuf,recvbuf);
-  if (remap->remap3d_extra) 
+  if (remap->remap3d_extra)
     remap->remap3d_extra->remap(in,out,sendbuf,recvbuf);
 }
 
@@ -1217,7 +1217,7 @@ void FFT3d::remap_forward_create(int &sendsize, int &recvsize)
     sendsize = MAX(sendsize,ssize);
     recvsize = MAX(recvsize,rsize);
     remap_midslow->remap3d_extra = NULL;
-    
+
   } else {
     remap_midslow->remap3d = new Remap3d(world);
     remap_midslow->remap3d->collective = collective_bp;
@@ -1585,14 +1585,14 @@ int FFT3d::prime_factorable(int n)
 }
 
 /* ----------------------------------------------------------------------
-   computes factors of N up to sqrt(N)
+   computes factors of N up to std::sqrt(N)
    store ascending list in pre-allocated factors
    return nfactor
 ------------------------------------------------------------------------- */
 
 void FFT3d::factor(int n)
 {
-  int sqroot = (int) sqrt(n) + 1;
+  int sqroot = (int) std::sqrt(n) + 1;
   if (sqroot*sqroot > n) sqroot--;
 
   nfactor = 0;
@@ -1618,7 +1618,7 @@ void FFT3d::procfactors(int nx, int ny, int nz,
   int i,j,jk,ifac,jfac,kfac;
   double newarea;
 
-  int sqroot = (int) sqrt(nprocs) + 1;
+  int sqroot = (int) std::sqrt(nprocs) + 1;
   if (sqroot*sqroot > nprocs) sqroot--;
 
   double minarea = 2.0*nx*ny + 2.0*ny*nz + 2.0*nx*nz;
@@ -1636,7 +1636,7 @@ void FFT3d::procfactors(int nx, int ny, int nz,
       kfac = jk/jfac;
       if (ifac*jfac*kfac != nprocs) continue;
       if (ifac > jfac || jfac > kfac) continue;
-      
+
       newarea = surfarea(ifac,jfac,kfac,nx,ny,nz);
       if (newarea < minarea) {
         minarea = newarea;

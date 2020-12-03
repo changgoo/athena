@@ -16,8 +16,8 @@
 #include <string>     // c_str()
 
 // Athena++ headers
-#include "block_fft_gravity.hpp"
 #include "../coordinates/coordinates.hpp"
+#include "block_fft_gravity.hpp"
 
 //----------------------------------------------------------------------------------------
 //! \fn BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
@@ -56,9 +56,10 @@ void BlockFFTGravity::ExecuteForward() {
 
   // cast std::complex* to FFT_SCALAR*
   FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR*>(in_);
-
-  pf3d->remap(data,data,pf3d->remap_premid); // block2mid
-  pf3d->perform_ffts((FFT_DATA *) data,FFTW_FORWARD,pf3d->fft_mid);  // mid_forward
+  // block2mid
+  pf3d->remap(data,data,pf3d->remap_premid);
+  // mid_forward
+  pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data),FFTW_FORWARD,pf3d->fft_mid);
   // apply phase shift for shearing BC
   for (int i=0; i<mid_nx1; i++) {
     for (int k=0; k<mid_nx3; k++) {
@@ -69,10 +70,13 @@ void BlockFFTGravity::ExecuteForward() {
       }
     }
   }
-  pf3d->remap(data,data,pf3d->remap_midfast);                        // mid2fast
-  pf3d->perform_ffts((FFT_DATA *) data,FFTW_FORWARD,pf3d->fft_fast); // fast_forward
-  pf3d->remap(data,data,pf3d->remap_fastslow);                       // fast2slow
-  // TODO comment out below to disable z transform for 2D solver
+  // mid2fast
+  pf3d->remap(data,data,pf3d->remap_midfast);
+  // fast_forward
+  pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data),FFTW_FORWARD,pf3d->fft_fast);
+  // fast2slow
+  pf3d->remap(data,data,pf3d->remap_fastslow);
+  // TODO(SMOON) comment out below to disable z transform for 2D solver
   std::memcpy(in_e_, in_, sizeof(std::complex<Real>)*nx1*nx2*nx3); // even term (l=2p)
   std::memcpy(in_o_, in_, sizeof(std::complex<Real>)*nx1*nx2*nx3); // odd term (l=2p+1)
   // apply odd term phase shift for vertical open BC
@@ -106,7 +110,7 @@ void BlockFFTGravity::ExecuteBackward() {
   // cast std::complex* to FFT_SCALAR*
   FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR*>(in_);
 
-  // TODO comment out below to disable z transform for 2D solver
+  // TODO(SMOON) comment out below to disable z transform for 2D solver
   // slow_backward
   pf3d->perform_ffts(reinterpret_cast<FFT_DATA*>(in_e_),FFTW_BACKWARD,pf3d->fft_slow);
   pf3d->perform_ffts(reinterpret_cast<FFT_DATA*>(in_o_),FFTW_BACKWARD,pf3d->fft_slow);
@@ -119,9 +123,12 @@ void BlockFFTGravity::ExecuteBackward() {
       }
     }
   }
-  pf3d->remap(data,data,pf3d->remap_slowfast);                        // slow2fast
-  pf3d->perform_ffts((FFT_DATA *) data,FFTW_BACKWARD,pf3d->fft_fast); // fast_backward
-  pf3d->remap(data,data,pf3d->remap_fastmid);                         // fast2mid
+  // slow2fast
+  pf3d->remap(data,data,pf3d->remap_slowfast);
+  // fast_backward
+  pf3d->perform_ffts(reinterpret_cast<FFT_DATA*>(data),FFTW_BACKWARD,pf3d->fft_fast);
+  // fast2mid
+  pf3d->remap(data,data,pf3d->remap_fastmid);
   // apply phase shift for shearing BC
   for (int i=0; i<mid_nx1; i++) {
     for (int k=0; k<mid_nx3; k++) {
@@ -132,14 +139,16 @@ void BlockFFTGravity::ExecuteBackward() {
       }
     }
   }
-  pf3d->perform_ffts((FFT_DATA *) data,FFTW_BACKWARD,pf3d->fft_mid); // mid_backward
+  // mid_backward
+  pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data),FFTW_BACKWARD,pf3d->fft_mid);
   if (pf3d->remap_postmid)
-  pf3d->remap(data,data,pf3d->remap_postmid);                        // mid2block
+    // mid2block
+    pf3d->remap(data,data,pf3d->remap_postmid);
 
   // multiply norm factor
-  // TODO comment out below to disable z transform for 2D solver
-  for (int i=0;i<2*nx1*nx2*nx3;++i) data[i] *= Lx3_/(2.0*Nx1*Nx2*SQR(Nx3));
-  //TODO norm factor for 2D solver
+  // TODO(SMOON) comment out below to disable z transform for 2D solver
+  for (int i=0; i<2*nx1*nx2*nx3; ++i) data[i] *= Lx3_/(2.0*Nx1*Nx2*SQR(Nx3));
+  //TODO(SMOON) norm factor for 2D solver
 //  for (int i=0;i<2*nx1*nx2*nx3;++i) data[i] *= 1.0/(Nx1*Nx2);
 
 #else
@@ -174,8 +183,7 @@ void BlockFFTGravity::ApplyKernel() {
         kz = TWO_PI*(slow_klo + k)/Nx3;
         if (((slow_ilo+i) + (slow_jlo+j) + (slow_klo+k)) == 0) {
           kernel = 0.0;
-        }
-        else {
+        } else {
           kernel = -four_pi_G / ((2. - 2.*std::cos(kx))/dx1sq_ +
                                  (2. - 2.*std::cos(ky))/dx2sq_ +
                                  (2. - 2.*std::cos(kz))/dx3sq_);
@@ -185,7 +193,7 @@ void BlockFFTGravity::ApplyKernel() {
     }
   }
 #elif defined(GRAV_DISK)
-  Real kx,ky,kz,kxy;
+  Real kx,kxt,ky,kz,kxy;
   Real kernel_e,kernel_o;
 
   for (int j=0; j<slow_nx2; j++) {
@@ -193,32 +201,33 @@ void BlockFFTGravity::ApplyKernel() {
       for (int k=0; k<slow_nx3; k++) {
         int idx = k + slow_nx3*(i + slow_nx1*j);
         kx = TWO_PI*(Real)(slow_ilo + i)/((Real)Nx1);
+        kxt = kx+rshear_*((Real)(Nx2)/(Real)(Nx1))*ky;
         ky = TWO_PI*(Real)(slow_jlo + j)/((Real)Nx2);
         kz = TWO_PI*(Real)(slow_klo + k)/((Real)Nx3);
 
-        kxy = std::sqrt((2. - 2.*std::cos(kx + rshear_*((Real)(Nx2)/(Real)(Nx1))*ky))/dx1sq_ +
-                        (2. - 2.*std::cos(ky))/dx2sq_);
+        kxy = std::sqrt((2.-2.*std::cos(kxt))/dx1sq_ + (2.-2.*std::cos(ky))/dx2sq_);
 
         // continuous kernel
 //        kxy = std::sqrt( SQR(TWO_PI*(slow_ilo+i)/Lx1_ + qomt*TWO_PI*(slow_jlo+j)/Lx2_)
 //                       + SQR(TWO_PI*(slow_jlo+j)/Lx2_) );
 
 
-        // TODO comment out below to disable z transform for 2D solver
+        // TODO(SMOON) comment out below to disable z transform for 2D solver
         if ((slow_ilo+i==0)&&(slow_jlo+j==0)) {
           kernel_e = k==0 ? 0.5*four_pi_G*Lx3_*(Real)(Nx3) : 0;
           kernel_o = -four_pi_G*(Lx3_/(Real)(Nx3)) / (1. - std::cos(kz+PI/(Real)(Nx3)));
-        }
-        else {
+        } else {
           kernel_e = -0.5*four_pi_G/kxy*(1. - std::exp(-kxy*Lx3_))*
-            std::sinh(kxy*Lx3_/(Real)(Nx3)) / (std::cosh(kxy*Lx3_/(Real)(Nx3)) - std::cos(kz));
+            std::sinh(kxy*Lx3_/(Real)(Nx3)) /
+            (std::cosh(kxy*Lx3_/(Real)(Nx3)) - std::cos(kz));
           kernel_o = -0.5*four_pi_G/kxy*(1. + std::exp(-kxy*Lx3_))*
-            std::sinh(kxy*Lx3_/(Real)(Nx3)) / (std::cosh(kxy*Lx3_/(Real)(Nx3)) - std::cos(kz+PI/(Real)(Nx3)));
+            std::sinh(kxy*Lx3_/(Real)(Nx3)) /
+            (std::cosh(kxy*Lx3_/(Real)(Nx3)) - std::cos(kz+PI/(Real)(Nx3)));
         }
         in_e_[idx] *= kernel_e;
         in_o_[idx] *= kernel_o;
 
-        // TODO this is temporary 2D solver
+        // TODO(SMOON) this is temporary 2D solver
 //        if ((slow_ilo+i==0)&&(slow_jlo+j==0)) {
 //          kernel_e = 0.0;
 //        }
@@ -226,7 +235,6 @@ void BlockFFTGravity::ApplyKernel() {
 //          kernel_e = -four_pi_G/SQR(kxy);
 //        }
 //        in_[idx] *= kernel_e;
-
       }
     }
   }

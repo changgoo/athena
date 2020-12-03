@@ -24,7 +24,7 @@ using namespace FFTMPI_NS;
 
 /* ---------------------------------------------------------------------- */
 
-Error::Error(MPI_Comm world_caller) 
+Error::Error(MPI_Comm world_caller)
 {
   world = world_caller;
 }

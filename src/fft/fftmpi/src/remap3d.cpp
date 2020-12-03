@@ -42,7 +42,7 @@ using namespace FFTMPI_NS;
        style of pack/unpack methods
        0 = array
        1 = pointer
-       2 = memcpy 
+       2 = memcpy
 ------------------------------------------------------------------------- */
 
 /* ----------------------------------------------------------------------
@@ -128,7 +128,7 @@ Remap3d::~Remap3d()
   memory->sfree(unpackplan);
 
   // free internal arrays for collective commm
-    
+
   if (collective) {
     memory->sfree(sendcnts);
     memory->sfree(recvcnts);
@@ -174,7 +174,7 @@ void Remap3d::setup(int in_ilo, int in_ihi, int in_jlo, int in_jhi,
                     int in_klo, int in_khi,
                     int out_ilo, int out_ihi, int out_jlo, int out_jhi,
                     int out_klo, int out_khi,
-                    int nqty, int user_permute, int user_memoryflag, 
+                    int nqty, int user_permute, int user_memoryflag,
                     int &user_sendsize, int &user_recvsize)
 {
   int i,iproc,ibuf,sendsize,recvsize;
@@ -214,11 +214,11 @@ void Remap3d::setup(int in_ilo, int in_ihi, int in_jlo, int in_jhi,
 
   // combine output extents across all procs
 
-  inarray = (struct extent_3d *) 
+  inarray = (struct extent_3d *)
     memory->smalloc(nprocs*sizeof(struct extent_3d));
   if (!inarray) error->one("Could not allocate inarray");
 
-  outarray = (struct extent_3d *) 
+  outarray = (struct extent_3d *)
     memory->smalloc(nprocs*sizeof(struct extent_3d));
   if (!outarray) error->one("Could not allocate outarray");
 
@@ -429,7 +429,7 @@ void Remap3d::setup(int in_ilo, int in_ihi, int in_jlo, int in_jhi,
   // setup for collective communication
   // pgroup = list of procs I communicate with during remap
   // ngroup = # of procs in pgroup
-  
+
   if (collective) {
 
     // pflag = 1 if proc is in group
@@ -493,7 +493,7 @@ void Remap3d::setup(int in_ilo, int in_ihi, int in_jlo, int in_jhi,
     pgroup = (int *) memory->srealloc(pgroup,ngroup*sizeof(int));
 
     ngroup = 0;
-    for (i = 0; i < nprocs; i++) 
+    for (i = 0; i < nprocs; i++)
       if (pflag[i]) pgroup[ngroup++] = i;
 
     memory->sfree(pflag);
@@ -514,7 +514,7 @@ void Remap3d::setup(int in_ilo, int in_ihi, int in_jlo, int in_jhi,
     for (int i = 0; i < nsend; i++) sendsize += send_size[i];
     recvsize = 0;
     for (int i = 0; i < nrecv; i++) recvsize += recv_size[i];
-    
+
     if (memoryflag && sendsize) {
       sendbuf = (FFT_SCALAR *) memory->smalloc(sendsize*sizeof(FFT_SCALAR));
       if (!sendbuf) error->one("Could not allocate sendbuf array");
@@ -608,7 +608,7 @@ void Remap3d::setup(int in_ilo, int in_ihi, int in_jlo, int in_jhi,
   }
 
   // allocated only for collective commm
-    
+
   if (collective) memusage += 7*ngroup * sizeof(int);
 }
 
@@ -626,7 +626,7 @@ void Remap3d::setup(int in_ilo, int in_ihi, int in_jlo, int in_jhi,
                   user_sendbuf and user_recvbuf are not used, can be NULL
 ------------------------------------------------------------------------- */
 
-void Remap3d::remap(FFT_SCALAR *in, FFT_SCALAR *out, 
+void Remap3d::remap(FFT_SCALAR *in, FFT_SCALAR *out,
                     FFT_SCALAR *user_sendbuf, FFT_SCALAR *user_recvbuf)
 {
   int isend,irecv;
@@ -696,7 +696,7 @@ void Remap3d::remap(FFT_SCALAR *in, FFT_SCALAR *out,
       MPI_Alltoallv(sendbuf,sendcnts,senddispls,MPI_FFT_SCALAR,
                     recvbuf,recvcnts,recvdispls,MPI_FFT_SCALAR,
                     newcomm);
-      
+
     // unpack the data from recvbuf into out
 
     offset = 0;
