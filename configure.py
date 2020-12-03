@@ -174,7 +174,8 @@ parser.add_argument('-omp',
 # --grav=[name] argument
 parser.add_argument('--grav',
                     default='none',
-                    choices=['none', 'fft', 'mg', 'blockfft'],
+                    choices=['none', 'fft', 'mg',
+                        'fft-periodic', 'fft-disk', 'fft-open'],
                     help='select self-gravity solver')
 
 # -fft argument
@@ -677,11 +678,23 @@ else:
     if args['grav'] == "mg":
         definitions['SELF_GRAVITY_ENABLED'] = '2'
 
-    if args['grav'] == "blockfft":
+    if args['grav'] == "fft-periodic":
         definitions['SELF_GRAVITY_ENABLED'] = '3'
-        # TODO in future, grav={fft, mg, fft_disk, fft_obc, ...}
-        # define GRAV_PERIODIC, GRAV_DISK, GRAV_OPEN, etc. depending on the option
+        definitions['GRAV_BC_OPTION'] = 'GRAV_PERIODIC'
+        if not args['fft']:
+            raise SystemExit(
+                '### CONFIGURE ERROR: FFT Poisson solver only be used with FFT')
+
+    if args['grav'] == "fft-disk":
+        definitions['SELF_GRAVITY_ENABLED'] = '3'
         definitions['GRAV_BC_OPTION'] = 'GRAV_DISK'
+        if not args['fft']:
+            raise SystemExit(
+                '### CONFIGURE ERROR: FFT Poisson solver only be used with FFT')
+
+    if args['grav'] == "fft-open":
+        definitions['SELF_GRAVITY_ENABLED'] = '3'
+        definitions['GRAV_BC_OPTION'] = 'GRAV_OPEN'
         if not args['fft']:
             raise SystemExit(
                 '### CONFIGURE ERROR: FFT Poisson solver only be used with FFT')
@@ -790,8 +803,12 @@ if args['grav'] == 'fft':
     self_grav_string = 'FFT'
 elif args['grav'] == 'mg':
     self_grav_string = 'Multigrid'
-elif args['grav'] == 'blockfft':
-    self_grav_string = 'FFT (using BlockFFT)'
+elif args['grav'] == 'fft-periodic':
+    self_grav_string = 'FFT (periodic BC)'
+elif args['grav'] == 'fft-disk':
+    self_grav_string = 'FFT (disk BC)'
+elif args['grav'] == 'fft-open':
+    self_grav_string = 'FFT (open BC)'
 
 print('Your Athena++ distribution has now been configured with the following options:')
 print('  Problem generator:          ' + args['prob'])

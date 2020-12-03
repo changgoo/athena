@@ -47,7 +47,13 @@ void ShowConfig() {
   } else if (SELF_GRAVITY_ENABLED == 2) {
     std::cout<<"  Self-Gravity:               Multigrid" << std::endl;
   } else if (SELF_GRAVITY_ENABLED == 3) {
-    std::cout<<"  Self-Gravity:               FFT (using BlockFFT)" << std::endl;
+#if defined(GRAV_PERIODIC)
+    std::cout<<"  Self-Gravity:               FFT (periodic BC)" << std::endl;
+#elif defined(GRAV_DISK)
+    std::cout<<"  Self-Gravity:               FFT (disk BC)" << std::endl;
+#elif defined(GRAV_OPEN)
+    std::cout<<"  Self-Gravity:               FFT (open BC)" << std::endl;
+#endif
   } else {
     std::cout<<"  Self-Gravity:               OFF" << std::endl;
   }

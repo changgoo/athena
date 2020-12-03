@@ -162,9 +162,7 @@ FFT3d::FFT3d(MPI_Comm user_comm, int user_precision)
 
   remap_prefast = remap_fastmid = remap_midslow = remap_postslow = NULL;
   remap_preslow = remap_slowmid = remap_midfast = remap_postfast = NULL;
-#ifdef GRAV_DISK
   remap_premid = remap_fastslow = remap_slowfast = remap_postmid = NULL;
-#endif
   fft_fast = fft_mid = fft_slow = NULL;
 
   memusage = 0;
@@ -508,12 +506,10 @@ void FFT3d::deallocate_setup()
   deallocate_remap(remap_midfast);
   deallocate_remap(remap_postfast);
 
-#ifdef GRAV_DISK
   deallocate_remap(remap_premid);
   deallocate_remap(remap_fastslow);
   deallocate_remap(remap_slowfast);
   deallocate_remap(remap_postmid);
-#endif
 
   deallocate_ffts();
   delete fft_fast;
@@ -522,9 +518,8 @@ void FFT3d::deallocate_setup()
 
   remap_prefast = remap_fastmid = remap_midslow = remap_postslow = NULL;
   remap_preslow = remap_slowmid = remap_midfast = remap_postfast = NULL;
-#ifdef GRAV_DISK
   remap_premid = remap_fastslow = remap_slowfast = remap_postmid = NULL;
-#endif
+
   fft_fast = fft_mid = fft_slow = NULL;
 }
 
@@ -1260,7 +1255,6 @@ void FFT3d::remap_forward_create(int &sendsize, int &recvsize)
     remap_postslow->remap3d_extra = NULL;
   }
 
-#ifdef GRAV_DISK
   remap_premid = new Remap;
   remap_premid->remap3d = new Remap3d(world);
   remap_premid->remap3d->collective = collective_bp;
@@ -1284,8 +1278,6 @@ void FFT3d::remap_forward_create(int &sendsize, int &recvsize)
   sendsize = MAX(sendsize,ssize);
   recvsize = MAX(recvsize,rsize);
   remap_fastslow->remap3d_extra = NULL;
-#endif
-
 }
 
 /* ----------------------------------------------------------------------
@@ -1424,7 +1416,6 @@ void FFT3d::remap_inverse_create(int &sendsize, int &recvsize)
     remap_postfast->remap3d_extra = NULL;
   }
 
-#ifdef GRAV_DISK
   remap_slowfast = new Remap;
   remap_slowfast->remap3d = new Remap3d(world);
   remap_slowfast->remap3d->collective = collective_pp;
@@ -1448,8 +1439,6 @@ void FFT3d::remap_inverse_create(int &sendsize, int &recvsize)
   sendsize = MAX(sendsize,ssize);
   recvsize = MAX(recvsize,rsize);
   remap_postmid->remap3d_extra = NULL;
-#endif
-
 }
 
 /* ----------------------------------------------------------------------

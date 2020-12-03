@@ -163,7 +163,6 @@ void BlockFFT::RetrieveResult(AthenaArray<Real> &dst) {
 void BlockFFT::ExecuteForward() {
 #ifdef FFT
 #ifdef MPI_PARALLEL
-  // cast std::complex* to FFT_SCALAR*
   FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR*>(in_);
   // block2fast
   if (pf3d->remap_prefast) pf3d->remap(data,data,pf3d->remap_prefast);
@@ -200,9 +199,7 @@ void BlockFFT::ApplyKernel() {
 void BlockFFT::ExecuteBackward() {
 #ifdef FFT
 #ifdef MPI_PARALLEL
-  // cast std::complex* to FFT_SCALAR*
   FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR*>(in_);
-
   // slow_backward
   pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data),FFTW_BACKWARD,pf3d->fft_slow);
   // slow2mid
@@ -215,12 +212,8 @@ void BlockFFT::ExecuteBackward() {
   pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data),FFTW_BACKWARD,pf3d->fft_fast);
   // fast2block
   if (pf3d->remap_postfast) pf3d->remap(data,data,pf3d->remap_postfast);
-
   // multiply norm factor
-  for (int i=0; i<nx1*nx2*nx3; ++i) {
-    data[2*i] /= (Nx1*Nx2*Nx3);
-    data[2*i+1] /= (Nx1*Nx2*Nx3);
-  }
+  for (int i=0; i<2*nx1*nx2*nx3; ++i) data[i] /= (Nx1*Nx2*Nx3);
 #endif
 #endif
 
