@@ -292,6 +292,7 @@ void BlockFFTGravity::ApplyKernel() {
 }
 
 void BlockFFTGravity::Solve(int stage) {
+#if defined(FFT) && defined(MPI_PARALLEL)
   Real time = pmy_block_->pmy_mesh->time;
   Real qomt = qshear_*Omega_0_*time;
   AthenaArray<Real> rho;
@@ -328,6 +329,13 @@ void BlockFFTGravity::Solve(int stage) {
   }
 
   RetrieveResult(pmy_block_->pgrav->phi);
+#else
+  std::stringstream msg;
+  msg << "### FATAL ERROR in BlockFFTGravity::Solve" << std::endl
+      << "BlockFFTGravity only work with MPI and FFT" << std::endl;
+  ATHENA_ERROR(msg);
+  return;
+#endif // FFT & MPI_PARALLEL
 
   gtlist_->DoTaskListOneStage(pmy_block_->pmy_mesh, stage);
 
