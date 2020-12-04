@@ -21,6 +21,7 @@
 
 // memory alignment settings
 
+#define FFT_INTEL_NO_TBB
 #if defined(__INTEL_COMPILER)
 #ifndef FFT_INTEL_NO_TBB
 #define FFT_USE_TBB_ALLOCATOR
@@ -28,6 +29,8 @@
 #else
 #include <malloc.h>
 #endif
+#else
+#include <malloc.h>
 #endif
 
 #if !defined(FFT_MEMALIGN)
