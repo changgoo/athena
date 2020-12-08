@@ -82,7 +82,7 @@ CRIntegrator::CRIntegrator(CosmicRay *pcr, ParameterInput *pin)
   vdiff_r_.NewAthenaArray(ncells1);
     
   taufact_ = pin->GetOrAddReal("cr","taucell",1.0);
-  vel_flx_flag_ = pin->GetOrAddInteger("cr","vflx",1);
+  vel_flx_flag_ = pin->GetOrAddInteger("cr","vflx",0);
 
   new_sol_.NewAthenaArray(NCR,ncells1);
 

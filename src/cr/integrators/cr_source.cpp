@@ -141,7 +141,7 @@ void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Rea
           sigma_z = 1.0/(1.0/pcr->sigma_diff(2,k,j,i) + 
            1.0/pcr->sigma_adv(2,k,j,i));
         }
-         
+        
         // Now update the momentum equation
         //\partial F/\partial t=-V_m\sigma (F-v(E+Pc_)/v_m)) 
         // And the energy equation

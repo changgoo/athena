@@ -539,7 +539,9 @@ void CRIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &cr_out)
       for(int n=0; n<NCR; ++n){
 #pragma omp simd
         for(int i=is; i<=ie; ++i){
+          double aa = cr_out(n,k,j,i);   
           cr_out(n,k,j,i) -= wght*dflx(n,i)/vol(i);
+          //if (n == 0 && cr_out(CRE,k,j,i) != cr_out(CRE,k,j,i)) printf("Wrong here %e %e %e \n", aa, x1flux(n,k,j,i+1), x1flux(n,k,j,i));
         }
       }
 
@@ -560,5 +562,5 @@ void CRIntegrator::FluxDivergence(const Real wght, AthenaArray<Real> &cr_out)
 #pragma omp simd
       for(int i=is; i<=ie; ++i)
         if(cr_out(CRE,k,j,i) < TINY_NUMBER)
-          cr_out(CRE,k,j,i) = TINY_NUMBER;
+        cr_out(CRE,k,j,i) = TINY_NUMBER;
 }

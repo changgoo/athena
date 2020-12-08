@@ -86,24 +86,30 @@ void Hydro::NewBlockTimeStep() {
               wi[IBY] = bcc(IB2,k,j,i);
               wi[IBZ] = bcc(IB3,k,j,i);
               Real cf = pmb->peos->FastMagnetosonicSpeed(wi,bx);
-              dt1(i) /= (std::abs(wi[IVX]) + cf);
+              Real speed = std::max(cspeed,(std::fabs(wi[IVX]) + cf));
+              dt1(i) /= (speed);
 
               wi[IBY] = bcc(IB3,k,j,i);
               wi[IBZ] = bcc(IB1,k,j,i);
               bx = bcc(IB2,k,j,i) + std::abs(b_x2f(k,j,i) - bcc(IB2,k,j,i));
               cf = pmb->peos->FastMagnetosonicSpeed(wi,bx);
-              dt2(i) /= (std::abs(wi[IVY]) + cf);
+              speed = std::max(cspeed,(std::fabs(wi[IVY]) + cf));
+              dt2(i) /= (speed);
 
               wi[IBY] = bcc(IB1,k,j,i);
               wi[IBZ] = bcc(IB2,k,j,i);
               bx = bcc(IB3,k,j,i) + std::abs(b_x3f(k,j,i) - bcc(IB3,k,j,i));
               cf = pmb->peos->FastMagnetosonicSpeed(wi,bx);
-              dt3(i) /= (std::abs(wi[IVZ]) + cf);
+              speed = std::max(cspeed,(std::fabs(wi[IVZ]) + cf));
+              dt3(i) /= (speed);
             } else {
               Real cs = pmb->peos->SoundSpeed(wi);
-              dt1(i) /= (std::abs(wi[IVX]) + cs);
-              dt2(i) /= (std::abs(wi[IVY]) + cs);
-              dt3(i) /= (std::abs(wi[IVZ]) + cs);
+              Real speed1 = std::max(cspeed, (fabs(wi[IVX]) + cs));
+              Real speed2 = std::max(cspeed, (fabs(wi[IVY]) + cs));
+              Real speed3 = std::max(cspeed, (fabs(wi[IVZ]) + cs));
+              dt1(i) /= speed1;
+              dt2(i) /= speed2;
+              dt3(i) /= speed3;
             }
           } else { // FluidFormulation::background or disabled. Assume scalar advection:
             dt1(i) /= (std::abs(wi[IVX]));
@@ -183,6 +189,6 @@ void Hydro::NewBlockTimeStep() {
   pmb->new_block_dt_hyperbolic_ = min_dt_hyperbolic;
   pmb->new_block_dt_parabolic_ = min_dt_parabolic;
   pmb->new_block_dt_user_ = min_dt_user;
-
+  
   return;
 }
