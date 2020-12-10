@@ -13,10 +13,10 @@ MPIFFT_FILE = @MPIFFT_FILE@
 
 # General compiler specifications
 
-CXX := @COMPILER_COMMAND@
-CPPFLAGS := @PREPROCESSOR_FLAGS@
-CXXFLAGS := @COMPILER_FLAGS@
-LDFLAGS := @LINKER_FLAGS@
+CXX := @COMPILER_COMMAND@ -I/usr/local/include
+CPPFLAGS := @PREPROCESSOR_FLAGS@ -I/usr/local/include
+CXXFLAGS := @COMPILER_FLAGS@ -I/usr/local/include
+LDFLAGS := @LINKER_FLAGS@ -L/usr/local/lib
 LDLIBS := @LIBRARY_FLAGS@
 GCOV_CMD := @GCOV_COMMAND@
 
@@ -30,6 +30,7 @@ SRC_FILES := $(wildcard src/*.cpp) \
 	     $(wildcard src/bvals/cc/fft_grav/*.cpp) \
 	     $(wildcard src/bvals/cc/hydro/*.cpp) \
 	     $(wildcard src/bvals/cc/mg/*.cpp) \
+             $(wildcard src/bvals/cc/radiation/*.cpp) \
 	     $(wildcard src/bvals/fc/*.cpp) \
 	     $(wildcard src/bvals/utils/*.cpp) \
 	     $(wildcard src/coordinates/*.cpp) \
@@ -43,10 +44,15 @@ SRC_FILES := $(wildcard src/*.cpp) \
 	     $(wildcard src/gravity/*.cpp) \
 	     $(wildcard src/hydro/*.cpp) \
 	     $(wildcard src/hydro/srcterms/*.cpp) \
-       $(wildcard src/cr/*.cpp) \
-       $(wildcard src/cr/integrators/*.cpp) \
-	     $(wildcard src/hydro/hydro_diffusion/*.cpp) \
-	     src/hydro/rsolvers/$(RSOLVER_DIR)$(RSOLVER_FILE) \
+             $(wildcard src/hydro/hydro_diffusion/*.cpp) \
+             $(wildcard src/radiation/*.cpp) \
+             $(wildcard src/radiation/integrators/*.cpp) \
+             $(wildcard src/radiation/integrators/srcterms/*.cpp) \
+             $(wildcard src/cr/*.cpp) \
+             $(wildcard src/cr/integrators/*.cpp) \
+             $(wildcard src/thermal_conduction/*.cpp) \
+             $(wildcard src/thermal_conduction/integrators/*.cpp) \
+             src/hydro/rsolvers/$(RSOLVER_DIR)$(RSOLVER_FILE) \
 	     $(wildcard src/inputs/*.cpp) \
 	     $(wildcard src/mesh/*.cpp) \
 	     $(wildcard src/multigrid/*.cpp) \

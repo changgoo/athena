@@ -64,12 +64,15 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin)
 { 
   // calculate the anaysis solution and compare
   //find the time, going through all the mesh block
-  /*MeshBlock *pmb = pblock;
+  MeshBlock *pmb = my_blocks(0);
   Real vmax = pmb->pcr->vmax;
   Real sum_error=0.0;
   int num_cell=0;
   Real diff_coef=vmax/(3.0*sigma);
-  while(pmb != nullptr){
+  
+  // Loop over MeshBlocks
+  for (int b=0; b<nblocal; ++b) {
+    MeshBlock *pmb = my_blocks(b);
     int ks=pmb->ks; int ke=pmb->ke; int js=pmb->js; int je=pmb->je;
     int is=pmb->is; int ie=pmb->ie;
     for(int k=ks; k<=ke; ++k){
@@ -78,7 +81,6 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin)
           Real x1 = pmb->pcoord->x1v(i);
           Real x2 = pmb->pcoord->x2v(j);
           Real x3 = pmb->pcoord->x3v(k);
-
           Real dist_sq=(x1-vx*time)*(x1-vx*time);
           if(direction == 1)
             dist_sq=(x2-vy*time)*(x2-vy*time);
@@ -90,10 +92,7 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin)
         }// end i
       }// end j
     }// end k
-
-    pmb=pmb->next;
-    
-  }
+  }  
 
 #ifdef MPI_PARALLEL
   MPI_Allreduce(&sum_error, &sum_error, 1, MPI_DOUBLE,MPI_SUM, MPI_COMM_WORLD);
@@ -122,17 +121,16 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin)
             << std::endl << "Error output file could not be opened" <<std::endl;
         throw std::runtime_error(msg.str().c_str());
       }
-      fprintf(pfile,"# Nx1  Nx2  Nx3  vx  vy  sigma  time  error");
+      fprintf(pfile,"# Nx1  Nx2  Nx3  direction vx  vy  vz  sigma  time  error");
       fprintf(pfile,"\n");
     }
 
     // write errors
-    fprintf(pfile,"%d  %d  %d",mesh_size.nx1,mesh_size.nx2,mesh_size.nx3);
-    fprintf(pfile,"  %e  %e  %e  %e  %e  %e\n",vx, vy, vz, sigma,time,sum_error);
+    fprintf(pfile,"%d  %d  %d  %d",mesh_size.nx1,mesh_size.nx2,mesh_size.nx3, direction);
+    fprintf(pfile,"  %e  %e  %e  %e  %e  %e\n", vx, vy, vz, sigma, time,sum_error);
     fclose(pfile);
 
-
-  }*/
+  }
     
 }
 
@@ -144,7 +142,6 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin)
   if(CR_ENABLED){
     pcr->EnrollOpacityFunction(Diffusion);
   }
-
 
 }
 
