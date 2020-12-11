@@ -127,7 +127,7 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin)
 
     // write errors
     fprintf(pfile,"%d  %d  %d  %d",mesh_size.nx1,mesh_size.nx2,mesh_size.nx3, direction);
-    fprintf(pfile,"  %e  %e  %e  %e  %e  %e\n", vx, vy, vz, sigma, time,sum_error);
+    fprintf(pfile,"  %e  %e  %e  %e  %e  %e \n", vx, vy, vz, sigma, time,sum_error);
     fclose(pfile);
 
   }
@@ -253,7 +253,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
       for (int k=ks; k<=ke; ++k) {
         for (int j=js; j<=je+1; ++j) {
           for (int i=is; i<=ie; ++i) {
-            pfield->b.x2f(k,j,i) = 1.0;
+            pfield->b.x2f(k,j,i) = 0.0;
           }
         }
       }

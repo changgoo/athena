@@ -69,11 +69,10 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin)
 
 void MeshBlock::InitUserMeshBlockData(ParameterInput *pin)
 {
-
+  
   if(CR_ENABLED){
     pcr->EnrollOpacityFunction(Diffusion);
   }
-
 
 }
 
@@ -182,7 +181,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
       for (int k=ks; k<=ke; ++k) {
         for (int j=js; j<=je+1; ++j) {
           for (int i=is; i<=ie; ++i) {
-            pfield->b.x2f(k,j,i) = 1.0;
+            pfield->b.x2f(k,j,i) = 0.0;
           }
         }
       }

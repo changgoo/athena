@@ -98,7 +98,18 @@ void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Rea
         Real vtot1 = v1;
         Real vtot2 = v2;
         Real vtot3 = v3;
-
+        
+        Real kin_en = 1e20;
+        if(pcr->src_flag == 0){
+          kin_en = rho*(std::pow(v1,2)+std::pow(v2,2)+std::pow(v3,2));
+          if (ec[i]>kin_en || ec[i]<0)
+          {
+            vtot1 = 0;
+            vtot2 = 0;
+            vtot3 = 0;
+          }
+        }  
+        
         // add the streaming velocity
         if(pcr->stream_flag){
           vtot1 += pcr->v_adv(0,k,j,i);
@@ -189,9 +200,11 @@ void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Rea
           // Apply rotation of the vectors
           InvRotateVec(sint_b[i],cost_b[i],sinp_b[i],cosp_b[i], 
                                          newfr1,newfr2,newfr3);						 
-          new_ec += dt * ec_source_(k,j,i);
+          if (pcr->src_flag == 0 && ec[i]<=kin_en && ec[i]>0) new_ec += dt * ec_source_(k,j,i);
         }        
 
+        if(new_ec < 0.0) new_ec = ec[i];
+        
         // Add the energy source term
         if (NON_BAROTROPIC_EOS && (pcr->src_flag > 0)){
           Real new_eg = u(IEN,k,j,i) - (new_ec - ec[i]); 
@@ -199,14 +212,12 @@ void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Rea
           u(IEN,k,j,i) = new_eg;       
         }         
 
-        if(new_ec < 0.0) new_ec = ec[i];
-         
         if(pcr->src_flag > 0){ 
           u(IM1,k,j,i) += (-(newfr1 - fc1[i]) * invlim);
           u(IM2,k,j,i) += (-(newfr2 - fc2[i]) * invlim);
           u(IM3,k,j,i) += (-(newfr3 - fc3[i]) * invlim);
         }
-		 
+
         u_cr(CRE,k,j,i) = new_ec;
         u_cr(CRF1,k,j,i) = newfr1;
         u_cr(CRF2,k,j,i) = newfr2;

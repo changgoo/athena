@@ -261,9 +261,6 @@ void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr,
   // b_angle[2]=sin_phi_b
   // b_angle[3]=cos_phi_b
 
-
-
-
   if(MAGNETIC_FIELDS_ENABLED){
     //First, calculate B_dot_grad_Pc
     for(int k=kl; k<=ku; ++k){
@@ -372,8 +369,6 @@ void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr,
   }// End MHD  
   else{
 
-
-
   for(int k=kl; k<=ku; ++k){
     for(int j=jl; j<=ju; ++j){
   // x component
@@ -406,9 +401,6 @@ void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr,
        
         pcr->v_adv(1,k,j,i) = 0.0;
         pcr->v_adv(2,k,j,i) = 0.0;
-
-
-
 
       }
 
@@ -478,7 +470,7 @@ void FixMHDLeft(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
     for (int k=ks; k<=ke; ++k) { 
     for (int j=js; j<=je; ++j) { 
 #pragma simd
-      for (int i=1; i<=(NGHOST); ++i) { 
+    for (int i=1; i<=(NGHOST); ++i) { 
 //        b.x1f(k,j,(is-i)) = sqrt(2.0*const_pb);  // reflect 1-field
           b.x1f(k,j,(is-i)) =  b.x1f(k,j,is);
       } 
@@ -502,8 +494,6 @@ void FixMHDLeft(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
       }}
     }
   }
-
-
 }
 
 

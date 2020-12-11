@@ -46,7 +46,7 @@ void Field::CT(const Real wght, FaceField &b_out) {
         pmb->pcoord->Edge3Length(k,j+1,is,ie+1,len_p1);
 #pragma omp simd
         for (int i=is; i<=ie+1; ++i) {
-          b_out.x1f(k,j,i) -=
+          //b_out.x1f(k,j,i) -=
               (wght/area(i))*(len_p1(i)*e3(k,j+1,i) - len(i)*e3(k,j,i));
         }
 
@@ -55,7 +55,7 @@ void Field::CT(const Real wght, FaceField &b_out) {
           pmb->pcoord->Edge2Length(k+1,j,is,ie+1,len_p1);
 #pragma omp simd
           for (int i=is; i<=ie+1; ++i) {
-            b_out.x1f(k,j,i) +=
+            //b_out.x1f(k,j,i) +=
                 (wght/area(i))*(len_p1(i)*e2(k+1,j,i) - len(i)*e2(k,j,i));
           }
         }
@@ -78,14 +78,14 @@ void Field::CT(const Real wght, FaceField &b_out) {
       pmb->pcoord->Edge3Length(k,j,is,ie+1,len);
 #pragma omp simd
       for (int i=is; i<=ie; ++i) {
-        b_out.x2f(k,j,i) += (wght/area(i))*(len(i+1)*e3(k,j,i+1) - len(i)*e3(k,j,i));
+       // b_out.x2f(k,j,i) += (wght/area(i))*(len(i+1)*e3(k,j,i+1) - len(i)*e3(k,j,i));
       }
       if (pmb->block_size.nx3 > 1) {
         pmb->pcoord->Edge1Length(k  ,j,is,ie,len);
         pmb->pcoord->Edge1Length(k+1,j,is,ie,len_p1);
 #pragma omp simd
         for (int i=is; i<=ie; ++i) {
-          b_out.x2f(k,j,i) -=
+          //b_out.x2f(k,j,i) -=
               (wght/area(i))*(len_p1(i)*e1(k+1,j,i) - len(i)*e1(k,j,i));
         }
       }
@@ -99,14 +99,14 @@ void Field::CT(const Real wght, FaceField &b_out) {
       pmb->pcoord->Edge2Length(k,j,is,ie+1,len);
 #pragma omp simd
       for (int i=is; i<=ie; ++i) {
-        b_out.x3f(k,j,i) -= (wght/area(i))*(len(i+1)*e2(k,j,i+1) - len(i)*e2(k,j,i));
+        //b_out.x3f(k,j,i) -= (wght/area(i))*(len(i+1)*e2(k,j,i+1) - len(i)*e2(k,j,i));
       }
       if (pmb->block_size.nx2 > 1) {
         pmb->pcoord->Edge1Length(k,j  ,is,ie,len);
         pmb->pcoord->Edge1Length(k,j+1,is,ie,len_p1);
 #pragma omp simd
         for (int i=is; i<=ie; ++i) {
-          b_out.x3f(k,j,i) +=
+          //b_out.x3f(k,j,i) +=
               (wght/area(i))*(len_p1(i)*e1(k,j+1,i) - len(i)*e1(k,j,i));
         }
       }
