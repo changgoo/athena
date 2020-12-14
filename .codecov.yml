@@ -38,17 +38,6 @@ coverage:
     changes: off           # measure changes in code coverage NOT in diff of PR or commit
     # (e.g. if a new Python regression test is added that tests unchanged lines in src/)
 
-  notify:
-    slack:
-      default:
-        url: "https://hooks.slack.com/services/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"
-        threshold: null    # null|x; send message if coverage drops by more than x%
-        only_pulls: false  # false|true; false=send message for every PR or commit status
-        attachments: "sunburst, diff"  # the interactive sunburst graph, and diff snapshot
-        branches: null
-        flags: null
-        paths: null
-
 parsers:
   gcov:                    # not caling Gcov in Codecov Bash uploader (-X gcov)
     branch_detection:      # using default gcov key:value pairs
