@@ -140,7 +140,7 @@ while read filename; do
     codecov_flag=$(basename ${filename} .info) # "flags must match pattern ^[\w\,]+$"
     # basename command is in GNU coreutils, but here is Bash Parameter Expansion alternative for stripping extension and path:
     #codecov_flag=${${filename%.info}##*/}
-    curl -s https://codecov.io/bash | bash -s - -X gcov -t ccdc959e-e2c3-4811-95c6-512151b39471 \
+    curl -s https://codecov.io/bash | bash -s - -X gcov -t b5ac2369-1242-4b11-86d0-7d9910f68160 \
 	-F ${codecov_flag} -f "${filename}" || echo "Codecov did not collect coverage reports"
     lcov_counter=$((lcov_counter + 1))
 done < <( find . -maxdepth 1 -name '*.info' )
