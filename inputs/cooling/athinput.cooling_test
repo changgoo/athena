@@ -1,6 +1,6 @@
 <comment>
-problem   = cooling in a  turbulent gas
-reference = El Badry et al. 2019 (for now)
+problem   = point cooling of a set of 4 cells
+reference = Tigress classic and El Badry '19 cooling functions 
 configure = --prob cooling
 
 <job>

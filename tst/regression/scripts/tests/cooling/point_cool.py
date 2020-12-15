@@ -1,18 +1,18 @@
 """
-Regression test for the cooling of a single cell from an set initial density and temperature
-that is compared against a separately computed cooling evolution.  This regression test uses 
-the TIGRESS classic cooling function with an Euler integration scheme. It is run with an 
-density of n_H = 30 cm^-3 and an initial temperature of 1e6 K, so that is can test many 
-different regimes of the cooling function (different temperatures) in a single test.
+Regression test for the cooling of a single cell from an set initial density and
+temperature that is compared against a separately computed cooling evolution.  This
+regression test uses the TIGRESS classic cooling function with an Euler integration
+scheme. It is run with an density of n_H = 30 cm^-3 and an initial temperature of
+1e6 K, so that is can test many different regimes of the cooling function (different
+temperatures) in a single test.
 
-This was built off of the template test code for athena++ so it may have some residual 
+This was built off of the template test code for athena++ so it may have some residual
 comments from that template.
 """
 # Modules
 import numpy as np                             # standard Python module for numerics
 import sys                                     # standard Python module to change path
 import scripts.utils.athena as athena          # utilities for running Athena++
-import scripts.utils.comparison as comparison  # more utilities explicitly for testing
 sys.path.insert(0, '../../vis/python')         # insert path to Python read scripts
 import athena_read                             # utilities for reading Athena++ data # noqa
 athena_read.check_nan_flag = True              # raise exception when encountering NaNs
@@ -87,8 +87,8 @@ def analyze():
     """
 
     # Read in reference data. Which is in Physical units of Myrs (for t_ref) and Kelvin
-    # for T_ref (which is actually T_mu when doing the comparison of the TIGRESS classic
-    # cooling function).
+    # for T_ref (which is actually T_mu when doing the comparison of the TIGRESS
+    # classic cooling function).
     # This is the result of an Euler cooling integration done separately in
     # Python with a much smaller time step. Make sure the that file that is being
     # compared matches the inputs given above in the "run()" function
@@ -107,25 +107,20 @@ def analyze():
     P = (2./3)*Pconv*Etot_sol/vol
     T_sol = P/rho
 
-    Tsol2 = (T_sol[1:] + T_sol[:-1])/2.
-    Tref2 = (T_ref[1:] + T_ref[:-1])/2.
-
-
     # Next we compute the differences between the reference arrays and the newly created
     # ones in the L^1 sense. That is, given functions f and g, we want
     #     \int |f(x)-g(x)| dx.
     # The utility script comparison.l1_diff() does this exactly, conveniently taking N+1
     # interface locations and N volume-averaged quantities. The two datasets can have
     # different values of N.
-    #error_abs_T = comparison.l1_diff(t_ref, Tref2, t_sol, Tsol2)
-    error_abs_T = np.trapz(abs(T_sol-np.interp(t_sol,t_ref,T_ref)),t_sol)
+    error_abs_T = np.trapz(abs(T_sol - np.interp(t_sol, t_ref, T_ref)), t_sol)
 
     # The errors are more meaningful if we account for the length of the domain and the
     # typical magnitude of the function itself. Fortunately, comparison.l1_norm() computes
     #     \int |f(x)| dx.
     # (Note neither comparison.l1_diff() nor comparison.l1_norm() divides by the length of
     # the domain.)
-    error_rel_T = error_abs_T / np.trapz(np.interp(t_sol,t_ref,T_ref),t_sol)
+    error_rel_T = error_abs_T / np.trapz(np.interp(t_sol, t_ref, T_ref), t_sol)
 
     # Finally, we test that the relative errors in the two quantities are no more than 1%.
     # If they are, we return False at the very end of the function and file; otherwise
