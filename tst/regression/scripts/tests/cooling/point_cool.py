@@ -1,28 +1,13 @@
 """
-Example test script.
+Regression test for the cooling of a single cell from an set initial density and temperature
+that is compared against a separately computed cooling evolution.  This regression test uses 
+the TIGRESS classic cooling function with an Euler integration scheme. It is run with an 
+density of n_H = 30 cm^-3 and an initial temperature of 1e6 K, so that is can test many 
+different regimes of the cooling function (different temperatures) in a single test.
 
-This is a complete, working example that can be run as part of the test suite. It does a
-simple test of a relativistic shock tube using the GR framework. There are many comments
-in order to make this file self-explanatory, but the actual working code is only 28
-lines long.
-
-There are three functions defined here:
-    prepare(**kwargs)
-    run(**kwargs)
-    analyze()
-All three must be defined with the same names and no required inputs in order to make a
-working script. They are called in sequence from the main test script run_tests.py.
-Additional support functions can be defined here, to be called by the three primary fns.
-
-Heavy use is made of support utilities defined in scripts/utils/athena.py. These are
-general-purpose Python scripts that interact with Athena++. They should be used whenever
-possible, since they work together to compile and run Athena++ and read the output data.
-In particular, proper use of them will result in all files outside tst/regression/ being
-in the same state after the test as they were before (including whatever configured
-version of Athena++ existed in athena/bin/), as well as cleaning up any new files
-produced by the test.
+This was built off of the template test code for athena++ so it may have some residual 
+comments from that template.
 """
-
 # Modules
 import numpy as np                             # standard Python module for numerics
 import sys                                     # standard Python module to change path
@@ -43,11 +28,6 @@ def prepare(**kwargs):
 
     # Configure as though we ran
     #     python configure.py -hdf5 --prob=cooling
-    # from the athena/ directory. Note that additional -<flag> command-line arguments can
-    # be specified as additional '<flag>' arguments before the <key>='<value>' arguments
-    # to athena.configure(). Any number of --<key>=<value> command-line arguments can also
-    # be supplied. Note athena.configure() expects the values only to be quoted, e.g.
-    # --<key>='<value>'.
     athena.configure(prob='cooling', **kwargs)
 
     # Call make as though we ran
@@ -78,10 +58,11 @@ def run(**kwargs):
                  'mesh/nx2=1',
                  'mesh/nx3=1',
                  'cooling/coolftn=tigress',
+                 'cooling/cfl_cool=0.01',
                  'cooling/solver=euler',
                  'problem/turb_flag=0',
-                 'problem/rho_0=1.0',
-                 'problem/pgas_0=3000']
+                 'problem/rho_0=30.0',
+                 'problem/pgas_0=30000000']
 
     # Run Athena++ as though we called
     #     ./athena -i ../inputs/cooling/athinput.cooling_test job/problem_id=cooling <...>
@@ -111,7 +92,7 @@ def analyze():
     # This is the result of an Euler cooling integration done separately in
     # Python with a much smaller time step. Make sure the that file that is being
     # compared matches the inputs given above in the "run()" function
-    (t_ref, T_ref) = np.loadtxt('data/ref_cooling_soltuions/tigress_pok3e3_nH1e0.txt').T
+    (t_ref, T_ref) = np.loadtxt('data/ref_cooling_soltuions/tigress_pok3e7_nH3e1.txt').T
 
     # Read in the data produced during this test. This will usually be stored in the
     # tst/regression/bin/ directory, but again we omit the first part of the path. Note
@@ -126,21 +107,25 @@ def analyze():
     P = (2./3)*Pconv*Etot_sol/vol
     T_sol = P/rho
 
+    Tsol2 = (T_sol[1:] + T_sol[:-1])/2.
+    Tref2 = (T_ref[1:] + T_ref[:-1])/2.
+
+
     # Next we compute the differences between the reference arrays and the newly created
     # ones in the L^1 sense. That is, given functions f and g, we want
     #     \int |f(x)-g(x)| dx.
     # The utility script comparison.l1_diff() does this exactly, conveniently taking N+1
     # interface locations and N volume-averaged quantities. The two datasets can have
     # different values of N.
-    error_abs_T = comparison.l1_diff(t_ref, T_ref, t_sol, T_sol)
+    #error_abs_T = comparison.l1_diff(t_ref, Tref2, t_sol, Tsol2)
+    error_abs_T = np.trapz(abs(T_sol-np.interp(t_sol,t_ref,T_ref)),t_sol)
 
     # The errors are more meaningful if we account for the length of the domain and the
     # typical magnitude of the function itself. Fortunately, comparison.l1_norm() computes
     #     \int |f(x)| dx.
     # (Note neither comparison.l1_diff() nor comparison.l1_norm() divides by the length of
     # the domain.)
-    Tref2 = (T_ref[1:] + T_ref[:-1])/2.
-    error_rel_T = error_abs_T / comparison.l1_norm(t_ref, Tref2)
+    error_rel_T = error_abs_T / np.trapz(np.interp(t_sol,t_ref,T_ref),t_sol)
 
     # Finally, we test that the relative errors in the two quantities are no more than 1%.
     # If they are, we return False at the very end of the function and file; otherwise
