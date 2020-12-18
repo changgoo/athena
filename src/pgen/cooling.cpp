@@ -3,7 +3,7 @@
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
-//! \file cooling_rk4.c
+//! \file cooling.cpp
 //! \brief Problem generator for cooling test using RK4 integration
 //========================================================================================
 
