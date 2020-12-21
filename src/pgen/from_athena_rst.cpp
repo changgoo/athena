@@ -107,7 +107,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   const int Ny_mesh = pmy_mesh->mesh_size.nx2;
   const int Nz_mesh = pmy_mesh->mesh_size.nx3;
 
-  std::int64_t nsize = pmy_mesh->GetTotalCells();
+  int nsize = static_cast<int>(pmy_mesh->GetTotalCells());
 
   int gis = static_cast<int>(loc.lx1) * Nx;
   int gjs = static_cast<int>(loc.lx2) * Ny;

@@ -64,7 +64,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   const int Ny_mesh = pmy_mesh->mesh_size.nx2;
   const int Nz_mesh = pmy_mesh->mesh_size.nx3;
 
-  std::int64_t nsize = pmy_mesh->GetTotalCells();
+  int nsize = static_cast<int>(pmy_mesh->GetTotalCells());
 
   AthenaArray<Real> data; //temporary array to store data of the entire mesh
   data.NewAthenaArray(Nz_mesh, Ny_mesh, Nx_mesh);
