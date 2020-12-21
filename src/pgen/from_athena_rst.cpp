@@ -29,6 +29,7 @@
 #include "../parameter_input.hpp"
 #include "../utils/utils.hpp"
 
+#define MAXLEN 256
 //! \fn void read_rst(std::string filename, std::string field, AthenaArray<Real> &data)
 //!                    int iu, int ju, int ku,
 //!                    int xstart = 0, int ystart = 0, int zstart = 0, int flagB = 0)
@@ -38,7 +39,6 @@ static void read_rst(std::string filename, std::string field, AthenaArray<Real> 
                      int iu, int ju, int ku,
                      int xstart = 0, int ystart = 0, int zstart = 0, int flagB = 0) {
   std::stringstream msg;
-  int MAXLEN = 256;
   FILE *fp;
   char line[MAXLEN];
 
@@ -98,10 +98,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   //!   must be the same as in the athena simulation).
   int flag = pin->GetOrAddInteger("problem", "flag_rst", 0);
 
-  //dimensions of meshblock
-  const int Nx = ie - is + 1;
-  const int Ny = je - js + 1;
-  const int Nz = ke - ks + 1;
+  //dimensions of meshblock excluding ghost zones
+  const int Nx = block_size.nx1;
+  const int Ny = block_size.nx2;
+  const int Nz = block_size.nx3;
   //dimensions of mesh
   const int Nx_mesh = pmy_mesh->mesh_size.nx1;
   const int Ny_mesh = pmy_mesh->mesh_size.nx2;
@@ -109,9 +109,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
   std::int64_t nsize = pmy_mesh->GetTotalCells();
 
-  int gis = loc.lx1 * Nx;
-  int gjs = loc.lx2 * Ny;
-  int gks = loc.lx3 * Nz;
+  int gis = static_cast<int>(loc.lx1) * Nx;
+  int gjs = static_cast<int>(loc.lx2) * Ny;
+  int gks = static_cast<int>(loc.lx3) * Nz;
 
   if (flag == 1) {
     //find the corresponding athena4.2 global id
@@ -223,12 +223,11 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       pfield->CalculateCellCenteredField(pfield->b,pfield->bcc,pcoord,is,ie,js,je,ks,ke);
     }
   } else {
-    int tigress_zmeshblocks, tigress_ymeshblocks, tigress_xmeshblocks;
-    int tigress_Nx_mesh, tigress_Ny_mesh, tigress_Nz_mesh;
+    int tigress_zmeshblocks(1), tigress_ymeshblocks(1), tigress_xmeshblocks(1);
+    int tigress_Nx_mesh(1), tigress_Ny_mesh(1), tigress_Nz_mesh(1);
     int tigress_Nx, tigress_Ny, tigress_Nz;
 
     std::stringstream msg;
-    int MAXLEN = 256;
     FILE *fp;
     char line[MAXLEN];
 
@@ -240,6 +239,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       throw std::runtime_error(msg.str().c_str());
     }
 
+    // read domain and MPI grid information from parameter files
+    // what if the original problem used AuthWithNProc option?
+    //   Athena would automatically set NGrid_x?, so not a problem.
     while (fgets(line,MAXLEN,fp)) {
       std::string s(line);
       if(s.find("Nx1")!=std::string::npos)
@@ -257,6 +259,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         break;
       }
     }
+
     fclose(fp);
 
     tigress_Nx = tigress_Nx_mesh/tigress_xmeshblocks;
@@ -270,6 +273,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     AthenaArray<Real> data; //temporary array to store data of the entire mesh
     data.NewAthenaArray(Nz_mesh, Ny_mesh, Nx_mesh);
 
+    // For each quantity, this repeats reading, broadcasting (if MPI), and assigning.
+    // These steps can be modularized.
+
+    // density
     if (Globals::my_rank == 0) {
       if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0)
         printf("Reading density ... \n");
@@ -301,13 +308,16 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       }
     }
 
+#ifdef MPI_PARALLEL
     int ierr = MPI_Bcast(data.data(), nsize, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
+#endif
 
     for (int k=ks; k<=ke; ++k)
       for (int j=js; j<=je; ++j)
         for (int i=is; i<=ie; ++i)
           phydro->u(IDN, k, j, i) = data(k-ks+gks, j-js+gjs, i-is+gis);
 
+    // x1-momentum
     if (Globals::my_rank == 0) {
       if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0)
         printf("Reading x1-momentum ... \n");
@@ -339,14 +349,16 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       }
     }
 
+#ifdef MPI_PARALLEL
     ierr = MPI_Bcast(data.data(), nsize, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
+#endif
 
     for (int k=ks; k<=ke; ++k)
       for (int j=js; j<=je; ++j)
         for (int i=is; i<=ie; ++i)
           phydro->u(IM1, k, j, i) = data(k-ks+gks, j-js+gjs, i-is+gis);
 
-
+    // x2-momentum
     if (Globals::my_rank == 0) {
       if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0)
         printf("Reading x2-momentum ... \n");
@@ -378,13 +390,16 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       }
     }
 
+#ifdef MPI_PARALLEL
     ierr = MPI_Bcast(data.data(), nsize, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
+#endif
 
     for (int k=ks; k<=ke; ++k)
       for (int j=js; j<=je; ++j)
         for (int i=is; i<=ie; ++i)
           phydro->u(IM2, k, j, i) = data(k-ks+gks, j-js+gjs, i-is+gis);
 
+    // x3-momentum
     if (Globals::my_rank == 0) {
       if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0)
         printf("Reading x3-momentum ... \n");
@@ -416,13 +431,16 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       }
     }
 
+#ifdef MPI_PARALLEL
     ierr = MPI_Bcast(data.data(), nsize, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
+#endif
 
     for (int k=ks; k<=ke; ++k)
       for (int j=js; j<=je; ++j)
         for (int i=is; i<=ie; ++i)
           phydro->u(IM3, k, j, i) = data(k-ks+gks, j-js+gjs, i-is+gis);
 
+    // energy density
     if (Globals::my_rank == 0) {
       if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0)
         printf("Reading energy density ... \n");
@@ -454,18 +472,23 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       }
     }
 
+#ifdef MPI_PARALLEL
     ierr = MPI_Bcast(data.data(), nsize, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
+#endif
 
     for (int k=ks; k<=ke; ++k)
       for (int j=js; j<=je; ++j)
         for (int i=is; i<=ie; ++i)
           phydro->u(IEN, k, j, i) = data(k-ks+gks, j-js+gjs, i-is+gis);
 
+    // done for hydro variables
     data.DeleteAthenaArray();
 
+    // face-centered fields
     if (MAGNETIC_FIELDS_ENABLED) {
       AthenaArray<Real> data_b;
 
+      // x1 B-field
       data_b.NewAthenaArray(Nz_mesh, Ny_mesh, Nx_mesh+1);
       if (Globals::my_rank == 0) {
         if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0)
@@ -502,8 +525,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         }
       }
 
+#ifdef MPI_PARALLEL
       ierr = MPI_Bcast(data_b.data(), (Nx_mesh+1)*Ny_mesh*Nz_mesh,
                        MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
+#endif
 
       for (int k=ks; k<=ke; ++k)
         for (int j=js; j<=je; ++j)
@@ -512,6 +537,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
       data_b.DeleteAthenaArray();
 
+      // x2 B-field
       data_b.NewAthenaArray(Nz_mesh, Ny_mesh+1, Nx_mesh);
       if (Globals::my_rank == 0) {
         if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0)
@@ -548,8 +574,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         }
       }
 
+#ifdef MPI_PARALLEL
       ierr = MPI_Bcast(data_b.data(), (Ny_mesh+1)*Nx_mesh*Nz_mesh,
                        MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
+#endif
 
       for (int k=ks; k<=ke; ++k)
         for (int j=js; j<=je+1; ++j)
@@ -558,6 +586,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
       data_b.DeleteAthenaArray();
 
+      // x1 B-field
       data_b.NewAthenaArray(Nz_mesh+1, Ny_mesh, Nx_mesh);
       if (Globals::my_rank == 0) {
         if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0)
@@ -594,8 +623,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         }
       }
 
+#ifdef MPI_PARALLEL
       ierr = MPI_Bcast(data_b.data(), (Nz_mesh+1)*Ny_mesh*Nx_mesh,
                        MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
+#endif
 
       for (int k=ks; k<=ke+1; ++k)
         for (int j=js; j<=je; ++j)
@@ -604,6 +635,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
       data_b.DeleteAthenaArray();
 
+      // done reading, calculate cell centered field
       pfield->CalculateCellCenteredField(pfield->b,pfield->bcc,pcoord,is,ie,js,je,ks,ke);
     }
   }

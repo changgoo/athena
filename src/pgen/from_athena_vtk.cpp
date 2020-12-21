@@ -28,6 +28,8 @@
 #include "../parameter_input.hpp"
 #include "../utils/utils.hpp"
 
+#define MAXLEN 256
+
 //function to split a string into a vector
 static std::vector<std::string> split(std::string str, char delimiter);
 //function to get rid of white space leading/trailing a string
@@ -69,9 +71,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   AthenaArray<Real> b; //needed for PrimitiveToConserved()
   b.NewAthenaArray(Nz,Ny,Nz);
 
-  int gis = loc.lx1 * Nx;
-  int gjs = loc.lx2 * Ny;
-  int gks = loc.lx3 * Nz;
+  int gis = static_cast<int>(loc.lx1) * Nx;
+  int gjs = static_cast<int>(loc.lx2) * Ny;
+  int gks = static_cast<int>(loc.lx3) * Nz;
 
   if (Globals::my_rank == 0) {
     if (loc.lx1 == 0 && loc.lx2 == 0 && loc.lx3 == 0)
@@ -79,7 +81,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     read_vtk(this, vtkdir, vtkfile0, "density", 0, data);
   }
 
+#ifdef MPI_PARALLEL
   ierr = MPI_Bcast(data.data(), nsize, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
+#endif
 
   for (int k=ks; k<=ke; ++k)
     for (int j=js; j<=je; ++j)
@@ -92,7 +96,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     read_vtk(this, vtkdir, vtkfile0, "pressure", 0, data);
   }
 
+#ifdef MPI_PARALLEL
   ierr = MPI_Bcast(data.data(), nsize, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
+#endif
 
   for (int k=ks; k<=ke; ++k)
     for (int j=js; j<=je; ++j)
@@ -106,7 +112,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     read_vtk(this, vtkdir, vtkfile0, "velocity", 0, data);
   }
 
+#ifdef MPI_PARALLEL
   ierr = MPI_Bcast(data.data(), nsize, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
+#endif
 
   for (int k=ks; k<=ke; ++k)
     for (int j=js; j<=je; ++j)
@@ -120,7 +128,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     read_vtk(this, vtkdir, vtkfile0, "velocity", 1, data);
   }
 
+#ifdef MPI_PARALLEL
   ierr = MPI_Bcast(data.data(), nsize, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
+#endif
 
   for (int k=ks; k<=ke; ++k)
     for (int j=js; j<=je; ++j)
@@ -134,7 +144,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     read_vtk(this, vtkdir, vtkfile0, "velocity", 2, data);
   }
 
+#ifdef MPI_PARALLEL
   ierr = MPI_Bcast(data.data(), nsize, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
+#endif
 
   for (int k=ks; k<=ke; ++k)
     for (int j=js; j<=je; ++j)
@@ -154,7 +166,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       read_vtk(this, vtkdir, vtkfile0, "cell_centered_B", 0, data);
     }
 
+#ifdef MPI_PARALLEL
     ierr = MPI_Bcast(data.data(), nsize, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
+#endif
 
     for (int k=0; k<=Nz_mesh-1; ++k) {
       for (int j=0; j<=Ny_mesh-1; ++j) {
@@ -182,7 +196,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       read_vtk(this, vtkdir, vtkfile0, "cell_centered_B", 1, data);
     }
 
+#ifdef MPI_PARALLEL
     ierr = MPI_Bcast(data.data(), nsize, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
+#endif
 
     data_B.NewAthenaArray(Nz_mesh, Ny_mesh+2, Nx_mesh);
 
@@ -212,7 +228,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       read_vtk(this, vtkdir, vtkfile0, "cell_centered_B", 2, data);
     }
 
+#ifdef MPI_PARALLEL
     ierr = MPI_Bcast(data.data(), nsize, MPI_ATHENA_REAL, 0, MPI_COMM_WORLD);
+#endif
 
     data_B.NewAthenaArray(Nz_mesh+2, Ny_mesh, Nx_mesh);
 
@@ -258,7 +276,8 @@ static void read_vtk(MeshBlock *mb, std::string vtkdir, std::string vtkfile0,
   std::string field, int component, AthenaArray<Real> &data) {
   std::stringstream msg;
   FILE *fp = NULL;
-  char cline[256], type[256], variable[256], format[256], t_type[256], t_format[256];
+  char cline[MAXLEN], type[MAXLEN], variable[MAXLEN];
+  char format[MAXLEN], t_type[MAXLEN], t_format[MAXLEN];
   std::string line;
 
   const std::string athena_header = "# vtk DataFile Version 2.0"; //athena4.2 header
@@ -281,7 +300,7 @@ static void read_vtk(MeshBlock *mb, std::string vtkdir, std::string vtkfile0,
   int cell_dat_vtk; //total number of cells in vtk file
   //total number of cells in MeshBlock
   const int cell_dat_mb = Nx_mb * Ny_mb * Nz_mb;
-  int retval, nread; //file handler return value
+  int retval; //file handler return value
   float fdat, fvec[3], ften[9];//store float format scaler, vector, and tensor
 
   std::string vtkfile;
@@ -293,7 +312,7 @@ static void read_vtk(MeshBlock *mb, std::string vtkdir, std::string vtkfile0,
     throw std::runtime_error(msg.str().c_str());
   }
   //get header
-  fgets(cline,256,fp);
+  fgets(cline,MAXLEN,fp);
   line.assign(cline);
   trim(line);
   if (SHOW_OUTPUT) {
@@ -308,7 +327,7 @@ static void read_vtk(MeshBlock *mb, std::string vtkdir, std::string vtkfile0,
   }
 
   //get comment field
-  fgets(cline,256,fp);
+  fgets(cline,MAXLEN,fp);
   line.assign(cline);
   trim(line);
   if (SHOW_OUTPUT) {
@@ -316,7 +335,7 @@ static void read_vtk(MeshBlock *mb, std::string vtkdir, std::string vtkfile0,
   }
 
   //get BINARY or ASCII
-  fgets(cline,256,fp);
+  fgets(cline,MAXLEN,fp);
   line.assign(cline);
   trim(line);
   if (SHOW_OUTPUT) {
@@ -330,7 +349,7 @@ static void read_vtk(MeshBlock *mb, std::string vtkdir, std::string vtkfile0,
   }
 
   //get DATASET STRUCTURED_POINTS or DATASET UNSTRUCTURED_GRID
-  fgets(cline,256,fp);
+  fgets(cline,MAXLEN,fp);
   line.assign(cline);
   trim(line);
   if (SHOW_OUTPUT) {
@@ -346,7 +365,7 @@ static void read_vtk(MeshBlock *mb, std::string vtkdir, std::string vtkfile0,
   //I'm assuming from this point on that the header is in good shape
 
   //read dimensions
-  fgets(cline,256,fp);
+  fgets(cline,MAXLEN,fp);
   if (SHOW_OUTPUT) {
     std::cout << cline;
   }
@@ -358,21 +377,21 @@ static void read_vtk(MeshBlock *mb, std::string vtkdir, std::string vtkfile0,
   Nz_vtk--;
 
   // Origin
-  fgets(cline,256,fp);
+  fgets(cline,MAXLEN,fp);
   if (SHOW_OUTPUT) {
     std::cout << cline;
   }
   sscanf(cline,"ORIGIN %le %le %le\n",&ox_vtk,&oy_vtk,&oz_vtk);
 
   // spacing
-  fgets(cline,256,fp);
+  fgets(cline,MAXLEN,fp);
   if (SHOW_OUTPUT) {
     std::cout << cline;
   }
   sscanf(cline,"ORIGIN %le %le %le\n",&dx_vtk,&dy_vtk,&dz_vtk);
 
   // Cell Data = Nx*Ny*Nz
-  fgets(cline,256,fp);
+  fgets(cline,MAXLEN,fp);
   if (SHOW_OUTPUT) {
     std::cout << cline;
   }
@@ -431,7 +450,7 @@ static void read_vtk(MeshBlock *mb, std::string vtkdir, std::string vtkfile0,
         }
 
         do {
-          fgets(cline,256,fp);
+          fgets(cline,MAXLEN,fp);
         } while(strncmp(cline,"CELL_DATA",9) != 0);
 
         // Now read the rest of the data in
@@ -476,7 +495,7 @@ static void read_vtk(MeshBlock *mb, std::string vtkdir, std::string vtkfile0,
               for (int k=0; k<Nz_vtk; k++) {
                 for (int j=0; j<Ny_vtk; j++) {
                   for (int i=0; i<Nx_vtk; i++) {
-                    if ((nread = fread(&fdat, sizeof(float), 1, fp)) != 1) {
+                    if (fread(&fdat, sizeof(float), 1, fp) != 1) {
                       fclose(fp);
                       msg << "### FATAL ERROR in Problem Generator [read_vtk]"
                           << std::endl
@@ -500,7 +519,7 @@ static void read_vtk(MeshBlock *mb, std::string vtkdir, std::string vtkfile0,
               for (int k=0; k<Nz_vtk; k++) {
                 for (int j=0; j<Ny_vtk; j++) {
                   for (int i=0; i<Nx_vtk; i++) {
-                    if ((nread = fread(&fvec, sizeof(float), 3, fp)) != 3) {
+                    if (fread(&fvec, sizeof(float), 3, fp) != 3) {
                       fclose(fp);
                       msg << "### FATAL ERROR in Problem Generator [read_vtk]"
                           << std::endl
@@ -546,7 +565,7 @@ static void read_vtk(MeshBlock *mb, std::string vtkdir, std::string vtkfile0,
 //! \brief Swap bytes, code stolen from Athena4.2, NEMO
 //======================================================================================
 static void ath_bswap(void *vdat, int len, int cnt) {
-  char tmp, *dat = reinterpret_cast<char *> vdat;
+  char tmp, *dat = reinterpret_cast<char *>(vdat);
   int k;
 
   if (len==1) {
