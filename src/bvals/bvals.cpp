@@ -172,7 +172,7 @@ BoundaryValues::BoundaryValues(MeshBlock *pmb, BoundaryFlag *input_bcs,
       msg << "### FATAL ERROR in BoundaryValues Class" << std::endl
           << "shear_periodic boundaries work only with uniform spacing "
           << "in the x2 direction." << std::endl
-          << "Check <mesh> x2rat parameter in the input file."<<std::endl;
+          << "Check <mesh> x2rat parameter in the input file." << std::endl;
       ATHENA_ERROR(msg);
     }
 
