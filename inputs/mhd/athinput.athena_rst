@@ -1,0 +1,62 @@
+<comment>
+problem   = reading from athena files
+reference = 
+configure = --prob=from_athena_rst
+
+<job>
+problem_id = Restart_rst      # problem ID: basename of output filenames
+
+<output1>
+file_type  = hdf5       # Binary data dump
+dt         = 0.1        # time increment between outputs
+variable   = prim
+
+<output2>
+file_type  = hst         # Binary data dump
+dt         = 0.01        # time increment between outputs
+
+<output3>
+file_type  = rst       # Binary data dump
+dt         = 0.05      # time increment between outputs
+
+
+<time>
+cfl_number = 0.3        # The Courant, Friedrichs, & Lewy (CFL) Number
+nlim       = -1         # cycle limit
+tlim       = 0.001       # time limit
+cr_xorder  = 1
+
+<mesh>
+nx1        = 128       # Number of zones in X1-direction
+x1min      = -512      # minimum value of X1
+x1max      = 512       # maximum value of X1
+ix1_bc     = outflow   # inner-X1 boundary flag
+ox1_bc     = outflow   # outer-X1 boundary flag
+
+nx2        = 128        # Number of zones in X2-direction
+x2min      = -512       # minimum value of X2
+x2max      = 512        # maximum value of X2
+ix2_bc     = outflow    # inner-X2 boundary flag
+ox2_bc     = outflow    # outer-X2 boundary flag
+
+nx3        = 896         # Number of zones in X3-direction
+x3min      = -3584       # minimum value of X3
+x3max      = 3584        # maximum value of X3
+ix3_bc     = outflow     # inner-X3 boundary flag
+ox3_bc     = outflow     # outer-X3 boundary flag
+
+<meshblock>
+nx1        =    64
+nx2        =    64
+nx3        =    448 
+
+<hydro>
+gamma           = 1.6666666666667       # gamma = C_p/C_v
+dfloor          = 1.e-8
+pfloor          = 1.e-7
+
+<problem>
+rst_directory = /Users/la15/Github/athena/bin/TIGRESS_Restart/        #directory of the restart file to be read in
+rst_file    = R8_8pc_newacc.0008.rst   #name of the restart file to be read in
+flag_rst    = 0    #default is 0, equal to 1 only if the numbers of meshblocks in the new and old simulations are the same
+
