@@ -4,9 +4,9 @@
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
 //! \file bvals_shear_emf.cpp
-//  \brief functions that apply BCs for face-centered flux corrections in shearing box
-// calculations
-//======================================================================================
+//! \brief functions that apply BCs for face-centered flux corrections in shearing box
+//! calculations
+//========================================================================================
 
 // C headers
 
@@ -42,10 +42,10 @@
 #endif
 
 
-//--------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 //! \fn int FaceCenteredBoundaryVariable::LoadEMFShearingBoxBoundarySameLevel(
-//                                                EdgeField &src, Real *buf, int nb)
-//  \brief Load shearing box EMF boundary buffers
+//!                                               EdgeField &src, Real *buf, int nb)
+//! \brief Load shearing box EMF boundary buffers
 
 void FaceCenteredBoundaryVariable::LoadEMFShearingBoxBoundarySameLevel(
                                    EdgeField &src, Real *buf, const int nb) {
@@ -91,9 +91,9 @@ void FaceCenteredBoundaryVariable::LoadEMFShearingBoxBoundarySameLevel(
 }
 
 
-//--------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 //! \fn void FaceCenteredBoundaryVariable::SendEMFShearingBoxBoundaryCorrection()
-//  \brief Send shearing box boundary buffers for EMF correction
+//! \brief Send shearing box boundary buffers for EMF correction
 
 void FaceCenteredBoundaryVariable::SendEMFShearingBoxBoundaryCorrection() {
   MeshBlock *pmb = pmy_block_;
@@ -108,9 +108,15 @@ void FaceCenteredBoundaryVariable::SendEMFShearingBoxBoundaryCorrection() {
       }
       if(pmb->block_size.nx3 > 1) {
         // average e2 for x1x3 edge
-        for (int k=pmb->ks; k<=pmb->ke+1; k+=pmb->block_size.nx3) {
+        if (pbval_->block_bcs[BoundaryFace::inner_x3] == BoundaryFlag::block
+            || pbval_->block_bcs[BoundaryFace::inner_x3] == BoundaryFlag::periodic) {
           for (int j=pmb->js; j<=pmb->je; j++)
-            shear_var_emf_[upper].x2e(k,j) *= 0.5;
+            shear_var_emf_[upper].x2e(pmb->ks,j) *= 0.5;
+        }
+        if (pbval_->block_bcs[BoundaryFace::outer_x3] == BoundaryFlag::block
+            || pbval_->block_bcs[BoundaryFace::outer_x3] == BoundaryFlag::periodic) {
+          for (int j=pmb->js; j<=pmb->je; j++)
+            shear_var_emf_[upper].x2e(pmb->ke+1,j) *= 0.5;
         }
       }
 
@@ -139,10 +145,10 @@ void FaceCenteredBoundaryVariable::SendEMFShearingBoxBoundaryCorrection() {
   return;
 }
 
-// --------------------------------------------------------------------------------------
-// ! \fn void FaceCenteredBoundaryVariable::SetEMFShearingBoxBoundarySameLevel(
-//                                   EdgeField &dst, Real *buf, const int nb)
-//  \brief Set EMF shearing box boundary received from a block on the same level
+//----------------------------------------------------------------------------------------
+//! \fn void FaceCenteredBoundaryVariable::SetEMFShearingBoxBoundarySameLevel(
+//!                                   EdgeField &dst, Real *buf, const int nb)
+//! \brief Set EMF shearing box boundary received from a block on the same level
 
 void FaceCenteredBoundaryVariable::SetEMFShearingBoxBoundarySameLevel(
                                    EdgeField &dst, Real *buf, const int nb) {
@@ -188,11 +194,13 @@ void FaceCenteredBoundaryVariable::SetEMFShearingBoxBoundarySameLevel(
 }
 
 
-//--------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 //! \fn bool FaceCenteredBoundaryVariable::ReceiveEMFShearingBoxBoundaryCorrection()
-//  \brief receive shearing box boundary data for EMF correction
+//! \brief receive shearing box boundary data for EMF correction
+//!
+//! \todo (felker):
+//! * DRY. Identical to Face/CellCentered impl. except for "emf" identifiers
 
-// TODO(felker): DRY. Identical to Face/CellCentered impl. except for "emf" identifiers
 bool FaceCenteredBoundaryVariable::ReceiveEMFShearingBoxBoundaryCorrection() {
   bool flag[2]{true, true};
   int nb_offset[2]{0, 3};
@@ -231,7 +239,7 @@ bool FaceCenteredBoundaryVariable::ReceiveEMFShearingBoxBoundaryCorrection() {
 
 //--------------------------------------------------------------------------------------
 //! \fn void FaceCenteredBoundaryVariable::SetEMFShearingBoxBoundaryCorrection()
-//  \brief Set EMF boundary received from a block on the finer level
+//! \brief Set EMF boundary received from a block on the finer level
 
 void FaceCenteredBoundaryVariable::SetEMFShearingBoxBoundaryCorrection() {
   MeshBlock *pmb = pmy_block_;
@@ -282,10 +290,10 @@ void FaceCenteredBoundaryVariable::SetEMFShearingBoxBoundaryCorrection() {
   return;
 }
 
-//--------------------------------------------------------------------------------------
+//----------------------------------------------------------------------------------------
 //! \fn void FaceCenteredBoundaryVariable::ClearEMFShearing()
-//  \brief Clear the working array for EMFs on the surface/edge contacting with
-//  a shearing periodic boundary
+//! \brief Clear the working array for EMFs on the surface/edge contacting with
+//! a shearing periodic boundary
 
 void FaceCenteredBoundaryVariable::ClearEMFShearing(EdgeField &work) {
   AthenaArray<Real> &e2 = work.x2e;

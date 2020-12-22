@@ -87,14 +87,13 @@ OrbitalBoundaryCommunication::~OrbitalBoundaryCommunication() {
       DestroyBoundaryData(orbital_bd_fc_[upper]);
     }
   }
-  if(pmy_orbital_->orbital_refinement) {
-    for (int n=0; n<2; n++) {
-      delete[] size_cc_send[n];
-      delete[] size_cc_recv[n];
-      if (MAGNETIC_FIELDS_ENABLED) {
-        delete[] size_fc_send[n];
-        delete[] size_fc_recv[n];
-      }
+
+  for (int n=0; n<2; n++) {
+    delete[] size_cc_send[n];
+    delete[] size_cc_recv[n];
+    if (MAGNETIC_FIELDS_ENABLED) {
+      delete[] size_fc_send[n];
+      delete[] size_fc_recv[n];
     }
   }
 }
@@ -226,7 +225,7 @@ void OrbitalBoundaryCommunication::InitBoundaryData(
 
 //----------------------------------------------------------------------------------------
 //! \fn void OrbitalBoundaryCommunication::DestroyBoundaryData(OrbitalBoundaryData &bd)
-//  \brief destroy BoundaryData structure
+//! \brief destroy BoundaryData structure
 
 void OrbitalBoundaryCommunication::DestroyBoundaryData(OrbitalBoundaryData &bd) {
   for (int n=0; n<bd.nbmax; n++) {
