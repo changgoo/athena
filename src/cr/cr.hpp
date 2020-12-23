@@ -35,7 +35,7 @@ class CosmicRay {
   friend class BoundaryValues;
 public:
   CosmicRay(MeshBlock *pmb, ParameterInput *pin);
-//  ~CosmicRay();
+  ~CosmicRay();
     
   AthenaArray<Real> u_cr, u_cr1, u_cr2; //cosmic ray energy density and flux
 
