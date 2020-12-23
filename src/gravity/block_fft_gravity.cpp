@@ -29,10 +29,11 @@ BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
       dx3sq_(SQR(pmb->pcoord->dx3v(NGHOST))),
       Lx1_(pmb->pmy_mesh->mesh_size.x1max - pmb->pmy_mesh->mesh_size.x1min),
       Lx2_(pmb->pmy_mesh->mesh_size.x2max - pmb->pmy_mesh->mesh_size.x2min),
-      Lx3_(pmb->pmy_mesh->mesh_size.x3max - pmb->pmy_mesh->mesh_size.x3min) {
+      Lx3_(pmb->pmy_mesh->mesh_size.x3max - pmb->pmy_mesh->mesh_size.x3min),
+      SHEAR_PERIODIC(pmb->pmy_mesh->shear_periodic) {
   gtlist_ = new FFTGravitySolverTaskList(pin, pmb->pmy_mesh);
-  Omega_0_ = pin->GetOrAddReal("problem","Omega0",0.0);
-  qshear_  = pin->GetOrAddReal("problem","qshear",0.0);
+  Omega_0_ = pin->GetOrAddReal("orbital_advection","Omega0",0.0);
+  qshear_  = pin->GetOrAddReal("orbital_advection","qshear",0.0);
   in2_ = new std::complex<Real>[nx1*nx2*nx3];
   in_e_ = new std::complex<Real>[nx1*nx2*nx3];
   in_o_ = new std::complex<Real>[nx1*nx2*nx3];
@@ -54,7 +55,7 @@ BlockFFTGravity::~BlockFFTGravity() {
 void BlockFFTGravity::ExecuteForward() {
 #if defined(FFT) && defined(MPI_PARALLEL)
 #if defined(GRAV_PERIODIC)
-  if (SHEARING_BOX) {
+  if (SHEAR_PERIODIC) {
     FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR *>(in_);
     // block2mid
     pf3d->remap(data,data,pf3d->remap_premid);
@@ -136,7 +137,7 @@ void BlockFFTGravity::ExecuteForward() {
 void BlockFFTGravity::ExecuteBackward() {
 #if defined(FFT) && defined(MPI_PARALLEL)
 #if defined(GRAV_PERIODIC)
-  if (SHEARING_BOX) {
+  if (SHEAR_PERIODIC) {
     FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR *>(in_);
     // slow_backward
     pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data),FFTW_BACKWARD,pf3d->fft_slow);
@@ -235,7 +236,7 @@ void BlockFFTGravity::ApplyKernel() {
         kx = TWO_PI*(Real)(slow_ilo + i)/(Real)Nx1;
         ky = TWO_PI*(Real)(slow_jlo + j)/(Real)Nx2;
         kz = TWO_PI*(Real)(slow_klo + k)/(Real)Nx3;
-        if (SHEARING_BOX)
+        if (SHEAR_PERIODIC)
           kxt = kx + rshear_*(Real)(Nx2)/(Real)(Nx1)*ky;
         else
           kxt = kx;

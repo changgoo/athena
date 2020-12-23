@@ -52,11 +52,8 @@ class EquationOfState;
 class FFTDriver;
 class FFTGravityDriver;
 class TurbulenceDriver;
-<<<<<<< HEAD
 class OrbitalAdvection;
-=======
 class BlockFFTGravity;
->>>>>>> Add gravity solver derived from BlockFFT
 
 FluidFormulation GetFluidFormulation(const std::string& input_string);
 

@@ -31,6 +31,10 @@
 
 FFTGravitySolverTaskList::FFTGravitySolverTaskList(ParameterInput *pin, Mesh *pm) {
   integrator = pin->GetOrAddString("time", "integrator", "vl2");
+
+  // Read a flag for shear periodic
+  SHEAR_PERIODIC = pm->shear_periodic;
+
   if (integrator == "vl2") {
     // VL: second-order van Leer integrator (Stone & Gardiner, NewA 14, 139 2009)
     // Simple predictor-corrector scheme similar to MUSCL-Hancock
@@ -50,7 +54,7 @@ FFTGravitySolverTaskList::FFTGravitySolverTaskList(ParameterInput *pin, Mesh *pm
     AddTask(SEND_GRAV_BND,NONE);
     AddTask(RECV_GRAV_BND,NONE);
     AddTask(SETB_GRAV_BND,(RECV_GRAV_BND|SEND_GRAV_BND));
-    if (SHEARING_BOX) { // Shearingbox BC for Gravity
+    if (SHEAR_PERIODIC) { // Shearingbox BC for Gravity
       AddTask(SEND_GRAV_SH,SETB_GRAV_BND);
       AddTask(RECV_GRAV_SH,SETB_GRAV_BND);
       AddTask(GRAV_PHYS_BND,(SEND_GRAV_SH|RECV_GRAV_SH));
@@ -110,23 +114,6 @@ void FFTGravitySolverTaskList::AddTask(const TaskID& id, const TaskID& dep) {
 }
 
 void FFTGravitySolverTaskList::StartupTaskList(MeshBlock *pmb, int stage) {
-  // Compute Shear call is not necessary since Solve is called after time integrator
-  // in which shear parameter is set for the corresponding stage.
-  // This is valid only if the Poisson solver is called at every substep
-
-  // SMOON: The above statement is true if we push_back 'gbvar' to 'bvars_main_int' in the
-  // Gravity constructor, because ComputeShear call in the time integrator set the
-  // shear parameters of the *selected* BoundaryVariable instances that are contained in
-  // 'bvars_main_int' vector. Currently, a CellCenteredBoundaryVariable instance 'gbvar'
-  // is not contained in 'bvars_main_int'.
-  // However, if we really want to enroll gbvar to bvars_main_int, we need to deprecate
-  // the use of FFTGravitySolverTaskList and move gravity inside TimeIntegratorTaskList.
-
-  if (SHEARING_BOX) {
-    Real dt = beta[stage-1]*(pmb->pmy_mesh->dt);
-    Real time = pmb->pmy_mesh->time+dt;
-    pmb->pgrav->gbvar.ComputeShear(time);
-  }
   pmb->pgrav->gbvar.StartReceiving(BoundaryCommSubset::all);
 
   return;
@@ -168,6 +155,7 @@ TaskStatus FFTGravitySolverTaskList::ReceiveFFTGravityShear(MeshBlock *pmb, int 
     return TaskStatus::fail;
   }
   if (ret) {
+    pmb->pgrav->gbvar.SetShearingBoxBoundaryBuffers();
     return TaskStatus::success;
   } else {
     return TaskStatus::fail;

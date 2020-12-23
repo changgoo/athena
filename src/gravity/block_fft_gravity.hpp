@@ -28,6 +28,11 @@ class BlockFFTGravity : public BlockFFT {
  public:
   BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin);
   ~BlockFFTGravity();
+
+  // data
+  bool SHEAR_PERIODIC; // flag for shear periodic boundary (true w/ , false w/o)
+
+  // functions
   void ExecuteForward() final;
   void ApplyKernel() final;
   void ExecuteBackward() final;

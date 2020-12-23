@@ -237,6 +237,20 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           if(!porb->orbital_advection_defined)
             phydro->u(IM2,k,j,i) -= rd*qshear*Omega0*x1;
           phydro->u(IM3,k,j,i) = 0.0;
+        } else if (ipert == 4) {
+          // 4) Swing amplification test (Kim & Ostriker 2001)
+          iso_cs = 0.09003163161571062;
+          rd = amp*std::cos(kx*x1 + ky*x2);
+          rvx = amp*kx/ky*std::sin(kx*x1 + ky*x2);
+          rvy = amp*std::sin(kx*x1 + ky*x2);
+          if (NON_BAROTROPIC_EOS) {
+            p0 = SQR(iso_cs)*d0/(gm1+1.0);
+            rp = p0 + SQR(iso_cs)*rd;
+          }
+          phydro->u(IDN,k,j,i) = d0+rd;
+          phydro->u(IM1,k,j,i) = (d0+rd)*rvx;
+          phydro->u(IM2,k,j,i) = (d0+rd)*(rvy - qshear*Omega_0*x1);
+          phydro->u(IM3,k,j,i) = 0.0;
         } else {
           std::stringstream msg;
           msg << "### FATAL ERROR in ssheet.cpp ProblemGenerator" << std::endl
