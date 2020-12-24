@@ -114,8 +114,8 @@ void FFTGravitySolverTaskList::AddTask(const TaskID& id, const TaskID& dep) {
 }
 
 void FFTGravitySolverTaskList::StartupTaskList(MeshBlock *pmb, int stage) {
+// \todo(SMOON) MPI error occurs when calling StartReceiving
   pmb->pgrav->gbvar.StartReceiving(BoundaryCommSubset::all);
-
   return;
 }
 
