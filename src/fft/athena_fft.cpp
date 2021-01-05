@@ -186,7 +186,7 @@ void FFTBlock::LoadSource(const AthenaArray<Real> &src, bool nu, int ngh,
         for (int i=ngh, mi=is; mi<=ie; i++, mi++) {
           std::int64_t idx = GetIndex(mi, mj, mk, f_in_);
           if (n == 0) {
-            // copy-list initializatio (since C++11)
+            // copy-list initialization (since C++11)
             dst[idx] = {src(n,k,j,i), 0.0};
           } else {
             dst[idx].imag(src(n,k,j,i));
