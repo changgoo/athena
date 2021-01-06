@@ -4,17 +4,17 @@ reference = Johnson & Gammie, 2005, ApJ, 626, 978
 configure = --prob=ssheet --eos=isothermal
 
 <job>
-problem_id = sst   # problem ID: basename of output filenames
+problem_id = msa   # problem ID: basename of output filenames
 
 <output1>
 file_type   = vtk     # HDF5 data dump
 variable    = prim     # variables to be output
-ghost_zones = true
-dt          = 1e-10      # time increment between outputs
+ghost_zones = false
+dt          = 0.1      # time increment between outputs
 
 <time>
 cfl_number = 0.3       # The Courant, Friedrichs, & Lewy (CFL) Number
-nlim       = 10        # cycle limit
+nlim       = -1        # cycle limit
 tlim       = 10.0       # time limit
 integrator  = vl2      # time integration algorithm
 xorder      = 2        # order of spatial reconstruction
@@ -43,11 +43,11 @@ num_threads = 1        # maximum number of OMP threads
 
 <meshblock>
 nx1 = 64
-nx2 = 32
+nx2 = 64
 nx3 = 4
 
 <hydro>
-gamma = 1.5            # gamma = C_p/C_v
+gamma = 1.6666666666666667            # gamma = C_p/C_v
 iso_sound_speed = 0.09003163161571062 # isothermal sound speed
 
 <orbital_advection>
