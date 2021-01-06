@@ -40,8 +40,6 @@ FFTGravitySolverTaskList::FFTGravitySolverTaskList(ParameterInput *pin, Mesh *pm
     // Simple predictor-corrector scheme similar to MUSCL-Hancock
     // Expressed in 2S or 3S* algorithm form
     nstages = 2;
-    beta[0] = 0.5;
-    beta[1] = 1.0;
   } else {
     std::stringstream msg;
     msg << "### FATAL ERROR in FFTGravitySolverTaskList constructor" << std::endl

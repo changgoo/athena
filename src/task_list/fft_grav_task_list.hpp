@@ -32,7 +32,6 @@ class FFTGravitySolverTaskList : public TaskList {
 
   // data
   std::string integrator;
-  Real beta[MAX_NSTAGE];
   bool SHEAR_PERIODIC; // flag for shear periodic boundary (true w/ , false w/o)
 
   // functions
