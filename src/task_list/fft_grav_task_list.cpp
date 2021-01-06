@@ -114,7 +114,15 @@ void FFTGravitySolverTaskList::AddTask(const TaskID& id, const TaskID& dep) {
 }
 
 void FFTGravitySolverTaskList::StartupTaskList(MeshBlock *pmb, int stage) {
+  if (SHEAR_PERIODIC) {
+    Real dt_fc   = pmb->pmy_mesh->dt*(beta[stage-1]-0.5);
+    Real dt_int  = pmb->pmy_mesh->dt*(beta[stage-1]);
+    Real time = pmb->pmy_mesh->time;
+    pmb->pbval->ComputeShear(time+dt_fc, time+dt_int);
+  }
+
   pmb->pgrav->gbvar.StartReceiving(BoundaryCommSubset::poisson);
+  if (SHEAR_PERIODIC) pmb->pgrav->gbvar.StartReceivingShear(BoundaryCommSubset::poisson);
   return;
 }
 
