@@ -391,6 +391,11 @@ void BoundaryValues::StartReceivingShear(BoundaryCommSubset phase) {
         bvar->StartReceivingShear(phase);
       }
       break;
+    case BoundaryCommSubset::poisson:
+      for (auto bvar : bvars_fft_grav) {
+        bvar->StartReceivingShear(phase);
+      }
+      break;
     case BoundaryCommSubset::gr_amr:
       // shearing box is currently incompatible with both GR and AMR
       std::stringstream msg;
