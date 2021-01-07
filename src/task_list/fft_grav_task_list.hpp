@@ -32,7 +32,6 @@ class FFTGravitySolverTaskList : public TaskList {
 
   // data
   std::string integrator;
-  bool SHEAR_PERIODIC; // flag for shear periodic boundary (true w/ , false w/o)
 
   // functions
   TaskStatus ClearFFTGravityBoundary(MeshBlock *pmb, int stage);
@@ -44,6 +43,10 @@ class FFTGravitySolverTaskList : public TaskList {
   TaskStatus PhysicalBoundary(MeshBlock *pmb, int stage);
 
  private:
+  bool ORBITAL_ADVECTION; // flag for orbital advection (true w/ , false w/o)
+  bool SHEAR_PERIODIC; // flag for shear periodic boundary (true w/ , false w/o)
+  Real sbeta[2], ebeta[2];
+
   void AddTask(const TaskID& id, const TaskID& dep) override;
   void StartupTaskList(MeshBlock *pmb, int stage) override;
 };
