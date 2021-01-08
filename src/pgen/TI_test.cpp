@@ -37,20 +37,24 @@ Units *punit;
 // Pointer to Cooling function class,
 // will be set to specific function depending on the input parameter (cooling/coolftn).
 CoolingFunctionBase *pcool;
+// mean density input to the simulation, for comparing to the maximum density
+Real rhobar_init;
+// Length of the box in code units, initialized in InitUserMeshData()
+Real Lbox;
 
 // explicit cooling solver using RK4 method for integration
 // slightly modified to update T*(n/n_H) rather than T itself
-void Cooling_RK4(MeshBlock *pmb, const Real t, const Real dt,
+void CoolingRK4(MeshBlock *pmb, const Real t, const Real dt,
        const AthenaArray<Real> &prim,const AthenaArray<Real> &prim_scalar,
        const AthenaArray<Real> &bcc, AthenaArray<Real> &cons,
        AthenaArray<Real> &cons_scalar);
-void Cooling_Euler(MeshBlock *pmb, const Real t, const Real dt,
+void CoolingEuler(MeshBlock *pmb, const Real t, const Real dt,
       const AthenaArray<Real> &prim,const AthenaArray<Real> &prim_scalar,
       const AthenaArray<Real> &bcc, AthenaArray<Real> &cons,
       AthenaArray<Real> &cons_scalar);
 Real CoolingLosses(MeshBlock *pmb, int iout);
-Real MaxDens(MeshBlock *pmb, int iout);
-static Real cooling_timestep(MeshBlock *pmb);
+Real MaxOverDens(MeshBlock *pmb, int iout);
+static Real CoolingTimestep(MeshBlock *pmb);
 
 // calculate tcool = e/L(rho, P)
 static Real tcool(const Real rho, const Real Press);
@@ -84,6 +88,9 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     return;
 #endif
   }
+
+  // determine length of the box in code units
+  Lbox = mesh_size.x1max - mesh_size.x1min;
 
   // initialize cooling function
   // currently, two cooling functions supported (tigress, plf)
@@ -123,10 +130,10 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   // currently, two cooling solvers are supported (euler, rk4)
   std::string coolsolver = pin->GetOrAddString("cooling", "solver", "euler");
   if (coolsolver.compare("euler") == 0) {
-    EnrollUserExplicitSourceFunction(Cooling_Euler);
+    EnrollUserExplicitSourceFunction(CoolingEuler);
     std::cout << "Cooling solver is set to Euler" << std::endl;
   } else if (coolsolver.compare("rk4") ==0) {
-    EnrollUserExplicitSourceFunction(Cooling_RK4);
+    EnrollUserExplicitSourceFunction(CoolingRK4);
     std::cout << "Cooling solver is set to RK4" << std::endl;
   } else {
     std::stringstream msg;
@@ -138,13 +145,13 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 
 
   // Enroll timestep so that dt <= min t_cool
-  EnrollUserTimeStepFunction(cooling_timestep);
+  EnrollUserTimeStepFunction(CoolingTimestep);
 
   // Enroll user-defined functions
   AllocateUserHistoryOutput(2);
   EnrollUserHistoryOutput(0, CoolingLosses, "e_cool");
   EnrollUserHistoryOutput(1, CoolingLosses, "e_ceil");
-  EnrollUserHistoryOutput(1, MaxDens, "rho_max");
+  EnrollUserHistoryOutput(1, MaxOverDens, "rho_max");
 }
 
 //========================================================================================
@@ -251,6 +258,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
   rho_0 /= pcool->to_nH; // to code units
   pgas_0 /= pcool->to_pok; // to code units
+  // store the initial mean density as a global variable
+  rhobar_init = rho_0;
 
   PrintParameters(rho_0,pgas_0);
   T = pcool->GetTemperature(rho_0,pgas_0);
@@ -258,12 +267,11 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   std::cout << "  Tempearture = " << T << std::endl;
   std::cout << " tcool = " << tcool(rho_0, pgas_0) << std::endl;
   std::cout << " sound speed = " << std::sqrt(pgas_0/rho_0) << std::endl;
-  // determine length of box
-  Real Lbox = pcoord->x1v(iu) - pcoord->x1v(il);
   // determine wavenumber in inverse code length
   Real kx = 2*PI*kn/Lbox;
   // determine growth rate via dispersion relation
   Real om = OmegaG(rho_0,pgas_0,kx);
+  std::cout << "  Lbox = " << Lbox << std::endl;
   std::cout << "  k = " << kx << std::endl;
   std::cout << "  omega = " << om << std::endl;
   // Initialize primitive values
@@ -290,14 +298,14 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 }
 
 //========================================================================================
-//! \fn void Cooling_Euler(MeshBlock *pmb, const Real t, const Real dt,
+//! \fn void CoolingEuler(MeshBlock *pmb, const Real t, const Real dt,
 //!       const AthenaArray<Real> &prim, const AthenaArray<Real> &prim_scalar,
 //!       const AthenaArray<Real> &bcc, AthenaArray<Real> &cons,
 //!       AthenaArray<Real> &cons_scalar)
 //! \brief function for cooling source term
 //!        must use prim to set cons
 //========================================================================================
-void Cooling_Euler(MeshBlock *pmb, const Real t, const Real dt,
+void CoolingEuler(MeshBlock *pmb, const Real t, const Real dt,
        const AthenaArray<Real> &prim, const AthenaArray<Real> &prim_scalar,
        const AthenaArray<Real> &bcc, AthenaArray<Real> &cons,
        AthenaArray<Real> &cons_scalar) {
@@ -381,14 +389,14 @@ void Cooling_Euler(MeshBlock *pmb, const Real t, const Real dt,
 }
 
 //========================================================================================
-//! \fn void Cooling_RK4(MeshBlock *pmb, const Real t, const Real dt,
+//! \fn void CoolingRK4(MeshBlock *pmb, const Real t, const Real dt,
 //!       const AthenaArray<Real> &prim, const AthenaArray<Real> &prim_scalar,
 //!       const AthenaArray<Real> &bcc, AthenaArray<Real> &cons,
 //!       AthenaArray<Real> &cons_scalar)
 //! \brief function for cooling source term
 //!        must use prim to set cons
 //========================================================================================
-void Cooling_RK4(MeshBlock *pmb, const Real t, const Real dt,
+void CoolingRK4(MeshBlock *pmb, const Real t, const Real dt,
        const AthenaArray<Real> &prim, const AthenaArray<Real> &prim_scalar,
        const AthenaArray<Real> &bcc, AthenaArray<Real> &cons,
        AthenaArray<Real> &cons_scalar) {
@@ -484,11 +492,11 @@ void Cooling_RK4(MeshBlock *pmb, const Real t, const Real dt,
 }
 
 //========================================================================================
-//! \fn Real cooling_timestep(MeshBlock *pmb)
+//! \fn Real CoolingTimestep(MeshBlock *pmb)
 //! \brief Function to calculate the timestep required to resolve cooling
 //!        tcool = 3/2 P/Edot_cool
 //========================================================================================
-static Real cooling_timestep(MeshBlock *pmb) {
+static Real CoolingTimestep(MeshBlock *pmb) {
   Real min_dt=1.0e10;
   for (int k=pmb->ks; k<=pmb->ke; ++k) {
     for (int j=pmb->js; j<=pmb->je; ++j) {
@@ -537,7 +545,6 @@ static Real tcool(const Real rho, const Real Press) {
 static Real SolveCubic(const Real b, const Real c, const Real d) {
   Real Q,R,D,S,T,res;
   Real theta,z1,z2,z3;
-  std::cout << " B = " << b << " C = " << c << " D = " << d << std::endl;
   // variables of use in solution Eqs. 22, 23 of reference
   Q = (3*c - b*b)/9;
   R = (9*b*c - 27*d - 2*b*b*b)/54;
@@ -556,7 +563,6 @@ static Real SolveCubic(const Real b, const Real c, const Real d) {
     z1 = 2*std::sqrt(-1*Q)*std::cos(theta/3) - b/3;
     z2 = 2*std::sqrt(-1*Q)*std::cos((theta + 2*PI)/3) - b/3;
     z3 = 2*std::sqrt(-1*Q)*std::cos((theta + 4*PI)/3) - b/3;
-    std::cout << "  z1 = " << z1 << " z2 = " << z2 << " z3 = " << z3 << std::endl;
     if ((z1>z2)&&(z1>z3))
       res = z1;
     else if(z2>z3)
@@ -634,11 +640,11 @@ Real CoolingLosses(MeshBlock *pmb, int iout) {
 }
 
 //========================================================================================
-//! \fn Real MaxDens(MeshBlock *pmb, int iout);
-//! \brief Maximum Density as a history variable, used to track the growth rate of the 
-//!        overdensity that is initialized
+//! \fn Real MaxOverDens(MeshBlock *pmb, int iout);
+//! \brief Maximum over density as a history variable, used to track the growth rate of
+//!        the overdensity that is initialized
 //========================================================================================
-Real MaxDens(MeshBlock *pmb, int iout) {
+Real MaxOverDens(MeshBlock *pmb, int iout) {
   // Prepare index bounds
   int il = pmb->is - NGHOST;
   int iu = pmb->ie + NGHOST;
@@ -659,13 +665,13 @@ Real MaxDens(MeshBlock *pmb, int iout) {
   for (int k = kl; k <= ku; ++k) {
     for (int j = jl; j <= ju; ++j) {
       for (int i = il; i <= iu; ++i) {
-	Real den = pmb->phydro->w(IDN,k,j,i);
+	Real den = pmb->phydro->w(IDN,k,j,i) - rhobar_init;
 	if (den>dmax)
 	  dmax = den;
       }
     }
   }
-  return dmax;
+  return dmax/rhobar_init;
 }
 
 //========================================================================================
