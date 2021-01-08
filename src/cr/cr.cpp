@@ -66,9 +66,16 @@ inline void DefaultOpacity(MeshBlock *pmb, AthenaArray<Real> &u_cr,
 #pragma omp simd
       for(int i=il; i<=iu; ++i){
         pcr->sigma_diff(0,k,j,i) = pcr->max_opacity;
-        pcr->sigma_diff(1,k,j,i) = pcr->max_opacity;
-        pcr->sigma_diff(2,k,j,i) = pcr->max_opacity;  
-
+        if (pcr->perp_diff_flag == 0)
+        {
+          pcr->sigma_diff(1,k,j,i) = pcr->max_opacity;
+          pcr->sigma_diff(2,k,j,i) = pcr->max_opacity;  
+        }
+        else
+        {
+          pcr->sigma_diff(1,k,j,i) = pcr->sigma*pcr->perp_to_par_diff;
+          pcr->sigma_diff(2,k,j,i) = pcr->sigma*pcr->perp_to_par_diff;
+        }  
       }
     }
   }
@@ -84,7 +91,7 @@ inline void DefaultOpacity(MeshBlock *pmb, AthenaArray<Real> &u_cr,
   // b_angle[3]=cos_phi_b
  
 
-  if(MAGNETIC_FIELDS_ENABLED && (pcr->stream_flag > 0)){
+  if(MAGNETIC_FIELDS_ENABLED){
     //First, calculate B_dot_grad_Pc
     for(int k=kl; k<=ku; ++k){
       for(int j=jl; j<=ju; ++j){
@@ -233,7 +240,7 @@ CosmicRay::CosmicRay(MeshBlock *pmb, ParameterInput *pin):
   max_opacity = pin->GetOrAddReal("cr","max_opacity",1.e10);
   lambdac = pin->GetOrAddReal("cr","lambdac",1.0); //dec/dt = -lambdac nH ec
   //TODO: convert loss rate in code_units
-  perp_to_par_diff = pin->GetOrAddReal("cr","lambdac",10.0);
+  perp_to_par_diff = pin->GetOrAddReal("cr","diff_ratio",10.0);
     
   //Flags 
   stream_flag = pin->GetOrAddInteger("cr","vs_flag",1);  
