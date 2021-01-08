@@ -3,11 +3,11 @@
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
-//! \file cooling_rk4.c
+//! \file TI_test.cpp
 //! \brief Problem generator for thermal instability test using TIGRESS classic cooling
-//! function and RK4 integration. A small density perturbation is given to a uniform 
-//! medium in equilibrium but which is thermally unstable. We then track thr growth rate 
-//! of the maximum density deviation.
+//! function and RK4 integration. A small perturbation is given to a uniform medium in
+//! equilibrium but which is thermally unstable. We then track thr growth rate of the
+//! maximum density deviation.
 //========================================================================================
 
 // C++ headers
@@ -49,14 +49,19 @@ void Cooling_Euler(MeshBlock *pmb, const Real t, const Real dt,
       const AthenaArray<Real> &bcc, AthenaArray<Real> &cons,
       AthenaArray<Real> &cons_scalar);
 Real CoolingLosses(MeshBlock *pmb, int iout);
+Real MaxDens(MeshBlock *pmb, int iout);
 static Real cooling_timestep(MeshBlock *pmb);
 
 // calculate tcool = e/L(rho, P)
-static Real tcool(CoolingFunctionBase *pcool, const Real rho, const Real Press);
+static Real tcool(const Real rho, const Real Press);
+
+// calculate growth rate of perturbation
+static Real SolveCubic(const Real b, const Real c, const Real d);
+static Real OmegaG(const Real rho, const Real Press, const Real k);
 
 // Utility functions for debugging
-void PrintCoolingFunction(CoolingFunctionBase *pcool, std::string coolftn);
-void PrintParameters(CoolingFunctionBase *pcool, const Real rho, const Real Press);
+void PrintCoolingFunction(std::string coolftn);
+void PrintParameters(const Real rho, const Real Press);
 
 //========================================================================================
 //! \fn void Mesh::InitUserMeshData(ParameterInput *pin)
@@ -107,7 +112,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   // show some values for sanity check.
   if (Globals::my_rank == 0) {
     // dump cooling function used in ascii format to e.g., tigress_coolftn.txt
-    PrintCoolingFunction(pcool,coolftn);
+    PrintCoolingFunction(coolftn);
 
     // print out units and constants in code units
     punit->PrintCodeUnits();
@@ -139,6 +144,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   AllocateUserHistoryOutput(2);
   EnrollUserHistoryOutput(0, CoolingLosses, "e_cool");
   EnrollUserHistoryOutput(1, CoolingLosses, "e_ceil");
+  EnrollUserHistoryOutput(1, MaxDens, "rho_max");
 }
 
 //========================================================================================
@@ -200,9 +206,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   pgas_mid = (pgas_high + pgas_low)/2.;
   rho_0 /= pcool->to_nH;
   // initialize the cooling times
-  tcool_low = tcool(pcool, rho_0, pgas_low);
-  tcool_high = tcool(pcool, rho_0, pgas_high);
-  tcool_mid = tcool(pcool, rho_0, pgas_mid);
+  tcool_low = tcool(rho_0, pgas_low);
+  tcool_high = tcool(rho_0, pgas_high);
+  tcool_mid = tcool(rho_0, pgas_mid);
   // if the endpoints do not have opposite signs on their cooling times we
   // are not guaranteed a zero exists, so we throw an error 
   if(tcool_low*tcool_high>0){
@@ -219,13 +225,13 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       pgas_high = pgas_mid;
       tcool_high = tcool_mid;
       pgas_mid = (pgas_high + pgas_low)/2.;
-      tcool_mid = tcool(pcool, rho_0, pgas_mid);
+      tcool_mid = tcool(rho_0, pgas_mid);
     }
     else {
       pgas_low = pgas_mid;
       tcool_low = tcool_mid;
       pgas_mid = (pgas_high + pgas_low)/2.;
-      tcool_mid = tcool(pcool, rho_0, pgas_mid);
+      tcool_mid = tcool(rho_0, pgas_mid);
     }
   }
   // set the pressure to the middle value found
@@ -241,27 +247,35 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
             << " " << T << std::endl
             << "  mu = " << mu << " mu(punit) = " << punit->mu
             << " muH = " << muH << std::endl;
-            // << " tcool = " << tcool(pcool, T, rho_0) << std::endl;
+            // << " tcool = " << tcool(T, rho_0) << std::endl;
 
   rho_0 /= pcool->to_nH; // to code units
   pgas_0 /= pcool->to_pok; // to code units
 
-  PrintParameters(pcool,rho_0,pgas_0);
+  PrintParameters(rho_0,pgas_0);
   T = pcool->GetTemperature(rho_0,pgas_0);
   Real nH = rho_0*pcool->to_nH;
   std::cout << "  Tempearture = " << T << std::endl;
-  std::cout << " tcool = " << tcool(pcool, rho_0, pgas_0) << std::endl;
+  std::cout << " tcool = " << tcool(rho_0, pgas_0) << std::endl;
   std::cout << " sound speed = " << std::sqrt(pgas_0/rho_0) << std::endl;
   // determine length of box
   Real Lbox = pcoord->x1v(iu) - pcoord->x1v(il);
+  // determine wavenumber in inverse code length
+  Real kx = 2*PI*kn/Lbox;
+  // determine growth rate via dispersion relation
+  Real om = OmegaG(rho_0,pgas_0,kx);
+  std::cout << "  k = " << kx << std::endl;
+  std::cout << "  omega = " << om << std::endl;
   // Initialize primitive values
   for (int k = kl; k <= ku; ++k) {
     for (int j = jl; j <= ju; ++j) {
       for (int i = il; i <= iu; ++i) {
 	Real x = pcoord->x1v(i);
-        phydro->w(IDN,k,j,i) = rho_0*(1 + alpha*std::cos(2*PI*kn*x/Lbox));
-        phydro->w(IPR,k,j,i) = pgas_0;
-        phydro->w(IVX,k,j,i) = 0.0;
+	Real pdev = -1*alpha*rho_0*(om/kx)*(om/kx)*std::cos(kx*x);
+	Real vdev = -1*alpha*(om/kx)*std::sin(kx*x);
+        phydro->w(IDN,k,j,i) = rho_0*(1 + alpha*std::cos(kx*x));
+        phydro->w(IPR,k,j,i) = pgas_0 + pdev;
+        phydro->w(IVX,k,j,i) = vdev;
         phydro->w(IVY,k,j,i) = 0.0;
         phydro->w(IVZ,k,j,i) = 0.0;
       }
@@ -320,7 +334,7 @@ void Cooling_Euler(MeshBlock *pmb, const Real t, const Real dt,
         // T here is not T = P/(n*k_B) but T*(n/nH)=P/(n_H*k_B)
         Real T_before = P_before*pcool->to_pok/nH_before;
 
-        Real T_update = T_before - T_before/tcool(pcool, rho_before, P_before)*dt_;
+        Real T_update = T_before - T_before/tcool(rho_before, P_before)*dt_;
 
         // dont cool below cooling floor and find new internal thermal energy
         Real T_floor = pcool->Get_Tfloor();
@@ -414,15 +428,15 @@ void Cooling_RK4(MeshBlock *pmb, const Real t, const Real dt,
         Real T_update = 0.;
         T_update += T_before;
         // dT/dt = - T/tcool(P(T,nH),nH) ---- RK4
-        // T and k are in physical units,
+        // T, k, and tcool are in physical units,
         // but rho and P passed into tcool function are in code units
-        Real k1 = -1.0 * (T_update/tcool(pcool, rho_before, P_before));
+        Real k1 = -1.0 * (T_update/tcool(rho_before, P_before));
         Real T2 = T_update + 0.5*dt_*k1, P2 = T2*nH_before/pcool->to_pok;
-        Real k2 = -1.0 * T2 / tcool(pcool, rho_before, P2);
+        Real k2 = -1.0 * T2 / tcool(rho_before, P2);
         Real T3 = T_update + 0.5*dt_*k2, P3 = T3*nH_before/pcool->to_pok;
-        Real k3 = -1.0 * T3 / tcool(pcool, rho_before, P3);
+        Real k3 = -1.0 * T3 / tcool(rho_before, P3);
         Real T4 = T_update + dt_*k3, P4 = T4*nH_before/pcool->to_pok;
-        Real k4 = -1.0 * T4 / tcool(pcool, rho_before, P4);
+        Real k4 = -1.0 * T4 / tcool(rho_before, P4);
         T_update += (k1 + 2.*k2 + 2.*k3 + k4)/6.0 * dt_;
 
         // dont cool below cooling floor and find new internal thermal energy
@@ -485,7 +499,7 @@ static Real cooling_timestep(MeshBlock *pmb) {
         // Real nH = rho*pcool->to_nH;
         Real T_floor = pcool->Get_Tfloor();
         if (T_before > 1.01 * T_floor) {
-          Real dtcool = pcool->cfl_cool*std::abs(tcool(pcool,rho,Press))
+          Real dtcool = pcool->cfl_cool*std::abs(tcool(rho,Press))
                        /pcool->punit->Time;
           min_dt = std::min(min_dt, dtcool);
         }
@@ -497,19 +511,114 @@ static Real cooling_timestep(MeshBlock *pmb) {
 }
 
 //========================================================================================
-//! \fn static Real tcool(CoolingFunctionBase *pcool, const Real rho, const Real Press)
+//! \fn static Real tcool(const Real rho, const Real Press)
 //! \brief tcool = e / (n^2*Cool - n*heat)
 //! \note
 //! - input rho and P are in code Units
 //! - output tcool is in second
 //========================================================================================
-static Real tcool(CoolingFunctionBase *pcool, const Real rho, const Real Press) {
+static Real tcool(const Real rho, const Real Press) {
   Real nH = rho*pcool->to_nH;
   Real cool = nH*nH*pcool->Lambda_T(rho, Press);
   Real heat = nH*pcool->Gamma_T(rho, Press);
   Real eint = Press*pcool->punit->Pressure/(pcool->gamma_adi-1);
   Real tcool = eint/(cool - heat);
   return tcool;
+}
+
+//========================================================================================
+//! \fn static Real SolveCubic(const Real a, const Real b, const Real c, const Real d)
+//! \brief solve a cubic equation
+//! \note
+//! - input coeffs of eq. x^3 + b*x^2 + c*x + d = 0
+//! - output greatest real solution to the cubic equation (due to Cardano 1545)
+//! - reference https://mathworld.wolfram.com/CubicFormula.html
+//========================================================================================
+static Real SolveCubic(const Real b, const Real c, const Real d) {
+  Real Q,R,D,S,T,res;
+  Real theta,z1,z2,z3;
+  std::cout << " B = " << b << " C = " << c << " D = " << d << std::endl;
+  // variables of use in solution Eqs. 22, 23 of reference
+  Q = (3*c - b*b)/9;
+  R = (9*b*c - 27*d - 2*b*b*b)/54;
+  // calculate the polynomial discriminant
+  D = Q*Q*Q + R*R;
+  // if the dsicriminant is positive there is one real root
+  if (D>0) {
+    S = std::cbrt(R + std::sqrt(D));
+    T = std::cbrt(R - std::sqrt(D));
+    res =  S + T - b/3;
+  }
+  // if the discriminant is greater than 0 there are three, distinct, real roots
+  else if (D < 0) {
+    theta = std::acos(R/std::sqrt( -1*Q*Q*Q ));
+    // calculate the three real roots
+    z1 = 2*std::sqrt(-1*Q)*std::cos(theta/3) - b/3;
+    z2 = 2*std::sqrt(-1*Q)*std::cos((theta + 2*PI)/3) - b/3;
+    z3 = 2*std::sqrt(-1*Q)*std::cos((theta + 4*PI)/3) - b/3;
+    std::cout << "  z1 = " << z1 << " z2 = " << z2 << " z3 = " << z3 << std::endl;
+    if ((z1>z2)&&(z1>z3))
+      res = z1;
+    else if(z2>z3)
+      res = z2;
+    else
+      res = z3;
+  }
+  return res;
+}
+
+//========================================================================================
+//! \fn static Real OmegaG(const Real rho, const Real Press, const Real k)
+//! \brief growth rate of instability
+//! \note
+//! - input rho and P are in code Units
+//! - output growth rate of instability in code Units
+//========================================================================================
+static Real OmegaG(const Real rho, const Real Press, const Real k) {
+  // get Temperature in Kelvin
+  Real T = pcool->GetTemperature(rho,Press);
+  // first get Lambda(T)/(kB*T) in physical units (cm^3 s^-1)
+  Real kBT = (T*punit->kB_in_code*punit->Kelvin/punit->erg);
+  Real L_kBT =  pcool->Lambda_T(rho,Press)/kBT;
+  // get total number density of particles in cm^-3
+  Real nden = rho*pcool->to_nH*pcool->Get_muH()/pcool->Get_mu(rho,Press);
+  // get gas isothermal sound speed in code units
+  Real cs = std::sqrt((5./3)*(Press/rho));
+  // get krho in code  units
+  Real krho = (2./3)*nden*L_kBT*punit->Time/cs;
+
+  Real Tl,Th,Ll,Lh,eps,dNew,dOld;
+  eps = 1e-10;
+  Tl = std::max(0.5*T,pcool->Get_Tfloor());
+  Th = std::min(2*T,pcool->Get_Tmax());
+  Ll = pcool->Lambda_T(rho,Press*(Tl/T));
+  Lh = pcool->Lambda_T(rho,Press*(Th/T));
+  dNew = (log10(Lh)-log10(Ll))/(log10(Th) - log10(Tl));
+  dOld = 2*dOld;
+  // while percent change in derivative is greater than
+  // eps, the convergence criterion parameter, re-evaluate 
+  // the derivative in a smaller interval
+  while(std::abs((dNew - dOld)/dOld)>eps && (dNew>eps)) {
+    // set preevious new derivative as old derivative
+    dOld = dNew;
+    // reposition endpoints more closely using average
+    Tl = (log10(Tl) + log10(T))/2;
+    Th = (log10(Th) + log10(T))/2;
+    // re-evaluate cooling
+    Ll = pcool->Lambda_T(rho,Press*(Tl/T));
+    Lh = pcool->Lambda_T(rho,Press*(Th/T));
+    // re-evaluate derivative
+    dNew = (log10(Lh)-log10(Ll))/(log10(Th) - log10(Tl));
+  }
+  // kT in code units based on derivative
+  Real kT = krho*dOld;
+  // get coefficients in cubic dispersion relation
+  Real B = cs*kT;
+  Real C = cs*cs*k*k;
+  Real D = (3./5)*cs*cs*cs*k*k*(kT - krho);
+  // solve  dispersion relation for the growth rate
+  Real om = SolveCubic(B,C,D);
+  return om;
 }
 
 //========================================================================================
@@ -525,10 +634,45 @@ Real CoolingLosses(MeshBlock *pmb, int iout) {
 }
 
 //========================================================================================
-//! \fn void PrintCoolingFunction(CoolingFunctionBase *pcool,std::string coolftn)
+//! \fn Real MaxDens(MeshBlock *pmb, int iout);
+//! \brief Maximum Density as a history variable, used to track the growth rate of the 
+//!        overdensity that is initialized
+//========================================================================================
+Real MaxDens(MeshBlock *pmb, int iout) {
+  // Prepare index bounds
+  int il = pmb->is - NGHOST;
+  int iu = pmb->ie + NGHOST;
+  int jl = pmb->js;
+  int ju = pmb->je;
+  if (pmb->block_size.nx2 > 1) {
+    jl -= (NGHOST);
+    ju += (NGHOST);
+  }
+  int kl = pmb->ks;
+  int ku = pmb->ke;
+  if (pmb->block_size.nx3 > 1) {
+    kl -= (NGHOST);
+    ku += (NGHOST);
+  }
+  Real dmax = 0.0;
+  // loop over grid to get highest density
+  for (int k = kl; k <= ku; ++k) {
+    for (int j = jl; j <= ju; ++j) {
+      for (int i = il; i <= iu; ++i) {
+	Real den = pmb->phydro->w(IDN,k,j,i);
+	if (den>dmax)
+	  dmax = den;
+      }
+    }
+  }
+  return dmax;
+}
+
+//========================================================================================
+//! \fn void PrintCoolingFunction(std::string coolftn)
 //! \brief private function to check cooling and heating functions
 //========================================================================================
-void PrintCoolingFunction(CoolingFunctionBase *pcool,std::string coolftn) {
+void PrintCoolingFunction(std::string coolftn) {
   Real Pok = 3.e3;
   std::string coolfilename(coolftn);
   coolfilename.append("_coolftn.txt");
@@ -542,18 +686,17 @@ void PrintCoolingFunction(CoolingFunctionBase *pcool,std::string coolftn) {
     Real Temp = pcool->GetTemperature(rho, Press);
     Real cool = pcool->Lambda_T(rho,Press);
     Real heat = pcool->Gamma_T(rho,Press);
-    Real t_cool = tcool(pcool,rho,Press);
+    Real t_cool = tcool(rho,Press);
     coolfile << rho << "," << Press << "," << Temp << ","
              << cool << "," << heat << "," << t_cool << "\n";
   }
 }
 
 //========================================================================================
-//! \fn void PrintParameters(CoolingFunctionBase *pcool, const Real rho,
-//!       const Real Press)
+//! \fn void PrintParameters(const Real rho, const Real Press)
 //! \brief print function for sanity check
 //========================================================================================
-void PrintParameters(CoolingFunctionBase *pcool, const Real rho, const Real Press) {
+void PrintParameters(const Real rho, const Real Press) {
   Real Temp_K = pcool->GetTemperature(rho, Press);
   Real nH = rho*pcool->to_nH;
   Real pok = Press*pcool->to_pok;
