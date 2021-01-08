@@ -51,10 +51,19 @@ public:
 
   AthenaArray<Real> flux[3]; // store transport flux, also need for refinement
   
+  //Flags 
+  int stream_flag; // to include streaming or not
+  int src_flag; // to update the gas energy and momentum equations
+  int losses_flag; //to include losses of CR energy and momentum due to collisional interaction with the ambient gas
+  int perp_diff_flag; //to include the presence of diffusion in the direction perpendicular to the magnetic field 
+  int var_sigma_flag; //to enable the self-consistent calculation of sigma 
+    
+  //Input parameters
   Real vmax; // the maximum velocity (effective speed of light)
-  Real sigma;
-  Real vlim;
-  Real max_opacity;
+  Real sigma; //scattering coefficient
+  Real max_opacity; 
+  Real lambdac; //rate of hadronic or ionizing losses per unit volume
+  Real perp_to_par_diff; //ratio between the scattering coefficient in the direction perpendicular to the magntic field and the scattering coefficient in the direction parallel to the magntic field
  
   AthenaArray<Real> CR_luminosity; // 0.1 * supernova energy = CR injection energy
 
@@ -82,9 +91,6 @@ public:
   AthenaArray<Real> cwidth2;
   AthenaArray<Real> b_grad_pc; // array to store B\dot Grad Pc
   AthenaArray<Real> b_angle; //sin\theta,cos\theta,sin\phi,cos\phi of B direction
-
-  int stream_flag; // flag to include streaming or not
-  int src_flag; // flag to 
 
 private:
 

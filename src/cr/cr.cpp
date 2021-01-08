@@ -226,18 +226,21 @@ CosmicRay::CosmicRay(MeshBlock *pmb, ParameterInput *pin):
   pmb->pbval->bvars.push_back(&cr_bvar);
   pmb->pbval->bvars_main_int.push_back(&cr_bvar);      
 
+  //Input parameters
   vmax = pin->GetOrAddReal("cr","vmax",1.0);
-
   sigma = pin->GetOrAddReal("cr","sigma",1.0);
-
   sigma *= vmax;
-  
-  vlim = pin->GetOrAddReal("cr","vlim",0.9);
   max_opacity = pin->GetOrAddReal("cr","max_opacity",1.e10);
-  
+  lambdac = pin->GetOrAddReal("cr","lambdac",1.0); //dec/dt = -lambdac nH ec
+  //TODO: convert loss rate in code_units
+  perp_to_par_diff = pin->GetOrAddReal("cr","lambdac",10.0);
+    
+  //Flags 
   stream_flag = pin->GetOrAddInteger("cr","vs_flag",1);  
   src_flag = pin->GetOrAddInteger("cr","src_flag",1);
-  
+  losses_flag = pin->GetOrAddInteger("cr","losses_flag",1);  
+  perp_diff_flag = pin->GetOrAddInteger("cr","perp_diff_flag",1);
+  var_sigma_flag = pin->GetOrAddInteger("cr","var_sigma_flag",1);
 
   int nc1 = pmb->ncells1, nc2 = pmb->ncells2, nc3 = pmb->ncells3;
 

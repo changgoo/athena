@@ -203,6 +203,14 @@ void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Rea
           if (pcr->src_flag == 0 && ec[i]<=kin_en && ec[i]>0) new_ec += dt * ec_source_(k,j,i);
         }        
 
+        if (pcr->losses_flag>0){
+          Real loss_rate = - pcr->lambdac * new_ec * rho;
+          new_ec -= loss_rate * new_ec * rho * dt;
+          newfr1 -= loss_rate * newfr1 * rho * dt;
+          newfr2 -= loss_rate * newfr2 * rho * dt;
+          newfr3 -= loss_rate * newfr3 * rho * dt;
+        }
+       
         if(new_ec < 0.0) new_ec = ec[i];
         
         // Add the energy source term
