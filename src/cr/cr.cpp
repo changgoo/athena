@@ -192,7 +192,6 @@ inline void DefaultOpacity(MeshBlock *pmb, AthenaArray<Real> &u_cr,
         }
       }
     }
-
   }// end MHD and stream flag
 
 }
@@ -241,6 +240,7 @@ CosmicRay::CosmicRay(MeshBlock *pmb, ParameterInput *pin):
   lambdac = pin->GetOrAddReal("cr","lambdac",1.0); //dec/dt = -lambdac nH ec
   //TODO: convert loss rate in code_units
   perp_to_par_diff = pin->GetOrAddReal("cr","diff_ratio",10.0);
+  ion_rate_norm = pin->GetOrAddReal("cr","ion_rate_norm",1e-4); //the dafault value assumes delta = -0.35
     
   //Flags 
   stream_flag = pin->GetOrAddInteger("cr","vs_flag",1);  
@@ -248,7 +248,8 @@ CosmicRay::CosmicRay(MeshBlock *pmb, ParameterInput *pin):
   losses_flag = pin->GetOrAddInteger("cr","losses_flag",1);  
   perp_diff_flag = pin->GetOrAddInteger("cr","perp_diff_flag",1);
   var_sigma_flag = pin->GetOrAddInteger("cr","var_sigma_flag",1);
-
+  if (var_sigma_flag == 1) losses_flag = 1;
+    
   int nc1 = pmb->ncells1, nc2 = pmb->ncells2, nc3 = pmb->ncells3;
 
   b_grad_pc.NewAthenaArray(nc3,nc2,nc1);

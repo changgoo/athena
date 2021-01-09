@@ -64,7 +64,8 @@ public:
   Real max_opacity; 
   Real lambdac; //rate of hadronic or ionizing losses per unit volume
   Real perp_to_par_diff; //ratio between the scattering coefficient in the direction perpendicular to the magntic field and the scattering coefficient in the direction parallel to the magntic field
- 
+  Real ion_rate_norm; // ionization rate normalization 
+  
   AthenaArray<Real> CR_luminosity; // 0.1 * supernova energy = CR injection energy
 
   MeshBlock* pmy_block;    // ptr to MeshBlock containing this Fluid
