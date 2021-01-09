@@ -265,8 +265,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   T = pcool->GetTemperature(rho_0,pgas_0);
   Real nH = rho_0*pcool->to_nH;
   std::cout << "  Tempearture = " << T << std::endl;
-  std::cout << " tcool = " << tcool(rho_0, pgas_0) << std::endl;
-  std::cout << " sound speed = " << std::sqrt(pgas_0/rho_0) << std::endl;
+  std::cout << "  tcool = " << tcool(rho_0, pgas_0) << std::endl;
+  std::cout << "  sound speed = " << std::sqrt(pgas_0/rho_0) << std::endl;
   // determine wavenumber in inverse code length
   Real kx = 2*PI*kn/Lbox;
   // determine growth rate via dispersion relation
@@ -588,10 +588,14 @@ static Real OmegaG(const Real rho, const Real Press, const Real k) {
   Real L_kBT =  pcool->Lambda_T(rho,Press)/kBT;
   // get total number density of particles in cm^-3
   Real nden = rho*pcool->to_nH*pcool->Get_muH()/pcool->Get_mu(rho,Press);
+  // n*L/kB*T in s^-1
+  Real nL_kBT = nden*L_kBT;
   // get gas isothermal sound speed in code units
   Real cs = std::sqrt((5./3)*(Press/rho));
-  // get krho in code  units
-  Real krho = (2./3)*nden*L_kBT*punit->Time/cs;
+  // get krho in code units
+  Real krho = (2./3)*nL_kBT*punit->Time/cs;
+  std::cout << "  n = " << nden << " cs = " << cs << std::endl;
+  std::cout << "  krho = " << krho << std::endl;
 
   Real Tl,Th,Ll,Lh,eps,dNew,dOld;
   eps = 1e-10;
@@ -616,6 +620,7 @@ static Real OmegaG(const Real rho, const Real Press, const Real k) {
     // re-evaluate derivative
     dNew = (log10(Lh)-log10(Ll))/(log10(Th) - log10(Tl));
   }
+  std::cout << "  dlnL_dlnT = " << dOld << std::endl;
   // kT in code units based on derivative
   Real kT = krho*dOld;
   // get coefficients in cubic dispersion relation
