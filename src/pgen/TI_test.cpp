@@ -41,6 +41,8 @@ CoolingFunctionBase *pcool;
 Real rhobar_init;
 // Length of the box in code units, initialized in InitUserMeshData()
 Real Lbox;
+// Length of the box in code units, initialized in InitUserMeshData()
+Real gamma_adi;
 
 // explicit cooling solver using RK4 method for integration
 // slightly modified to update T*(n/n_H) rather than T itself
@@ -114,7 +116,8 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   // not unit class is initialized within cooling function constructor
   // to use appropreate mu and muH
   punit = pcool->punit;
-
+  // set gamma as a global variable in the problem
+  gamma_adi = pcool->gamma_adi;
 
   // show some values for sanity check.
   if (Globals::my_rank == 0) {
@@ -333,7 +336,6 @@ void CoolingEuler(MeshBlock *pmb, const Real t, const Real dt,
         const Real P_before = prim(IPR,k,j,i);
         const Real rho_before = prim(IDN,k,j,i);
 
-        Real gamma_adi = pcool->gamma_adi;
         Real u = P_before/(gamma_adi - 1.0); // internal energy in code units
 
         // calculate nH in physical units before cooling
@@ -424,7 +426,6 @@ void CoolingRK4(MeshBlock *pmb, const Real t, const Real dt,
         const Real P_before = prim(IPR,k,j,i);
         const Real rho_before = prim(IDN,k,j,i);
 
-        Real gamma_adi = pcool->gamma_adi;
         Real u = P_before/(gamma_adi - 1.0); // internal energy in code units
 
         // calculate nH in physical units before cooling
@@ -545,6 +546,7 @@ static Real tcool(const Real rho, const Real Press) {
 static Real SolveCubic(const Real b, const Real c, const Real d) {
   Real Q,R,D,S,T,res;
   Real theta,z1,z2,z3;
+  std::cout << "  B = " << b << "  C = " << c << "  D = " << d << std::endl;
   // variables of use in solution Eqs. 22, 23 of reference
   Q = (3*c - b*b)/9;
   R = (9*b*c - 27*d - 2*b*b*b)/54;
@@ -563,6 +565,7 @@ static Real SolveCubic(const Real b, const Real c, const Real d) {
     z1 = 2*std::sqrt(-1*Q)*std::cos(theta/3) - b/3;
     z2 = 2*std::sqrt(-1*Q)*std::cos((theta + 2*PI)/3) - b/3;
     z3 = 2*std::sqrt(-1*Q)*std::cos((theta + 4*PI)/3) - b/3;
+    std::cout << "  z1 = " << z1 << "  z2 = " << z2 << "  z3 = " << z3 << std::endl;
     if ((z1>z2)&&(z1>z3))
       res = z1;
     else if(z2>z3)
@@ -581,20 +584,21 @@ static Real SolveCubic(const Real b, const Real c, const Real d) {
 //! - output growth rate of instability in code Units
 //========================================================================================
 static Real OmegaG(const Real rho, const Real Press, const Real k) {
+  Real gm1 = gamma_adi-1;
   // get Temperature in Kelvin
   Real T = pcool->GetTemperature(rho,Press);
-  // first get Lambda(T)/(kB*T) in physical units (cm^3 s^-1)
-  Real kBT = (T*punit->kB_in_code*punit->Kelvin/punit->erg);
-  Real L_kBT =  pcool->Lambda_T(rho,Press)/kBT;
-  // get total number density of particles in cm^-3
-  Real nden = rho*pcool->to_nH*pcool->Get_muH()/pcool->Get_mu(rho,Press);
-  // n*L/kB*T in s^-1
-  Real nL_kBT = nden*L_kBT;
-  // get gas isothermal sound speed in code units
-  Real cs = std::sqrt((5./3)*(Press/rho));
-  // get krho in code units
-  Real krho = (2./3)*nL_kBT*punit->Time/cs;
-  std::cout << "  n = " << nden << " cs = " << cs << std::endl;
+  // density in nH
+  Real nH = rho*pcool->to_nH;
+  // Pressure in c.g.s
+  Real P = Press*punit->Pressure;
+  // sounds spped in c.g.s
+  Real cs = std::sqrt(gamma_adi*(Press/rho))*punit->Velocity;
+  // krho in c.g.s
+  Real krho = gm1*nH*nH*pcool->Lambda_T(rho,Press)/(P*cs);
+  krho *= punit->Length; // krho in code units
+  cs /= punit->Velocity; // cs in code units
+
+  std::cout << "  cs = " << cs << std::endl;
   std::cout << "  krho = " << krho << std::endl;
 
   Real Tl,Th,Ll,Lh,eps,dNew,dOld;
@@ -604,7 +608,7 @@ static Real OmegaG(const Real rho, const Real Press, const Real k) {
   Ll = pcool->Lambda_T(rho,Press*(Tl/T));
   Lh = pcool->Lambda_T(rho,Press*(Th/T));
   dNew = (log10(Lh)-log10(Ll))/(log10(Th) - log10(Tl));
-  dOld = 2*dOld;
+  dOld = 2*dNew;
   // while percent change in derivative is greater than
   // eps, the convergence criterion parameter, re-evaluate 
   // the derivative in a smaller interval
