@@ -1,0 +1,28 @@
+var struct_output_parameters =
+[
+    [ "OutputParameters", "struct_output_parameters.html#a773ed2c9ebe62418e85f273b4ede4274", null ],
+    [ "block_name", "struct_output_parameters.html#ac33cf3c93e0c8a12e3e449ca4e9b6ffb", null ],
+    [ "block_number", "struct_output_parameters.html#a5714987080505809a66e0bf9cf139a7d", null ],
+    [ "cartesian_vector", "struct_output_parameters.html#a424fc8e9170c60ad450de5e01d29569b", null ],
+    [ "data_format", "struct_output_parameters.html#a725a2bf402c46f3f2a75a3ceb4d9d519", null ],
+    [ "dt", "struct_output_parameters.html#aa38cc4948c10ba8fb8729b0685eda855", null ],
+    [ "file_basename", "struct_output_parameters.html#afc92d33970b99a2b32e79dac3d6c1b35", null ],
+    [ "file_id", "struct_output_parameters.html#ad04355fd309f4cc8ae01fda1a0ed21ef", null ],
+    [ "file_number", "struct_output_parameters.html#a0297f5f38e5dd6ad6afc54f99f74542f", null ],
+    [ "file_type", "struct_output_parameters.html#ab0df2db42a18657d93b5f388f2117413", null ],
+    [ "include_ghost_zones", "struct_output_parameters.html#a8dc535685c931568b82d45e474f8e44b", null ],
+    [ "islice", "struct_output_parameters.html#ad436002d6238e40ecf50955f67e781f3", null ],
+    [ "jslice", "struct_output_parameters.html#a941acee05c9553dec2f9c48b14fafb33", null ],
+    [ "kslice", "struct_output_parameters.html#a594ead39f96a161b5e8e4f98527289e8", null ],
+    [ "next_time", "struct_output_parameters.html#a1a502aff3067be0bbb9163ab4fe7526c", null ],
+    [ "output_slicex1", "struct_output_parameters.html#a48de206c1dd1d154e2c19344b7b35f75", null ],
+    [ "output_slicex2", "struct_output_parameters.html#a4245af6f0e27095f4449dee16d65bfee", null ],
+    [ "output_slicex3", "struct_output_parameters.html#a1d04f0c66318ef2926abf336704e4bfe", null ],
+    [ "output_sumx1", "struct_output_parameters.html#a3930abf81a651d3437d5aefcc244d26b", null ],
+    [ "output_sumx2", "struct_output_parameters.html#ac02d9c0a4e0003527b44ac597a1155a2", null ],
+    [ "output_sumx3", "struct_output_parameters.html#a07e9bb6c46e78bef4e25f7863e329268", null ],
+    [ "variable", "struct_output_parameters.html#a6bf7fdb0e0451326bc845c34f2dbb960", null ],
+    [ "x1_slice", "struct_output_parameters.html#a0ac8f725853adde1a8250f10a176c5d0", null ],
+    [ "x2_slice", "struct_output_parameters.html#a1a748960a8f00ad814b63c37bce84337", null ],
+    [ "x3_slice", "struct_output_parameters.html#a516ff6764591135625748dd6fd12c940", null ]
+];

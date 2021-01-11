@@ -1,0 +1,27 @@
+var class_passive_scalars =
+[
+    [ "PassiveScalars", "class_passive_scalars.html#a366a5e8bd6e2ff211c97d98e0e2d8fda", null ],
+    [ "AddFluxDivergence", "class_passive_scalars.html#a7405bee4096ce0551dcf41912c71eb30", null ],
+    [ "AddFluxDivergence_STS", "class_passive_scalars.html#a64b9db6026e69c1501cd92ee2092ae24", null ],
+    [ "CalculateFluxes", "class_passive_scalars.html#a45eea013100c2b622d3108524b0ed01f", null ],
+    [ "CalculateFluxes_STS", "class_passive_scalars.html#a641f99ef5dd89733a59c7141a2b56c7d", null ],
+    [ "DiffusiveFluxIso", "class_passive_scalars.html#a26e1a836c9f14d965bea4a83b8335e9d", null ],
+    [ "NewDiffusionDt", "class_passive_scalars.html#a85d0e167acecf4f2988d6bfd9379fa00", null ],
+    [ "coarse_r_", "class_passive_scalars.html#ade0642a9604061f2fb86bb170f2892dc", null ],
+    [ "coarse_s_", "class_passive_scalars.html#aa49866ad78cca4a0795bf7efadc374f0", null ],
+    [ "diffusion_flx", "class_passive_scalars.html#ab6a799483dfea401a56389a21964931e", null ],
+    [ "mass_flux_fc", "class_passive_scalars.html#ae94263055f1c31720d0c6dfa513ac3b6", null ],
+    [ "nu_scalar_iso", "class_passive_scalars.html#ad18ddc22802c71ab948a2181046c35ea", null ],
+    [ "r", "class_passive_scalars.html#abae1a24cc64fde87762178c66c2b9760", null ],
+    [ "r_cc", "class_passive_scalars.html#aa3706a73f7d874000d14a1aa346dad9a", null ],
+    [ "refinement_idx", "class_passive_scalars.html#a95040c30366ac5debf46585ba2e34215", null ],
+    [ "s", "class_passive_scalars.html#aefff2991fd89c575316f8cac25562286", null ],
+    [ "s0", "class_passive_scalars.html#a715e465be7a67e0b0b0bad40f68ea2b5", null ],
+    [ "s1", "class_passive_scalars.html#afb7af66d683fa9089691b4fb4b7fd425", null ],
+    [ "s2", "class_passive_scalars.html#ae25d689ef0ed27b6970c27f9525e891e", null ],
+    [ "s_cc", "class_passive_scalars.html#a43dfe948429e7c62e8920033696c79fb", null ],
+    [ "s_fl_div", "class_passive_scalars.html#a8478843fea838007c0246d607f678ae9", null ],
+    [ "s_flux", "class_passive_scalars.html#a6e975c0aaa329b5f6f598f892105d7af", null ],
+    [ "sbvar", "class_passive_scalars.html#a3edf49abed2745980a55902064a0d47f", null ],
+    [ "scalar_diffusion_defined", "class_passive_scalars.html#a1cebdf3ac370f1d0705b73313d98dda4", null ]
+];

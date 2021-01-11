@@ -19,7 +19,6 @@
 #   -s                enable special relativity
 #   -g                enable general relativity
 #   -t                enable interface frame transformations for GR
-#   -shear            enable shearing periodic boundary conditions
 #   -cr               enable cosmic ray transport
 #   -debug            enable debug flags (-g -O0); override other compiler options
 #   -coverage         enable compiler-dependent code coverage flags
@@ -143,18 +142,12 @@ parser.add_argument('-t',
                     default=False,
                     help='enable interface frame transformations for GR')
 
-# -shear argument
-parser.add_argument('-shear',
-                    action='store_true',
-                    default=False,
-                    help='enable shearing box')
-
 # -cr argument
 parser.add_argument('-cr',
                     action='store_true',
                     default=False,
                     help='enable cosmic ray transport')
-                    
+
 # -debug argument
 parser.add_argument('-debug',
                     action='store_true',
@@ -448,19 +441,12 @@ if args['g']:
     makefile_options['RSOLVER_FILE'] += '_rel'
     if not args['t']:
         makefile_options['RSOLVER_FILE'] += '_no_transform'
-
-# -shear argument
-if args['shear']:
-    definitions['SHEARING_BOX'] = '1'
-else:
-    definitions['SHEARING_BOX'] = '0'
-
 # -cr argument
 if args['cr']:
     definitions['CR_ENABLED'] = '1'
 else:
     definitions['CR_ENABLED'] = '0'
-    
+
 # --cxx=[name] argument
 if args['cxx'] == 'g++':
     # GCC is C++11 feature-complete since v4.8.1 (2013-05-31)
@@ -817,7 +803,6 @@ print('  General relativity:         ' + ('ON' if args['g'] else 'OFF'))
 print('  Frame transformations:      ' + ('ON' if args['t'] else 'OFF'))
 print('  Self-Gravity:               ' + self_grav_string)
 print('  Super-Time-Stepping:        ' + ('ON' if args['sts'] else 'OFF'))
-print('  Shearing Box BCs:           ' + ('ON' if args['shear'] else 'OFF'))
 print('  Cosmic Ray Transport:       ' + ('ON' if args['cr'] else 'OFF'))
 print('  Debug flags:                ' + ('ON' if args['debug'] else 'OFF'))
 print('  Code coverage flags:        ' + ('ON' if args['coverage'] else 'OFF'))
