@@ -213,7 +213,11 @@ class TimeIntegratorTaskList : public TaskList {
   TaskStatus ReceiveCR(MeshBlock *pmb, int stage);
   TaskStatus SetBoundariesCR(MeshBlock *pmb, int stage);
   TaskStatus CROpacity(MeshBlock *pmb, int stage);
-  
+  TaskStatus SendCRShear(MeshBlock *pmb, int stage);
+  TaskStatus ReceiveCRShear(MeshBlock *pmb, int stage);
+  TaskStatus ReceiveCRFluxShear(MeshBlock *pmb, int stage);
+  TaskStatus SendCRFluxShear(MeshBlock *pmb, int stage);
+    
  private:
   bool ORBITAL_ADVECTION; // flag for orbital advection (true w/ , false w/o)
   bool SHEAR_PERIODIC; // flag for shear periodic boundary (true w/ , false w/o)
@@ -279,47 +283,39 @@ const TaskID CALC_HYDFLX(2);
 const TaskID CALC_FLDFLX(3);
 const TaskID CALC_RADFLX(4);
 const TaskID CALC_CHMFLX(5);
-const TaskID CALC_CRFLX(6);
 
 const TaskID SEND_HYDFLX(7);
 const TaskID SEND_FLDFLX(8);
-const TaskID SEND_CRFLX(9);
 // const TaskID SEND_RADFLX(8);
 // const TaskID SEND_CHMFLX(9);
 
 const TaskID RECV_HYDFLX(10);
 const TaskID RECV_FLDFLX(11);
-const TaskID RECV_CRFLX(12);
 // const TaskID RECV_RADFLX(12);
 // const TaskID RECV_CHMFLX(13);
 
 const TaskID SRCTERM_HYD(14);
-const TaskID SRCTERM_CR(15);
 // const TaskID SRCTERM_FLD(15);
 // const TaskID SRCTERM_RAD(16);
 // const TaskID SRCTERM_CHM(17);
 
 const TaskID INT_HYD(18);
 const TaskID INT_FLD(19);
-const TaskID INT_CR(20);
 // const TaskID INT_RAD(20);
 // const TaskID INT_CHM(21);
 
 const TaskID SEND_HYD(22);
 const TaskID SEND_FLD(23);
-const TaskID SEND_CR(24);
 // const TaskID SEND_RAD(24);
 // const TaskID SEND_CHM(25);
 
 const TaskID RECV_HYD(26);
 const TaskID RECV_FLD(27);
-const TaskID RECV_CR(28);
 // const TaskID RECV_RAD(28);
 // const TaskID RECV_CHM(29);
 
 const TaskID SETB_HYD(30);
 const TaskID SETB_FLD(31);
-const TaskID SETB_CR(32);
 // const TaskID SETB_RAD(32);
 // const TaskID SETB_CHM(33);
 
@@ -362,7 +358,19 @@ const TaskID SEND_FLDORB(65);
 const TaskID RECV_FLDORB(66);
 const TaskID CALC_FLDORB(67);
 
-const TaskID CR_OPACITY(68);
+const TaskID CALC_CRFLX(68);
+const TaskID INT_CR(69);
+const TaskID SEND_CRFLX(70);
+const TaskID RECV_CRFLX(71);
+const TaskID SEND_CR(72);
+const TaskID RECV_CR(73);
+const TaskID SETB_CR(74);
+const TaskID SEND_CRFLXSH(75);
+const TaskID RECV_CRFLXSH(76);
+const TaskID SEND_CRSH(77);
+const TaskID RECV_CRSH(78);
+const TaskID SRCTERM_CR(79);
+const TaskID CR_OPACITY(80);
 
 }  // namespace HydroIntegratorTaskNames
 #endif  // TASK_LIST_TASK_LIST_HPP_

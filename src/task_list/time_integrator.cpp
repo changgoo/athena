@@ -937,7 +937,14 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
       if (pm->multilevel) { // SMR or AMR
         AddTask(SEND_CRFLX,CALC_CRFLX);
         AddTask(RECV_CRFLX,CALC_CRFLX);
-        AddTask(INT_CR,RECV_CRFLX);
+        //Do I need to include the shear_periodic case?
+        if (SHEAR_PERIODIC) {
+          AddTask(SEND_CRFLXSH,RECV_CRFLX);
+          AddTask(RECV_CRFLXSH,(SEND_CRFLX|RECV_CRFLX));
+          AddTask(INT_CR,RECV_CRFLXSH);
+        } else {
+          AddTask(INT_CR,RECV_CRFLX);
+        }  
       } else {
         AddTask(INT_CR, CALC_CRFLX);
       }
@@ -945,6 +952,10 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
       AddTask(SEND_CR,SRCTERM_CR);
       AddTask(RECV_CR,NONE);
       AddTask(SETB_CR,(RECV_CR|SRCTERM_CR));
+      if (SHEAR_PERIODIC) {
+        AddTask(SEND_CRSH,SETB_CR);
+        AddTask(RECV_CRSH,SEND_CRSH);
+      }
     }
     
     if (NSCALARS > 0) {
@@ -957,21 +968,17 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
     if(CR_ENABLED)
       src_term = (src_term | SRCTERM_CR);
 
-    AddTask(SEND_HYD,src_term);
-    AddTask(RECV_HYD,NONE);
-    AddTask(SETB_HYD,(RECV_HYD|SRCTERM_HYD));
-
     if (ORBITAL_ADVECTION) {
-      AddTask(SEND_HYDORB,SRCTERM_HYD);
+      AddTask(SEND_HYDORB,src_term);
       AddTask(RECV_HYDORB,NONE);
       AddTask(CALC_HYDORB,(SEND_HYDORB|RECV_HYDORB));
       AddTask(SEND_HYD,CALC_HYDORB);
       AddTask(RECV_HYD,NONE);
       AddTask(SETB_HYD,(RECV_HYD|CALC_HYDORB));
     } else {
-      AddTask(SEND_HYD,SRCTERM_HYD);
+      AddTask(SEND_HYD,src_term);
       AddTask(RECV_HYD,NONE);
-      AddTask(SETB_HYD,(RECV_HYD|SRCTERM_HYD));
+      AddTask(SETB_HYD,(RECV_HYD|src_term));
     }
 
     if (SHEAR_PERIODIC) {
@@ -1048,7 +1055,7 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
         if (SHEAR_PERIODIC) {
           TaskID setb=(SEND_HYD|RECV_HYDSH|SEND_FLD|RECV_FLDSH);
           if(CR_ENABLED)
-            setb=(setb|SEND_CR|SETB_CR); //Change SETB_CR for shearing BCs!!!
+            setb=(setb|SEND_CR|RECV_CRSH); 
           if (NSCALARS > 0) {
             AddTask(PROLONG,(setb|SEND_SCLR|RECV_SCLRSH));
           } else {
@@ -1086,7 +1093,7 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
         if (SHEAR_PERIODIC) {
           TaskID setb=(SEND_HYD|RECV_HYDSH);
           if(CR_ENABLED)
-            setb=(setb|SEND_CR|SETB_CR); //Change SETB_CR for shearing BCs!!!
+            setb=(setb|SEND_CR|RECV_CRSH); 
           if (NSCALARS > 0) {
             AddTask(PROLONG,(setb|SEND_SCLR|RECV_SCLRSH));
           } else {
@@ -1424,7 +1431,27 @@ void TimeIntegratorTaskList::AddTask(const TaskID& id, const TaskID& dep) {
     task_list_[ntasks].TaskFunc=
         static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
         (&TimeIntegratorTaskList::SetBoundariesCR);
+    task_list_[ntasks].lb_time = true;  
+  }else if(id == SEND_CRSH){
+    task_list_[ntasks].TaskFunc=
+        static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
+        (&TimeIntegratorTaskList::SendCRShear);
     task_list_[ntasks].lb_time = true;     
+  }else if(id == RECV_CRSH){
+    task_list_[ntasks].TaskFunc=
+        static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
+        (&TimeIntegratorTaskList::ReceiveCRShear);
+    task_list_[ntasks].lb_time = true;
+  } else if (id == SEND_CRFLXSH) {
+    task_list_[ntasks].TaskFunc=
+        static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
+        (&TimeIntegratorTaskList::SendCRFluxShear);
+    task_list_[ntasks].lb_time = true;
+  } else if (id == RECV_CRFLXSH) {
+    task_list_[ntasks].TaskFunc=
+        static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
+        (&TimeIntegratorTaskList::ReceiveCRFluxShear);
+    task_list_[ntasks].lb_time = false;        
   }else if(id == CR_OPACITY){
     task_list_[ntasks].TaskFunc=
         static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
@@ -2602,11 +2629,72 @@ TaskStatus TimeIntegratorTaskList::ReceiveCR(MeshBlock *pmb, int stage) {
   }
 }
 
+//Modify SendCRShear and ReceiveCRShear
+TaskStatus TimeIntegratorTaskList::SendCRShear(MeshBlock *pmb, int stage) {
+  if (stage <= nstages) {
+    pmb->pcr->cr_bvar.SendShearingBoxBoundaryBuffers();
+  } else {
+    return TaskStatus::fail;
+  }
+  return TaskStatus::success;
+}
+
+
+TaskStatus TimeIntegratorTaskList::ReceiveCRShear(MeshBlock *pmb, int stage) {
+  bool ret;
+  ret = false;
+  if (stage <= nstages) {
+    ret = pmb->pcr->cr_bvar.ReceiveShearingBoxBoundaryBuffers();
+  } else {
+    return TaskStatus::fail;
+  }
+  if (ret) {
+    // Do I need to include SetShearingBoxBoundaryBuffers???
+    pmb->pcr->cr_bvar.SetShearingBoxBoundaryBuffers();
+    return TaskStatus::success;
+  } else {
+    return TaskStatus::fail;
+  }
+	return TaskStatus::success;
+}
+
 
 TaskStatus TimeIntegratorTaskList::SetBoundariesCR(MeshBlock *pmb, int stage) {
   if (stage <= nstages) {
     pmb->pcr->cr_bvar.SetBoundaries();
     return TaskStatus::success;
+  }
+  return TaskStatus::fail;
+}
+
+
+TaskStatus TimeIntegratorTaskList::SendCRFluxShear(MeshBlock *pmb, int stage) {
+  if (stage <= nstages) {
+    if (stage_wghts[stage-1].main_stage ||
+        pmb->pmy_mesh->sts_loc == TaskType::op_split_before ||
+        pmb->pmy_mesh->sts_loc == TaskType::op_split_after) {
+      pmb->pcr->cr_bvar.SendFluxShearingBoxBoundaryBuffers();
+    }
+    return TaskStatus::success;
+  }
+  return TaskStatus::fail;
+}
+
+
+TaskStatus TimeIntegratorTaskList::ReceiveCRFluxShear(MeshBlock *pmb, int stage) {
+  if (stage <= nstages) {
+    if (stage_wghts[stage-1].main_stage ||
+        pmb->pmy_mesh->sts_loc == TaskType::op_split_before ||
+        pmb->pmy_mesh->sts_loc == TaskType::op_split_after) {
+      if (pmb->pcr->cr_bvar.ReceiveFluxShearingBoxBoundaryBuffers()) {
+        pmb->pcr->cr_bvar.SetFluxShearingBoxBoundaryBuffers();
+        return TaskStatus::success;
+      } else {
+        return TaskStatus::fail;
+      }
+    } else {
+      return TaskStatus::success;
+    }
   }
   return TaskStatus::fail;
 }
