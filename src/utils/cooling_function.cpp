@@ -95,6 +95,28 @@ Real PiecewiseLinearFits::Lambda_T(const Real rho, const Real Press) {
 }
 
 //========================================================================================
+//! \fn Real PiecewiseLinearFits::dlnL_dlnT(const Real rho, chost Real Press)
+//! \brief logarithmic derivative of cooling functions Lambda_T(T)
+//!
+//! - input rho, Press in code units
+//! - return d ln(Lambda)/ d ln(T)
+//! - In the PLF cooling function this simply returns the tabulated exponents
+//========================================================================================
+Real PiecewiseLinearFits::dlnL_dlnT(const Real rho, const Real Press) {
+  Real T = GetTemperature(rho,Press);
+  int k, n=nfit_cool-1;
+  // first find the temperature bin
+  for (k=n; k>=0; k--) {
+    if (T >= T_cooling_curve[k]) break;
+  }
+  if (T > T_cooling_curve[0]) {
+    return exponent_cooling_curve[k];
+  } else {
+    return 0.0;
+  }
+}
+
+//========================================================================================
 //! \fn Real PiecewiseLinearFits::Gamma_T(const Real rho, const Real Press)
 //! \brief constant heating for T<T_PE
 //!
@@ -157,6 +179,25 @@ Real TigressClassic::Lambda_T(const Real rho, const Real Press) {
   Real cool = cool_table[T1idx]+(cool_table[T1idx+1]-cool_table[T1idx])*dTemp;
 
   return cool;
+}
+
+//========================================================================================
+//! \fn Real TigressClassic::dlnL_dlnT(const Real rho, const Real Press)
+//! \brief give logarthmic derivative of cooling
+//!
+//! - input rho, Press in code units
+//! - return d ln(Lambda)/ d ln(T)
+//! - In the TigressClassic cooling function this returns the instantaneous 
+//!   derivative in according to the tabulated values of the cooling function
+//========================================================================================
+Real TigressClassic::dlnL_dlnT(const Real rho, const Real Press) {
+  Real T1 = Press/rho*punit->Temperature;
+
+  int T1idx = get_Tidx(T1);
+  Real dlnT = log10(T1_tbl[T1idx+1])-log10(T1_tbl[T1idx]);
+  Real dlnL = log10(cool_table[T1idx+1])-log10(cool_table[T1idx]);
+
+  return dlnL/dlnT;
 }
 
 //========================================================================================

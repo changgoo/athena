@@ -29,6 +29,7 @@ class CoolingFunctionBase {
 
   // Real Getdt(const Real T, const Real nH);
   virtual Real Lambda_T(const Real rho, const Real Press) = 0;
+  virtual Real dlnL_dlnT(const Real rho, const Real Press) = 0;
   virtual Real Gamma_T(const Real rho, const Real Press) = 0;
   virtual Real Get_mu(const Real rho, const Real Press) = 0;
   virtual Real Get_muH() = 0;
@@ -66,6 +67,7 @@ class PiecewiseLinearFits : public CoolingFunctionBase {
   // ~PiecewiseLinearFits() override { delete punit; }
 
   Real Lambda_T(const Real rho, const Real Press) override;
+  Real dlnL_dlnT(const Real rho, const Real Press) override;
   Real Gamma_T(const Real rho, const Real Press) override;
   Real Get_mu(const Real rho, const Real Press) override { return mu; }
   Real Get_muH() override { return muH; }
@@ -118,6 +120,7 @@ class TigressClassic : public CoolingFunctionBase {
   // ~TigressClassic() override { delete punit; }
 
   Real Lambda_T(const Real rho, const Real Press) override;
+  Real dlnL_dlnT(const Real rho, const Real Press) override;
   Real Gamma_T(const Real rho, const Real Press) override;
   Real Get_mu(const Real rho, const Real Press) override;
   Real Get_muH() override { return muH; }

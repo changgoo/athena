@@ -601,32 +601,10 @@ static Real OmegaG(const Real rho, const Real Press, const Real k) {
   std::cout << "  cs = " << cs << std::endl;
   std::cout << "  krho = " << krho << std::endl;
 
-  Real Tl,Th,Ll,Lh,eps,dNew,dOld;
-  eps = 1e-10;
-  Tl = std::max(0.5*T,pcool->Get_Tfloor());
-  Th = std::min(2*T,pcool->Get_Tmax());
-  Ll = pcool->Lambda_T(rho,Press*(Tl/T));
-  Lh = pcool->Lambda_T(rho,Press*(Th/T));
-  dNew = (log10(Lh)-log10(Ll))/(log10(Th) - log10(Tl));
-  dOld = 2*dNew;
-  // while percent change in derivative is greater than
-  // eps, the convergence criterion parameter, re-evaluate 
-  // the derivative in a smaller interval
-  while(std::abs((dNew - dOld)/dOld)>eps && (dNew>eps)) {
-    // set preevious new derivative as old derivative
-    dOld = dNew;
-    // reposition endpoints more closely using average
-    Tl = (log10(Tl) + log10(T))/2;
-    Th = (log10(Th) + log10(T))/2;
-    // re-evaluate cooling
-    Ll = pcool->Lambda_T(rho,Press*(Tl/T));
-    Lh = pcool->Lambda_T(rho,Press*(Th/T));
-    // re-evaluate derivative
-    dNew = (log10(Lh)-log10(Ll))/(log10(Th) - log10(Tl));
-  }
-  std::cout << "  dlnL_dlnT = " << dOld << std::endl;
+  Real dlnL_dlnT = pcool->dlnL_dlnT(rho,Press);
+  std::cout << "  dlnL_dlnT = " << dlnL_dlnT << std::endl;
   // kT in code units based on derivative
-  Real kT = krho*dOld;
+  Real kT = krho*dlnL_dlnT;
   // get coefficients in cubic dispersion relation
   Real B = cs*kT;
   Real C = cs*cs*k*k;
