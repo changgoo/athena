@@ -194,10 +194,12 @@ Real TigressClassic::dlnL_dlnT(const Real rho, const Real Press) {
   Real T1 = Press/rho*punit->Temperature;
 
   int T1idx = get_Tidx(T1);
-  Real dlnT = log10(T1_tbl[T1idx+1])-log10(T1_tbl[T1idx]);
-  Real dlnL = log10(cool_table[T1idx+1])-log10(cool_table[T1idx]);
+  Real Ti = T1_tbl[T1idx];
+  Real Tip1 = T1_tbl[T1idx+1];
+  Real Li = cool_table[T1idx];
+  Real Lip1 = cool_table[T1idx+1];
 
-  return dlnL/dlnT;
+  return (Lip1-Li)/(Tip1-Ti)*Ti/Li;
 }
 
 //========================================================================================
