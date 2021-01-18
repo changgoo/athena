@@ -221,7 +221,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   tcool_mid = tcool(rho_0, pgas_mid);
   // if the endpoints do not have opposite signs on their cooling times we
   // are not guaranteed a zero exists, so we throw an error
-  if(tcool_low*tcool_high>0){
+  if (tcool_low*tcool_high>0) {
     std::stringstream msg;
     msg << "### ERROR in ProblemGenerator " << std::endl
         << "pressure guesses must have tcool with opposite signs!" << std::endl;
@@ -230,14 +230,13 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   }
   // find the equilibrium point of the cooling curve using
   // bisection root finding
-  while((pgas_high-pgas_low)/pgas_mid > tol){
-    if(tcool_low*tcool_mid < 0){
+  while ((pgas_high-pgas_low)/pgas_mid > tol) {
+    if (tcool_low*tcool_mid < 0) {
       pgas_high = pgas_mid;
       tcool_high = tcool_mid;
       pgas_mid = (pgas_high + pgas_low)/2.;
       tcool_mid = tcool(rho_0, pgas_mid);
-    }
-    else {
+    } else {
       pgas_low = pgas_mid;
       tcool_low = tcool_mid;
       pgas_mid = (pgas_high + pgas_low)/2.;
@@ -281,9 +280,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   for (int k = kl; k <= ku; ++k) {
     for (int j = jl; j <= ju; ++j) {
       for (int i = il; i <= iu; ++i) {
-	Real x = pcoord->x1v(i);
-	Real pdev = -1*alpha*rho_0*(om/kx)*(om/kx)*std::cos(kx*x);
-	Real vdev = -1*alpha*(om/kx)*std::sin(kx*x);
+        Real x = pcoord->x1v(i);
+        Real pdev = -1*alpha*rho_0*(om/kx)*(om/kx)*std::cos(kx*x);
+        Real vdev = -1*alpha*(om/kx)*std::sin(kx*x);
         phydro->w(IDN,k,j,i) = rho_0*(1 + alpha*std::cos(kx*x));
         phydro->w(IPR,k,j,i) = pgas_0 + pdev;
         phydro->w(IVX,k,j,i) = vdev;
@@ -557,9 +556,8 @@ static Real SolveCubic(const Real b, const Real c, const Real d) {
     S = std::cbrt(R + std::sqrt(D));
     T = std::cbrt(R - std::sqrt(D));
     res =  S + T - b/3;
-  }
+  } else if (D < 0) {
   // if the discriminant is greater than 0 there are three, distinct, real roots
-  else if (D < 0) {
     theta = std::acos(R/std::sqrt( -1*Q*Q*Q ));
     // calculate the three real roots
     z1 = 2*std::sqrt(-1*Q)*std::cos(theta/3) - b/3;
@@ -652,9 +650,8 @@ Real MaxOverDens(MeshBlock *pmb, int iout) {
   for (int k = kl; k <= ku; ++k) {
     for (int j = jl; j <= ju; ++j) {
       for (int i = il; i <= iu; ++i) {
-	Real den = pmb->phydro->w(IDN,k,j,i) - rhobar_init;
-	if (den>dmax)
-	  dmax = den;
+        Real den = pmb->phydro->w(IDN,k,j,i) - rhobar_init;
+        if (den>dmax) dmax = den;
       }
     }
   }
