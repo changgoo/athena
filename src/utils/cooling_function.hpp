@@ -35,7 +35,6 @@ class CoolingFunctionBase {
   virtual Real Get_muH() = 0;
 
   virtual Real GetTemperature(const Real rho, const Real Press) = 0;
-  // virtual Real GetPressure(const Real T, const Real nH) = 0;
 
   // accessors
   Real Get_Tmax() { return T_max; }
@@ -73,13 +72,12 @@ class PiecewiseLinearFits : public CoolingFunctionBase {
   Real Get_muH() override { return muH; }
 
   Real GetTemperature(const Real rho, const Real Press) override;
-  // Real GetPressure(const Real T, const Real nH) override;
 
  private:
   Real mu,muH;
   Real T_PE,Gamma0;
   // fitting parameters
-  static const int nfit_cool = 12;
+  static constexpr int nfit_cool = 12;
   Real T_cooling_curve[nfit_cool] =
     {0.99999999e1,
      1.0e+02, 6.0e+03, 1.75e+04,
@@ -139,7 +137,8 @@ class TigressClassic : public CoolingFunctionBase {
   int get_Tidx(const Real temp);
 
   // tables
-  static const int NTBL=801;
+  static constexpr int NTBL=801;
+  static constexpr Real Tmin_tbl=10.0,Tmax_tbl=1.e9,dlnT_tbl=0.01;
   Real T1_tbl[NTBL] = {
            1.00000000e+01,   1.02329299e+01,   1.04712855e+01,
            1.07151931e+01,   1.09647820e+01,   1.12201845e+01,

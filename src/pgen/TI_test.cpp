@@ -113,7 +113,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   }
 
   // shorthand for unit class
-  // not unit class is initialized within cooling function constructor
+  // unit class is initialized within cooling function constructor
   // to use appropreate mu and muH
   punit = pcool->punit;
   // set gamma as a global variable in the problem
@@ -203,14 +203,14 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   int kn = pin->GetInteger("problem","kn");
   // background mean density
   Real rho_0   = pin->GetReal("problem", "rho_0"); // measured in m_p muH cm^-3
-  // the gas pressure is then set by requiring that the gas be in thermal 
-  // equilibrium at the given gas density. We do this via root finding the 
+  // the gas pressure is then set by requiring that the gas be in thermal
+  // equilibrium at the given gas density. We do this via root finding the
   // correct temperature.
   Real pgas_low, pgas_high, pgas_mid;
   Real tcool_low, tcool_high, tcool_mid;
   // tolerance to stop root finding convergence search
   Real tol = 1e-12;
-  // set the initial pgas at the approximate extremes 
+  // set the initial pgas at the approximate extremes
   pgas_low = pcool->Get_Tfloor()*rho_0/pcool->to_pok;
   pgas_high = pcool->Get_Tmax()*rho_0/pcool->to_pok;
   pgas_mid = (pgas_high + pgas_low)/2.;
@@ -220,7 +220,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   tcool_high = tcool(rho_0, pgas_high);
   tcool_mid = tcool(rho_0, pgas_mid);
   // if the endpoints do not have opposite signs on their cooling times we
-  // are not guaranteed a zero exists, so we throw an error 
+  // are not guaranteed a zero exists, so we throw an error
   if(tcool_low*tcool_high>0){
     std::stringstream msg;
     msg << "### ERROR in ProblemGenerator " << std::endl
@@ -228,7 +228,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     throw std::runtime_error(msg.str().c_str());
     return;
   }
-  // find the equilibrium point of the cooling curve using 
+  // find the equilibrium point of the cooling curve using
   // bisection root finding
   while((pgas_high-pgas_low)/pgas_mid > tol){
     if(tcool_low*tcool_mid < 0){
@@ -521,7 +521,7 @@ static Real CoolingTimestep(MeshBlock *pmb) {
 
 //========================================================================================
 //! \fn static Real tcool(const Real rho, const Real Press)
-//! \brief tcool = e / (n^2*Cool - n*heat)
+//! \brief tcool = e / (n_H^2*Cool - n_H*heat)
 //! \note
 //! - input rho and P are in code Units
 //! - output tcool is in second

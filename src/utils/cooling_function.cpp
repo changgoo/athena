@@ -187,19 +187,16 @@ Real TigressClassic::Lambda_T(const Real rho, const Real Press) {
 //!
 //! - input rho, Press in code units
 //! - return d ln(Lambda)/ d ln(T)
-//! - In the TigressClassic cooling function this returns the instantaneous 
+//! - In the TigressClassic cooling function this returns the instantaneous
 //!   derivative in according to the tabulated values of the cooling function
 //========================================================================================
 Real TigressClassic::dlnL_dlnT(const Real rho, const Real Press) {
   Real T1 = Press/rho*punit->Temperature;
-
   int T1idx = get_Tidx(T1);
-  Real Ti = T1_tbl[T1idx];
-  Real Tip1 = T1_tbl[T1idx+1];
-  Real Li = cool_table[T1idx];
-  Real Lip1 = cool_table[T1idx+1];
 
-  return (Lip1-Li)/(Tip1-Ti)*Ti/Li;
+  Real dLdT = (cool_table[T1idx+1]-cool_table[T1idx])/(T1_tbl[T1idx+1]-T1_tbl[T1idx]);
+  Real dlnLdlnT = dLdT*T1/(cool_table[T1idx]+dLdT*(T1-T1_tbl[T1idx]));
+  return dlnLdlnT;
 }
 
 //========================================================================================
@@ -272,13 +269,12 @@ Real TigressClassic::Get_mu(const Real rho, const Real Press) {
 //========================================================================================
 int TigressClassic::get_Tidx(const Real T1) {
   Real Tidx;
-  Real Tmin=10.0,Tmax=1.e9,dT=0.01;
   Real x1, x2;
 
-  if(T1 < Tmin) return 0;
-  if(T1 >= Tmax) return NTBL-2;
+  if(T1 < Tmin_tbl) return 0;
+  if(T1 >= Tmax_tbl) return NTBL-2;
 
-  x1 = log10(T1/Tmin)/dT;
+  x1 = log10(T1/Tmin_tbl)/dlnT_tbl;
   x2 = NTBL-2;
   if (x1 < x2) {
     return static_cast<int>(x1);
