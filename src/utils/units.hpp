@@ -6,7 +6,7 @@
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
 //! \file units.hpp
-//  \brief prototypes of unit and constant classes
+//! \brief prototypes of unit and constant classes
 
 // C headers
 
