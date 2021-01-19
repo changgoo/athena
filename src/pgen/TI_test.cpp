@@ -556,8 +556,9 @@ static Real SolveCubic(const Real b, const Real c, const Real d) {
     S = std::cbrt(R + std::sqrt(D));
     T = std::cbrt(R - std::sqrt(D));
     res =  S + T - b/3;
-  } else if (D < 0) {
-  // if the discriminant is greater than 0 there are three, distinct, real roots
+  } else {
+  // if the discriminant is zero all roots are real and at least two are equal
+  // if the discriminant is negative there are three, distinct, real roots
     theta = std::acos(R/std::sqrt( -1*Q*Q*Q ));
     // calculate the three real roots
     z1 = 2*std::sqrt(-1*Q)*std::cos(theta/3) - b/3;
