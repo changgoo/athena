@@ -207,7 +207,7 @@ time python -u ./run_tests.py sr --config=--cxx=icpc --silent
 time python -u ./run_tests.py gr --config=--cxx=icpc --silent
 time python -u ./run_tests.py curvilinear --config=--cxx=icpc --silent
 time python -u ./run_tests.py shearingbox --config=--cxx=icpc --silent
-# time python -u ./run_tests.py diffusion --config=--cxx=icpc --silent
+time python -u ./run_tests.py diffusion --config=--cxx=icpc --config=-fp-model=strict --silent
 time python -u ./run_tests.py symmetry --config=--cxx=icpc --silent
 time python -u ./run_tests.py eos --config=--cxx=icpc --silent
 time python -u ./run_tests.py scalars/mignone_radial_1d --config=--cxx=icpc --silent
