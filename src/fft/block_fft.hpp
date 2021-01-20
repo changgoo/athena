@@ -5,8 +5,8 @@
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
-//! \file athena_fft.hpp
-//  \brief defines minimalist FFT class
+//! \file block_fft.hpp
+//! \brief defines interface class to Plimpton's fftMPI
 
 // C headers
 
@@ -27,30 +27,24 @@
 #include <mpi.h>
 #include "fftmpi/src/fft2d.h"
 #include "fftmpi/src/fft3d.h"
-// using namespace FFTMPI_NS;
 #endif // MPI_PARALLEL
 #endif
 
 
 //! \class BlockFFT
-//  \brief
+//! \brief interface to the Plimpton's fftMPI
 
 class BlockFFT {
  public:
-  explicit BlockFFT(MeshBlock *pmb);
-  virtual ~BlockFFT();
-
-  void LoadSource(const AthenaArray<Real> &src);
-  void RetrieveResult(AthenaArray<Real> &dst);
-  virtual void ExecuteForward();
-  virtual void ExecuteBackward();
-  virtual void ApplyKernel();
+  BlockFFT(MeshBlock *pmb);
+  ~BlockFFT();
 
   // data
   const int is, ie, js, je, ks, ke; // meshblock indices
   const int Nx1, Nx2, Nx3;          // mesh size (active zones)
   const int nx1, nx2, nx3;          // meshblock size (active zones)
   const int ndim;                   // number of dimensions
+
   // global index for input data layout
   const int in_ilo, in_ihi, in_jlo, in_jhi, in_klo, in_khi;
   int fast_ilo, fast_ihi, fast_jlo, fast_jhi, fast_klo, fast_khi;
@@ -59,9 +53,18 @@ class BlockFFT {
   int mid_nx1, mid_nx2, mid_nx3;
   int slow_ilo, slow_ihi, slow_jlo, slow_jhi, slow_klo, slow_khi;
   int slow_nx1, slow_nx2, slow_nx3;
-#if defined(FFT) && defined(MPI_PARALLEL)
+#ifdef FFT
+#ifdef MPI_PARALLEL
   FFTMPI_NS::FFT3d *pf3d;
 #endif
+#endif
+
+  // functions
+  void LoadSource(const AthenaArray<Real> &src);
+  void RetrieveResult(AthenaArray<Real> &dst);
+  virtual void ExecuteForward();
+  virtual void ExecuteBackward();
+  virtual void ApplyKernel();
 
  protected:
   MeshBlock *pmy_block_;

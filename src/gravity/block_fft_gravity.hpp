@@ -5,8 +5,8 @@
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
-//! \file fft_gravity.hpp
-//  \brief defines FFTGravity class
+//! \file block_fft_gravity.hpp
+//! \brief defines BlockFFTGravity class
 
 // C headers
 
@@ -21,8 +21,13 @@
 #include "../task_list/fft_grav_task_list.hpp"
 #include "gravity.hpp"
 
+//! identifiers for gravity boundary conditions
+enum class GravityBoundaryFlag {periodic, disk, open};
+//! free functions to return boundary flag given input string
+GravityBoundaryFlag GetGravityBoundaryFlag(const std::string& input_string);
+
 //! \class BlockFFTGravity
-//  \brief minimalist FFT gravity solver for each block
+//! \brief minimalist FFT gravity solver for each block
 
 class BlockFFTGravity : public BlockFFT {
  public:
@@ -31,6 +36,7 @@ class BlockFFTGravity : public BlockFFT {
 
   // data
   bool SHEAR_PERIODIC; // flag for shear periodic boundary (true w/ , false w/o)
+  GravityBoundaryFlag gbflag; // flag for the gravity boundary condition
 
   // functions
   void ExecuteForward() final;

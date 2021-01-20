@@ -3,8 +3,8 @@
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
-//! \file athena_fft.cpp
-//  \brief
+//! \file block_fft.cpp
+//! \brief defines interface class to Plimpton's fftMPI
 
 // C headers
 
@@ -126,7 +126,7 @@ BlockFFT::~BlockFFT() {
 
 //----------------------------------------------------------------------------------------
 //! \fn void BlockFFT::LoadSource(const AthenaArray<Real> &src)
-//  \brief Fill the source in the active zone
+//! \brief Fill the source in the active zone
 
 void BlockFFT::LoadSource(const AthenaArray<Real> &src) {
   for (int k=ks; k<=ke; k++) {
@@ -142,7 +142,7 @@ void BlockFFT::LoadSource(const AthenaArray<Real> &src) {
 
 //----------------------------------------------------------------------------------------
 //! \fn void BlockFFT::RetrieveResult(const AthenaArray<Real> &dst)
-//  \brief Fill the result in the active zone
+//! \brief Fill the result in the active zone
 
 void BlockFFT::RetrieveResult(AthenaArray<Real> &dst) {
   for (int k=ks; k<=ke; k++) {
@@ -158,7 +158,7 @@ void BlockFFT::RetrieveResult(AthenaArray<Real> &dst) {
 
 //----------------------------------------------------------------------------------------
 //! \fn void BlockFFT::ExecuteForward()
-//  \brief Forward transform
+//! \brief Forward transform
 
 void BlockFFT::ExecuteForward() {
 #ifdef FFT
@@ -184,7 +184,7 @@ void BlockFFT::ExecuteForward() {
 
 //----------------------------------------------------------------------------------------
 //! \fn void BlockFFT::ApplyKernel()
-//  \brief Apply kernel
+//! \brief Apply kernel
 
 void BlockFFT::ApplyKernel() {
   // do nothing
@@ -194,7 +194,7 @@ void BlockFFT::ApplyKernel() {
 
 //----------------------------------------------------------------------------------------
 //! \fn void BlockFFT::ExecuteBackward()
-//  \brief Backward transform
+//! \brief Backward transform
 
 void BlockFFT::ExecuteBackward() {
 #ifdef FFT

@@ -38,7 +38,7 @@ def prepare(*args, **kwargs):
     athena.configure('mpi','fft','hdf5','h5double',
                      prob='msa',
                      eos='isothermal', flux='hlle',
-                     grav='fft-periodic', *args, **kwargs)
+                     grav='blockfft', *args, **kwargs)
     athena.make()
 
 def run(**kwargs):
@@ -68,6 +68,7 @@ def run(**kwargs):
                      'meshblock/nx2=' + repr(n),
                      'meshblock/nx3=4',
                      'hydro/iso_sound_speed={}'.format(cs),
+                     'self_gravity/grav_bc=periodic',
                      'orbital_advection/OAorder=0',
                      'orbital_advection/qshear={}'.format(qshear),
                      'orbital_advection/Omega0={}'.format(Omega0),
