@@ -93,13 +93,15 @@ void BlockFFTGravity::ExecuteForward() {
     pf3d->remap(data,data,pf3d->remap_premid);
     // mid_forward
     pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data),FFTW_FORWARD,pf3d->fft_mid);
-    // apply phase shift for shearing BC
-    for (int i=0; i<mid_nx1; i++) {
-      for (int k=0; k<mid_nx3; k++) {
-        for (int j=0; j<mid_nx2; j++) {
-          int idx = j + mid_nx2*(k + mid_nx3*i);
-          in_[idx] *= std::exp(-TWO_PI*I_*rshear_*
-              (Real)(mid_jlo+j)*(Real)(mid_ilo+i)/(Real)Nx1);
+    if (SHEAR_PERIODIC) {
+      // apply phase shift for shearing BC
+      for (int i=0; i<mid_nx1; i++) {
+        for (int k=0; k<mid_nx3; k++) {
+          for (int j=0; j<mid_nx2; j++) {
+            int idx = j + mid_nx2*(k + mid_nx3*i);
+            in_[idx] *= std::exp(-TWO_PI*I_*rshear_*
+                (Real)(mid_jlo+j)*(Real)(mid_ilo+i)/(Real)Nx1);
+          }
         }
       }
     }
@@ -198,13 +200,15 @@ void BlockFFTGravity::ExecuteBackward() {
     pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data),FFTW_BACKWARD,pf3d->fft_fast);
     // fast2mid
     pf3d->remap(data,data,pf3d->remap_fastmid);
-    // apply phase shift for shearing BC
-    for (int i=0; i<mid_nx1; i++) {
-      for (int k=0; k<mid_nx3; k++) {
-        for (int j=0; j<mid_nx2; j++) {
-          int idx = j + mid_nx2*(k + mid_nx3*i);
-          in_[idx] *= std::exp(TWO_PI*I_*rshear_*
-              (Real)(mid_jlo+j)*(Real)(mid_ilo+i)/(Real)Nx1);
+    if (SHEAR_PERIODIC) {
+      // apply phase shift for shearing BC
+      for (int i=0; i<mid_nx1; i++) {
+        for (int k=0; k<mid_nx3; k++) {
+          for (int j=0; j<mid_nx2; j++) {
+            int idx = j + mid_nx2*(k + mid_nx3*i);
+            in_[idx] *= std::exp(TWO_PI*I_*rshear_*
+                (Real)(mid_jlo+j)*(Real)(mid_ilo+i)/(Real)Nx1);
+          }
         }
       }
     }
@@ -255,10 +259,11 @@ void BlockFFTGravity::ApplyKernel() {
           kx = TWO_PI*(Real)(slow_ilo + i)/(Real)Nx1;
           ky = TWO_PI*(Real)(slow_jlo + j)/(Real)Nx2;
           kz = TWO_PI*(Real)(slow_klo + k)/(Real)Nx3;
-          if (SHEAR_PERIODIC)
+          if (SHEAR_PERIODIC) {
             kxt = kx + rshear_*(Real)(Nx2)/(Real)(Nx1)*ky;
-          else
+          } else {
             kxt = kx;
+          }
           if (((slow_ilo+i) + (slow_jlo+j) + (slow_klo+k)) == 0) {
             kernel = 0.0;
           } else {
@@ -281,7 +286,11 @@ void BlockFFTGravity::ApplyKernel() {
           kx = TWO_PI*(Real)(slow_ilo + i)/(Real)Nx1;
           ky = TWO_PI*(Real)(slow_jlo + j)/(Real)Nx2;
           kz = TWO_PI*(Real)(slow_klo + k)/(Real)Nx3;
-          kxt = kx + rshear_*(Real)(Nx2)/(Real)(Nx1)*ky;
+          if (SHEAR_PERIODIC) {
+            kxt = kx + rshear_*(Real)(Nx2)/(Real)(Nx1)*ky;
+          } else {
+            kxt = kx;
+          }
           kxy = std::sqrt((2.-2.*std::cos(kxt))/dx1sq_ +
                           (2.-2.*std::cos(ky ))/dx2sq_);
           if ((slow_ilo+i==0)&&(slow_jlo+j==0)) {
@@ -324,38 +333,46 @@ void BlockFFTGravity::ApplyKernel() {
 void BlockFFTGravity::Solve(int stage) {
 #ifdef FFT
 #ifdef MPI_PARALLEL
-  Real time = pmy_block_->pmy_mesh->time;
-  Real qomt = qshear_*Omega_0_*time;
-  AthenaArray<Real> rho;
-  Real p,eps;
+  if (SHEAR_PERIODIC) {
+    Real time = pmy_block_->pmy_mesh->time;
+    Real qomt = qshear_*Omega_0_*time;
+    AthenaArray<Real> rho;
+    Real p,eps;
 
-  // left integer point
-  p = std::floor(qomt*Lx1_/Lx2_*(Real)Nx2);
-  eps = qomt*Lx1_/Lx2_*(Real)Nx2 - p;
-  rshear_ = p/(Real)Nx2;
-  rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
-  LoadSource(rho);
-  ExecuteForward();
-  ApplyKernel();
-  ExecuteBackward();
-  std::memcpy(in2_, in_, sizeof(std::complex<Real>)*nx1*nx2*nx3);
+    // left integer point
+    p = std::floor(qomt*Lx1_/Lx2_*(Real)Nx2);
+    eps = qomt*Lx1_/Lx2_*(Real)Nx2 - p;
+    rshear_ = p/(Real)Nx2;
+    rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
+    LoadSource(rho);
+    ExecuteForward();
+    ApplyKernel();
+    ExecuteBackward();
+    std::memcpy(in2_, in_, sizeof(std::complex<Real>)*nx1*nx2*nx3);
 
-  // right integer point
-  p = std::floor(qomt*Lx1_/Lx2_*(Real)Nx2) + 1.;
-  rshear_ = p/(Real)Nx2;
-  rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
-  LoadSource(rho);
-  ExecuteForward();
-  ApplyKernel();
-  ExecuteBackward();
+    // right integer point
+    p = std::floor(qomt*Lx1_/Lx2_*(Real)Nx2) + 1.;
+    rshear_ = p/(Real)Nx2;
+    rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
+    LoadSource(rho);
+    ExecuteForward();
+    ApplyKernel();
+    ExecuteBackward();
 
-  // linear interpolation in time
-  FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR *>(in_);
-  FFT_SCALAR *data2 = reinterpret_cast<FFT_SCALAR *>(in2_);
-  for (int i=0; i<2*nx1*nx2*nx3; ++i) {
-    data[i] = (1.-eps)*data2[i] + eps*data[i];
+    // linear interpolation in time
+    FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR *>(in_);
+    FFT_SCALAR *data2 = reinterpret_cast<FFT_SCALAR *>(in2_);
+    for (int i=0; i<2*nx1*nx2*nx3; ++i) {
+      data[i] = (1.-eps)*data2[i] + eps*data[i];
+    }
+  } else {
+    AthenaArray<Real> rho;
+    rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
+    LoadSource(rho);
+    ExecuteForward();
+    ApplyKernel();
+    ExecuteBackward();
   }
-
   RetrieveResult(pmy_block_->pgrav->phi);
 #else
   std::stringstream msg;
