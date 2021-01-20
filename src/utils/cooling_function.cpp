@@ -26,8 +26,7 @@ CoolingFunctionBase::CoolingFunctionBase(ParameterInput *pin) :
   T_max(pin->GetOrAddReal("cooling", "T_max",1.e9)),
   T_floor(pin->GetOrAddReal("cooling", "T_floor",10)),
   cfl_cool(pin->GetReal("cooling", "cfl_cool")), // min dt_hydro/dt_cool
-  gamma_adi(pin->GetReal("hydro","gamma")) // adiabatic index
-{
+  gamma_adi(pin->GetReal("hydro","gamma")) {
   mu = 1.27;
   muH = 1.4;
   Initialize(mu,muH);
@@ -66,8 +65,8 @@ CoolingFunctionBase::~CoolingFunctionBase() {
 //========================================================================================
 PiecewiseLinearFits::PiecewiseLinearFits(ParameterInput *pin) :
   CoolingFunctionBase(pin),
-  T_PE(pin->GetReal("cooling", "T_PE")),
-  Gamma0(pin->GetReal("cooling", "Gamma")) {
+  T_PE(pin->GetReal("cooling", "T_PE")), // temperature below which PE heating is applied
+  Gamma0(pin->GetReal("cooling", "Gamma")) { // heating rate in ergs / sec
   mu = 0.62;
   muH = 1.4;
   Initialize(mu,muH);
