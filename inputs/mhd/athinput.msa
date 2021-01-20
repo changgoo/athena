@@ -1,24 +1,24 @@
 <comment>
-problem   = HD shwave test
-reference = Johnson & Gammie, 2005, ApJ, 626, 978
-configure = --prob=ssheet --eos=isothermal
+problem   = Modified swing amplification
+reference = Kim & Ostriker 2001, ApJ, 559, 70
+configure = --prob=msa --eos=isothermal --grav=blockfft -fft
 
 <job>
 problem_id = msa   # problem ID: basename of output filenames
 
 <output1>
 file_type   = vtk     # HDF5 data dump
-variable    = prim     # variables to be output
+variable    = prim    # variables to be output
 ghost_zones = false
-dt          = 0.1      # time increment between outputs
+dt          = 2       # time increment between outputs
 
 <time>
-cfl_number = 0.3       # The Courant, Friedrichs, & Lewy (CFL) Number
-nlim       = -1        # cycle limit
-tlim       = 10.0       # time limit
-integrator  = vl2      # time integration algorithm
-xorder      = 2        # order of spatial reconstruction
-ncycle_out  = 1        # interval for stdout summary info
+cfl_number = 0.3      # The Courant, Friedrichs, & Lewy (CFL) Number
+nlim       = 10000    # cycle limit
+tlim       = 2.0      # time limit
+integrator = vl2      # time integration algorithm
+xorder     = 2        # order of spatial reconstruction
+ncycle_out = 10       # interval for stdout summary info
 
 <mesh>
 nx1        = 64        # Number of zones in X1-direction
