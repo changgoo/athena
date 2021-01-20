@@ -28,6 +28,9 @@
 #include "tbb/scalable_allocator.h"
 #else
 #include <malloc.h>
+size_t smalloc_size(const void *p) {
+    return malloc_usable_size((void*)p);
+}
 #endif
 #else
 // platform dependent malloced size return function
