@@ -33,13 +33,15 @@ kx = 2*np.pi*nwx/Lx
 ky = 2*np.pi*nwy/Lx
 gconst = nJ*cs2
 
+
 def prepare(*args, **kwargs):
     logger.debug('Running test ' + __name__)
-    athena.configure('mpi','fft','hdf5','h5double',
+    athena.configure('mpi', 'fft', 'hdf5', 'h5double',
                      prob='msa',
                      eos='isothermal', flux='hlle',
                      grav='blockfft', *args, **kwargs)
     athena.make()
+
 
 def run(**kwargs):
     for n in resolution_range:
@@ -80,37 +82,37 @@ def run(**kwargs):
                      'problem/nwy={}'.format(nwy)]
         athena.run('mhd/athinput.msa', arguments)
 
+
 def analyze():
-    def ode(t,y,kx,ky,kappa,qshear,cs2,gconst):
+    def ode(t, y, kx, ky, kappa, qshear, cs2, gconst):
         kxt = kx + qshear*ky*t
         kmag = np.sqrt(kxt**2+ky**2)
         f0 = -kxt*y[1]-ky*y[2]
         f1 = 2*y[2]+kxt*(cs2-4*np.pi*gconst/kmag**2)*y[0]
         f2 = -0.5*kappa**2*y[1]+ky*(cs2-4*np.pi*gconst/kmag**2)*y[0]
-        return np.array([f0,f1,f2])
+        return np.array([f0, f1, f2])
 
     l2ERROR = []
 
     # solve ODE to get the reference solution
     y0 = 0.5*amp*np.array([1, kx/ky, 1])
-    odesol = solve_ivp(ode, (0,2), y0, atol=1e-30, rtol=1e-13,
-                       t_eval = [2,],
-                       args=[kx,ky,kappa,qshear,cs2,gconst])
+    odesol = solve_ivp(ode, (0, 2), y0, atol=1e-30, rtol=1e-13, t_eval=[2],
+                       args=[kx, ky, kappa, qshear, cs2, gconst])
     kxt = kx+qshear*ky*odesol.t
 
     # compute L2 norms
     for n in resolution_range:
         ds = athena_read.athdf('bin/SwingAmplification_' + str(n)
                                + '.out1.00001.athdf')
-        analytic = 1.0 + 2*odesol.y[0]*np.cos(ky*ds['x2v'][None,:,None]\
-                 + kxt*ds['x1v'][None,None,:]) + 0*ds['x3v'][:,None,None]
+        analytic = 1.0 + 2*odesol.y[0]*np.cos(ky*ds['x2v'][None, :, None]
+                                              + kxt*ds['x1v'][None, None, :])
         dx = Lx/n
         l2ERROR.append(np.sqrt(((ds['rho']-analytic)**2*dx**2).sum()))
 
     # estimate L2 convergence
     analyze_status = True
     conv = (np.diff(np.log(np.array(l2ERROR)))
-                / np.diff(np.log(np.array(resolution_range))))
+            / np.diff(np.log(np.array(resolution_range))))
     logger.info('[Swing Amplification]: Convergence order = {}'
                 .format(conv))
 
