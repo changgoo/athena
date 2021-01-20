@@ -30,7 +30,19 @@
 #include <malloc.h>
 #endif
 #else
+// platform dependent malloced size return function
+// https://stackoverflow.com/questions/1281686/determine-size-of-dynamically-allocated-memory-in-c
+#if defined(__linux__)
 #include <malloc.h>
+size_t smalloc_size(const void *p) {
+    return malloc_usable_size((void*)p);
+}
+#elif defined(__APPLE__)
+#include <malloc/malloc.h>
+size_t smalloc_size(const void *p) {
+    return malloc_size(p);
+}
+#endif
 #endif
 
 #if !defined(FFT_MEMALIGN)
@@ -83,8 +95,8 @@ void *Memory::srealloc(void *ptr, int64_t nbytes)
   if (offset) {
     void *optr = ptr;
     ptr = smalloc(nbytes);
-    if (nbytes < malloc_usable_size(optr)) memcpy(ptr,optr,nbytes);
-    else memcpy(ptr,optr,malloc_usable_size(optr));
+    if (nbytes < smalloc_size(optr)) memcpy(ptr,optr,nbytes);
+    else memcpy(ptr,optr,smalloc_size(optr));
     free(optr);
   }
 #else
