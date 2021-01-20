@@ -36,7 +36,7 @@
 
 class BlockFFT {
  public:
-  BlockFFT(MeshBlock *pmb);
+  explicit BlockFFT(MeshBlock *pmb);
   ~BlockFFT();
 
   // data

@@ -12,6 +12,7 @@
 
 // C++ headers
 #include <complex>
+#include <string>
 
 // Athena++ headers
 #include "../athena.hpp"
