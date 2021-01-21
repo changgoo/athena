@@ -113,6 +113,11 @@ time python -u ./run_tests.py diffusion --silent
 time python -u ./run_tests.py hydro4 --coverage="${lcov_capture_cmd}" -r="time/nlim=10" --silent || true
 time python -u ./run_tests.py hydro4 --silent
 
+# cooling regressiong
+time python -u ./run_tests.py cooling --coverage="${lcov_capture_cmd}" -r="time/nlim=10" --silent || true
+time python -u ./run_tests.py cooling --silent
+
+
 # Swap serial HDF5 library module for parallel HDF5 library:
 module unload hdf5/gcc/1.10.0
 module load hdf5/gcc/openmpi-3.0.0/1.10.0
@@ -202,13 +207,16 @@ time python -u ./run_tests.py sr --config=--cxx=icpc --silent
 time python -u ./run_tests.py gr --config=--cxx=icpc --silent
 time python -u ./run_tests.py curvilinear --config=--cxx=icpc --silent
 time python -u ./run_tests.py shearingbox --config=--cxx=icpc --silent
-# time python -u ./run_tests.py diffusion --config=--cxx=icpc --silent
+time python -u ./run_tests.py diffusion --config=--cxx=icpc --config=--cflag=-fp-model=strict --silent
 time python -u ./run_tests.py symmetry --config=--cxx=icpc --silent
 time python -u ./run_tests.py eos --config=--cxx=icpc --silent
 time python -u ./run_tests.py scalars/mignone_radial_1d --config=--cxx=icpc --silent
 
 # High-order solver regression tests w/ Intel compiler
 time python -u ./run_tests.py hydro4 --config=--cxx=icpc --silent
+
+# cooling regression
+time python -u ./run_tests.py cooling --config=--cxx=icpc --silent
 
 # Swap serial HDF5 library module for parallel HDF5 library:
 module unload hdf5/intel-17.0/1.10.0
