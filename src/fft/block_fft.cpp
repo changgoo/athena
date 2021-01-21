@@ -25,7 +25,7 @@
 // constructor, initializes data structures and parameters
 
 BlockFFT::BlockFFT(MeshBlock *pmb) :
-    pmy_block_(pmb), ndim(pmb->pmy_mesh->ndim),
+    ndim(pmb->pmy_mesh->ndim),
     is(pmb->is), ie(pmb->ie), js(pmb->js), je(pmb->je), ks(pmb->ks), ke(pmb->ke),
     Nx1(pmb->pmy_mesh->mesh_size.nx1),
     Nx2(pmb->pmy_mesh->mesh_size.nx2),
@@ -38,7 +38,8 @@ BlockFFT::BlockFFT(MeshBlock *pmb) :
     in_jlo((pmb->loc.lx2)*pmb->block_size.nx2),
     in_jhi(((pmb->loc.lx2+1)*pmb->block_size.nx2)-1),
     in_klo((pmb->loc.lx3)*pmb->block_size.nx3),
-    in_khi(((pmb->loc.lx3+1)*pmb->block_size.nx3)-1) {
+    in_khi(((pmb->loc.lx3+1)*pmb->block_size.nx3)-1),
+    pmy_block_(pmb) {
   int cnt = nx1*nx2*nx3;
   in_ = new std::complex<Real>[cnt];
 

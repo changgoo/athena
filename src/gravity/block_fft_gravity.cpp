@@ -24,14 +24,15 @@
 //! \brief BlockFFTGravity constructor
 
 BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
-    : BlockFFT(pmb), I_(0.0,1.0),
+    : BlockFFT(pmb),
+      SHEAR_PERIODIC(pmb->pmy_mesh->shear_periodic),
       dx1sq_(SQR(pmb->pcoord->dx1v(NGHOST))),
       dx2sq_(SQR(pmb->pcoord->dx2v(NGHOST))),
       dx3sq_(SQR(pmb->pcoord->dx3v(NGHOST))),
       Lx1_(pmb->pmy_mesh->mesh_size.x1max - pmb->pmy_mesh->mesh_size.x1min),
       Lx2_(pmb->pmy_mesh->mesh_size.x2max - pmb->pmy_mesh->mesh_size.x2min),
       Lx3_(pmb->pmy_mesh->mesh_size.x3max - pmb->pmy_mesh->mesh_size.x3min),
-      SHEAR_PERIODIC(pmb->pmy_mesh->shear_periodic) {
+      I_(0.0,1.0) {
   gtlist_ = new FFTGravitySolverTaskList(pin, pmb->pmy_mesh);
   gbflag = GetGravityBoundaryFlag(pin->GetString("self_gravity", "grav_bc"));
   Omega_0_ = pin->GetReal("orbital_advection","Omega0");
