@@ -785,12 +785,8 @@ if args['grav'] == 'fft':
     self_grav_string = 'FFT'
 elif args['grav'] == 'mg':
     self_grav_string = 'Multigrid'
-elif args['grav'] == 'fft-periodic':
-    self_grav_string = 'FFT (periodic BC)'
-elif args['grav'] == 'fft-disk':
-    self_grav_string = 'FFT (disk BC)'
-elif args['grav'] == 'fft-open':
-    self_grav_string = 'FFT (open BC)'
+elif args['grav'] == 'blockfft':
+    self_grav_string = 'FFT (using BlockFFTGravity)'
 
 print('Your Athena++ distribution has now been configured with the following options:')
 print('  Problem generator:          ' + args['prob'])
