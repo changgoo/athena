@@ -60,9 +60,10 @@ shboxcoord   = 1       # 1=xy (default); 2=xz
 grav_bc = periodic
 
 <problem>
+compute_error = true  # when 'true' outputs L1 error compared to ODE solution
 Q         = 2
 nJ        = 2.5
 beta      = 1
-amp       = 1.0e-4    # wave amplitude
-nwx       = -6        # wavenumber in x1
+amp       = 1.0e-6    # wave amplitude
+nwx       = -3        # wavenumber in x1
 nwy       = 1         # wavenumber in x2
