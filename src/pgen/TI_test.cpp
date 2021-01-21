@@ -100,10 +100,12 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 
   if (coolftn.compare("tigress") == 0) {
     pcool = new TigressClassic(pin);
-    std::cout << "Cooling function is set to TigressClassic" << std::endl;
+    if (Globals::my_rank == 0)
+      std::cout << "Cooling function is set to TigressClassic" << std::endl;
   } else if (coolftn.compare("plf") ==0) {
     pcool = new PiecewiseLinearFits(pin);
-    std::cout << "Cooling function is set to PiecewiseLinearFits" << std::endl;
+    if (Globals::my_rank == 0)
+      std::cout << "Cooling function is set to PiecewiseLinearFits" << std::endl;
   } else {
     std::stringstream msg;
     msg << "### FATAL ERROR in ProblemGenerator" << std::endl
@@ -122,7 +124,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   // show some values for sanity check.
   if (Globals::my_rank == 0) {
     // dump cooling function used in ascii format to e.g., tigress_coolftn.txt
-    PrintCoolingFunction(coolftn);
+    // PrintCoolingFunction(coolftn);
 
     // print out units and constants in code units
     punit->PrintCodeUnits();
@@ -134,10 +136,12 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   std::string coolsolver = pin->GetOrAddString("cooling", "solver", "euler");
   if (coolsolver.compare("euler") == 0) {
     EnrollUserExplicitSourceFunction(CoolingEuler);
-    std::cout << "Cooling solver is set to Euler" << std::endl;
+    if (Globals::my_rank == 0)
+      std::cout << "Cooling solver is set to Euler" << std::endl;
   } else if (coolsolver.compare("rk4") ==0) {
     EnrollUserExplicitSourceFunction(CoolingRK4);
-    std::cout << "Cooling solver is set to RK4" << std::endl;
+    if (Globals::my_rank == 0)
+      std::cout << "Cooling solver is set to RK4" << std::endl;
   } else {
     std::stringstream msg;
     msg << "### FATAL ERROR in ProblemGenerator" << std::endl
@@ -251,13 +255,14 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real mu = pcool->Get_mu(rho_0, pgas_0/pcool->to_pok);
   Real T = pgas_0/rho_0*(mu/muH);
   //
-  std::cout << "============== Check Initialization ===============" << std::endl
-            << " Input (nH, P/k, T) in cgs = " << rho_0 << " " << pgas_0
-            << " " << T << std::endl
-            << "  mu = " << mu << " mu(punit) = " << punit->mu
-            << " muH = " << muH << std::endl;
-            // << " tcool = " << tcool(T, rho_0) << std::endl;
-
+  if (Globals::my_rank == 0) {
+    std::cout << "============== Check Initialization ===============" << std::endl
+              << " Input (nH, P/k, T) in cgs = " << rho_0 << " " << pgas_0
+              << " " << T << std::endl
+              << "  mu = " << mu << " mu(punit) = " << punit->mu
+              << " muH = " << muH << std::endl;
+              // << " tcool = " << tcool(T, rho_0) << std::endl;
+  }
   rho_0 /= pcool->to_nH; // to code units
   pgas_0 /= pcool->to_pok; // to code units
   // store the initial mean density as a global variable
@@ -266,16 +271,20 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   PrintParameters(rho_0,pgas_0);
   T = pcool->GetTemperature(rho_0,pgas_0);
   Real nH = rho_0*pcool->to_nH;
-  std::cout << "  Tempearture = " << T << std::endl;
-  std::cout << "  tcool = " << tcool(rho_0, pgas_0) << std::endl;
-  std::cout << "  sound speed = " << std::sqrt(pgas_0/rho_0) << std::endl;
+  if (Globals::my_rank == 0) {
+    std::cout << "  Tempearture = " << T << std::endl;
+    std::cout << "  tcool = " << tcool(rho_0, pgas_0) << std::endl;
+    std::cout << "  sound speed = " << std::sqrt(pgas_0/rho_0) << std::endl;
+  }
   // determine wavenumber in inverse code length
   Real kx = 2*PI*kn/Lbox;
   // determine growth rate via dispersion relation
   Real om = OmegaG(rho_0,pgas_0,kx);
-  std::cout << "  Lbox = " << Lbox << std::endl;
-  std::cout << "  k = " << kx << std::endl;
-  std::cout << "  omega = " << om << std::endl;
+  if (Globals::my_rank == 0) {
+    std::cout << "  Lbox = " << Lbox << std::endl;
+    std::cout << "  k = " << kx << std::endl;
+    std::cout << "  omega = " << om << std::endl;
+  }
   // Initialize primitive values
   for (int k = kl; k <= ku; ++k) {
     for (int j = jl; j <= ju; ++j) {
@@ -545,7 +554,7 @@ static Real tcool(const Real rho, const Real Press) {
 static Real SolveCubic(const Real b, const Real c, const Real d) {
   Real Q,R,D,S,T,res;
   Real theta,z1,z2,z3;
-  std::cout << "  B = " << b << "  C = " << c << "  D = " << d << std::endl;
+  // std::cout << "  B = " << b << "  C = " << c << "  D = " << d << std::endl;
   // variables of use in solution Eqs. 22, 23 of reference
   Q = (3*c - b*b)/9;
   R = (9*b*c - 27*d - 2*b*b*b)/54;
@@ -564,7 +573,7 @@ static Real SolveCubic(const Real b, const Real c, const Real d) {
     z1 = 2*std::sqrt(-1*Q)*std::cos(theta/3) - b/3;
     z2 = 2*std::sqrt(-1*Q)*std::cos((theta + 2*PI)/3) - b/3;
     z3 = 2*std::sqrt(-1*Q)*std::cos((theta + 4*PI)/3) - b/3;
-    std::cout << "  z1 = " << z1 << "  z2 = " << z2 << "  z3 = " << z3 << std::endl;
+    // std::cout << "  z1 = " << z1 << "  z2 = " << z2 << "  z3 = " << z3 << std::endl;
     if ((z1>z2)&&(z1>z3))
       res = z1;
     else if(z2>z3)
@@ -597,11 +606,11 @@ static Real OmegaG(const Real rho, const Real Press, const Real k) {
   krho *= punit->Length; // krho in code units
   cs /= punit->Velocity; // cs in code units
 
-  std::cout << "  cs = " << cs << std::endl;
-  std::cout << "  krho = " << krho << std::endl;
+  // std::cout << "  cs = " << cs << std::endl;
+  // std::cout << "  krho = " << krho << std::endl;
 
   Real dlnL_dlnT = pcool->dlnL_dlnT(rho,Press);
-  std::cout << "  dlnL_dlnT = " << dlnL_dlnT << std::endl;
+  // std::cout << "  dlnL_dlnT = " << dlnL_dlnT << std::endl;
   // kT in code units based on derivative
   Real kT = krho*dlnL_dlnT;
   // get coefficients in cubic dispersion relation
