@@ -35,7 +35,6 @@ gconst = nJ*cs2
 def prepare(*args, **kwargs):
     logger.debug('Running test ' + __name__)
     athena.configure('mpi', 'fft', prob='msa',
-                     eos='adiabatic', flux='hlle',
                      grav='blockfft', *args, **kwargs)
     athena.make()
 
