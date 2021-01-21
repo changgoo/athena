@@ -25,8 +25,8 @@
 #include <fftw3.h>
 #ifdef MPI_PARALLEL
 #include <mpi.h>
-#include "fftmpi/src/fft2d.h"
-#include "fftmpi/src/fft3d.h"
+#include "fftmpi/fft2d.h"
+#include "fftmpi/fft3d.h"
 #endif // MPI_PARALLEL
 #endif
 

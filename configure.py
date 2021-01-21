@@ -694,7 +694,7 @@ if args['fft']:
         makefile_options['LIBRARY_FLAGS'] += ' -lfftw3_omp'
     if args['mpi']:
         makefile_options['MPIFFT_FILE'] = ' $(wildcard src/fft/plimpton/*.cpp)'
-        makefile_options['MPIFFT_FILE'] += ' $(wildcard src/fft/fftmpi/src/*.cpp)'
+        makefile_options['MPIFFT_FILE'] += ' $(wildcard src/fft/fftmpi/*.cpp)'
     makefile_options['LIBRARY_FLAGS'] += ' -lfftw3'
 
 # -hdf5 argument

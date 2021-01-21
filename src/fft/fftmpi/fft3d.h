@@ -21,7 +21,7 @@
 #include "ffttype.h"
 
 // Athena++ headers
-#include "../../../athena.hpp"
+#include "../../athena.hpp"
 
 // Forward declaration
 class BlockFFT;
