@@ -33,12 +33,12 @@ BlockFFT::BlockFFT(MeshBlock *pmb) :
     nx1(pmb->block_size.nx1),
     nx2(pmb->block_size.nx2),
     nx3(pmb->block_size.nx3),
-    in_ilo((pmb->loc.lx1)*pmb->block_size.nx1),
-    in_ihi(((pmb->loc.lx1+1)*pmb->block_size.nx1)-1),
-    in_jlo((pmb->loc.lx2)*pmb->block_size.nx2),
-    in_jhi(((pmb->loc.lx2+1)*pmb->block_size.nx2)-1),
-    in_klo((pmb->loc.lx3)*pmb->block_size.nx3),
-    in_khi(((pmb->loc.lx3+1)*pmb->block_size.nx3)-1),
+    in_ilo(static_cast<int>(pmb->loc.lx1)*pmb->block_size.nx1),
+    in_ihi((static_cast<int>(pmb->loc.lx1+1)*pmb->block_size.nx1)-1),
+    in_jlo(static_cast<int>(pmb->loc.lx2)*pmb->block_size.nx2),
+    in_jhi((static_cast<int>(pmb->loc.lx2+1)*pmb->block_size.nx2)-1),
+    in_klo(static_cast<int>(pmb->loc.lx3)*pmb->block_size.nx3),
+    in_khi((static_cast<int>(pmb->loc.lx3+1)*pmb->block_size.nx3)-1),
     pmy_block_(pmb) {
   int cnt = nx1*nx2*nx3;
   in_ = new std::complex<Real>[cnt];
