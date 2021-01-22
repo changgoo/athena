@@ -182,13 +182,8 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
 
   for (int b=0; b<nblocal; ++b) {
     MeshBlock *pmb = my_blocks(b);
-    BoundaryValues *pbval = pmb->pbval;
     int is = pmb->is, ie = pmb->ie, js = pmb->js, je = pmb->je,
         ks = pmb->ks, ke = pmb->ke;
-    // Even for MHD, there are only cell-centered mesh variables
-    int ncells4 = NHYDRO + NFIELD;
-    int nl = 0;
-    int nu = ncells4 - 1;
 
     //  Compute errors at cell centers
     Real d1, m1, m2, m3, e0, b1, b2, b3;
@@ -197,7 +192,6 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
         for (int i=is; i<=ie; i++) {
           Real x1 = pmb->pcoord->x1v(i);
           Real x2 = pmb->pcoord->x2v(j);
-          Real x3 = pmb->pcoord->x3v(k);
           d1 = 1.0 + 2.0*d1a*std::cos(kxt*x1 + ky*x2);
           m1 = d1*2.0*v1a*std::sin(kxt*x1 + ky*x2);
           m2 = d1*(-qshear*Omega0*x1 + 2.0*v2a*std::sin(kxt*x1 + ky*x2));

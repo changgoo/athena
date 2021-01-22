@@ -58,7 +58,7 @@ using namespace FFTMPI_NS;
    safe malloc
 ------------------------------------------------------------------------- */
 
-void *Memory::smalloc(int64_t nbytes)
+void *Memory::smalloc(size_t nbytes)
 {
   if (nbytes == 0) return NULL;
 
@@ -83,7 +83,7 @@ void *Memory::smalloc(int64_t nbytes)
    safe realloc
 ------------------------------------------------------------------------- */
 
-void *Memory::srealloc(void *ptr, int64_t nbytes)
+void *Memory::srealloc(void *ptr, size_t nbytes)
 {
   if (nbytes == 0) {
     sfree(ptr);

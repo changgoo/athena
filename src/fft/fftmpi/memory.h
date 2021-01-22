@@ -24,8 +24,8 @@ namespace FFTMPI_NS {
 class Memory {
  public:
   Memory() {}
-  void *smalloc(int64_t n);
-  void *srealloc(void *, int64_t n);
+  void *smalloc(size_t n);
+  void *srealloc(void *, size_t n);
   void sfree(void *);
 };
 
