@@ -153,6 +153,13 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
   if (!pin->GetOrAddBoolean("problem", "compute_error", false)) return;
 
+  if (!SELF_GRAVITY_ENABLED) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in msa.cpp ProblemGenerator" << std::endl
+        << "Errors are valid only when SELF_GRAVITY_ENABLED" << std::endl;
+    ATHENA_ERROR(msg);
+  }
+
   // linear perturbation amplitudes at t=2
   Real tf = pin->GetReal("time","tlim");
   if ((tf!=2.0)||(Q!=2.0)||(nJ!=2.5)||(nwx!=-3.0)||(nwy!=1)||(amp!=1e-6)) {
