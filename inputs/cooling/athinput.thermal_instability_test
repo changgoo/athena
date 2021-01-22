@@ -1,0 +1,62 @@
+<comment>
+problem   = thermal instability test for 
+reference = El Badry et al. 2019 (for now)
+configure = --prob TI_test
+
+<job>
+problem_id = TI_test # problem ID: basename of output filenames
+
+<output1>
+file_type  = hst       # History data dump
+dt         = 1.e-3      # time increment between outputs
+
+<time>
+cfl_number = 0.3       # The Courant, Friedrichs, & Lewy (CFL) Number
+nlim       = -1		# cycle limit
+tlim       = 0.1        # time limit
+integrator  = vl2       # time integration algorithm
+xorder      = 2         # order of spatial reconstruction
+ncycle_out  = 10        # interval for stdout summary info
+
+<mesh>
+nx1        = 32		# Number of zones in X1-direction
+x1min      = -0.05	# minimum value of X1
+x1max      = 0.05	# maximum value of X1
+ix1_bc     = periodic	# inner-X1 boundary flag
+ox1_bc     = periodic	# outer-X1 boundary flag
+
+nx2        = 4		# Number of zones in X2-direction
+x2min      = -0.00625	# minimum value of X2
+x2max      = 0.00625	# maximum value of X2
+ix2_bc     = periodic	# inner-X2 boundary flag
+ox2_bc     = periodic	# outer-X2 boundary flag
+
+nx3        = 4		# Number of zones in X3-direction
+x3min      = -0.00625	# minimum value of X3
+x3max      = 0.00625	# maximum value of X3
+ix3_bc     = periodic	# inner-X3 boundary flag
+ox3_bc     = periodic	# outer-X3 boundary flag
+
+<hydro>
+gamma           = 1.666666666667 # gamma = C_p/C_v
+iso_sound_speed = 0.4082482905   # equivalent to sqrt(gamma*p/d) for p=0.1, d=1
+
+<cooling>
+coolftn       = tigress	# tigress or plf
+solver        = euler	# euler or rk4
+
+cfl_cool      = 0.01	# min dt_hydro/dt_cool
+T_floor       = 10 	# temperature floor
+T_max         = 1e8	# temperature ceiling
+
+T_PE          = 15000	# temperature below which PE heating is applied, if plf
+Gamma         = 2e-26 	# heating rate in ergs / sec, if plf
+
+heat_ratio    = 1.0       # Gamma/Gamma0, if tigress
+
+<problem>
+turb_flag     = 0         # option for turning on turbulence 0=off 1=decaying 2=driven
+rho_0         = 5.0	  # initial density meant to be in cm^-3, pressure is set so the gas is in equilibrium
+alpha         = 0.0001	  # the relative amplitude of the density perturbation, should be << 1
+kn            = 1	  # the wavenumber of the perturbation, periodic in x direction
+dedt          = 0         # energy injection rate for turbulence
