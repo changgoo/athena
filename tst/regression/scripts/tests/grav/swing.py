@@ -48,8 +48,8 @@ def run(**kwargs):
                      'mesh/nx2=' + repr(n),
                      'mesh/x2min={}'.format(-Lx/2.),
                      'mesh/x2max={}'.format(Lx/2.),
-                     'meshblock/nx1=' + repr(n),
-                     'meshblock/nx2=' + repr(n),
+                     'meshblock/nx1=' + repr(n/2),
+                     'meshblock/nx2=' + repr(n/2),
                      'hydro/iso_sound_speed={}'.format(cs),
                      'orbital_advection/qshear={}'.format(qshear),
                      'orbital_advection/Omega0={}'.format(Omega0),
@@ -59,7 +59,9 @@ def run(**kwargs):
                      'problem/nwx={}'.format(nwx),
                      'problem/nwy={}'.format(nwy),
                      'problem/compute_error=true']
-        athena.run('mhd/athinput.msa', arguments)
+        # athena.run('mhd/athinput.msa', arguments)
+        athena.mpirun(kwargs['mpirun_cmd'], kwargs['mpirun_opts'],
+                      4, 'mhd/athinput.msa', arguments)
 
 
 def analyze():

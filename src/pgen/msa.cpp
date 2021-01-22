@@ -32,6 +32,10 @@
 #include "../outputs/outputs.hpp"
 #include "../parameter_input.hpp"
 
+#ifdef MPI_PARALLEL
+#include <mpi.h>
+#endif
+
 namespace {
 Real cs, gm1, d0, p0, gconst;
 Real Q, nJ, beta, amp;
