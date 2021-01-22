@@ -37,7 +37,7 @@
 class BlockFFT {
  public:
   explicit BlockFFT(MeshBlock *pmb);
-  ~BlockFFT();
+  virtual ~BlockFFT();
 
   // data
   const int ndim;                   // number of dimensions
