@@ -20,7 +20,7 @@
 echo "Starting Google C++ Style cpplint.py test"
 set -e
 # Use "python[23] -u" to prevent buffering of sys.stdout,stderr.write() calls in cpplint.py and mix-up in Jenkins logs,
-find ../../src/ -type f \( -name "*.cpp" -o -name "*.hpp" \) -not -path "*/fft/plimpton/*" -not -name "defs.hpp" -print | xargs python -u ./cpplint.py --counting=detailed
+find ../../src/ -type f \( -name "*.cpp" -o -name "*.hpp" \) -not -path "*/fft/plimpton/*" -not -path "*/fft/fftmpi/*" -not -name "defs.hpp" -print | xargs python -u ./cpplint.py --counting=detailed
 set +e
 echo "End of Google C++ Style cpplint.py test"
 

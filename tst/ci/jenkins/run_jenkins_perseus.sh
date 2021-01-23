@@ -62,55 +62,78 @@ module load fftw/gcc/3.3.4
 module list
 
 # Lcov command stub used for capturing tracefile and for combining multiple tracefiles:
-lcov_cmd="lcov --rc lcov_branch_coverage=1 --no-external --gcov-tool=gcov"
+#lcov_cmd="lcov --rc lcov_branch_coverage=1 --no-external --gcov-tool=gcov"
 regression_abs_path=$(pwd)
-lcov_capture_cmd="${lcov_cmd} --directory=${regression_abs_path}/obj/ --capture --base-directory=${athena_abs_path}"
+#lcov_capture_cmd="${lcov_cmd} --directory=${regression_abs_path}/obj/ --capture --base-directory=${athena_abs_path}"
 
 # Run regression test sets. Need to specify Slurm mpirun wrapper, srun
 # In order to condense the build log, --silent option suppresses only the stdout of Makefile calls. Don't use with pgen_compile.py:
 time python -u ./run_tests.py pgen/pgen_compile --config=--cflag="$(../ci/set_warning_cflag.sh g++)"
+# (changgoo) suppress code coverage analysis as it is not working properly for now
 # For (most) regression tests compiled with GCC, perform Gcov code coverage analysis via Lcov front end:
-time python -u ./run_tests.py pgen/hdf5_reader_serial --coverage="${lcov_capture_cmd}" --silent
-time python -u ./run_tests.py grav --mpirun=srun --mpirun_opts=--job-name='GCC grav/jeans_3d' \
-     --coverage="${lcov_capture_cmd}" --silent
-time python -u ./run_tests.py turb --mpirun=srun --mpirun_opts=--job-name='GCC turb/' \
-     --coverage="${lcov_capture_cmd}" --silent
-time python -u ./run_tests.py mpi --mpirun=srun --mpirun_opts=--job-name='GCC mpi/mpi_linwave' \
-     --coverage="${lcov_capture_cmd}" --silent
-time python -u ./run_tests.py omp --coverage="${lcov_capture_cmd}" --silent
-timeout --signal=TERM 60m time python -u ./run_tests.py hybrid --mpirun=srun \
-	--mpirun_opts=--job-name='GCC hybrid/hybrid_linwave' \
-	--coverage="${lcov_capture_cmd}" --silent
-time python -u ./run_tests.py hydro --coverage="${lcov_capture_cmd}" --silent
-time python -u ./run_tests.py amr --coverage="${lcov_capture_cmd}" --silent
-time python -u ./run_tests.py outputs --coverage="${lcov_capture_cmd}" --silent
-time python -u ./run_tests.py sr --coverage="${lcov_capture_cmd}" --silent
-time python -u ./run_tests.py curvilinear --coverage="${lcov_capture_cmd}" --silent
-time python -u ./run_tests.py symmetry --coverage="${lcov_capture_cmd}" --silent
-time python -u ./run_tests.py eos --coverage="${lcov_capture_cmd}" --silent
-time python -u ./run_tests.py scalars/mignone_radial_1d --coverage="${lcov_capture_cmd}" --silent
+#time python -u ./run_tests.py pgen/hdf5_reader_serial --coverage="${lcov_capture_cmd}" --silent
+#time python -u ./run_tests.py grav --mpirun=srun --mpirun_opts=--job-name='GCC grav/jeans_3d' \
+#     --coverage="${lcov_capture_cmd}" --silent
+#time python -u ./run_tests.py turb --mpirun=srun --mpirun_opts=--job-name='GCC turb/' \
+#     --coverage="${lcov_capture_cmd}" --silent
+#time python -u ./run_tests.py mpi --mpirun=srun --mpirun_opts=--job-name='GCC mpi/mpi_linwave' \
+#     --coverage="${lcov_capture_cmd}" --silent
+#time python -u ./run_tests.py omp --coverage="${lcov_capture_cmd}" --silent
+#timeout --signal=TERM 60m time python -u ./run_tests.py hybrid --mpirun=srun \
+#	--mpirun_opts=--job-name='GCC hybrid/hybrid_linwave' \
+#	--coverage="${lcov_capture_cmd}" --silent
+#time python -u ./run_tests.py hydro --coverage="${lcov_capture_cmd}" --silent
+#time python -u ./run_tests.py amr --coverage="${lcov_capture_cmd}" --silent
+#time python -u ./run_tests.py outputs --coverage="${lcov_capture_cmd}" --silent
+#time python -u ./run_tests.py sr --coverage="${lcov_capture_cmd}" --silent
+#time python -u ./run_tests.py curvilinear --coverage="${lcov_capture_cmd}" --silent
+#time python -u ./run_tests.py symmetry --coverage="${lcov_capture_cmd}" --silent
+#time python -u ./run_tests.py eos --coverage="${lcov_capture_cmd}" --silent
+#time python -u ./run_tests.py scalars/mignone_radial_1d --coverage="${lcov_capture_cmd}" --silent
 # Exclude gr/compile*.py regression tests from code coverage analysis (nothing is executed in these tests):
-time python -u ./run_tests.py gr/compile_kerr-schild gr/compile_minkowski gr/compile_schwarzschild --silent
-time python -u ./run_tests.py gr/mhd_shocks_hlld gr/mhd_shocks_hlle gr/mhd_shocks_llf \
-     --coverage="${lcov_capture_cmd}" --silent
-time python -u ./run_tests.py gr/hydro_shocks_hllc gr/hydro_shocks_hlle gr/hydro_shocks_llf \
-     --coverage="${lcov_capture_cmd}" --silent
-time python -u ./run_tests.py gr/hydro_shocks_hlle_no_transform gr/hydro_shocks_llf_no_transform \
-     --coverage="${lcov_capture_cmd}" --silent
+#time python -u ./run_tests.py gr/compile_kerr-schild gr/compile_minkowski gr/compile_schwarzschild --silent
+#time python -u ./run_tests.py gr/mhd_shocks_hlld gr/mhd_shocks_hlle gr/mhd_shocks_llf \
+#     --coverage="${lcov_capture_cmd}" --silent
+#time python -u ./run_tests.py gr/hydro_shocks_hllc gr/hydro_shocks_hlle gr/hydro_shocks_llf \
+#     --coverage="${lcov_capture_cmd}" --silent
+#time python -u ./run_tests.py gr/hydro_shocks_hlle_no_transform gr/hydro_shocks_llf_no_transform \
+#     --coverage="${lcov_capture_cmd}" --silent
 # For regression tests with unacceptably long runtimes with -O0 optimization, "sample" the code coverage by running each test twice:
 # - 1x normally (-O3) without --coverage=CMD to check correctness
 # - 1x with --coverage=CMD (and hence -O0) and small cycle limit, ignoring failure in subsequent test.analyze() step
-time python -u ./run_tests.py mhd --coverage="${lcov_capture_cmd}" -r="time/nlim=10" --silent || true
+time python -u ./run_tests.py pgen/hdf5_reader_serial --silent
+time python -u ./run_tests.py grav --mpirun=srun --mpirun_opts=--job-name='GCC grav/jeans_3d' --silent
+time python -u ./run_tests.py turb --mpirun=srun --mpirun_opts=--job-name='GCC turb/' --silent
+time python -u ./run_tests.py mpi --mpirun=srun --mpirun_opts=--job-name='GCC mpi/mpi_linwave' --silent
+time python -u ./run_tests.py omp --silent
+timeout --signal=TERM 60m time python -u ./run_tests.py hybrid --mpirun=srun \
+	--mpirun_opts=--job-name='GCC hybrid/hybrid_linwave' \
+	--silent
+time python -u ./run_tests.py hydro --silent
+time python -u ./run_tests.py amr --silent
+time python -u ./run_tests.py outputs --silent
+time python -u ./run_tests.py sr --silent
+time python -u ./run_tests.py curvilinear --silent
+time python -u ./run_tests.py symmetry --silent
+time python -u ./run_tests.py eos --silent
+time python -u ./run_tests.py scalars/mignone_radial_1d --silent
+# Exclude gr/compile*.py regression tests from code coverage analysis (nothing is executed in these tests):
+time python -u ./run_tests.py gr/compile_kerr-schild gr/compile_minkowski gr/compile_schwarzschild --silent
+time python -u ./run_tests.py gr/mhd_shocks_hlld gr/mhd_shocks_hlle gr/mhd_shocks_llf --silent
+time python -u ./run_tests.py gr/hydro_shocks_hllc gr/hydro_shocks_hlle gr/hydro_shocks_llf --silent
+time python -u ./run_tests.py gr/hydro_shocks_hlle_no_transform gr/hydro_shocks_llf_no_transform --silent
+#
+#time python -u ./run_tests.py mhd --coverage="${lcov_capture_cmd}" -r="time/nlim=10" --silent || true
 time python -u ./run_tests.py mhd --silent  # (mhd/mhd_linwave.py is currenlty the slowest regression test):
 
-time python -u ./run_tests.py shearingbox --coverage="${lcov_capture_cmd}" -r="time/nlim=10" --silent || true
+#time python -u ./run_tests.py shearingbox --coverage="${lcov_capture_cmd}" -r="time/nlim=10" --silent || true
 time python -u ./run_tests.py shearingbox --silent
 
-time python -u ./run_tests.py diffusion --coverage="${lcov_capture_cmd}" -r="time/nlim=10" --silent || true
+#time python -u ./run_tests.py diffusion --coverage="${lcov_capture_cmd}" -r="time/nlim=10" --silent || true
 time python -u ./run_tests.py diffusion --silent
 
 # High-order solver regression tests w/ GCC
-time python -u ./run_tests.py hydro4 --coverage="${lcov_capture_cmd}" -r="time/nlim=10" --silent || true
+#time python -u ./run_tests.py hydro4 --coverage="${lcov_capture_cmd}" -r="time/nlim=10" --silent || true
 time python -u ./run_tests.py hydro4 --silent
 
 # cooling regressiong
@@ -128,49 +151,49 @@ module list
 
 # Workaround issue with parallel HDF5 modules compiled with OpenMPI on Perseus--- linker still chooses serial HDF5 library in /usr/lib64/
 # due to presence of -L flag in mpicxx wrapper that overrides LIBRARY_PATH environment variable
-time python -u ./run_tests.py pgen/hdf5_reader_parallel --coverage="${lcov_capture_cmd}" \
+time python -u ./run_tests.py pgen/hdf5_reader_parallel \ #--coverage="${lcov_capture_cmd}" \
      --mpirun=srun --mpirun_opts=--job-name='GCC pgen/hdf5_reader_parallel' \
      --config=--lib_path=${mpi_hdf5_library_path} --silent
 
 # Combine Lcov tracefiles from individaul regression tests:
 # All .info files in current working directory tst/regression/ -> lcov.info
 # (remove '-maxdepth 1' to recursively search subfolders for more .info)
-lcov_counter=0
-set +e  # Don't quit on errors during Lcov processing / don't let the build fail here
-while read filename; do
-    # Accumulate string variable containing all tracefiles joined by '-a '
-    lcov_input_files="$lcov_input_files -a \"$filename\""
-    # Alternative to uploading single unified "lcov.info" tracefile: attempt to upload each Lcov
-    # test_name.info tracefile separately with a Codecov Flag matching test_name (or test_set/ group?)
-    codecov_flag=$(basename ${filename} .info) # "flags must match pattern ^[\w\,]+$"
-    # basename command is in GNU coreutils, but here is Bash Parameter Expansion alternative for stripping extension and path:
-    #codecov_flag=${${filename%.info}##*/}
-    curl -s https://codecov.io/bash | bash -s - -X gcov -t b5ac2369-1242-4b11-86d0-7d9910f68160 \
-	-F ${codecov_flag} -f "${filename}" || echo "Codecov did not collect coverage reports"
-    lcov_counter=$((lcov_counter + 1))
-done < <( find . -maxdepth 1 -name '*.info' )
-eval "${lcov_cmd}" "${lcov_input_files}" -o lcov.info
+#lcov_counter=0
+#set +e  # Don't quit on errors during Lcov processing / don't let the build fail here
+#while read filename; do
+#    # Accumulate string variable containing all tracefiles joined by '-a '
+#    lcov_input_files="$lcov_input_files -a \"$filename\""
+#    # Alternative to uploading single unified "lcov.info" tracefile: attempt to upload each Lcov
+#    # test_name.info tracefile separately with a Codecov Flag matching test_name (or test_set/ group?)
+#    codecov_flag=$(basename ${filename} .info) # "flags must match pattern ^[\w\,]+$"
+#    # basename command is in GNU coreutils, but here is Bash Parameter Expansion alternative for stripping extension and path:
+#    #codecov_flag=${${filename%.info}##*/}
+#    curl -s https://codecov.io/bash | bash -s - -X gcov -t b5ac2369-1242-4b11-86d0-7d9910f68160 \
+#	-F ${codecov_flag} -f "${filename}" || echo "Codecov did not collect coverage reports"
+#    lcov_counter=$((lcov_counter + 1))
+#done < <( find . -maxdepth 1 -name '*.info' )
+#eval "${lcov_cmd}" "${lcov_input_files}" -o lcov.info
 # Explicitly return count of individual Lcov tracefiles, and monitor any changes to this number (53 expected as of 2018-12-04):
 # (most Lcov failures will be silent and hidden in build log;, missing reports will be hard to notice in Lcov HTML and Codecov reports)
-echo "Detected ${lcov_counter} individual tracefiles and combined them -> lcov.info"
+#echo "Detected ${lcov_counter} individual tracefiles and combined them -> lcov.info"
 
 # Generate Lcov HTML report and backup to home directory on Perseus (never used by Codecov):
-gendesc scripts/tests/test_descriptions.txt --output-filename ./regression_tests.desc
-lcov_dir_name="${SLURM_JOB_NAME}_lcov_html"
+#gendesc scripts/tests/test_descriptions.txt --output-filename ./regression_tests.desc
+#lcov_dir_name="${SLURM_JOB_NAME}_lcov_html"
 # TODO(felker): Address "lcov: ERROR: no valid records found in tracefile ./eos_eos_comparison_eos_hllc.info"
-genhtml --legend --show-details --keep-descriptions --description-file=regression_tests.desc \
-	--branch-coverage -o ${lcov_dir_name} lcov.info
-mv lcov.info ${lcov_dir_name}
+#genhtml --legend --show-details --keep-descriptions --description-file=regression_tests.desc \
+#	--branch-coverage -o ${lcov_dir_name} lcov.info
+#mv lcov.info ${lcov_dir_name}
 # GNU (but not BSD) tar supports --remove-files option for cleaning up files (and directories) after adding them to the archive:
-tar --remove-files -cvzf "${lcov_dir_name}.tar.gz" ${lcov_dir_name}
-mv "${lcov_dir_name}.tar.gz" $HOME  # ~2 MB. Manually rm HTML databases from $HOME on a reg. basis
+#tar --remove-files -cvzf "${lcov_dir_name}.tar.gz" ${lcov_dir_name}
+#mv "${lcov_dir_name}.tar.gz" $HOME  # ~2 MB. Manually rm HTML databases from $HOME on a reg. basis
 # genhtml requires that src/ is unmoved since compilation; works from $HOME on Perseus,
 # but lcov.info tracefile is not portable across sytems (without --to-package, etc.)
 #cp lcov.info $HOME  # ~30 MB --- tracefile is too large to store long-term
 
 # Ensure that no stale tracefiles are kept in Jenkins cached workspace
-rm -rf *.info
-set -e
+#rm -rf *.info
+#set -e
 
 # Build step #2: regression tests using Intel compiler and MPI library
 module purge
