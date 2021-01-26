@@ -415,7 +415,13 @@ void CRIntegrator::CalculateFluxes(AthenaArray<Real> &w,
 
         // calculate streaming velocity with magnetic field
         for(int i=is; i<=ie; ++i){
-          Real inv_sqrt_rho = 1.0/sqrt(w(IDN,k,j,i));
+          Real inv_sqrt_rho;
+          if (pcr->self_consistent_flag == 0){
+            inv_sqrt_rho = 1.0/sqrt(w(IDN,k,j,i));
+          } else {
+            Real rhoi = pcr->Get_IonDensity(w(IDN,k,j,i),w(IPR,k,j,i),cr(CRE,k,j,i));
+            inv_sqrt_rho = 1.0/sqrt(rhoi);
+          }
 
           Real pb= bcc(IB1,k,j,i)*bcc(IB1,k,j,i)
                   +bcc(IB2,k,j,i)*bcc(IB2,k,j,i)
@@ -445,7 +451,18 @@ void CRIntegrator::CalculateFluxes(AthenaArray<Real> &w,
             pcr->sigma_adv(1,k,j,i) = pcr->max_opacity;
             pcr->sigma_adv(2,k,j,i) = pcr->max_opacity;
           }
-
+          
+          pcr->sigma_diff(0,k,j,i) = pcr->Get_SigmaParallel(w(IDN,k,j,i),w(IPR,k,j,i),cr(CRE,k,j,i), fabs(b_grad_pc));
+          if (pcr->perp_diff_flag == 0)
+          {
+            pcr->sigma_diff(1,k,j,i) = pcr->max_opacity;
+            pcr->sigma_diff(2,k,j,i) = pcr->max_opacity;  
+          }
+          else
+          {
+            pcr->sigma_diff(1,k,j,i) = pcr->sigma_diff(0,k,j,i)*pcr->perp_to_par_diff;
+            pcr->sigma_diff(2,k,j,i) = pcr->sigma_diff(0,k,j,i)*pcr->perp_to_par_diff;
+          }  
 
           Real v1 = w(IVX,k,j,i);
           Real v2 = w(IVY,k,j,i);
