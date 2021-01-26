@@ -67,6 +67,7 @@ void Units::SetUnitsConstants() {
   aR_in_code = Constants::aR * erg/(cm*cm*cm*Kelvin*Kelvin*Kelvin*Kelvin);
   kB_in_code = Constants::kB * erg/Kelvin;
   c_in_code = Constants::c * cm/second;
+  e_in_code = Constants::e * std::sqrt(dyne*4*PI)*cm;
 }
 
 void Units::PrintCodeUnits() {
@@ -101,6 +102,7 @@ void Units::PrintConstantsInCodeUnits() {
   std::cout << "Myr in code = " << Myr_in_code << std::endl;
   std::cout << "kB in code = " << kB_in_code << std::endl;
   std::cout << "c in code = " << c_in_code << std::endl;
+  std::cout << "e in code = " << e_in_code << std::endl;
 
   std::cout << "P/kB conversion = " << Pressure/Constants::kB << std::endl;
   std::cout << "====================================" << std::endl;

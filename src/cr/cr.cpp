@@ -31,6 +31,8 @@
 #include "../parameter_input.hpp"
 #include "../mesh/mesh.hpp"
 #include "../globals.hpp"
+#include "../utils/cooling_function.hpp"
+#include "../utils/units.hpp"
 #include "../coordinates/coordinates.hpp"
 #include "integrators/cr_integrators.hpp"
 
@@ -247,27 +249,47 @@ CosmicRay::CosmicRay(MeshBlock *pmb, ParameterInput *pin):
   src_flag = pin->GetOrAddInteger("cr","src_flag",1);
   losses_flag = pin->GetOrAddInteger("cr","losses_flag",1);  
   perp_diff_flag = pin->GetOrAddInteger("cr","perp_diff_flag",1);
-  var_sigma_flag = pin->GetOrAddInteger("cr","var_sigma_flag",1);
-  if (var_sigma_flag == 1) losses_flag = 1;
+  self_consistent_flag = pin->GetOrAddInteger("cr","self_consistent_flag",1);
+  if (self_consistent_flag == 1) losses_flag = 1;
     
   int nc1 = pmb->ncells1, nc2 = pmb->ncells2, nc3 = pmb->ncells3;
 
   b_grad_pc.NewAthenaArray(nc3,nc2,nc1);
   b_angle.NewAthenaArray(4,nc3,nc2,nc1);
   
-
   cwidth.NewAthenaArray(nc1);
   cwidth1.NewAthenaArray(nc1);
   cwidth2.NewAthenaArray(nc1);
   
   // set a default opacity function
   UpdateOpacity = DefaultOpacity;
-
+  
   pcrintegrator = new CRIntegrator(this, pin);
 
+  // Pointer to Cooling function class,
+  // will be set to specific function depending on the input parameter (cooling/coolftn).
+  std::string coolftn = pin->GetOrAddString("cooling", "coolftn", "tigress");
+  if (coolftn.compare("tigress") == 0) {
+    pcool = new TigressClassic(pin);
+    std::cout << "Cooling function is set to TigressClassic" << std::endl;
+  } else if (coolftn.compare("plf") ==0) {
+    pcool = new PiecewiseLinearFits(pin);
+    std::cout << "Cooling function is set to PiecewiseLinearFits" << std::endl;
+  } else {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in ProblemGenerator" << std::endl
+        << "coolftn = " << coolftn.c_str() << " is not supported" << std::endl;
+    throw std::runtime_error(msg.str().c_str());
+    return;
+  }
+  punit = pcool->punit;
 }
 
-CosmicRay::~CosmicRay() {delete pcrintegrator;}
+CosmicRay::~CosmicRay() {
+  delete pcrintegrator;
+  delete pcool;
+  delete punit;
+}
 
 //Enrol the function to update opacity
 

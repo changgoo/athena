@@ -13,8 +13,9 @@
 #include "../athena.hpp"
 #include "../athena_arrays.hpp"
 #include "../bvals/cc/bvals_cc.hpp"
+#include "../utils/cooling_function.hpp"
+#include "../utils/units.hpp"
 #include <string>
-
 
 
 class MeshBlock;
@@ -23,8 +24,6 @@ class CRIntegrator;
 
 //! \class CosmicRay
 //  \brief CosmicRay data and functions
-
-
 
 // Array indices for  moments
 enum {CRE=0, CRF1=1, CRF2=2, CRF3=3};
@@ -56,7 +55,7 @@ public:
   int src_flag; // to update the gas energy and momentum equations
   int losses_flag; //to include losses of CR energy and momentum due to collisional interaction with the ambient gas
   int perp_diff_flag; //to include the presence of diffusion in the direction perpendicular to the magnetic field 
-  int var_sigma_flag; //to enable the self-consistent calculation of sigma 
+  int self_consistent_flag; //to enable the self-consistent calculation of sigma
     
   //Input parameters
   Real vmax; // the maximum velocity (effective speed of light)
@@ -73,6 +72,10 @@ public:
   
   CRIntegrator *pcrintegrator;
   
+  // Pointer to Cooling function class,
+  // will be set to specific function depending on the input parameter (cooling/coolftn).
+  CoolingFunctionBase *pcool;
+  Units *punit;
   
   //Function in problem generators to update opacity
   void EnrollOpacityFunction(CROpacityFunc MyOpacityFunction);
@@ -86,6 +89,10 @@ public:
   // The function pointer for the diffusion coefficient
   CROpacityFunc UpdateOpacity;
 
+  //Function to calculate the scattering coefficient in the direction parallel to the magnetic field 
+  Real Get_SigmaParallel(Real rho, Real Press, Real ecr, Real grad_pc_par);
+  //Function to calculate the ion Alfvèn speed
+  Real Get_IonDensity(Real rho, Real Press, Real ecr);
 
   AthenaArray<Real> cwidth; 
   AthenaArray<Real> cwidth1;
