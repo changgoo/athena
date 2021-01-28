@@ -100,7 +100,7 @@ void TaskList::DoTaskListOneStage(Mesh *pmesh, int stage) {
 
 void TaskList::OutputAllTaskTime(const int ncycle, std::string basename) {
   double time_per_step = 0.;
-  double all_task_time[ntasks];
+  double all_task_time[128];
   int ntask_time = 0;
 
   for (int i=0; i<ntasks; i++) {

@@ -8,8 +8,8 @@
 
 // C++ standard libraries
 #include <cmath>    // round()
-#include <sstream>  // stringstream
 #include <random>     // mt19937, normal_distribution, uniform_real_distribution
+#include <sstream>  // stringstream
 
 // Athena++ headers
 #include "../athena.hpp"
