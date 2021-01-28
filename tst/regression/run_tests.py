@@ -168,9 +168,8 @@ def main(**kwargs):
                 test_results.append(result)
                 test_errors.append(None)
             finally:
-                pass
-#                os.system('rm -rf {0}/bin'.format(current_dir))
-#                os.system('rm -rf {0}/obj'.format(current_dir))
+                os.system('rm -rf {0}/bin'.format(current_dir))
+                os.system('rm -rf {0}/obj'.format(current_dir))
             # For CI, print after every individual test has finished
             logger.info('{} test: prepare(), run(), analyze() finished'.format(name))
 
