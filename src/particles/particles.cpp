@@ -8,6 +8,7 @@
 
 // C++ Standard Libraries
 #include <algorithm>
+#include <climits>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
@@ -508,7 +509,7 @@ void Particles::LinkNeighbors(MeshBlockTree &tree,
           if (pn->pnb == NULL) {
             int nblevel = pbval_->nblevel[n][m][l];
             if (0 <= nblevel && nblevel < my_level) {
-              int ngid = tree.FindNeighbor(pbval_->loc, l-1, m-1, n-1)->GetGID();
+              int ngid = tree.FindNeighbor(pbval_->loc, l-1, m-1, n-1)->GetGid();
               for (int i = 0; i < pbval_->nneighbor; ++i) {
                 NeighborBlock& nb = pbval_->neighbor[i];
                 if (nb.snb.gid == ngid) {
@@ -1114,6 +1115,15 @@ void Particles::AssignShorthands() {
 //! \brief changes the capacity of particle arrays while preserving existing data.
 
 void Particles::UpdateCapacity(int new_nparmax) {
+  // (changgoo) new_nparmax must be smaller than INT_MAX
+  if (new_nparmax >= INT_MAX) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in function [Particles::UpdateCapacity]"
+        << "Cannot update capacity for " << new_nparmax
+        << " that exceeds INT_MAX=" << INT_MAX
+        << std::endl;
+    ATHENA_ERROR(msg);
+  }
   // Increase size of property arrays
   nparmax = new_nparmax;
   intprop.ResizeLastDimension(nparmax);

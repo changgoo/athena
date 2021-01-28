@@ -130,8 +130,10 @@ friend class ParticleMesh;
   void UpdateCapacity(int new_nparmax);  //!> Change the capacity of particle arrays
 
   // Instance variables
-  std::uint64_t npar;     //!> number of particles
-  std::uint64_t nparmax;  //!> maximum number of particles per meshblock
+  // std::uint64_t npar;     //!> number of particles
+  // std::uint64_t nparmax;  //!> maximum number of particles per meshblock
+  int npar;     //!> number of particles
+  int nparmax;  //!> maximum number of particles per meshblock
 
                                // Data attached to the particles:
   AthenaArray<int> intprop;    //!>   integer properties
