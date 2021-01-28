@@ -20,7 +20,6 @@
 #   -g                enable general relativity
 #   -t                enable interface frame transformations for GR
 #   -p                enable particles
-#   -shear            enable shearing periodic boundary conditions
 #   -debug            enable debug flags (-g -O0); override other compiler options
 #   -coverage         enable compiler-dependent code coverage flags
 #   -float            enable single precision (default is double)
@@ -149,12 +148,6 @@ parser.add_argument('-p',
                     default=False,
                     help='enable particles')
 
-# -shear argument
-parser.add_argument('-shear',
-                    action='store_true',
-                    default=False,
-                    help='enable shearing box')
-
 # -debug argument
 parser.add_argument('-debug',
                     action='store_true',
@@ -188,7 +181,7 @@ parser.add_argument('-omp',
 # --grav=[name] argument
 parser.add_argument('--grav',
                     default='none',
-                    choices=['none', 'fft', 'mg'],
+                    choices=['none', 'fft', 'mg', 'blockfft'],
                     help='select self-gravity solver')
 
 # -fft argument
@@ -448,16 +441,8 @@ if args['g']:
     makefile_options['RSOLVER_FILE'] += '_rel'
     if not args['t']:
         makefile_options['RSOLVER_FILE'] += '_no_transform'
-
-# -shear argument
-if args['shear']:
-    definitions['SHEARING_BOX'] = '1'
-else:
-    definitions['SHEARING_BOX'] = '0'
-
 # -p arguments
 definitions['PARTICLES'] = '1' if args['p'] else '0'
-
 # --cxx=[name] argument
 if args['cxx'] == 'g++':
     # GCC is C++11 feature-complete since v4.8.1 (2013-05-31)
@@ -698,8 +683,14 @@ else:
 
     if args['grav'] == "mg":
         definitions['SELF_GRAVITY_ENABLED'] = '2'
-    definitions['NGRAV_VARIABLES'] = '1'
 
+    if args['grav'] == "blockfft":
+        definitions['SELF_GRAVITY_ENABLED'] = '3'
+        if not args['fft']:
+            raise SystemExit(
+                '### CONFIGURE ERROR: FFT Poisson solver only be used with FFT')
+
+    definitions['NGRAV_VARIABLES'] = '1'
 # -fft argument
 makefile_options['MPIFFT_FILE'] = ' '
 definitions['FFT_OPTION'] = 'NO_FFT'
@@ -713,6 +704,7 @@ if args['fft']:
         makefile_options['LIBRARY_FLAGS'] += ' -lfftw3_omp'
     if args['mpi']:
         makefile_options['MPIFFT_FILE'] = ' $(wildcard src/fft/plimpton/*.cpp)'
+        makefile_options['MPIFFT_FILE'] += ' $(wildcard src/fft/fftmpi/*.cpp)'
     makefile_options['LIBRARY_FLAGS'] += ' -lfftw3'
 
 # -hdf5 argument
@@ -803,6 +795,8 @@ if args['grav'] == 'fft':
     self_grav_string = 'FFT'
 elif args['grav'] == 'mg':
     self_grav_string = 'Multigrid'
+elif args['grav'] == 'blockfft':
+    self_grav_string = 'FFT (using BlockFFTGravity)'
 
 print('Your Athena++ distribution has now been configured with the following options:')
 print('  Problem generator:          ' + args['prob'])
@@ -817,7 +811,6 @@ print('  Frame transformations:      ' + ('ON' if args['t'] else 'OFF'))
 print('  Particles:                  ' + ('ON' if args['p'] else 'OFF'))
 print('  Self-Gravity:               ' + self_grav_string)
 print('  Super-Time-Stepping:        ' + ('ON' if args['sts'] else 'OFF'))
-print('  Shearing Box BCs:           ' + ('ON' if args['shear'] else 'OFF'))
 print('  Debug flags:                ' + ('ON' if args['debug'] else 'OFF'))
 print('  Code coverage flags:        ' + ('ON' if args['coverage'] else 'OFF'))
 print('  Linker flags:               ' + makefile_options['LINKER_FLAGS'] + ' '

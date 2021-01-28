@@ -16,7 +16,7 @@
 
 //----------------------------------------------------------------------------------------
 //! \fn void ShowConfig()
-//  \brief prints diagnostic messages about the configuration of an Athena++ executable
+//! \brief prints diagnostic messages about the configuration of an Athena++ executable
 
 void ShowConfig() {
   // To match configure.py output: use 2 space indent for option, value output starts on
@@ -46,6 +46,8 @@ void ShowConfig() {
     std::cout<<"  Self-Gravity:               FFT" << std::endl;
   } else if (SELF_GRAVITY_ENABLED == 2) {
     std::cout<<"  Self-Gravity:               Multigrid" << std::endl;
+  } else if (SELF_GRAVITY_ENABLED == 3) {
+    std::cout<<"  Self-Gravity:               FFT (using BlockFFTGravity)" << std::endl;
   } else {
     std::cout<<"  Self-Gravity:               OFF" << std::endl;
   }
@@ -53,11 +55,6 @@ void ShowConfig() {
     std::cout<<"  Super-Time-Stepping:        ON" << std::endl;
   } else {
     std::cout<<"  Super-Time-Stepping:        OFF" << std::endl;
-  }
-  if (SHEARING_BOX) {
-    std::cout<<"  Shearing Box BCs:           ON" << std::endl;
-  } else {
-    std::cout<<"  Shearing Box BCs:           OFF" << std::endl;
   }
   // configure.py output: +"Debug flags"
   // configure.py output: +"Code coverage flags"

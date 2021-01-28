@@ -60,5 +60,11 @@ meshtest.dat
 # genhtml test case description format produced by gendesc
 *.desc
 
+# compiled doxygen file
+doc/doxy*
+
 # doxygen output
 doc/html
+
+# tag file produced by ctags
+tags
