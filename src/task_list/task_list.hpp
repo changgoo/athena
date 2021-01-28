@@ -355,10 +355,10 @@ const TaskID SEND_FLDORB(65);
 const TaskID RECV_FLDORB(66);
 const TaskID CALC_FLDORB(67);
 
-const TaskID INT_PAR(57);
-const TaskID SEND_PAR(58);
-const TaskID RECV_PAR(59);
-const TaskID SEND_PM(60);
-const TaskID RECV_PM(61);
+const TaskID INT_PAR(68);
+const TaskID SEND_PAR(69);
+const TaskID RECV_PAR(70);
+const TaskID SEND_PM(71);
+const TaskID RECV_PM(72);
 }  // namespace HydroIntegratorTaskNames
 #endif  // TASK_LIST_TASK_LIST_HPP_
