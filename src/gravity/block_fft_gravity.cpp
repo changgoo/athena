@@ -392,6 +392,35 @@ void BlockFFTGravity::Solve(int stage) {
 
   gtlist_->DoTaskListOneStage(pmy_block_->pmy_mesh, stage);
 
+  // apply physical BC
+  if (gbflag==GravityBoundaryFlag::disk) {
+    if (pmy_block_->loc.lx3==0) {
+      for (int k=1; k<=NGHOST; k++) {
+        for (int j=js-NGHOST; j<=je+NGHOST; j++) {
+          for (int i=is-NGHOST; i<=ie+NGHOST; i++) {
+            // constant extrapolation
+            pmy_block_->pgrav->phi(ks-k,j,i) = pmy_block_->pgrav->phi(ks,j,i);
+            // linear extrapolation
+//            pmy_block_->pgrav->phi(ks-k,j,i) = pmy_block_->pgrav->phi(ks,j,i)
+//                + k*(pmy_block_->pgrav->phi(ks,j,i) - pmy_block_->pgrav->phi(ks+1,j,i));
+          }
+        }
+      }
+    }
+    if (pmy_block_->loc.lx3==Nx3/nx3-1) {
+      for (int k=1; k<=NGHOST; k++) {
+        for (int j=js-NGHOST; j<=je+NGHOST; j++) {
+          for (int i=is-NGHOST; i<=ie+NGHOST; i++) {
+            // constant extrapolation
+            pmy_block_->pgrav->phi(ke+k,j,i) = pmy_block_->pgrav->phi(ke,j,i);
+            // linear extrapolation
+//            pmy_block_->pgrav->phi(ke+k,j,i) = pmy_block_->pgrav->phi(ke,j,i)
+//                + k*(pmy_block_->pgrav->phi(ke,j,i) - pmy_block_->pgrav->phi(ke-1,j,i));
+          }
+        }
+      }
+    }
+  }
   return;
 }
 

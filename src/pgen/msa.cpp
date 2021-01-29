@@ -38,10 +38,11 @@
 
 namespace {
 Real cs, gm1, d0, p0, gconst;
-Real Q, nJ, beta, amp;
+Real Q, nJ, scaleH, beta, amp;
 int nwx, nwy; // wavenumbers
 Real x1size,x2size,x3size;
 Real qshear, Omega0; // shear parameters
+bool strat;
 } // namespace
 
 //======================================================================================
@@ -91,10 +92,12 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   amp = pin->GetReal("problem","amp");
   nwx = pin->GetInteger("problem","nwx");
   nwy = pin->GetInteger("problem","nwy");
+  strat = pin->GetBoolean("problem","strat");
   cs = std::sqrt(4.0-2.0*qshear)/PI/nJ/Q;
-  d0 = 1.0;
+  scaleH = 1.0/std::sqrt(TWO_PI*nJ); // scale height for hyperbolic secant^2 profile
+  d0 = 1.0; // midplane density
   if (NON_BAROTROPIC_EOS) {
-    p0 = SQR(cs)/(gm1+1.0);
+    p0 = SQR(cs)*d0/(gm1+1.0); // midplane pressure
   }
 
   if (SELF_GRAVITY_ENABLED) {
@@ -122,26 +125,42 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real kx = (TWO_PI/x1size)*(static_cast<Real>(nwx));
   Real ky = (TWO_PI/x2size)*(static_cast<Real>(nwy));
 
-  Real x1, x2, rd, rp, rvx, rvy;
+  Real x1, x2, x3, rd, rp, rvx, rvy;
+  Real den, prs;
   // update the physical variables as initial conditions
   for (int k=ks; k<=ke; k++) {
     for (int j=js; j<=je; j++) {
       for (int i=is; i<=ie; i++) {
         x1 = pcoord->x1v(i);
         x2 = pcoord->x2v(j);
-        rd = amp*std::cos(kx*x1 + ky*x2);
+        x3 = pcoord->x3v(k);
+
+        if (strat) {
+          den = d0*SQR(1.0/std::cosh(x3/scaleH));
+          rd = amp*SQR(1.0/std::cosh(x3/scaleH))*std::cos(kx*x1 + ky*x2);
+        } else {
+          den = d0;
+          rd = amp*std::cos(kx*x1 + ky*x2);
+        }
         rvx = amp*kx/ky*std::sin(kx*x1 + ky*x2);
         rvy = amp*std::sin(kx*x1 + ky*x2);
-        phydro->u(IDN,k,j,i) = d0+rd;
-        phydro->u(IM1,k,j,i) = (d0+rd)*rvx;
-        phydro->u(IM2,k,j,i) = (d0+rd)*(rvy - qshear*Omega0*x1);
+        if (NON_BAROTROPIC_EOS) {
+          prs = p0*std::pow(den/d0, gm1+1.0);
+          rp = SQR(cs)*rd;
+        }
+
+        phydro->u(IDN,k,j,i) = (den+rd);
+        phydro->u(IM1,k,j,i) = (den+rd)*rvx;
+        phydro->u(IM2,k,j,i) = (den+rd)*rvy;
+        if (pmy_mesh->shear_periodic) {
+          phydro->u(IM2,k,j,i) -= (den+rd)*(qshear*Omega0*x1);
+        }
         phydro->u(IM3,k,j,i) = 0.0;
         if (NON_BAROTROPIC_EOS) {
-          rp = SQR(cs)*rd;
-          phydro->u(IEN,k,j,i) = (p0+rp)/gm1 + 0.5*(SQR(phydro->u(IM1,k,j,i)) +
-                                                    SQR(phydro->u(IM2,k,j,i)) +
-                                                    SQR(phydro->u(IM3,k,j,i))
-                                                    ) / phydro->u(IDN,k,j,i);
+          phydro->u(IEN,k,j,i) = (prs+rp)/gm1 + 0.5*(SQR(phydro->u(IM1,k,j,i)) +
+                                                SQR(phydro->u(IM2,k,j,i)) +
+                                                SQR(phydro->u(IM3,k,j,i))
+                                                ) / phydro->u(IDN,k,j,i);
         }
       }
     }

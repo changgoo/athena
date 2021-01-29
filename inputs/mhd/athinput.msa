@@ -67,3 +67,4 @@ beta      = 1
 amp       = 1.0e-6    # wave amplitude
 nwx       = -3        # wavenumber in x1
 nwy       = 1         # wavenumber in x2
+strat     = false
