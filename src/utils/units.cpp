@@ -45,7 +45,7 @@ void Units::SetUnitsConstants() {
 
   EnergyDensity = Pressure = Density*Velocity*Velocity;
 
-  MagneticField = Pressure/Density;
+  MagneticField = std::sqrt(4.*PI*Pressure);
 
   Temperature = Pressure/Density*mu*Constants::mH/Constants::kB;
 

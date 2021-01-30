@@ -71,23 +71,23 @@ public:
   CellCenteredBoundaryVariable cr_bvar;
   
   CRIntegrator *pcrintegrator;
-  
-  // Pointer to Cooling function class,
-  // will be set to specific function depending on the input parameter (cooling/coolftn).
-  CoolingFunctionBase *pcool;
+
   Units *punit;
   
   //Function in problem generators to update opacity
   void EnrollOpacityFunction(CROpacityFunc MyOpacityFunction);
 
+  void EnrollTemperatureFunction(CRTemperatureFunc MyTemperatureFunction);
+  
   void EnrollUserCRSource(CRSrcTermFunc my_func);
   
   void Calculate_SNluminosity_from_TIGRESS(MeshBlock *pmb, ParameterInput *pin, int ks, int js, int is, int ke, int je, int ie);
 	  
   bool cr_source_defined;
 
-  // The function pointer for the diffusion coefficient
   CROpacityFunc UpdateOpacity;
+  
+  CRTemperatureFunc UpdateTemperature;
 
   //Function to calculate the scattering coefficient in the direction parallel to the magnetic field 
   Real Get_SigmaParallel(Real rho, Real Press, Real ecr, Real grad_pc_par);
@@ -105,5 +105,8 @@ private:
   CRSrcTermFunc UserSourceTerm_;
 
 };
+
+//default function to calculate the gas temperature
+Real DefaultTemperature(Real rho, Real Press, Real &mu, Real &muH);
 
 #endif // CR_HPP

@@ -210,6 +210,7 @@ using FieldDiffusionCoeffFunc = void (*)(
     int is, int ie, int js, int je, int ks, int ke);
 using CROpacityFunc = void (*)(MeshBlock *pmb, AthenaArray<Real> &u_cr, 
     AthenaArray<Real> &prim, AthenaArray<Real> &bcc);
+using CRTemperatureFunc = Real (*)(Real rho, Real Press, Real &mu, Real &muH);    
 using CRBoundaryFunc = void (*)(
     MeshBlock *pmb, Coordinates *pco, CosmicRay *pcr, 
     const AthenaArray<Real> &w, const AthenaArray<Real> &bc, 

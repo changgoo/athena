@@ -195,8 +195,7 @@ inline void DefaultOpacity(MeshBlock *pmb, AthenaArray<Real> &u_cr,
       }
     }
   }// end MHD and stream flag
-
-}
+}                
 
 CosmicRay::CosmicRay(MeshBlock *pmb, ParameterInput *pin):
     pmy_block(pmb), u_cr(NCR,pmb->ncells3,pmb->ncells2,pmb->ncells1),
@@ -233,24 +232,6 @@ CosmicRay::CosmicRay(MeshBlock *pmb, ParameterInput *pin):
   cr_bvar.bvar_index = pmb->pbval->bvars.size();
   pmb->pbval->bvars.push_back(&cr_bvar);
   pmb->pbval->bvars_main_int.push_back(&cr_bvar);      
-
-  //Input parameters
-  vmax = pin->GetOrAddReal("cr","vmax",1.0);
-  sigma = pin->GetOrAddReal("cr","sigma",1.0);
-  sigma *= vmax;
-  max_opacity = pin->GetOrAddReal("cr","max_opacity",1.e10);
-  lambdac = pin->GetOrAddReal("cr","lambdac",1.0); //dec/dt = -lambdac nH ec
-  //TODO: convert loss rate in code_units
-  perp_to_par_diff = pin->GetOrAddReal("cr","diff_ratio",10.0);
-  ion_rate_norm = pin->GetOrAddReal("cr","ion_rate_norm",1e-4); //the dafault value assumes delta = -0.35
-    
-  //Flags 
-  stream_flag = pin->GetOrAddInteger("cr","vs_flag",1);  
-  src_flag = pin->GetOrAddInteger("cr","src_flag",1);
-  losses_flag = pin->GetOrAddInteger("cr","losses_flag",1);  
-  perp_diff_flag = pin->GetOrAddInteger("cr","perp_diff_flag",1);
-  self_consistent_flag = pin->GetOrAddInteger("cr","self_consistent_flag",1);
-  if (self_consistent_flag == 1) losses_flag = 1;
     
   int nc1 = pmb->ncells1, nc2 = pmb->ncells2, nc3 = pmb->ncells3;
 
@@ -263,31 +244,32 @@ CosmicRay::CosmicRay(MeshBlock *pmb, ParameterInput *pin):
   
   // set a default opacity function
   UpdateOpacity = DefaultOpacity;
+  // set a default temperature function
+  UpdateTemperature = DefaultTemperature;
   
   pcrintegrator = new CRIntegrator(this, pin);
-
-  // Pointer to Cooling function class,
-  // will be set to specific function depending on the input parameter (cooling/coolftn).
-  std::string coolftn = pin->GetOrAddString("cooling", "coolftn", "tigress");
-  if (coolftn.compare("tigress") == 0) {
-    pcool = new TigressClassic(pin);
-    std::cout << "Cooling function is set to TigressClassic" << std::endl;
-  } else if (coolftn.compare("plf") ==0) {
-    pcool = new PiecewiseLinearFits(pin);
-    std::cout << "Cooling function is set to PiecewiseLinearFits" << std::endl;
-  } else {
-    std::stringstream msg;
-    msg << "### FATAL ERROR in ProblemGenerator" << std::endl
-        << "coolftn = " << coolftn.c_str() << " is not supported" << std::endl;
-    throw std::runtime_error(msg.str().c_str());
-    return;
-  }
-  punit = pcool->punit;
+  
+  //Input parameters
+  vmax = pin->GetOrAddReal("cr","vmax",1.0); //this should be in code units already
+  sigma = pin->GetOrAddReal("cr","sigma",1.0); 
+  sigma *= vmax;
+  max_opacity = pin->GetOrAddReal("cr","max_opacity",1.e10);
+  lambdac = pin->GetOrAddReal("cr","lambdac",1.0); //dec/dt = -lambdac nH ec
+  perp_to_par_diff = pin->GetOrAddReal("cr","diff_ratio",10.0);
+  ion_rate_norm = pin->GetOrAddReal("cr","ion_rate_norm",1e-4); //in cgs unit -- the dafault value assumes delta = -0.35
+    
+  //Flags 
+  stream_flag = pin->GetOrAddInteger("cr","vs_flag",1);  
+  src_flag = pin->GetOrAddInteger("cr","src_flag",1);
+  losses_flag = pin->GetOrAddInteger("cr","losses_flag",1);  
+  perp_diff_flag = pin->GetOrAddInteger("cr","perp_diff_flag",1);
+  self_consistent_flag = pin->GetOrAddInteger("cr","self_consistent_flag",1);
+  if (self_consistent_flag == 1) losses_flag = 1;
+  
 }
 
 CosmicRay::~CosmicRay() {
   delete pcrintegrator;
-  delete pcool;
   delete punit;
 }
 
@@ -296,6 +278,11 @@ CosmicRay::~CosmicRay() {
 void CosmicRay::EnrollOpacityFunction(CROpacityFunc MyOpacityFunction)
 {
   UpdateOpacity = MyOpacityFunction;
+}
+
+void CosmicRay::EnrollTemperatureFunction(CRTemperatureFunc MyTemperatureFunction)
+{
+  UpdateTemperature = MyTemperatureFunction;
 }
 
 void CosmicRay::EnrollUserCRSource(CRSrcTermFunc my_func)
