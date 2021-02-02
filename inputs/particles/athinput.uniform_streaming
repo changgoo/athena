@@ -69,6 +69,7 @@ gamma           = 1.4   # gamma = C_p/C_v
 iso_sound_speed = 1.0   # isothermal sound speed
 
 <particles>
+partype = dust
 taus0 = 0.5          # drag stopping time
 backreaction = true  # turn on/off the back reaction of the gas drag
 

@@ -79,7 +79,6 @@ void TracerParticles::AssignShorthands() {
 //! \brief adds acceleration to particles.
 
 void TracerParticles::SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
-  // Nothing to do for tracers
   ppm->InterpolateMeshToParticles(meshsrc, IVX, work, iwx, 3);
 
   // Transform the gas velocity into Cartesian.

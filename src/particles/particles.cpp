@@ -194,7 +194,7 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
       for (int k = 0; k < ppar->npar; ++k)
         pcoord->CartesianToMeshCoordsVector(ppar->xp(k), ppar->yp(k), ppar->zp(k),
             ppar->vpx(k), ppar->vpy(k), ppar->vpz(k), vp1(k), vp2(k), vp3(k));
-      ppm->AssignParticlesToMeshAux(vp, 0, ppar->imom1, 3);
+      ppm->AssignParticlesToMeshAux(vp, 0, ppm->imom1, 3);
     } else {
       // std::cout << "on MB " << b << " npar:" << ppar->npar << " nparmax:" << ppar->nparmax << std::endl;
       // std::cout << "on MB " << b << " npar:" << ppm->ppar_->npar << " nparmax:" << ppm->ppar_->nparmax << std::endl;
@@ -224,9 +224,9 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
                 for (int i = is; i <= ie; ++i) {
                   Real vol(pc->GetCellVolume(k,j,i));
                   ppm->weight(k,j,i) /= vol;
-                  ppm->meshaux(pmb->ppar->imom1,k,j,i) /= vol;
-                  ppm->meshaux(pmb->ppar->imom2,k,j,i) /= vol;
-                  ppm->meshaux(pmb->ppar->imom3,k,j,i) /= vol;
+                  ppm->meshaux(ppm->imom1,k,j,i) /= vol;
+                  ppm->meshaux(ppm->imom2,k,j,i) /= vol;
+                  ppm->meshaux(ppm->imom3,k,j,i) /= vol;
                 }
           } else {
             for (int k = ks; k <= ke; ++k)
@@ -369,9 +369,9 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin) :
 
   // Allocate mesh auxiliaries.
   ppm = new ParticleMesh(this);
-  imom1 = ppm->AddMeshAux();
-  imom2 = ppm->AddMeshAux();
-  imom3 = ppm->AddMeshAux();
+  imom1 = ppm->imom1;
+  imom2 = ppm->imom2;
+  imom3 = ppm->imom3;
 
   // Initiate ParticleBuffer class.
   ParticleBuffer::SetNumberOfProperties(nint, nreal + naux);
@@ -498,7 +498,9 @@ void Particles::Integrate(int stage) {
     dt = pmy_mesh->dt;
     break;
   }
-
+  std::cout << "Integrate:" << std::endl;
+  std::cout << pmy_block->phydro->u(IM1,1,1,1) << std::endl;
+  std::cout << pmy_block->phydro->w(IVX,NGHOST,NGHOST,NGHOST) << std::endl;
   // Conduct one stage of the integration.
   EulerStep(t, dt, pmy_block->phydro->w);
   ReactToMeshAux(t, dt, pmy_block->phydro->w);
@@ -980,6 +982,9 @@ void Particles::EulerStep(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
     yp0(k) = tmpy;
     zp0(k) = tmpz;
   }
+  // std::cout << "t: " << t << " dt: " << dt << std::endl;
+  // std::cout << " " << xp(0) << "  " << yp(0) << " " << zp(0) <<  std::endl;
+  // std::cout << " " << xp0(0) << "  " << yp0(0) << " " << zp0(0) <<  std::endl;
 
   // Integrate the source terms (e.g., acceleration).
   SourceTerms(t, dt, meshsrc);

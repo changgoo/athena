@@ -58,9 +58,9 @@ void DustParticles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
       for (int k = ppm->ks; k <= ppm->ke; ++k)
         for (int j = ppm->js; j <= ppm->je; ++j)
           for (int i = ppm->is; i <= ppm->ie; ++i) {
-            ppm->meshaux(ppar->imom1,k,j,i) *= ppar->mass;
-            ppm->meshaux(ppar->imom2,k,j,i) *= ppar->mass;
-            ppm->meshaux(ppar->imom3,k,j,i) *= ppar->mass;
+            ppm->meshaux(ppm->imom1,k,j,i) *= ppar->mass;
+            ppm->meshaux(ppm->imom2,k,j,i) *= ppar->mass;
+            ppm->meshaux(ppm->imom3,k,j,i) *= ppar->mass;
           }
     }
   }
@@ -95,9 +95,10 @@ void DustParticles::PrintVariables() {
             << std::endl
             << "  ixi1: " << ixi1 << "  ixi2: " << ixi2 << "  ixi3: " << ixi3 << std::endl
             << "  imom1: " << imom1 << "  imom2: " << imom2 << "  imom3: " << imom3
-            << "  iwx: " << iwx << "  iwy: " << iwy << "  iwz: " << iwz << std::endl
             << "  idpx1: " << idpx1 << "  idpx2: " << idpx2 << "  idpx3: " << idpx3
-            << std::endl << "  dragforce: " << dragforce
+            << std::endl
+            << "  iwx: " << iwx << "  iwy: " << iwy << "  iwz: " << iwz << std::endl
+            << "  dragforce: " << dragforce
             << "  backreaction:" << backreaction << "  variable_taus:" << variable_taus
             << "  taus0:" << taus0 << "  mass:" << mass
             << std::endl;
@@ -163,7 +164,7 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin)
 
   // Assign shorthands (need to do this for every constructor of a derived class)
   AssignShorthands();
-  PrintVariables();
+  if(Globals::my_rank == 0) PrintVariables();
 }
 
 //--------------------------------------------------------------------------------------
@@ -193,7 +194,7 @@ DustParticles::~DustParticles() {
 //!   Precondition:
 //!   The particle properties on mesh must be assigned using the class method
 //!   DustParticles::FindDensityOnMesh().
-// 
+//
 // AthenaArray<Real> DustParticles::GetVelocityField() const {
 //   AthenaArray<Real> vel(3, ppm->nx3_, ppm->nx2_, ppm->nx1_);
 //   for (int k = ppm->ks; k <= ppm->ke; ++k)

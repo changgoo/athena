@@ -59,6 +59,7 @@ friend class OutputType;
   // Class variables
   int nmeshaux;  //!> number of auxiliaries to the meshblock
   int iweight;   //!> index to weight in meshaux
+  int imom1, imom2, imom3;   //!> index to momentum vector in meshaux
 
   // Instance variables
   AthenaArray<Real> meshaux;   //!> auxiliaries to the meshblock

@@ -78,7 +78,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real dx1 = mesh_size.x1len / npx1,
        dx2 = mesh_size.x2len / npx2,
        dx3 = mesh_size.x3len / npx3;
-  ppar->SetOneParticleMass(dtog * vol / (npx1 * npx2 * npx3));
+  if (DustParticles *pp = dynamic_cast<DustParticles*>(ppar))
+    pp->SetOneParticleMass(dtog * vol / (npx1 * npx2 * npx3));
 
   // Determine number of particles in the block.
   int npx1_loc = static_cast<int>(std::round(block_size.x1len / dx1)),
@@ -108,9 +109,11 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   }
 
   // Initialize the stopping time.
-  if (ppar->GetVariableTaus()) {
-    Real taus0 = ppar->GetStoppingTime();
-    for (int k = 0; k < npar; ++k)
-      ppar->taus(k) = taus0;
+  if (DustParticles *pp = dynamic_cast<DustParticles*>(ppar)){
+    if (pp->GetVariableTaus()) {
+      Real taus0 = pp->GetStoppingTime();
+      for (int k = 0; k < npar; ++k)
+        pp->taus(k) = taus0;
+    }
   }
 }

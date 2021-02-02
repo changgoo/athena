@@ -58,9 +58,14 @@ int ParticleMesh::AddMeshAux() {
 //! \fn ParticleMesh::ParticleMesh(Particles *ppar, int nmeshaux)
 //! \brief constructs a new ParticleMesh instance.
 
-ParticleMesh::ParticleMesh(Particles *ppar) : nmeshaux(0), iweight(-1) {
+ParticleMesh::ParticleMesh(Particles *ppar) : nmeshaux(0), iweight(-1),
+  imom1(-1), imom2(-1), imom3(-1) {
   // Add weight in meshaux.
   iweight = AddMeshAux();
+  // Add momentum in meshaux
+  imom1 = AddMeshAux();
+  imom2 = AddMeshAux();
+  imom3 = AddMeshAux();
 
   // Save some inputs.
   ppar_ = ppar;
@@ -113,10 +118,11 @@ ParticleMesh::ParticleMesh(Particles *ppar) : nmeshaux(0), iweight(-1) {
 #endif
   }
 
-  // std::cout << "===========================================================" << std::endl;
-  // std::cout << "============Particle Mesh Static Variables=================" << std::endl;
-  // std::cout << "===========================================================" << std::endl;
-  // std::cout << "  iweight: " << iweight << "  nmeshaux: " << nmeshaux << std::endl;
+  std::cout << "===========================================================" << std::endl;
+  std::cout << "============Particle Mesh Static Variables=================" << std::endl;
+  std::cout << "===========================================================" << std::endl;
+  std::cout << "  iweight: " << iweight << "  nmeshaux: " << nmeshaux << std::endl;
+  std::cout << "  imom1: " << imom1 << "  imom2: " << imom2 << "  imom3: " << imom3 << std::endl;
 }
 
 //--------------------------------------------------------------------------------------
