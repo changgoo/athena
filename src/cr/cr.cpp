@@ -58,46 +58,14 @@ inline void DefaultOpacity(MeshBlock *pmb, AthenaArray<Real> &u_cr,
     ku += 1;
   }
 
-
   Real invlim = 1.0/pcr->vmax;
 
-
-  for(int k=kl; k<=ku; ++k){
-    for(int j=jl; j<=ju; ++j){
-#pragma omp simd
-      for(int i=il; i<=iu; ++i){
-        pcr->sigma_diff(0,k,j,i) = pcr->sigma;
-        if (pcr->perp_diff_flag == 0)
-        {
-          pcr->sigma_diff(1,k,j,i) = pcr->max_opacity;
-          pcr->sigma_diff(2,k,j,i) = pcr->max_opacity;  
-        }
-        else
-        {
-          pcr->sigma_diff(1,k,j,i) = pcr->sigma*pcr->perp_to_par_diff;
-          pcr->sigma_diff(2,k,j,i) = pcr->sigma*pcr->perp_to_par_diff;
-        }  
-      }
-    }
-  }
-
-  // Need to calculate the rotation matrix 
-  // We need this to determine the direction of rotation velocity
-
-  // The information stored in the array
-  // b_angle is
-  // b_angle[0]=sin_theta_b
-  // b_angle[1]=cos_theta_b
-  // b_angle[2]=sin_phi_b
-  // b_angle[3]=cos_phi_b
- 
-
   if(MAGNETIC_FIELDS_ENABLED){
-    //First, calculate B_dot_grad_Pc
     for(int k=kl; k<=ku; ++k){
       for(int j=jl; j<=ju; ++j){
-      // diffusion coefficient is calculated with respect to B direction
-      // Use a simple estimate of Grad Pc
+        
+        // The diffusion coefficient is calculated with respect to B direction
+        // Estimate of Grad Pc along B
 
         // x component
         pmb->pcoord->CenterWidth1(k,j,il-1,iu+1,pcr->cwidth);
@@ -106,7 +74,7 @@ inline void DefaultOpacity(MeshBlock *pmb, AthenaArray<Real> &u_cr,
                          + pcr->cwidth(i);
           Real dprdx=(u_cr(CRE,k,j,i+1) - u_cr(CRE,k,j,i-1))/3.0;
           dprdx /= distance;
-          pcr->sigma_adv(0,k,j,i) = dprdx;
+          pcr->b_grad_pc(k,j,i) = bcc(IB1,k,j,i) * dprdx;
         }
         // y component
         pmb->pcoord->CenterWidth2(k,j-1,il,iu,pcr->cwidth1);       
@@ -118,7 +86,7 @@ inline void DefaultOpacity(MeshBlock *pmb, AthenaArray<Real> &u_cr,
                          + pcr->cwidth(i);
           Real dprdy=(u_cr(CRE,k,j+1,i) - u_cr(CRE,k,j-1,i))/3.0;
           dprdy /= distance;
-          pcr->sigma_adv(1,k,j,i) = dprdy;
+          pcr->b_grad_pc(k,j,i) += bcc(IB2,k,j,i) * dprdy;
         } 
         // z component
         pmb->pcoord->CenterWidth3(k-1,j,il,iu,pcr->cwidth1);       
@@ -130,17 +98,69 @@ inline void DefaultOpacity(MeshBlock *pmb, AthenaArray<Real> &u_cr,
                           + pcr->cwidth(i);
           Real dprdz=(u_cr(CRE,k+1,j,i) -  u_cr(CRE,k-1,j,i))/3.0;
           dprdz /= distance;
-          pcr->sigma_adv(2,k,j,i) = dprdz;
+          pcr->b_grad_pc(k,j,i) += bcc(IB3,k,j,i) * dprdz;
         }       
-
-
+        
         for(int i=il; i<=iu; ++i){
-          // Now calculate the angles of B
-          Real bxby = sqrt(bcc(IB1,k,j,i)*bcc(IB1,k,j,i) +
-                           bcc(IB2,k,j,i)*bcc(IB2,k,j,i));
+          
           Real btot = sqrt(bcc(IB1,k,j,i)*bcc(IB1,k,j,i) +
                            bcc(IB2,k,j,i)*bcc(IB2,k,j,i) + 
                            bcc(IB3,k,j,i)*bcc(IB3,k,j,i));
+          
+          Real b_grad_pc = pcr->b_grad_pc(k,j,i);
+          
+          //diffusion coefficient
+          pcr->sigma_diff(0,k,j,i) = pcr->Get_SigmaParallel(prim(IDN,k,j,i),prim(IPR,k,j,i),u_cr(CRE,k,j,i),fabs(b_grad_pc));
+          if (pcr->perp_diff_flag == 0)
+          {
+            pcr->sigma_diff(1,k,j,i) = pcr->max_opacity;
+            pcr->sigma_diff(2,k,j,i) = pcr->max_opacity;  
+          }
+          else
+          {
+            pcr->sigma_diff(1,k,j,i) = pcr->sigma_diff(0,k,j,i)*pcr->perp_to_par_diff;
+            pcr->sigma_diff(2,k,j,i) = pcr->sigma_diff(0,k,j,i)*pcr->perp_to_par_diff;
+          }  
+          
+          Real inv_sqrt_rho;
+          if (pcr->self_consistent_flag == 0){
+            inv_sqrt_rho = 1.0/sqrt(prim(IDN,k,j,i));
+          } else {
+            Real rhoi = pcr->Get_IonDensity(prim(IDN,k,j,i),prim(IPR,k,j,i),u_cr(CRE,k,j,i));
+            inv_sqrt_rho = 1.0/sqrt(rhoi);
+          }
+          Real va1 = bcc(IB1,k,j,i) * inv_sqrt_rho;
+          Real va2 = bcc(IB2,k,j,i) * inv_sqrt_rho;
+          Real va3 = bcc(IB3,k,j,i) * inv_sqrt_rho;
+          Real va = btot * inv_sqrt_rho;
+          Real dpc_sign = 0.0;
+          if(b_grad_pc > TINY_NUMBER) dpc_sign = 1.0;
+          else if(-b_grad_pc > TINY_NUMBER) dpc_sign = -1.0;
+          //streaming velocity
+          pcr->v_adv(0,k,j,i) = -va1 * dpc_sign;
+          pcr->v_adv(1,k,j,i) = -va2 * dpc_sign;
+          pcr->v_adv(2,k,j,i) = -va3 * dpc_sign;
+          
+          //streaming coefficient
+          if(va < TINY_NUMBER){
+            pcr->sigma_adv(0,k,j,i) = pcr->max_opacity;
+          }else{
+            pcr->sigma_adv(0,k,j,i) = fabs(b_grad_pc)/(btot * va * (1.0 + 1.0/3.0) 
+                                               * invlim * u_cr(CRE,k,j,i));
+          }
+          pcr->sigma_adv(1,k,j,i) = pcr->max_opacity;
+          pcr->sigma_adv(2,k,j,i) = pcr->max_opacity;
+
+          // Here we calculate the angles of B needed to compute the rotation matrix 
+          // The information stored in the array
+          // b_angle is
+          // b_angle[0]=sin_theta_b
+          // b_angle[1]=cos_theta_b
+          // b_angle[2]=sin_phi_b
+          // b_angle[3]=cos_phi_b
+          
+          Real bxby = sqrt(bcc(IB1,k,j,i)*bcc(IB1,k,j,i) +
+                           bcc(IB2,k,j,i)*bcc(IB2,k,j,i));
           
           if(btot > TINY_NUMBER){
             pcr->b_angle(0,k,j,i) = bxby/btot;
@@ -156,25 +176,10 @@ inline void DefaultOpacity(MeshBlock *pmb, AthenaArray<Real> &u_cr,
             pcr->b_angle(2,k,j,i) = 0.0;
             pcr->b_angle(3,k,j,i) = 1.0;            
           }
-
-          Real va = sqrt(btot*btot/prim(IDN,k,j,i));
-          if(va < TINY_NUMBER){
-            pcr->sigma_adv(0,k,j,i) = pcr->max_opacity;
-          }else{
-            Real b_grad_pc = bcc(IB1,k,j,i) * pcr->sigma_adv(0,k,j,i)
-                           + bcc(IB2,k,j,i) * pcr->sigma_adv(1,k,j,i)
-                           + bcc(IB3,k,j,i) * pcr->sigma_adv(2,k,j,i);
-            pcr->sigma_adv(0,k,j,i) = fabs(b_grad_pc)/(btot * va * (1.0 + 1.0/3.0) 
-                                               * invlim * u_cr(CRE,k,j,i));
-          }
-          pcr->sigma_adv(1,k,j,i) = pcr->max_opacity;
-          pcr->sigma_adv(2,k,j,i) = pcr->max_opacity;
-
+          
         }//end i        
-
       }// end j
     }// end k
-
   }// End MHD  
   else{
 
