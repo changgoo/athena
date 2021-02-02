@@ -108,7 +108,7 @@ void MGGravityDriver::Solve(int stage) {
 
   if (PARTICLES) {
     // Compute mass density of particles.
-    if (pmy_mesh_->my_blocks(0)->ppar->GetBackReaction())
+    if (pmy_mesh_->my_blocks(0)->ppar->IsGravity())
       DustParticles::FindDensityOnMesh(pmy_mesh_, false);
   }
 
@@ -122,7 +122,7 @@ void MGGravityDriver::Solve(int stage) {
       AthenaArray<Real> rho;
       rho.InitWithShallowSlice(pmg->pmy_block_->phydro->u,4,IDN,1);
 
-      if (pmy_mesh_->my_blocks(0)->ppar->GetBackReaction()) {
+      if (pmy_mesh_->my_blocks(0)->ppar->IsGravity()) {
         AthenaArray<Real> rhop(pmg->pmy_block_->ppar->GetMassDensity());
         for (int k = pmg->pmy_block_->ks; k <= pmg->pmy_block_->ke; ++k)
           for (int j = pmg->pmy_block_->js; j <= pmg->pmy_block_->je; ++j)

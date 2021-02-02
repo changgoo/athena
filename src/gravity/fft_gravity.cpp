@@ -73,14 +73,14 @@ void FFTGravityDriver::Solve(int stage, int mode) {
 
   // Compute mass density of particles.
   if (PARTICLES) {
-    if (pmy_mesh_->my_blocks(0)->ppar->GetBackReaction())
+    if (pmy_mesh_->my_blocks(0)->ppar->IsGravity())
       DustParticles::FindDensityOnMesh(pmy_mesh_, false);
   }
   for (int nb=0; nb<pmy_mesh_->nblocal; ++nb) {
     MeshBlock *pmb = pmy_mesh_->my_blocks(nb);
     in.InitWithShallowSlice(pmb->phydro->u,4,IDN,1);
     if (PARTICLES) {
-      if (pmb->ppar->GetBackReaction()) {
+      if (pmb->ppar->IsGravity()) {
         AthenaArray<Real> rhop(pmb->ppar->GetMassDensity());
         for (int k = pmb->ks; k <= pmb->ke; ++k)
           for (int j = pmb->js; j <= pmb->je; ++j)

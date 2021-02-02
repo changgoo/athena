@@ -74,6 +74,10 @@ friend class ParticleMesh;
 
   // Accessor
   Real GetMaximumWeight() const;
+  AthenaArray<Real> GetMassDensity() const { return ppm->weight; }
+  AthenaArray<Real> GetVelocityField() const;
+  bool IsGravity() { return isgravity_; }
+
 
   // Instance methods
   void ClearBoundary();
@@ -135,6 +139,8 @@ friend class ParticleMesh;
   // std::uint64_t nparmax;  //!> maximum number of particles per meshblock
   int npar;     //!> number of particles
   int nparmax;  //!> maximum number of particles per meshblock
+  bool isgravity_;
+  Real mass;   //!> mass of each particle
 
                                // Data attached to the particles:
   AthenaArray<int> intprop;    //!>   integer properties
@@ -161,11 +167,11 @@ friend class ParticleMesh;
   static void ProcessNewParticles(Mesh *pmesh);
 
   // Instance methods
-  virtual void SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) {}
-  virtual void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) {}
-  virtual void ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc) {}
+  virtual void SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc)=0;
+  virtual void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc)=0;
+  virtual void ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc)=0;
   virtual void DepositToMesh(Real t, Real dt, const AthenaArray<Real>& meshsrc,
-                             AthenaArray<Real>& meshdst) {}
+                             AthenaArray<Real>& meshdst)=0;
 
   int CountNewParticles() const;
   void ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3);
@@ -235,8 +241,8 @@ friend class MeshBlock;
   ~DustParticles();
 
   // Accessors
-  AthenaArray<Real> GetMassDensity() const { return ppm->weight; }
-  AthenaArray<Real> GetVelocityField() const;
+  // AthenaArray<Real> GetMassDensity() const { return ppm->weight; }
+  // AthenaArray<Real> GetVelocityField() const;
 
   // Instance method
   Real NewBlockTimeStep();
@@ -256,13 +262,13 @@ friend class MeshBlock;
   Real taus0;  //!> constant/default stopping time (in code units)
 
   // Instance methods.
-  void AssignShorthands();
-  void SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc);
-  void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc);
-  void UserStoppingTime(Real t, Real dt, const AthenaArray<Real>& meshsrc);
-  void ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc);
+  void AssignShorthands() override;
+  void SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
+  void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
+  void ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
   void DepositToMesh(Real t, Real dt, const AthenaArray<Real>& meshsrc,
-                     AthenaArray<Real>& meshdst);
+                     AthenaArray<Real>& meshdst) override;
+  void UserStoppingTime(Real t, Real dt, const AthenaArray<Real>& meshsrc);
 
   // Instance variables
   AthenaArray<Real> wx, wy, wz;        // shorthand for working arrays
@@ -270,50 +276,5 @@ friend class MeshBlock;
   AthenaArray<Real> taus;              // shorthand for stopping time
   ParticleGravity *ppgrav;
 };
-
-// //--------------------------------------------------------------------------------------
-// //! \fn bool DustParticles::GetBackReaction()
-// //! \brief returns if the back reaction of the drag is on or off.
-//
-// inline bool DustParticles::GetBackReaction() {
-//   return backreaction;
-// }
-//
-// //--------------------------------------------------------------------------------------
-// //! \fn bool DustParticles::GetVariableTaus()
-// //! \brief returns if the stopping time can be variable or not.
-//
-// inline bool DustParticles::GetVariableTaus() {
-//   return variable_taus;
-// }
-//
-// //--------------------------------------------------------------------------------------
-// //! \fn Real DustParticles::GetOneParticleMass()
-// //! \brief returns the mass of each particle.
-//
-// inline Real DustParticles::GetOneParticleMass() {
-//   return mass;
-// }
-//
-// //--------------------------------------------------------------------------------------
-// //! \fn Real DustParticles::GetStoppingTime()
-// //! \brief returns the stopping time of the drag.
-//
-// inline Real DustParticles::GetStoppingTime() {
-//   return taus0;
-// }
-
-// //--------------------------------------------------------------------------------------
-// //! \fn AthenaArray<Real> DustParticles::GetMassDensity()
-// //! \brief returns the mass density of particles on the mesh.
-// //!
-// //! \note
-// //!  Precondition:
-// //!  The particle properties on mesh must be assigned using the class method
-// //!  DustParticles::FindDensityOnMesh().
-//
-// inline AthenaArray<Real> DustParticles::GetMassDensity() const {
-//   return ppm->weight;
-// }
 
 #endif  // PARTICLES_PARTICLES_HPP_

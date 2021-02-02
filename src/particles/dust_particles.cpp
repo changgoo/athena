@@ -44,7 +44,7 @@ void DustParticles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
   Particles::FindDensityOnMesh(pm, include_momentum);
 
   for (int b = 0; b < pm->nblocal; ++b) {
-    DustParticles *ppar(pm->my_blocks(b)->ppar);
+    DustParticles *ppar = dynamic_cast<DustParticles*>(pm->my_blocks(b)->ppar);
     ParticleMesh *ppm(ppar->ppm);
 
     // Find the mass density.
@@ -151,9 +151,11 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin)
     dpx3.InitWithShallowSlice(ppm->meshaux, 4, idpx3, 1);
   }
 
-  if (SELF_GRAVITY_ENABLED && backreaction)
+  if (SELF_GRAVITY_ENABLED && backreaction) {
+    isgravity_ = true;
     // Activate particle gravity.
     ppgrav = new ParticleGravity(this);
+  }
 
   // Re-Allocate working arrays.
   work.DeleteAthenaArray();
@@ -191,39 +193,20 @@ DustParticles::~DustParticles() {
 //!   Precondition:
 //!   The particle properties on mesh must be assigned using the class method
 //!   DustParticles::FindDensityOnMesh().
-
-// AthenaArray<Real> DustParticles::GetMassDensity() const {
-//   AthenaArray<Real> rho(ppm->nx3_, ppm->nx2_, ppm->nx1_);
+// 
+// AthenaArray<Real> DustParticles::GetVelocityField() const {
+//   AthenaArray<Real> vel(3, ppm->nx3_, ppm->nx2_, ppm->nx1_);
 //   for (int k = ppm->ks; k <= ppm->ke; ++k)
 //     for (int j = ppm->js; j <= ppm->je; ++j)
-//       for (int i = ppm->is; i <= ppm->ie; ++i)
-//         rho(k,j,i) = ppm->weight(k,j,i) * mass;
-//   return rho;
+//       for (int i = ppm->is; i <= ppm->ie; ++i) {
+//         Real rho(ppm->weight(k,j,i));
+//         rho = (rho > 0.0) ? rho : 1.0;
+//         vel(0,k,j,i) = ppm->meshaux(imom1,k,j,i) / rho;
+//         vel(1,k,j,i) = ppm->meshaux(imom2,k,j,i) / rho;
+//         vel(2,k,j,i) = ppm->meshaux(imom3,k,j,i) / rho;
+//       }
+//   return vel;
 // }
-
-
-//--------------------------------------------------------------------------------------
-//! \fn AthenaArray<Real> DustParticles::GetVelocityField()
-//! \brief returns the particle velocity on the mesh.
-//!
-//! \note
-//!   Precondition:
-//!   The particle properties on mesh must be assigned using the class method
-//!   DustParticles::FindDensityOnMesh().
-
-AthenaArray<Real> DustParticles::GetVelocityField() const {
-  AthenaArray<Real> vel(3, ppm->nx3_, ppm->nx2_, ppm->nx1_);
-  for (int k = ppm->ks; k <= ppm->ke; ++k)
-    for (int j = ppm->js; j <= ppm->je; ++j)
-      for (int i = ppm->is; i <= ppm->ie; ++i) {
-        Real rho(ppm->weight(k,j,i));
-        rho = (rho > 0.0) ? rho : 1.0;
-        vel(0,k,j,i) = ppm->meshaux(imom1,k,j,i) / rho;
-        vel(1,k,j,i) = ppm->meshaux(imom2,k,j,i) / rho;
-        vel(2,k,j,i) = ppm->meshaux(imom3,k,j,i) / rho;
-      }
-  return vel;
-}
 
 //--------------------------------------------------------------------------------------
 //! \fn Real DustParticles::NewBlockTimeStep();

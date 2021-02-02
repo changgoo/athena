@@ -316,7 +316,8 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin) :
   nint(0), nreal(0), naux(0), nwork(0),
   ipid(-1), ixp(-1), iyp(-1), izp(-1), ivpx(-1), ivpy(-1), ivpz(-1),
   ixp0(-1), iyp0(-1), izp0(-1), ivpx0(-1), ivpy0(-1), ivpz0(-1),
-  ixi1(-1), ixi2(-1), ixi3(-1), imom1(-1), imom2(-1), imom3(-1) {
+  ixi1(-1), ixi2(-1), ixi3(-1), imom1(-1), imom2(-1), imom3(-1),
+  isgravity_(false) {
   // Add particle ID.
   ipid = AddIntProperty();
 
@@ -383,7 +384,7 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin) :
 
   // Shallow copy to shorthands.
   AssignShorthands();
-  
+
   // PrintVariables();
 }
 
@@ -409,6 +410,29 @@ Particles::~Particles() {
 
   // Delete mesh auxiliaries.
   delete ppm;
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn AthenaArray<Real> DustParticles::GetVelocityField()
+//! \brief returns the particle velocity on the mesh.
+//!
+//! \note
+//!   Precondition:
+//!   The particle properties on mesh must be assigned using the class method
+//!   DustParticles::FindDensityOnMesh().
+
+AthenaArray<Real> Particles::GetVelocityField() const {
+  AthenaArray<Real> vel(3, ppm->nx3_, ppm->nx2_, ppm->nx1_);
+  for (int k = ppm->ks; k <= ppm->ke; ++k)
+    for (int j = ppm->js; j <= ppm->je; ++j)
+      for (int i = ppm->is; i <= ppm->ie; ++i) {
+        Real rho(ppm->weight(k,j,i));
+        rho = (rho > 0.0) ? rho : 1.0;
+        vel(0,k,j,i) = ppm->meshaux(imom1,k,j,i) / rho;
+        vel(1,k,j,i) = ppm->meshaux(imom2,k,j,i) / rho;
+        vel(2,k,j,i) = ppm->meshaux(imom3,k,j,i) / rho;
+      }
+  return vel;
 }
 
 //--------------------------------------------------------------------------------------
