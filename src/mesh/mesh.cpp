@@ -101,6 +101,7 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
     sts_loc(TaskType::main_int),
     muj(), nuj(), muj_tilde(), gammaj_tilde(),
     nbnew(), nbdel(),
+    partype(pin->GetOrAddString("particles", "partype", "none")),
     step_since_lb(), gflag(), turb_flag(), amr_updated(multilevel),
     // private members:
     next_phys_id_(), num_mesh_threads_(pin->GetOrAddInteger("mesh", "num_threads", 1)),
@@ -321,7 +322,7 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
   }
 
   // Initialize Particles class.
-  if (PARTICLES) DustParticles::Initialize(this, pin);
+  if (PARTICLES) Particles::Initialize(this, pin);
 
   if (EOS_TABLE_ENABLED) peos_table = new EosTable(pin);
   InitUserMeshData(pin);

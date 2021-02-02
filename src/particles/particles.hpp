@@ -277,4 +277,43 @@ friend class MeshBlock;
   ParticleGravity *ppgrav;
 };
 
+//--------------------------------------------------------------------------------------
+//! \class TracerParticles
+//! \brief defines the class for Tracer particles that interact with the gas via drag
+//!        force.
+
+class TracerParticles : public Particles {
+friend class MeshBlock;
+
+ public:
+  // Class method
+  static void Initialize(Mesh *pm, ParameterInput *pin);
+
+  //!Constructor
+  TracerParticles(MeshBlock *pmb, ParameterInput *pin);
+
+  // Destructor
+  ~TracerParticles();
+
+  // Instance method
+  Real NewBlockTimeStep();
+
+ private:
+  // Class variables
+  static bool initialized;    //!> whether or not the class is initialized
+
+  int iwx, iwy, iwz;         // indices for working arrays
+
+  // Instance methods.
+  void AssignShorthands() override;
+  void SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
+  void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
+  void ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
+  void DepositToMesh(Real t, Real dt, const AthenaArray<Real>& meshsrc,
+                     AthenaArray<Real>& meshdst) override;
+
+  // Instance variables
+  AthenaArray<Real> wx, wy, wz;        // shorthand for working arrays
+};
+
 #endif  // PARTICLES_PARTICLES_HPP_

@@ -179,7 +179,12 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
   //! * Compare both private member variables via BoundaryValues::CheckCounterPhysID
 
   peos = new EquationOfState(this, pin);
-  if (PARTICLES) ppar = new DustParticles(this, pin);
+  if (PARTICLES) {
+    if (pm->partype == "dust")
+      ppar = new DustParticles(this, pin);
+    else
+      ppar = new TracerParticles(this, pin);
+  }
 
   // OrbitalAdvection: constructor depends on Coordinates, Hydro, Field, PassiveScalars.
   porb = new OrbitalAdvection(this, pin);

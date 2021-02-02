@@ -39,6 +39,7 @@ class ParameterInput;
 class ParticleMesh {
 friend class Particles;
 friend class DustParticles;
+friend class TracerParticles;
 friend class ParticleGravity;
 friend class OutputType;
 

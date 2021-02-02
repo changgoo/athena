@@ -237,6 +237,7 @@ class Mesh {
   TaskType sts_loc;
   Real muj, nuj, muj_tilde, gammaj_tilde;
   int nbtotal, nblocal, nbnew, nbdel;
+  std::string partype;
 
   int step_since_lb;
   int gflag;
