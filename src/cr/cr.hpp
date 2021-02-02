@@ -40,12 +40,14 @@ public:
 
   AthenaArray<Real> coarse_cr_;
 
-  //   diffusion coefficients for both normal diffusion term, and advection term
+  //diffusion coefficients for both normal diffusion term, and advection term
   AthenaArray<Real> sigma_diff, sigma_adv; 
 
   AthenaArray<Real> v_adv; // streaming velocity
   AthenaArray<Real> v_diff; // the diffuion velocity, need to calculate the flux
-    
+  
+  AthenaArray<Real> CRInjectionRate; //rate of injection CR energy density
+  
   int refinement_idx{-1};
 
   AthenaArray<Real> flux[3]; // store transport flux, also need for refinement
@@ -65,13 +67,12 @@ public:
   Real perp_to_par_diff; //ratio between the scattering coefficient in the direction perpendicular to the magntic field and the scattering coefficient in the direction parallel to the magntic field
   Real ion_rate_norm; // ionization rate normalization 
   
-  AthenaArray<Real> CR_luminosity; // 0.1 * supernova energy = CR injection energy
+  Real DensityUnit, LengthUnit, VelocityUnit;
 
   MeshBlock* pmy_block;    // ptr to MeshBlock containing this Fluid
   CellCenteredBoundaryVariable cr_bvar;
   
   CRIntegrator *pcrintegrator;
-
   Units *punit;
   
   //Function in problem generators to update opacity
@@ -80,9 +81,7 @@ public:
   void EnrollTemperatureFunction(CRTemperatureFunc MyTemperatureFunction);
   
   void EnrollUserCRSource(CRSrcTermFunc my_func);
-  
-  void Calculate_SNluminosity_from_TIGRESS(MeshBlock *pmb, ParameterInput *pin, int ks, int js, int is, int ke, int je, int ie);
-	  
+    
   bool cr_source_defined;
 
   CROpacityFunc UpdateOpacity;
@@ -107,6 +106,6 @@ private:
 };
 
 //default function to calculate the gas temperature
-Real DefaultTemperature(Real rho, Real Press, Real &mu, Real &muH);
+void DefaultTemperature(Units *punit, Real rho, Real Press, Real &Temp, Real &mu, Real &muH);
 
 #endif // CR_HPP

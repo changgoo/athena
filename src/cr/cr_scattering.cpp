@@ -24,7 +24,6 @@
 #include "../parameter_input.hpp"
 #include "../mesh/mesh.hpp"
 #include "../globals.hpp"
-#include "../utils/cooling_function.hpp"
 #include "../utils/units.hpp"
 
 // MPI/OpenMP header
@@ -42,11 +41,10 @@ Real Get_IonFraction(Real Temp, Real rho, Real ecr, Real ZetaNorm);
 Real Get_mui(Real Temp, Real mu, Real xi);
 Real Get_NeutralDensity(Real Temp, Real rho, Real rhoi, Real mui, Real muH);
 
-Real DefaultTemperature(Real rho, Real Press, Real &mu, Real &muH){
-  Real Temp = Press/rho;//*punit->Temperature;
+void DefaultTemperature(Units *punit, Real rho, Real Press, Real &Temp, Real &mu, Real &muH){
   mu = 1.27; //assuming neutral gas
   muH = 1.4272;
-  return Temp;
+  Temp = Press/rho*mu*punit->Temperature;
 }
 
 Real CosmicRay::Get_SigmaParallel(Real rho, Real Press, Real ecr, Real grad_pc_par){
@@ -58,8 +56,8 @@ Real CosmicRay::Get_SigmaParallel(Real rho, Real Press, Real ecr, Real grad_pc_p
     Real cr_kinenergy = 1e9 * 1.6021773e-12; //1 GeV in erg
     Real kinenergy_in_code = cr_kinenergy * punit->erg;
     
-    Real mu, muH;
-    Real Temp = UpdateTemperature(rho, Press, mu, muH);
+    Real mu, muH, Temp;
+    UpdateTemperature(punit, rho, Press, Temp, mu, muH);
     
     // ion fraction; the value of the CR energy density in cgs is required to calculate the CR ionization rate
     Real ecr_in_cgs = ecr*punit->EnergyDensity;
@@ -89,8 +87,8 @@ Real CosmicRay::Get_SigmaParallel(Real rho, Real Press, Real ecr, Real grad_pc_p
 
 Real CosmicRay::Get_IonDensity(Real rho, Real Press, Real ecr){
   Real rho_ion;
-  Real mu, muH;
-  Real Temp = UpdateTemperature(rho, Press, mu, muH);
+  Real mu, muH, Temp;
+  UpdateTemperature(punit, rho, Press, Temp, mu, muH);
   
   // ion fraction; the value of the CR energy density in cgs is required to calculate the CR ionization rate
   Real ecr_in_cgs = ecr*punit->EnergyDensity;

@@ -51,7 +51,7 @@ static Real vy = 0.0;
 static Real vz = 0.0;
 static int direction =0;
 
-Real TempCalculation(Real rho, Real Press, Real &mu, Real &muH);
+void TempCalculation(Units *punit, Real rho, Real Press, Real &Temp, Real &mu, Real &muH);
 
 void Mesh::UserWorkAfterLoop(ParameterInput *pin)
 { 
@@ -81,24 +81,24 @@ void Mesh::InitUserMeshData(ParameterInput *pin)
   
 }
 
-
-
 void MeshBlock::InitUserMeshBlockData(ParameterInput *pin)
 {
   if(CR_ENABLED){
     pcr->punit = punit;
     pcr->EnrollTemperatureFunction(TempCalculation);    
+    pcr->sigma = pin->GetOrAddReal("cr","sigma",1.0);
+    pcr->sigma *= pcr->vmax;
     pcr->sigma *= punit->second/(punit->cm*punit->cm);
+    pcr->lambdac = pin->GetOrAddReal("cr","lambdac",1.0);
     pcr->lambdac /= punit->second;
   }
 }
-
-Real TempCalculation(Real rho, Real Press, Real &mu, Real &muH)
+ 
+void TempCalculation(Units *punit, Real rho, Real Press, Real &Temp, Real &mu, Real &muH)
 {
-  Real Temp = pcool->GetTemperature(rho, Press);
+  Temp = pcool->GetTemperature(rho, Press);
   muH = pcool->Get_muH();
   mu = Temp/(Press/rho)*pcool->punit->Temperature;
-  return Temp;  
 }
 
 void MeshBlock::ProblemGenerator(ParameterInput *pin)

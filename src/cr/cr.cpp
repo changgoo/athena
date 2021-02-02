@@ -31,7 +31,6 @@
 #include "../parameter_input.hpp"
 #include "../mesh/mesh.hpp"
 #include "../globals.hpp"
-#include "../utils/cooling_function.hpp"
 #include "../utils/units.hpp"
 #include "../coordinates/coordinates.hpp"
 #include "integrators/cr_integrators.hpp"
@@ -67,7 +66,7 @@ inline void DefaultOpacity(MeshBlock *pmb, AthenaArray<Real> &u_cr,
     for(int j=jl; j<=ju; ++j){
 #pragma omp simd
       for(int i=il; i<=iu; ++i){
-        pcr->sigma_diff(0,k,j,i) = pcr->max_opacity;
+        pcr->sigma_diff(0,k,j,i) = pcr->sigma;
         if (pcr->perp_diff_flag == 0)
         {
           pcr->sigma_diff(1,k,j,i) = pcr->max_opacity;
@@ -204,7 +203,7 @@ CosmicRay::CosmicRay(MeshBlock *pmb, ParameterInput *pin):
     sigma_adv(3,pmb->ncells3,pmb->ncells2,pmb->ncells1),
     v_adv(3,pmb->ncells3,pmb->ncells2,pmb->ncells1),
     v_diff(3,pmb->ncells3,pmb->ncells2,pmb->ncells1),
-    CR_luminosity(pmb->ncells3,pmb->ncells2,pmb->ncells1),
+    CRInjectionRate(pmb->ncells3,pmb->ncells2,pmb->ncells1),
     //constructor overload resolution of non-aggregate class type AthenaArray<Real>
     flux{{NCR, pmb->ncells3, pmb->ncells2, pmb->ncells1+1},
         {NCR,pmb->ncells3, pmb->ncells2+1, pmb->ncells1,
@@ -249,23 +248,31 @@ CosmicRay::CosmicRay(MeshBlock *pmb, ParameterInput *pin):
   
   pcrintegrator = new CRIntegrator(this, pin);
   
-  //Input parameters
-  vmax = pin->GetOrAddReal("cr","vmax",1.0); //this should be in code units already
-  sigma = pin->GetOrAddReal("cr","sigma",1.0); 
-  sigma *= vmax;
-  max_opacity = pin->GetOrAddReal("cr","max_opacity",1.e10);
-  lambdac = pin->GetOrAddReal("cr","lambdac",1.0); //dec/dt = -lambdac nH ec
-  perp_to_par_diff = pin->GetOrAddReal("cr","diff_ratio",10.0);
-  ion_rate_norm = pin->GetOrAddReal("cr","ion_rate_norm",1e-4); //in cgs unit -- the dafault value assumes delta = -0.35
-    
   //Flags 
   stream_flag = pin->GetOrAddInteger("cr","vs_flag",1);  
   src_flag = pin->GetOrAddInteger("cr","src_flag",1);
   losses_flag = pin->GetOrAddInteger("cr","losses_flag",1);  
   perp_diff_flag = pin->GetOrAddInteger("cr","perp_diff_flag",1);
-  self_consistent_flag = pin->GetOrAddInteger("cr","self_consistent_flag",1);
+  self_consistent_flag = pin->GetOrAddInteger("cr","self_consistent_flag",0);
   if (self_consistent_flag == 1) losses_flag = 1;
   
+  //Code units
+  DensityUnit = pin->GetOrAddReal("problem", "DensityUnit",1.);
+  LengthUnit = pin->GetOrAddReal("problem", "LengthUnit",1.);
+  VelocityUnit = pin->GetOrAddReal("problem", "VelocityUnit",1.);
+  punit = new Units(DensityUnit,LengthUnit,VelocityUnit);
+  
+  //Input parameters
+  vmax = pin->GetOrAddReal("cr","vmax",1.0); //this should be in code units already
+  sigma = pin->GetOrAddReal("cr","sigma",1.0); 
+  max_opacity = pin->GetOrAddReal("cr","max_opacity",1.e10);
+  lambdac = pin->GetOrAddReal("cr","lambdac",1.0); //dec/dt = -lambdac nH ec
+  perp_to_par_diff = pin->GetOrAddReal("cr","diff_ratio",10.0);
+  ion_rate_norm = pin->GetOrAddReal("cr","ion_rate_norm",1e-4); //in cgs unit -- the dafault value assumes delta = -0.35
+  
+  sigma *= vmax;
+  sigma *= punit->second/(punit->cm*punit->cm);
+  lambdac /= punit->second;  
 }
 
 CosmicRay::~CosmicRay() {

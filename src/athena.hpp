@@ -52,6 +52,7 @@ class HydroDiffusion;
 class FieldDiffusion;
 class CosmicRay;
 class OrbitalAdvection;
+class Units;
 
 //--------------------------------------------------------------------------------------
 //! \struct LogicalLocation
@@ -210,7 +211,7 @@ using FieldDiffusionCoeffFunc = void (*)(
     int is, int ie, int js, int je, int ks, int ke);
 using CROpacityFunc = void (*)(MeshBlock *pmb, AthenaArray<Real> &u_cr, 
     AthenaArray<Real> &prim, AthenaArray<Real> &bcc);
-using CRTemperatureFunc = Real (*)(Real rho, Real Press, Real &mu, Real &muH);    
+using CRTemperatureFunc = void (*)(Units *punit, Real rho, Real Press, Real &Temp, Real &mu, Real &muH);    
 using CRBoundaryFunc = void (*)(
     MeshBlock *pmb, Coordinates *pco, CosmicRay *pcr, 
     const AthenaArray<Real> &w, const AthenaArray<Real> &bc, 
@@ -218,7 +219,7 @@ using CRBoundaryFunc = void (*)(
     Real time, Real dt, int is, int ie, int js, int je, int ks, int ke, int ngh);
 using CRSrcTermFunc = void (*)(
     MeshBlock *pmb, const Real time, const Real dt,
-    const AthenaArray<Real> &prim, const AthenaArray<Real> &bcc, AthenaArray<Real> &u_cr, const AthenaArray<Real> &CR_luminosity);
+    const AthenaArray<Real> &prim, const AthenaArray<Real> &bcc, AthenaArray<Real> &u_cr, AthenaArray<Real> &CRInjectionRate);
 using OrbitalVelocityFunc = Real (*)(
     OrbitalAdvection *porb, Real x1, Real x2, Real x3);
 
