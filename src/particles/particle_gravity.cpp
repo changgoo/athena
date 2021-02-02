@@ -19,23 +19,12 @@
 #include "particle-mesh.hpp"
 #include "particles.hpp"
 
-// Class variables
-// int ParticleGravity::iwx(-1), ParticleGravity::iwy(-1), ParticleGravity::iwz(-1);
-
 //--------------------------------------------------------------------------------------
 //! \fn ParticleGravity::ParticleGravity(Particles *ppar)
 //! \brief constructs a new ParticleGravity instance.
 
-ParticleGravity::ParticleGravity(Particles *ppar) : iwx(-1), iwy(-1), iwz(-1) {
-  // Get the indices to working arrays for particles.
-  iwx = ppar->AddWorkingArray();
-  iwy = ppar->AddWorkingArray();
-  iwz = ppar->AddWorkingArray();
-
-  // std::cout << "===========================================================" << std::endl;
-  // std::cout << "=========Particle Gravity Static Variables=================" << std::endl;
-  // std::cout << "===========================================================" << std::endl;
-  // std::cout << "  iwx: " << iwx << "  iwy: " << iwy << "  iwz: " << iwz << std::endl;
+ParticleGravity::ParticleGravity(Particles *ppar) :
+  igx(ppar->igx), igy(ppar->igy), igz(ppar->igz) {
 
   // Remember my parent Particles instance.
   pmy_par = ppar;
@@ -72,13 +61,13 @@ ParticleGravity::~ParticleGravity() {
 
 void ParticleGravity::ExertGravitationalForce(Real dt) {
   // Interpolate the gravitational force onto each particle.
-  pmy_pm->InterpolateMeshToParticles(gforce, 0, pmy_par->work, iwx, 3);
+  pmy_pm->InterpolateMeshToParticles(gforce, 0, pmy_par->work, igx, 3);
 
   // Add the force.
   for (int k = 0; k < pmy_par->npar; ++k) {
-    pmy_par->vpx(k) += dt * pmy_par->work(iwx,k);
-    pmy_par->vpy(k) += dt * pmy_par->work(iwy,k);
-    pmy_par->vpz(k) += dt * pmy_par->work(iwz,k);
+    pmy_par->vpx(k) += dt * pmy_par->work(igx,k);
+    pmy_par->vpy(k) += dt * pmy_par->work(igy,k);
+    pmy_par->vpz(k) += dt * pmy_par->work(igz,k);
   }
 }
 
@@ -129,12 +118,4 @@ void ParticleGravity::FindGravitationalForce(const AthenaArray<Real>& phi) {
         gforce(1,k,j,i) = active2 ? a2 * (phi(k,j-1,i) - phi(k,j+1,i)) : 0.0;
         gforce(2,k,j,i) = active3 ? a3 * (phi(k-1,j,i) - phi(k+1,j,i)) : 0.0;
       }
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn void ParticleGravity::Initialize()
-//! \brief initializes the class.
-
-void ParticleGravity::Initialize() {
-  return;
 }

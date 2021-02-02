@@ -28,12 +28,9 @@ class ParticleGravity {
   void ExertGravitationalForce(Real dt);
   void FindGravitationalForce(const AthenaArray<Real>& phi);
 
-  // Class methods
-  static void Initialize();
-
  private:
-  // Class variables
-  int iwx, iwy, iwz;  // indices to working arrays
+  // Instance variables
+  int igx, igy, igz;  // indices to working arrays
 
   // Attributes
   AthenaArray<Real> gforce;        //!> gravitational force

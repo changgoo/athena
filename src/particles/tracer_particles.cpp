@@ -17,22 +17,6 @@
 #include "particle_gravity.hpp"
 #include "particles.hpp"
 
-// Class variable initialization
-bool TracerParticles::initialized(false);
-
-//--------------------------------------------------------------------------------------
-//! \fn void TracerParticles::Initialize(Mesh *pm, ParameterInput *pin)
-//! \brief initializes the class.
-
-void TracerParticles::Initialize(Mesh *pm, ParameterInput *pin) {
-  // Initialize first the parent class.
-  Particles::Initialize(pm, pin);
-
-  if (!initialized) {
-    initialized = true;
-  }
-}
-
 //--------------------------------------------------------------------------------------
 //! \fn TracerParticles::TracerParticles(MeshBlock *pmb, ParameterInput *pin)
 //! \brief constructs a TracerParticles instance.
@@ -50,7 +34,6 @@ TracerParticles::TracerParticles(MeshBlock *pmb, ParameterInput *pin)
 
   // Assign shorthands (need to do this for every constructor of a derived class)
   AssignShorthands();
-  Particles::PrintVariables();
 }
 
 //--------------------------------------------------------------------------------------
@@ -58,16 +41,18 @@ TracerParticles::TracerParticles(MeshBlock *pmb, ParameterInput *pin)
 //! \brief destroys a TracerParticles instance.
 
 TracerParticles::~TracerParticles() {
-  wx.DeleteAthenaArray();
-  wy.DeleteAthenaArray();
-  wz.DeleteAthenaArray();
+  // Delete working arrays here
+  if (nwork > 0) {
+    work.DeleteAthenaArray();
+    nwork = 0;
+  }
 }
+
 //--------------------------------------------------------------------------------------
 //! \fn void TracerParticles::AssignShorthands()
 //! \brief assigns shorthands by shallow coping slices of the data.
 
 void TracerParticles::AssignShorthands() {
-  // std::cout << "assign shorthands called " << std::endl;
   Particles::AssignShorthands();
   wx.InitWithShallowSlice(work, 2, iwx, 1);
   wy.InitWithShallowSlice(work, 2, iwy, 1);

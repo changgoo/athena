@@ -32,17 +32,6 @@
 // Class variable initialization
 bool Particles::initialized = false;
 int Particles::idmax = 0;
-// int Particles::nint = 0;
-// int Particles::nreal = 0;
-// int Particles::naux = 0;
-// int Particles::nwork = 0;
-// int Particles::ipid = -1;
-// int Particles::ixp = -1, Particles::iyp = -1, Particles::izp = -1;
-// int Particles::ivpx = -1, Particles::ivpy = -1, Particles::ivpz = -1;
-// int Particles::ixp0 = -1, Particles::iyp0 = -1, Particles::izp0 = -1;
-// int Particles::ivpx0 = -1, Particles::ivpy0 = -1, Particles::ivpz0 = -1;
-// int Particles::ixi1 = -1, Particles::ixi2 = -1, Particles::ixi3 = -1;
-// int Particles::imom1 = -1, Particles::imom2 = -1, Particles::imom3 = -1;
 Real Particles::cfl_par = 1;
 ParameterInput* Particles::pinput = NULL;
 #ifdef MPI_PARALLEL
@@ -134,24 +123,6 @@ void Particles::Initialize(Mesh *pm, ParameterInput *pin) {
   initialized = true;
 }
 
-void Particles::PrintVariables() {
-  std::cout << "===========================================================" << std::endl;
-  std::cout << "================Particle Static Variables==================" << std::endl;
-  std::cout << "===========================================================" << std::endl;
-  std::cout << " nint: " << nint << "  nreal: " << nreal
-            << "  naux: " << naux << "  nwork: " << nwork
-            << "  nmeshaux: " << ppm->nmeshaux << std::endl;
-  std::cout << " ipid: " << ipid
-            << "  ixp: " << ixp << "  iyp: " << iyp << "  izp: " << izp << std::endl
-            << "  ivpx: " << ivpx << "  ivpy: " << ivpy << "  ivpz: " << ivpz << std::endl
-            << "  ixp0: " << ixp0 << "  iyp0: " << iyp0 << "  izp0: " << izp0 << std::endl
-            << "  ivpx0: " << ivpx0 << "  ivpy0: " << ivpy0 << "  ivpz0: " << ivpz0
-            << std::endl
-            << "  ixi1: " << ixi1 << "  ixi2: " << ixi2 << "  ixi3: " << ixi3 << std::endl
-            << "  imom1: " << imom1 << "  imom2: " << imom2 << "  imom3: " << imom3
-            << std::endl;
-}
-
 //--------------------------------------------------------------------------------------
 //! \fn Particles::PostInitialize(Mesh *pm, ParameterInput *pin)
 //! \brief preprocesses the class after problem generator and before the main loop.
@@ -196,8 +167,6 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
             ppar->vpx(k), ppar->vpy(k), ppar->vpz(k), vp1(k), vp2(k), vp3(k));
       ppm->AssignParticlesToMeshAux(vp, 0, ppm->imom1, 3);
     } else {
-      // std::cout << "on MB " << b << " npar:" << ppar->npar << " nparmax:" << ppar->nparmax << std::endl;
-      // std::cout << "on MB " << b << " npar:" << ppm->ppar_->npar << " nparmax:" << ppm->ppar_->nparmax << std::endl;
       ppm->AssignParticlesToMeshAux(ppar->realprop, 0, ppm->iweight, 0);
     }
     ppm->SendBoundary();
@@ -209,8 +178,9 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
     pending = false;
     for (int i = 0; i < nblocks; ++i) {
       const MeshBlock *pmb(pm->my_blocks(i));
+      const Particles *ppar(pmb->ppar);
       Coordinates *pc(pmb->pcoord);
-      ParticleMesh *ppm(pmb->ppar->ppm);
+      ParticleMesh *ppm(ppar->ppm);
       if (!completed[i]) {
         // Finalize boundary communications.
         if ((completed[i] = ppm->ReceiveBoundary())) {
@@ -223,16 +193,17 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
               for (int j = js; j <= je; ++j)
                 for (int i = is; i <= ie; ++i) {
                   Real vol(pc->GetCellVolume(k,j,i));
-                  ppm->weight(k,j,i) /= vol;
-                  ppm->meshaux(ppm->imom1,k,j,i) /= vol;
-                  ppm->meshaux(ppm->imom2,k,j,i) /= vol;
-                  ppm->meshaux(ppm->imom3,k,j,i) /= vol;
+                  Real rhop(ppar->mass/vol);
+                  ppm->weight(k,j,i) *= rhop;
+                  ppm->meshaux(ppm->imom1,k,j,i) *= rhop;
+                  ppm->meshaux(ppm->imom2,k,j,i) *= rhop;
+                  ppm->meshaux(ppm->imom3,k,j,i) *= rhop;
                 }
           } else {
             for (int k = ks; k <= ke; ++k)
               for (int j = js; j <= je; ++j)
                 for (int i = is; i <= ie; ++i)
-                  ppm->weight(k,j,i) /= pc->GetCellVolume(k,j,i);
+                  ppm->weight(k,j,i) *= ppar->mass/pc->GetCellVolume(k,j,i);
           }
           ppm->ClearBoundary();
         } else {
@@ -317,7 +288,7 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin) :
   ipid(-1), ixp(-1), iyp(-1), izp(-1), ivpx(-1), ivpy(-1), ivpz(-1),
   ixp0(-1), iyp0(-1), izp0(-1), ivpx0(-1), ivpy0(-1), ivpz0(-1),
   ixi1(-1), ixi2(-1), ixi3(-1), imom1(-1), imom2(-1), imom3(-1),
-  isgravity_(false) {
+  igx(-1), igy(-1), igz(-1), isgravity_(false), mass(1.0) {
   // Add particle ID.
   ipid = AddIntProperty();
 
@@ -413,13 +384,13 @@ Particles::~Particles() {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn AthenaArray<Real> DustParticles::GetVelocityField()
+//! \fn AthenaArray<Real> Particles::GetVelocityField()
 //! \brief returns the particle velocity on the mesh.
 //!
 //! \note
 //!   Precondition:
 //!   The particle properties on mesh must be assigned using the class method
-//!   DustParticles::FindDensityOnMesh().
+//!   Particles::FindDensityOnMesh().
 
 AthenaArray<Real> Particles::GetVelocityField() const {
   AthenaArray<Real> vel(3, ppm->nx3_, ppm->nx2_, ppm->nx1_);
@@ -498,9 +469,7 @@ void Particles::Integrate(int stage) {
     dt = pmy_mesh->dt;
     break;
   }
-  std::cout << "Integrate:" << std::endl;
-  std::cout << pmy_block->phydro->u(IM1,1,1,1) << std::endl;
-  std::cout << pmy_block->phydro->w(IVX,NGHOST,NGHOST,NGHOST) << std::endl;
+
   // Conduct one stage of the integration.
   EulerStep(t, dt, pmy_block->phydro->w);
   ReactToMeshAux(t, dt, pmy_block->phydro->w);
@@ -869,15 +838,11 @@ void Particles::ProcessNewParticles(Mesh *pmesh) {
     nnewpar[i] += nnewpar[i-1];
 
   // Set particle IDs.
-  // std::cout << "===========ProcessNewParticles==============" << std::endl;
   for (int b = 0; b < nblocks; ++b) {
     const MeshBlock *pmb(pmesh->my_blocks(b));
     pmb->ppar->SetNewParticleID(idmax + (pmb->gid > 0 ? nnewpar[pmb->gid - 1] : 0));
-    // std::cout << " gid:" << pmb->gid << " nnewpar: " << nnewpar[pmb->gid] << std::endl;
   }
   idmax += nnewpar[nbtotal - 1];
-
-  // std::cout << " idmax: " << idmax << std::endl;
 }
 
 //--------------------------------------------------------------------------------------
@@ -982,9 +947,6 @@ void Particles::EulerStep(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
     yp0(k) = tmpy;
     zp0(k) = tmpz;
   }
-  // std::cout << "t: " << t << " dt: " << dt << std::endl;
-  // std::cout << " " << xp(0) << "  " << yp(0) << " " << zp(0) <<  std::endl;
-  // std::cout << " " << xp0(0) << "  " << yp0(0) << " " << zp0(0) <<  std::endl;
 
   // Integrate the source terms (e.g., acceleration).
   SourceTerms(t, dt, meshsrc);
@@ -1183,7 +1145,7 @@ void Particles::UpdateCapacity(int new_nparmax) {
         << std::endl;
     ATHENA_ERROR(msg);
   }
-  // std::cout << "updating capacity from " << nparmax << " to " << new_nparmax << std::endl;
+
   // Increase size of property arrays
   nparmax = new_nparmax;
   intprop.ResizeLastDimension(nparmax);

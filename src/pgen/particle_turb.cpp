@@ -154,7 +154,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     }
 
     // Initialize the stopping time.
-    if (DustParticles *pp = dynamic_cast<DustParticles*>(ppar)){
+    if (DustParticles *pp = dynamic_cast<DustParticles*>(ppar)) {
       if (pp->GetVariableTaus()) {
         Real taus0 = pp->GetStoppingTime();
         for (int k = 0; k < npar; ++k)

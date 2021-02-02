@@ -22,8 +22,6 @@
 
 // Class variable initialization
 bool ParticleMesh::initialized_ = false;
-// int ParticleMesh::nmeshaux = 0;
-// int ParticleMesh::iweight = -1;
 #ifdef MPI_PARALLEL
 MPI_Comm ParticleMesh::my_comm = MPI_COMM_NULL;
 #endif
@@ -117,12 +115,6 @@ ParticleMesh::ParticleMesh(Particles *ppar) : nmeshaux(0), iweight(-1),
     bd_.req_send[n] = MPI_REQUEST_NULL;
 #endif
   }
-
-  std::cout << "===========================================================" << std::endl;
-  std::cout << "============Particle Mesh Static Variables=================" << std::endl;
-  std::cout << "===========================================================" << std::endl;
-  std::cout << "  iweight: " << iweight << "  nmeshaux: " << nmeshaux << std::endl;
-  std::cout << "  imom1: " << imom1 << "  imom2: " << imom2 << "  imom3: " << imom3 << std::endl;
 }
 
 //--------------------------------------------------------------------------------------
@@ -131,7 +123,6 @@ ParticleMesh::ParticleMesh(Particles *ppar) : nmeshaux(0), iweight(-1),
 
 ParticleMesh::~ParticleMesh() {
   // Destroy the particle meshblock.
-  weight.DeleteAthenaArray();
   meshaux.DeleteAthenaArray();
 
   // Destroy boundary data.

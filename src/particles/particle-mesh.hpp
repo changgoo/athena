@@ -46,7 +46,7 @@ friend class OutputType;
  public:
   // Class methods
   static void Initialize(ParameterInput *pin);
-  int AddMeshAux();
+
 
   // Constructor and destructor
   explicit ParticleMesh(Particles *ppar);
@@ -55,6 +55,9 @@ friend class OutputType;
   // Accessor
   Real FindMaximumWeight() const;
 
+  // methods
+  int AddMeshAux();
+  
  protected:
   // Class variables
   int nmeshaux;  //!> number of auxiliaries to the meshblock

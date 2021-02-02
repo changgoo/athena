@@ -17,92 +17,6 @@
 #include "particle_gravity.hpp"
 #include "particles.hpp"
 
-// Class variable initialization
-bool DustParticles::initialized(false);
-// bool DustParticles::backreaction(false);
-// bool DustParticles::dragforce(true);
-// bool DustParticles::variable_taus(false);
-//
-// int DustParticles::iwx = -1, DustParticles::iwy = -1, DustParticles::iwz = -1;
-// int DustParticles::idpx1 = -1, DustParticles::idpx2 = -1, DustParticles::idpx3 = -1;
-// int DustParticles::itaus = -1;
-//
-// Real DustParticles::mass = 1.0, DustParticles::taus0 = 0.0;
-
-//--------------------------------------------------------------------------------------
-//! \fn void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum)
-//! \brief finds the mass density of particles on the mesh.  If include_momentum is
-//!   true, the momentum density field is also included.
-//!
-//! \note
-//!   Postcondition:
-//!   ppm->weight becomes the density in each cell, and if include_momentum
-//!   is true, ppm->meshaux(imom1:imom3,:,:,:) becomes the momentum density.
-
-void DustParticles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
-  // Assign the particles onto the mesh.
-  Particles::FindDensityOnMesh(pm, include_momentum);
-
-  for (int b = 0; b < pm->nblocal; ++b) {
-    DustParticles *ppar = dynamic_cast<DustParticles*>(pm->my_blocks(b)->ppar);
-    ParticleMesh *ppm(ppar->ppm);
-
-    // Find the mass density.
-    for (int k = ppm->ks; k <= ppm->ke; ++k)
-      for (int j = ppm->js; j <= ppm->je; ++j)
-        for (int i = ppm->is; i <= ppm->ie; ++i)
-          ppm->weight(k,j,i) *= ppar->mass;
-
-    // Find the momentum density.
-    if (include_momentum) {
-      for (int k = ppm->ks; k <= ppm->ke; ++k)
-        for (int j = ppm->js; j <= ppm->je; ++j)
-          for (int i = ppm->is; i <= ppm->ie; ++i) {
-            ppm->meshaux(ppm->imom1,k,j,i) *= ppar->mass;
-            ppm->meshaux(ppm->imom2,k,j,i) *= ppar->mass;
-            ppm->meshaux(ppm->imom3,k,j,i) *= ppar->mass;
-          }
-    }
-  }
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn void DustParticles::Initialize(Mesh *pm, ParameterInput *pin)
-//! \brief initializes the class.
-
-void DustParticles::Initialize(Mesh *pm, ParameterInput *pin) {
-  // Initialize first the parent class.
-  Particles::Initialize(pm, pin);
-
-  if (!initialized) {
-
-    initialized = true;
-
-  }
-}
-
-void DustParticles::PrintVariables() {
-  std::cout << "===========================================================" << std::endl;
-  std::cout << "============Dust Particle Static Variables=================" << std::endl;
-  std::cout << "===========================================================" << std::endl;
-  std::cout << " nint: " << nint << "  nreal: " << nreal
-            << "  naux: " << naux << "  nwork: " << nwork << std::endl;
-  std::cout << " ipid: " << ipid
-            << "  ixp: " << ixp << "  iyp: " << iyp << "  izp: " << izp << std::endl
-            << "  ivpx: " << ivpx << "  ivpy: " << ivpy << "  ivpz: " << ivpz << std::endl
-            << "  ixp0: " << ixp0 << "  iyp0: " << iyp0 << "  izp0: " << izp0 << std::endl
-            << "  ivpx0: " << ivpx0 << "  ivpy0: " << ivpy0 << "  ivpz0: " << ivpz0
-            << std::endl
-            << "  ixi1: " << ixi1 << "  ixi2: " << ixi2 << "  ixi3: " << ixi3 << std::endl
-            << "  imom1: " << imom1 << "  imom2: " << imom2 << "  imom3: " << imom3
-            << "  idpx1: " << idpx1 << "  idpx2: " << idpx2 << "  idpx3: " << idpx3
-            << std::endl
-            << "  iwx: " << iwx << "  iwy: " << iwy << "  iwz: " << iwz << std::endl
-            << "  dragforce: " << dragforce
-            << "  backreaction:" << backreaction << "  variable_taus:" << variable_taus
-            << "  taus0:" << taus0 << "  mass:" << mass
-            << std::endl;
-}
 //--------------------------------------------------------------------------------------
 //! \fn void DustParticles::SetOneParticleMass(Real new_mass)
 //! \brief sets the mass of each particle.
@@ -118,7 +32,7 @@ void DustParticles::SetOneParticleMass(Real new_mass) {
 DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin)
   : Particles(pmb, pin), backreaction(false), dragforce(true), variable_taus(false),
   iwx(-1), iwy(-1), iwz(-1), idpx1(-1), idpx2(-1), idpx3(-1),
-  itaus(-1), mass(1.0), taus0(0.0) {
+  itaus(-1), taus0(0.0) {
   // Add working array at particles for gas velocity/particle momentum change.
   iwx = AddWorkingArray();
   iwy = AddWorkingArray();
@@ -143,9 +57,6 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin)
     idpx3 = imom3;
   }
 
-  // if (SELF_GRAVITY_ENABLED && backreaction)
-  //   ParticleGravity::Initialize();
-
   if (backreaction) {
     dpx1.InitWithShallowSlice(ppm->meshaux, 4, idpx1, 1);
     dpx2.InitWithShallowSlice(ppm->meshaux, 4, idpx2, 1);
@@ -154,6 +65,10 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin)
 
   if (SELF_GRAVITY_ENABLED && backreaction) {
     isgravity_ = true;
+    // Add working arrays for gravity forces
+    igx = AddWorkingArray();
+    igy = AddWorkingArray();
+    igz = AddWorkingArray();
     // Activate particle gravity.
     ppgrav = new ParticleGravity(this);
   }
@@ -164,7 +79,6 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin)
 
   // Assign shorthands (need to do this for every constructor of a derived class)
   AssignShorthands();
-  if(Globals::my_rank == 0) PrintVariables();
 }
 
 //--------------------------------------------------------------------------------------
@@ -172,42 +86,15 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin)
 //! \brief destroys a DustParticles instance.
 
 DustParticles::~DustParticles() {
-  wx.DeleteAthenaArray();
-  wy.DeleteAthenaArray();
-  wz.DeleteAthenaArray();
-
-  if (backreaction) {
-    dpx1.DeleteAthenaArray();
-    dpx2.DeleteAthenaArray();
-    dpx3.DeleteAthenaArray();
+  // Delete working arrays here
+  if (nwork > 0) {
+    work.DeleteAthenaArray();
+    nwork = 0;
   }
 
   if (SELF_GRAVITY_ENABLED && backreaction)
     delete ppgrav;
 }
-
-//--------------------------------------------------------------------------------------
-//! \fn AthenaArray<Real> DustParticles::GetVelocityField()
-//! \brief returns the particle velocity on the mesh.
-//!
-//! \note
-//!   Precondition:
-//!   The particle properties on mesh must be assigned using the class method
-//!   DustParticles::FindDensityOnMesh().
-//
-// AthenaArray<Real> DustParticles::GetVelocityField() const {
-//   AthenaArray<Real> vel(3, ppm->nx3_, ppm->nx2_, ppm->nx1_);
-//   for (int k = ppm->ks; k <= ppm->ke; ++k)
-//     for (int j = ppm->js; j <= ppm->je; ++j)
-//       for (int i = ppm->is; i <= ppm->ie; ++i) {
-//         Real rho(ppm->weight(k,j,i));
-//         rho = (rho > 0.0) ? rho : 1.0;
-//         vel(0,k,j,i) = ppm->meshaux(imom1,k,j,i) / rho;
-//         vel(1,k,j,i) = ppm->meshaux(imom2,k,j,i) / rho;
-//         vel(2,k,j,i) = ppm->meshaux(imom3,k,j,i) / rho;
-//       }
-//   return vel;
-// }
 
 //--------------------------------------------------------------------------------------
 //! \fn Real DustParticles::NewBlockTimeStep();
@@ -246,7 +133,6 @@ Real DustParticles::NewBlockTimeStep() {
 //! \brief assigns shorthands by shallow coping slices of the data.
 
 void DustParticles::AssignShorthands() {
-  // std::cout << "assign shorthands called " << std::endl;
   Particles::AssignShorthands();
   wx.InitWithShallowSlice(work, 2, iwx, 1);
   wy.InitWithShallowSlice(work, 2, iwy, 1);

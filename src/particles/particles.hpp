@@ -61,7 +61,6 @@ friend class ParticleMesh;
   static void FormattedTableOutput(Mesh *pm, OutputParameters op);
   static void GetHistoryOutputNames(std::string output_names[]);
   static int GetTotalNumber(Mesh *pm);
-  void PrintVariables();
 
   // Class constant
   static const int NHISTORY = 7;  //!> number of variables in history output
@@ -107,6 +106,10 @@ friend class ParticleMesh;
 
   // Class variables
   static bool initialized;  //!> whether or not the class is initialized
+  static Real cfl_par;  //!> CFL number for particles
+  static ParameterInput *pinput;
+
+  // Instance variables
   int nint;          //!> numbers of integer particle properties
   int nreal;         //!> numbers of real particle properties
   int naux;          //!> number of auxiliary particle properties
@@ -123,10 +126,8 @@ friend class ParticleMesh;
 
   int imom1, imom2, imom3;  // indices for momentum components on mesh
 
-  static Real cfl_par;  //!> CFL number for particles
-
-  static ParameterInput *pinput;
-
+  int igx, igy, igz; // indices for gravity force
+  
   // Instance methods
   virtual void AssignShorthands();  //!> Needs to be called everytime
                                     //!> intprop, realprop, & auxprop are resized
@@ -139,7 +140,7 @@ friend class ParticleMesh;
   // std::uint64_t nparmax;  //!> maximum number of particles per meshblock
   int npar;     //!> number of particles
   int nparmax;  //!> maximum number of particles per meshblock
-  bool isgravity_;
+  bool isgravity_; //!> flag for gravity
   Real mass;   //!> mass of each particle
 
                                // Data attached to the particles:
@@ -223,16 +224,12 @@ class DustParticles : public Particles {
 friend class MeshBlock;
 
  public:
-  // Class method
-  static void FindDensityOnMesh(Mesh *pm, bool include_momentum);
-  static void Initialize(Mesh *pm, ParameterInput *pin);
   void SetOneParticleMass(Real new_mass);
   bool GetBackReaction() { return backreaction; }
   bool GetDragForce() { return dragforce; }
   bool GetVariableTaus() { return variable_taus; }
   Real GetOneParticleMass() { return mass; }
   Real GetStoppingTime() { return taus0; }
-  void PrintVariables();
 
   //!Constructor
   DustParticles(MeshBlock *pmb, ParameterInput *pin);
@@ -240,25 +237,19 @@ friend class MeshBlock;
   // Destructor
   ~DustParticles();
 
-  // Accessors
-  // AthenaArray<Real> GetMassDensity() const { return ppm->weight; }
-  // AthenaArray<Real> GetVelocityField() const;
-
   // Instance method
   Real NewBlockTimeStep();
 
  private:
-  // Class variables
-  static bool initialized;    //!> whether or not the class is initialized
   bool backreaction;   //!> turn on/off back reaction
   bool dragforce;      //!> turn on/off drag force
   bool variable_taus;  //!> whether or not the stopping time is variable
 
   int iwx, iwy, iwz;         // indices for working arrays
+  int igx, igy, igz;         // indices for working arrays for gravity
   int idpx1, idpx2, idpx3;   // indices for momentum change
   int itaus;                 //!> index for stopping time
 
-  Real mass;   //!> mass of each particle
   Real taus0;  //!> constant/default stopping time (in code units)
 
   // Instance methods.
@@ -286,9 +277,6 @@ class TracerParticles : public Particles {
 friend class MeshBlock;
 
  public:
-  // Class method
-  static void Initialize(Mesh *pm, ParameterInput *pin);
-
   //!Constructor
   TracerParticles(MeshBlock *pmb, ParameterInput *pin);
 
@@ -299,9 +287,6 @@ friend class MeshBlock;
   Real NewBlockTimeStep();
 
  private:
-  // Class variables
-  static bool initialized;    //!> whether or not the class is initialized
-
   int iwx, iwy, iwz;         // indices for working arrays
 
   // Instance methods.
