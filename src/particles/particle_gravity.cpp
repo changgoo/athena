@@ -20,13 +20,23 @@
 #include "particles.hpp"
 
 // Class variables
-int ParticleGravity::iwx(-1), ParticleGravity::iwy(-1), ParticleGravity::iwz(-1);
+// int ParticleGravity::iwx(-1), ParticleGravity::iwy(-1), ParticleGravity::iwz(-1);
 
 //--------------------------------------------------------------------------------------
 //! \fn ParticleGravity::ParticleGravity(Particles *ppar)
 //! \brief constructs a new ParticleGravity instance.
 
-ParticleGravity::ParticleGravity(Particles *ppar) {
+ParticleGravity::ParticleGravity(Particles *ppar) : iwx(-1), iwy(-1), iwz(-1) {
+  // Get the indices to working arrays for particles.
+  iwx = ppar->AddWorkingArray();
+  iwy = ppar->AddWorkingArray();
+  iwz = ppar->AddWorkingArray();
+
+  // std::cout << "===========================================================" << std::endl;
+  // std::cout << "=========Particle Gravity Static Variables=================" << std::endl;
+  // std::cout << "===========================================================" << std::endl;
+  // std::cout << "  iwx: " << iwx << "  iwy: " << iwy << "  iwz: " << iwz << std::endl;
+
   // Remember my parent Particles instance.
   pmy_par = ppar;
   pmy_pm = ppar->ppm;
@@ -126,8 +136,5 @@ void ParticleGravity::FindGravitationalForce(const AthenaArray<Real>& phi) {
 //! \brief initializes the class.
 
 void ParticleGravity::Initialize() {
-  // Get the indices to working arrays for particles.
-  iwx = Particles::AddWorkingArray();
-  iwy = Particles::AddWorkingArray();
-  iwz = Particles::AddWorkingArray();
+  return;
 }

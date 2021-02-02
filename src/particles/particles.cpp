@@ -32,17 +32,17 @@
 // Class variable initialization
 bool Particles::initialized = false;
 int Particles::idmax = 0;
-int Particles::nint = 0;
-int Particles::nreal = 0;
-int Particles::naux = 0;
-int Particles::nwork = 0;
-int Particles::ipid = -1;
-int Particles::ixp = -1, Particles::iyp = -1, Particles::izp = -1;
-int Particles::ivpx = -1, Particles::ivpy = -1, Particles::ivpz = -1;
-int Particles::ixp0 = -1, Particles::iyp0 = -1, Particles::izp0 = -1;
-int Particles::ivpx0 = -1, Particles::ivpy0 = -1, Particles::ivpz0 = -1;
-int Particles::ixi1 = -1, Particles::ixi2 = -1, Particles::ixi3 = -1;
-int Particles::imom1 = -1, Particles::imom2 = -1, Particles::imom3 = -1;
+// int Particles::nint = 0;
+// int Particles::nreal = 0;
+// int Particles::naux = 0;
+// int Particles::nwork = 0;
+// int Particles::ipid = -1;
+// int Particles::ixp = -1, Particles::iyp = -1, Particles::izp = -1;
+// int Particles::ivpx = -1, Particles::ivpy = -1, Particles::ivpz = -1;
+// int Particles::ixp0 = -1, Particles::iyp0 = -1, Particles::izp0 = -1;
+// int Particles::ivpx0 = -1, Particles::ivpy0 = -1, Particles::ivpz0 = -1;
+// int Particles::ixi1 = -1, Particles::ixi2 = -1, Particles::ixi3 = -1;
+// int Particles::imom1 = -1, Particles::imom2 = -1, Particles::imom3 = -1;
 Real Particles::cfl_par = 1;
 ParameterInput* Particles::pinput = NULL;
 #ifdef MPI_PARALLEL
@@ -78,11 +78,11 @@ void Particles::AMRCoarseToFine(MeshBlock* pmbc, MeshBlock* pmbf) {
       // Load a particle to the fine meshblock.
       int npar = pparf->npar;
       if (npar >= pparf->nparmax) pparf->UpdateCapacity(2 * pparf->nparmax);
-      for (int j = 0; j < nint; ++j)
+      for (int j = 0; j < pparf->nint; ++j)
         pparf->intprop(j,npar) = pparc->intprop(j,k);
-      for (int j = 0; j < nreal; ++j)
+      for (int j = 0; j < pparf->nreal; ++j)
         pparf->realprop(j,npar) = pparc->realprop(j,k);
-      for (int j = 0; j < naux; ++j)
+      for (int j = 0; j < pparf->naux; ++j)
         pparf->auxprop(j,npar) = pparc->auxprop(j,k);
       ++pparf->npar;
     }
@@ -101,13 +101,13 @@ void Particles::AMRFineToCoarse(MeshBlock* pmbf, MeshBlock* pmbc) {
   if (npar_new > pparc->nparmax) pparc->UpdateCapacity(npar_new);
 
   // Load the particles.
-  for (int j = 0; j < nint; ++j)
+  for (int j = 0; j < pparf->nint; ++j)
     for (int k = 0; k < nparf; ++k)
       pparc->intprop(j,nparc+k) = pparf->intprop(j,k);
-  for (int j = 0; j < nreal; ++j)
+  for (int j = 0; j < pparf->nreal; ++j)
     for (int k = 0; k < nparf; ++k)
       pparc->realprop(j,nparc+k) = pparf->realprop(j,k);
-  for (int j = 0; j < naux; ++j)
+  for (int j = 0; j < pparf->naux; ++j)
     for (int k = 0; k < nparf; ++k)
       pparc->auxprop(j,nparc+k) = pparf->auxprop(j,k);
   pparc->npar = npar_new;
@@ -119,40 +119,6 @@ void Particles::AMRFineToCoarse(MeshBlock* pmbf, MeshBlock* pmbc) {
 
 void Particles::Initialize(Mesh *pm, ParameterInput *pin) {
   if (initialized) return;
-
-  // Add particle ID.
-  ipid = AddIntProperty();
-
-  // Add particle position.
-  ixp = AddRealProperty();
-  iyp = AddRealProperty();
-  izp = AddRealProperty();
-
-  // Add particle velocity.
-  ivpx = AddRealProperty();
-  ivpy = AddRealProperty();
-  ivpz = AddRealProperty();
-
-  // Add old particle position.
-  ixp0 = AddAuxProperty();
-  iyp0 = AddAuxProperty();
-  izp0 = AddAuxProperty();
-
-  // Add old particle velocity.
-  ivpx0 = AddAuxProperty();
-  ivpy0 = AddAuxProperty();
-  ivpz0 = AddAuxProperty();
-
-  // Add particle position indices.
-  ixi1 = AddWorkingArray();
-  ixi2 = AddWorkingArray();
-  ixi3 = AddWorkingArray();
-
-  // Initiate ParticleMesh class.
-  ParticleMesh::Initialize(pin);
-  imom1 = ParticleMesh::AddMeshAux();
-  imom2 = ParticleMesh::AddMeshAux();
-  imom3 = ParticleMesh::AddMeshAux();
 
   // Get the CFL number for particles.
   cfl_par = pin->GetOrAddReal("particles", "cfl_par", pm->cfl_number);
@@ -166,6 +132,24 @@ void Particles::Initialize(Mesh *pm, ParameterInput *pin) {
 #endif
 
   initialized = true;
+}
+
+void Particles::PrintVariables() {
+  std::cout << "===========================================================" << std::endl;
+  std::cout << "================Particle Static Variables==================" << std::endl;
+  std::cout << "===========================================================" << std::endl;
+  std::cout << " nint: " << nint << "  nreal: " << nreal
+            << "  naux: " << naux << "  nwork: " << nwork
+            << "  nmeshaux: " << ppm->nmeshaux << std::endl;
+  std::cout << " ipid: " << ipid
+            << "  ixp: " << ixp << "  iyp: " << iyp << "  izp: " << izp << std::endl
+            << "  ivpx: " << ivpx << "  ivpy: " << ivpy << "  ivpz: " << ivpz << std::endl
+            << "  ixp0: " << ixp0 << "  iyp0: " << iyp0 << "  izp0: " << izp0 << std::endl
+            << "  ivpx0: " << ivpx0 << "  ivpy0: " << ivpy0 << "  ivpz0: " << ivpz0
+            << std::endl
+            << "  ixi1: " << ixi1 << "  ixi2: " << ixi2 << "  ixi3: " << ixi3 << std::endl
+            << "  imom1: " << imom1 << "  imom2: " << imom2 << "  imom3: " << imom3
+            << std::endl;
 }
 
 //--------------------------------------------------------------------------------------
@@ -210,8 +194,10 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
       for (int k = 0; k < ppar->npar; ++k)
         pcoord->CartesianToMeshCoordsVector(ppar->xp(k), ppar->yp(k), ppar->zp(k),
             ppar->vpx(k), ppar->vpy(k), ppar->vpz(k), vp1(k), vp2(k), vp3(k));
-      ppm->AssignParticlesToMeshAux(vp, 0, imom1, 3);
+      ppm->AssignParticlesToMeshAux(vp, 0, ppar->imom1, 3);
     } else {
+      // std::cout << "on MB " << b << " npar:" << ppar->npar << " nparmax:" << ppar->nparmax << std::endl;
+      // std::cout << "on MB " << b << " npar:" << ppm->ppar_->npar << " nparmax:" << ppm->ppar_->nparmax << std::endl;
       ppm->AssignParticlesToMeshAux(ppar->realprop, 0, ppm->iweight, 0);
     }
     ppm->SendBoundary();
@@ -238,9 +224,9 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
                 for (int i = is; i <= ie; ++i) {
                   Real vol(pc->GetCellVolume(k,j,i));
                   ppm->weight(k,j,i) /= vol;
-                  ppm->meshaux(imom1,k,j,i) /= vol;
-                  ppm->meshaux(imom2,k,j,i) /= vol;
-                  ppm->meshaux(imom3,k,j,i) /= vol;
+                  ppm->meshaux(pmb->ppar->imom1,k,j,i) /= vol;
+                  ppm->meshaux(pmb->ppar->imom2,k,j,i) /= vol;
+                  ppm->meshaux(pmb->ppar->imom3,k,j,i) /= vol;
                 }
           } else {
             for (int k = ks; k <= ke; ++k)
@@ -326,7 +312,39 @@ int Particles::GetTotalNumber(Mesh *pm) {
 //! \fn Particles::Particles(MeshBlock *pmb, ParameterInput *pin)
 //! \brief constructs a Particles instance.
 
-Particles::Particles(MeshBlock *pmb, ParameterInput *pin) {
+Particles::Particles(MeshBlock *pmb, ParameterInput *pin) :
+  nint(0), nreal(0), naux(0), nwork(0),
+  ipid(-1), ixp(-1), iyp(-1), izp(-1), ivpx(-1), ivpy(-1), ivpz(-1),
+  ixp0(-1), iyp0(-1), izp0(-1), ivpx0(-1), ivpy0(-1), ivpz0(-1),
+  ixi1(-1), ixi2(-1), ixi3(-1), imom1(-1), imom2(-1), imom3(-1) {
+  // Add particle ID.
+  ipid = AddIntProperty();
+
+  // Add particle position.
+  ixp = AddRealProperty();
+  iyp = AddRealProperty();
+  izp = AddRealProperty();
+
+  // Add particle velocity.
+  ivpx = AddRealProperty();
+  ivpy = AddRealProperty();
+  ivpz = AddRealProperty();
+
+  // Add old particle position.
+  ixp0 = AddAuxProperty();
+  iyp0 = AddAuxProperty();
+  izp0 = AddAuxProperty();
+
+  // Add old particle velocity.
+  ivpx0 = AddAuxProperty();
+  ivpy0 = AddAuxProperty();
+  ivpz0 = AddAuxProperty();
+
+  // Add particle position indices.
+  ixi1 = AddWorkingArray();
+  ixi2 = AddWorkingArray();
+  ixi3 = AddWorkingArray();
+
   // Point to the calling MeshBlock.
   pmy_block = pmb;
   pmy_mesh = pmb->pmy_mesh;
@@ -345,20 +363,28 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin) {
   // Allocate integer properties.
   realprop.NewAthenaArray(nreal,nparmax);
 
+  // Initiate ParticleMesh class.
+  ParticleMesh::Initialize(pin);
+
+  // Allocate mesh auxiliaries.
+  ppm = new ParticleMesh(this);
+  imom1 = ppm->AddMeshAux();
+  imom2 = ppm->AddMeshAux();
+  imom3 = ppm->AddMeshAux();
+
+  // Initiate ParticleBuffer class.
+  ParticleBuffer::SetNumberOfProperties(nint, nreal + naux);
+
   // Allocate auxiliary properties.
   if (naux > 0) auxprop.NewAthenaArray(naux,nparmax);
 
   // Allocate working arrays.
   if (nwork > 0) work.NewAthenaArray(nwork,nparmax);
 
-  // Allocate mesh auxiliaries.
-  ppm = new ParticleMesh(this);
-
   // Shallow copy to shorthands.
   AssignShorthands();
-
-  // Initiate ParticleBuffer class.
-  ParticleBuffer::SetNumberOfProperties(nint, nreal + naux);
+  
+  // PrintVariables();
 }
 
 //--------------------------------------------------------------------------------------
@@ -817,11 +843,15 @@ void Particles::ProcessNewParticles(Mesh *pmesh) {
     nnewpar[i] += nnewpar[i-1];
 
   // Set particle IDs.
+  // std::cout << "===========ProcessNewParticles==============" << std::endl;
   for (int b = 0; b < nblocks; ++b) {
     const MeshBlock *pmb(pmesh->my_blocks(b));
     pmb->ppar->SetNewParticleID(idmax + (pmb->gid > 0 ? nnewpar[pmb->gid - 1] : 0));
+    // std::cout << " gid:" << pmb->gid << " nnewpar: " << nnewpar[pmb->gid] << std::endl;
   }
   idmax += nnewpar[nbtotal - 1];
+
+  // std::cout << " idmax: " << idmax << std::endl;
 }
 
 //--------------------------------------------------------------------------------------
@@ -1124,6 +1154,7 @@ void Particles::UpdateCapacity(int new_nparmax) {
         << std::endl;
     ATHENA_ERROR(msg);
   }
+  // std::cout << "updating capacity from " << nparmax << " to " << new_nparmax << std::endl;
   // Increase size of property arrays
   nparmax = new_nparmax;
   intprop.ResizeLastDimension(nparmax);

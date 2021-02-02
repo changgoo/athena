@@ -33,7 +33,7 @@ class ParticleGravity {
 
  private:
   // Class variables
-  static int iwx, iwy, iwz;  // indices to working arrays
+  int iwx, iwy, iwz;  // indices to working arrays
 
   // Attributes
   AthenaArray<Real> gforce;        //!> gravitational force

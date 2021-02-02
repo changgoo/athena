@@ -67,8 +67,7 @@ iso_sound_speed = 1.00           # equavalent to sqrt(gamma*p/d) for p=0.1, d=1
 taus0 = 0           # drag stopping time
 backreaction = true # turn on/off the back reaction of the gas drag
 
-<problem>
-turb_flag  = 1    # 1 for decaying, 2 (impulsive) or 3 (continuous) for driven turbulence
+<turbulence>
 dedt       = 10.0 # Energy injection rate (for driven) or Total energy (for decaying)
 nlow       = 1    # cut-off wavenumber at low-k
 nhigh      = 2    # cut-off wavenumber at high-k
@@ -77,5 +76,8 @@ tcorr      = 0.1  # correlation time for OU process (both impulsive and continuo
 dtdrive    = 0.1  # time interval between perturbation (impulsive)
 f_shear    = 0.5  # the ratio of the shear component
 rseed      = 1    # if non-negative, seed will be set by hand (slow PS generation)
+
+<problem>
+turb_flag  = 1    # 1 for decaying, 2 (impulsive) or 3 (continuous) for driven turbulence
 four_pi_G  = 39.4784176 # 4*pi^2 for nJ = 1 if cs=d0=L=1
 dtog       = 1    # dust to gas ratio

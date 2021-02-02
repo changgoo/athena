@@ -45,7 +45,7 @@ friend class OutputType;
  public:
   // Class methods
   static void Initialize(ParameterInput *pin);
-  static int AddMeshAux();
+  int AddMeshAux();
 
   // Constructor and destructor
   explicit ParticleMesh(Particles *ppar);
@@ -56,8 +56,8 @@ friend class OutputType;
 
  protected:
   // Class variables
-  static int nmeshaux;  //!> number of auxiliaries to the meshblock
-  static int iweight;   //!> index to weight in meshaux
+  int nmeshaux;  //!> number of auxiliaries to the meshblock
+  int iweight;   //!> index to weight in meshaux
 
   // Instance variables
   AthenaArray<Real> meshaux;   //!> auxiliaries to the meshblock

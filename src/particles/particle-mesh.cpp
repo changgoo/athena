@@ -22,8 +22,8 @@
 
 // Class variable initialization
 bool ParticleMesh::initialized_ = false;
-int ParticleMesh::nmeshaux = 0;
-int ParticleMesh::iweight = -1;
+// int ParticleMesh::nmeshaux = 0;
+// int ParticleMesh::iweight = -1;
 #ifdef MPI_PARALLEL
 MPI_Comm ParticleMesh::my_comm = MPI_COMM_NULL;
 #endif
@@ -37,9 +37,6 @@ static Real _WeightFunction(Real dxi);
 
 void ParticleMesh::Initialize(ParameterInput *pin) {
   if (initialized_) return;
-
-  // Add weight in meshaux.
-  iweight = AddMeshAux();
 
 #ifdef MPI_PARALLEL
   // Get my MPI communicator.
@@ -61,7 +58,10 @@ int ParticleMesh::AddMeshAux() {
 //! \fn ParticleMesh::ParticleMesh(Particles *ppar, int nmeshaux)
 //! \brief constructs a new ParticleMesh instance.
 
-ParticleMesh::ParticleMesh(Particles *ppar) {
+ParticleMesh::ParticleMesh(Particles *ppar) : nmeshaux(0), iweight(-1) {
+  // Add weight in meshaux.
+  iweight = AddMeshAux();
+
   // Save some inputs.
   ppar_ = ppar;
   pmb_ = ppar->pmy_block;
@@ -112,6 +112,11 @@ ParticleMesh::ParticleMesh(Particles *ppar) {
     bd_.req_send[n] = MPI_REQUEST_NULL;
 #endif
   }
+
+  // std::cout << "===========================================================" << std::endl;
+  // std::cout << "============Particle Mesh Static Variables=================" << std::endl;
+  // std::cout << "===========================================================" << std::endl;
+  // std::cout << "  iweight: " << iweight << "  nmeshaux: " << nmeshaux << std::endl;
 }
 
 //--------------------------------------------------------------------------------------

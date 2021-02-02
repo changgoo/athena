@@ -61,6 +61,7 @@ friend class ParticleMesh;
   static void FormattedTableOutput(Mesh *pm, OutputParameters op);
   static void GetHistoryOutputNames(std::string output_names[]);
   static int GetTotalNumber(Mesh *pm);
+  void PrintVariables();
 
   // Class constant
   static const int NHISTORY = 7;  //!> number of variables in history output
@@ -95,28 +96,28 @@ friend class ParticleMesh;
 
  protected:
   // Class methods
-  static int AddIntProperty();
-  static int AddRealProperty();
-  static int AddAuxProperty();
-  static int AddWorkingArray();
+  int AddIntProperty();
+  int AddRealProperty();
+  int AddAuxProperty();
+  int AddWorkingArray();
 
   // Class variables
   static bool initialized;  //!> whether or not the class is initialized
-  static int nint;          //!> numbers of integer particle properties
-  static int nreal;         //!> numbers of real particle properties
-  static int naux;          //!> number of auxiliary particle properties
-  static int nwork;         //!> number of working arrays for particles
+  int nint;          //!> numbers of integer particle properties
+  int nreal;         //!> numbers of real particle properties
+  int naux;          //!> number of auxiliary particle properties
+  int nwork;         //!> number of working arrays for particles
 
-  static int ipid;                 //!> index for the particle ID
-  static int ixp, iyp, izp;        // indices for the position components
-  static int ivpx, ivpy, ivpz;     // indices for the velocity components
+  int ipid;                 //!> index for the particle ID
+  int ixp, iyp, izp;        // indices for the position components
+  int ivpx, ivpy, ivpz;     // indices for the velocity components
 
-  static int ixp0, iyp0, izp0;     // indices for beginning position components
-  static int ivpx0, ivpy0, ivpz0;  // indices for beginning velocity components
+  int ixp0, iyp0, izp0;     // indices for beginning position components
+  int ivpx0, ivpy0, ivpz0;  // indices for beginning velocity components
 
-  static int ixi1, ixi2, ixi3;     // indices for position indices
+  int ixi1, ixi2, ixi3;     // indices for position indices
 
-  static int imom1, imom2, imom3;  // indices for momentum components on mesh
+  int imom1, imom2, imom3;  // indices for momentum components on mesh
 
   static Real cfl_par;  //!> CFL number for particles
 
@@ -219,11 +220,13 @@ friend class MeshBlock;
   // Class method
   static void FindDensityOnMesh(Mesh *pm, bool include_momentum);
   static void Initialize(Mesh *pm, ParameterInput *pin);
-  static void SetOneParticleMass(Real new_mass);
-  static bool GetBackReaction();
-  static bool GetVariableTaus();
-  static Real GetOneParticleMass();
-  static Real GetStoppingTime();
+  void SetOneParticleMass(Real new_mass);
+  bool GetBackReaction() { return backreaction; }
+  bool GetDragForce() { return dragforce; }
+  bool GetVariableTaus() { return variable_taus; }
+  Real GetOneParticleMass() { return mass; }
+  Real GetStoppingTime() { return taus0; }
+  void PrintVariables();
 
   //!Constructor
   DustParticles(MeshBlock *pmb, ParameterInput *pin);
@@ -232,7 +235,7 @@ friend class MeshBlock;
   ~DustParticles();
 
   // Accessors
-  AthenaArray<Real> GetMassDensity() const;
+  AthenaArray<Real> GetMassDensity() const { return ppm->weight; }
   AthenaArray<Real> GetVelocityField() const;
 
   // Instance method
@@ -241,16 +244,16 @@ friend class MeshBlock;
  private:
   // Class variables
   static bool initialized;    //!> whether or not the class is initialized
-  static bool backreaction;   //!> turn on/off back reaction
-  static bool dragforce;      //!> turn on/off drag force
-  static bool variable_taus;  //!> whether or not the stopping time is variable
+  bool backreaction;   //!> turn on/off back reaction
+  bool dragforce;      //!> turn on/off drag force
+  bool variable_taus;  //!> whether or not the stopping time is variable
 
-  static int iwx, iwy, iwz;         // indices for working arrays
-  static int idpx1, idpx2, idpx3;   // indices for momentum change
-  static int itaus;                 //!> index for stopping time
+  int iwx, iwy, iwz;         // indices for working arrays
+  int idpx1, idpx2, idpx3;   // indices for momentum change
+  int itaus;                 //!> index for stopping time
 
-  static Real mass;   //!> mass of each particle
-  static Real taus0;  //!> constant/default stopping time (in code units)
+  Real mass;   //!> mass of each particle
+  Real taus0;  //!> constant/default stopping time (in code units)
 
   // Instance methods.
   void AssignShorthands();
@@ -268,49 +271,49 @@ friend class MeshBlock;
   ParticleGravity *ppgrav;
 };
 
-//--------------------------------------------------------------------------------------
-//! \fn bool DustParticles::GetBackReaction()
-//! \brief returns if the back reaction of the drag is on or off.
+// //--------------------------------------------------------------------------------------
+// //! \fn bool DustParticles::GetBackReaction()
+// //! \brief returns if the back reaction of the drag is on or off.
+//
+// inline bool DustParticles::GetBackReaction() {
+//   return backreaction;
+// }
+//
+// //--------------------------------------------------------------------------------------
+// //! \fn bool DustParticles::GetVariableTaus()
+// //! \brief returns if the stopping time can be variable or not.
+//
+// inline bool DustParticles::GetVariableTaus() {
+//   return variable_taus;
+// }
+//
+// //--------------------------------------------------------------------------------------
+// //! \fn Real DustParticles::GetOneParticleMass()
+// //! \brief returns the mass of each particle.
+//
+// inline Real DustParticles::GetOneParticleMass() {
+//   return mass;
+// }
+//
+// //--------------------------------------------------------------------------------------
+// //! \fn Real DustParticles::GetStoppingTime()
+// //! \brief returns the stopping time of the drag.
+//
+// inline Real DustParticles::GetStoppingTime() {
+//   return taus0;
+// }
 
-inline bool DustParticles::GetBackReaction() {
-  return backreaction;
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn bool DustParticles::GetVariableTaus()
-//! \brief returns if the stopping time can be variable or not.
-
-inline bool DustParticles::GetVariableTaus() {
-  return variable_taus;
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn Real DustParticles::GetOneParticleMass()
-//! \brief returns the mass of each particle.
-
-inline Real DustParticles::GetOneParticleMass() {
-  return mass;
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn Real DustParticles::GetStoppingTime()
-//! \brief returns the stopping time of the drag.
-
-inline Real DustParticles::GetStoppingTime() {
-  return taus0;
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn AthenaArray<Real> DustParticles::GetMassDensity()
-//! \brief returns the mass density of particles on the mesh.
-//!
-//! \note
-//!  Precondition:
-//!  The particle properties on mesh must be assigned using the class method
-//!  DustParticles::FindDensityOnMesh().
-
-inline AthenaArray<Real> DustParticles::GetMassDensity() const {
-  return ppm->weight;
-}
+// //--------------------------------------------------------------------------------------
+// //! \fn AthenaArray<Real> DustParticles::GetMassDensity()
+// //! \brief returns the mass density of particles on the mesh.
+// //!
+// //! \note
+// //!  Precondition:
+// //!  The particle properties on mesh must be assigned using the class method
+// //!  DustParticles::FindDensityOnMesh().
+//
+// inline AthenaArray<Real> DustParticles::GetMassDensity() const {
+//   return ppm->weight;
+// }
 
 #endif  // PARTICLES_PARTICLES_HPP_
