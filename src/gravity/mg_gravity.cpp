@@ -109,7 +109,7 @@ void MGGravityDriver::Solve(int stage) {
   if (PARTICLES) {
     // Compute mass density of particles.
     if (pmy_mesh_->my_blocks(0)->ppar->IsGravity())
-      DustParticles::FindDensityOnMesh(pmy_mesh_, false);
+      Particles::FindDensityOnMesh(pmy_mesh_, false);
   }
 
 

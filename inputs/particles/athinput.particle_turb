@@ -64,9 +64,7 @@ gamma           = 1.666666666667 # gamma = C_p/C_v
 iso_sound_speed = 1.00           # equavalent to sqrt(gamma*p/d) for p=0.1, d=1
 
 <particles>
-partype = tracer
-taus0 = 0           # drag stopping time
-backreaction = true # turn on/off the back reaction of the gas drag
+partype    = tracer
 
 <turbulence>
 dedt       = 10.0 # Energy injection rate (for driven) or Total energy (for decaying)
@@ -79,6 +77,8 @@ f_shear    = 0.5  # the ratio of the shear component
 rseed      = 1    # if non-negative, seed will be set by hand (slow PS generation)
 
 <problem>
+np_per_cell = 1
 turb_flag  = 1    # 1 for decaying, 2 (impulsive) or 3 (continuous) for driven turbulence
 four_pi_G  = 39.4784176 # 4*pi^2 for nJ = 1 if cs=d0=L=1
 dtog       = 1    # dust to gas ratio
+compute_error = true

@@ -32,6 +32,9 @@ TracerParticles::TracerParticles(MeshBlock *pmb, ParameterInput *pin)
   work.DeleteAthenaArray();
   work.NewAthenaArray(nwork,nparmax);
 
+  // Define mass.
+  mass = pin->GetOrAddReal("particles", "mass", 1.0);
+
   // Assign shorthands (need to do this for every constructor of a derived class)
   AssignShorthands();
 }
@@ -46,6 +49,14 @@ TracerParticles::~TracerParticles() {
     work.DeleteAthenaArray();
     nwork = 0;
   }
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void TracerParticles::SetOneParticleMass(Real new_mass)
+//! \brief sets the mass of each particle.
+
+void TracerParticles::SetOneParticleMass(Real new_mass) {
+  pinput->SetReal("particles", "mass", mass = new_mass);
 }
 
 //--------------------------------------------------------------------------------------

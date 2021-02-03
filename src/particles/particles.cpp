@@ -269,12 +269,12 @@ void Particles::GetHistoryOutputNames(std::string output_names[]) {
 //! \fn int Particles::GetTotalNumber(Mesh *pm)
 //! \brief returns total number of particles (from all processes).
 
-int Particles::GetTotalNumber(Mesh *pm) {
-  int npartot(0);
+std::int64_t Particles::GetTotalNumber(Mesh *pm) {
+  std::int64_t npartot(0);
   for (int b = 0; b < pm->nblocal; ++b)
     npartot += pm->my_blocks(b)->ppar->npar;
 #ifdef MPI_PARALLEL
-  MPI_Allreduce(MPI_IN_PLACE, &npartot, 1, MPI_INT, MPI_SUM, my_comm);
+  MPI_Allreduce(MPI_IN_PLACE, &npartot, 1, MPI_LONG, MPI_SUM, my_comm);
 #endif
   return npartot;
 }

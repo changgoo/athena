@@ -64,7 +64,7 @@ void OutputLoopTime(const int ncycle, double dt_array[], std::string basename) {
 
     if ((fp = std::fopen(fname.c_str(),&fop)) == nullptr) {
       std::cout << "### ERROR in function OutputLoopTime" << std::endl
-                << "Cannot open loop_time.txt" << std::endl;
+                << "Cannot open " << fname << std::endl;
       return;
     }
 

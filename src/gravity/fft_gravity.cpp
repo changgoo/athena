@@ -74,7 +74,7 @@ void FFTGravityDriver::Solve(int stage, int mode) {
   // Compute mass density of particles.
   if (PARTICLES) {
     if (pmy_mesh_->my_blocks(0)->ppar->IsGravity())
-      DustParticles::FindDensityOnMesh(pmy_mesh_, false);
+      Particles::FindDensityOnMesh(pmy_mesh_, false);
   }
   for (int nb=0; nb<pmy_mesh_->nblocal; ++nb) {
     MeshBlock *pmb = pmy_mesh_->my_blocks(nb);

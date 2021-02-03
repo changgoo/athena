@@ -18,14 +18,6 @@
 #include "particles.hpp"
 
 //--------------------------------------------------------------------------------------
-//! \fn void DustParticles::SetOneParticleMass(Real new_mass)
-//! \brief sets the mass of each particle.
-
-void DustParticles::SetOneParticleMass(Real new_mass) {
-  pinput->SetReal("particles", "mass", mass = new_mass);
-}
-
-//--------------------------------------------------------------------------------------
 //! \fn DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin)
 //! \brief constructs a DustParticles instance.
 
@@ -94,6 +86,14 @@ DustParticles::~DustParticles() {
 
   if (SELF_GRAVITY_ENABLED && backreaction)
     delete ppgrav;
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void DustParticles::SetOneParticleMass(Real new_mass)
+//! \brief sets the mass of each particle.
+
+void DustParticles::SetOneParticleMass(Real new_mass) {
+  pinput->SetReal("particles", "mass", mass = new_mass);
 }
 
 //--------------------------------------------------------------------------------------

@@ -60,7 +60,7 @@ friend class ParticleMesh;
   static void FindHistoryOutput(Mesh *pm, Real data_sum[], int pos);
   static void FormattedTableOutput(Mesh *pm, OutputParameters op);
   static void GetHistoryOutputNames(std::string output_names[]);
-  static int GetTotalNumber(Mesh *pm);
+  static std::int64_t GetTotalNumber(Mesh *pm);
 
   // Class constant
   static const int NHISTORY = 7;  //!> number of variables in history output
@@ -127,7 +127,7 @@ friend class ParticleMesh;
   int imom1, imom2, imom3;  // indices for momentum components on mesh
 
   int igx, igy, igz; // indices for gravity force
-  
+
   // Instance methods
   virtual void AssignShorthands();  //!> Needs to be called everytime
                                     //!> intprop, realprop, & auxprop are resized
@@ -284,7 +284,8 @@ friend class MeshBlock;
   ~TracerParticles();
 
   // Instance method
-  Real NewBlockTimeStep();
+  void SetOneParticleMass(Real new_mass);
+  Real GetOneParticleMass() { return mass; }
 
  private:
   int iwx, iwy, iwz;         // indices for working arrays
