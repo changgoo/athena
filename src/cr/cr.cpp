@@ -188,6 +188,10 @@ inline void DefaultOpacity(MeshBlock *pmb, AthenaArray<Real> &u_cr,
 #pragma omp simd
         for(int i=il; i<=iu; ++i){
 
+          pcr->sigma_diff(0,k,j,i) = pcr->sigma;
+          pcr->sigma_diff(1,k,j,i) = pcr->max_opacity;
+          pcr->sigma_diff(2,k,j,i) = pcr->max_opacity;  
+          
           pcr->sigma_adv(0,k,j,i) = pcr->max_opacity;
           pcr->sigma_adv(1,k,j,i) = pcr->max_opacity;
           pcr->sigma_adv(2,k,j,i) = pcr->max_opacity;  
