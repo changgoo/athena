@@ -110,7 +110,7 @@ inline void DefaultOpacity(MeshBlock *pmb, AthenaArray<Real> &u_cr,
           Real b_grad_pc = pcr->b_grad_pc(k,j,i);
           
           //diffusion coefficient
-          pcr->sigma_diff(0,k,j,i) = pcr->Get_SigmaParallel(prim(IDN,k,j,i),prim(IPR,k,j,i),u_cr(CRE,k,j,i),fabs(b_grad_pc));
+          pcr->sigma_diff(0,k,j,i) = pcr->Get_SigmaParallel(prim(IDN,k,j,i),prim(IPR,k,j,i),u_cr(CRE,k,j,i),fabs(b_grad_pc)/btot);
           if (pcr->perp_diff_flag == 0)
           {
             pcr->sigma_diff(1,k,j,i) = pcr->max_opacity;
@@ -275,7 +275,7 @@ CosmicRay::CosmicRay(MeshBlock *pmb, ParameterInput *pin):
   vmax = pin->GetOrAddReal("cr","vmax",1.0); //this should be in code units already
   sigma = pin->GetOrAddReal("cr","sigma",1.0); 
   max_opacity = pin->GetOrAddReal("cr","max_opacity",1.e10);
-  lambdac = pin->GetOrAddReal("cr","lambdac",1.0); //dec/dt = -lambdac nH ec
+  lambdac = pin->GetOrAddReal("cr","lambdac",0.0); //dec/dt = -lambdac nH ec
   perp_to_par_diff = pin->GetOrAddReal("cr","diff_ratio",10.0);
   ion_rate_norm = pin->GetOrAddReal("cr","ion_rate_norm",1e-4); //in cgs unit -- the dafault value assumes delta = -0.35
   

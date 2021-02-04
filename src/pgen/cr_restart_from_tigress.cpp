@@ -161,7 +161,7 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin)
     pcr->sigma = pin->GetOrAddReal("cr","sigma",1.0);
     pcr->sigma *= pcr->vmax;
     pcr->sigma *= punit->second/(punit->cm*punit->cm);
-    pcr->lambdac = pin->GetOrAddReal("cr","lambdac",1.0);
+    pcr->lambdac = pin->GetOrAddReal("cr","lambdac",5.3e-16);
     pcr->lambdac /= punit->second;
   }
 }
@@ -307,7 +307,7 @@ void TempCalculation(Units *punit, Real rho, Real Press, Real &Temp, Real &mu, R
 {
   Temp = pcool->GetTemperature(rho, Press);
   muH = pcool->Get_muH();
-  mu = Temp/(Press/rho)*pcool->punit->Temperature;
+  mu = pcool->Get_mu(rho, Press);
 }
   
 //! \fn void MeshBlock::ProblemGenerator(ParameterInput *pin)

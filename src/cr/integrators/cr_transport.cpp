@@ -452,7 +452,7 @@ void CRIntegrator::CalculateFluxes(AthenaArray<Real> &w,
             pcr->sigma_adv(2,k,j,i) = pcr->max_opacity;
           }
           
-          pcr->sigma_diff(0,k,j,i) = pcr->Get_SigmaParallel(w(IDN,k,j,i),w(IPR,k,j,i),cr(CRE,k,j,i),fabs(b_grad_pc));
+          pcr->sigma_diff(0,k,j,i) = pcr->Get_SigmaParallel(w(IDN,k,j,i),w(IPR,k,j,i),cr(CRE,k,j,i),fabs(b_grad_pc)/sqrt(pb));
           if (pcr->perp_diff_flag == 0)
           {
             pcr->sigma_diff(1,k,j,i) = pcr->max_opacity;

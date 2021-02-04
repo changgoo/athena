@@ -204,11 +204,10 @@ void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Rea
         }        
 
         if (pcr->losses_flag>0){
-          Real loss_rate = - pcr->lambdac * new_ec * rho;
-          new_ec -= loss_rate * new_ec * rho * dt;
-          newfr1 -= loss_rate * newfr1 * rho * dt;
-          newfr2 -= loss_rate * newfr2 * rho * dt;
-          newfr3 -= loss_rate * newfr3 * rho * dt;
+          new_ec -= pcr->lambdac * new_ec * rho * dt;
+          newfr1 -= pcr->lambdac * newfr1 * rho * dt;
+          newfr2 -= pcr->lambdac * newfr2 * rho * dt;
+          newfr3 -= pcr->lambdac * newfr3 * rho * dt;
         }
        
         if(new_ec < 0.0) new_ec = ec[i];
