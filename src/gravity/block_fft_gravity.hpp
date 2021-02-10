@@ -45,13 +45,17 @@ class BlockFFTGravity : public BlockFFT {
   void ExecuteBackward() final;
   void Solve(int stage);
 
+  // utility functions
+  void InitGreen();
+
  private:
   FFTGravitySolverTaskList *gtlist_;
   Real Omega_0_,qshear_,rshear_;
   Real dx1sq_,dx2sq_,dx3sq_;
   Real Lx1_,Lx2_,Lx3_;
-  const std::complex<Real> I_;
+  const std::complex<Real> I_; // sqrt(-1)
   std::complex<Real> *in2_,*in_e_,*in_o_;
+  AthenaArray<Real> green_; // Green's function for open BC
 };
 
 #endif // GRAVITY_BLOCK_FFT_GRAVITY_HPP_
