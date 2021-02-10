@@ -40,6 +40,9 @@ BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
   in2_ = new std::complex<Real>[nx1*nx2*nx3];
   in_e_ = new std::complex<Real>[nx1*nx2*nx3];
   in_o_ = new std::complex<Real>[nx1*nx2*nx3];
+  green_.NewAthenaArray(2*fast_nx3, 2*fast_nx2, 2*fast_nx1);
+  if (gbflag==GravityBoundaryFlag::open)
+    InitGreen();
 }
 
 //----------------------------------------------------------------------------------------
@@ -127,11 +130,6 @@ void BlockFFTGravity::ExecuteForward() {
     pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(in_e_),FFTW_FORWARD,pf3d->fft_slow);
     pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(in_o_),FFTW_FORWARD,pf3d->fft_slow);
   } else if (gbflag==GravityBoundaryFlag::open) {
-    std::stringstream msg;
-    msg << "### FATAL ERROR in BlockFFTGravity::ExecuteForward" << std::endl
-        << "open boundary condition is not yet implemented" << std::endl;
-    ATHENA_ERROR(msg);
-    return;
   } else {
     std::stringstream msg;
     msg << "### FATAL ERROR in BlockFFTGravity::ExecuteForward" << std::endl
@@ -220,11 +218,6 @@ void BlockFFTGravity::ExecuteBackward() {
     // multiply norm factor
     for (int i=0; i<2*nx1*nx2*nx3; ++i) data[i] *= Lx3_/(2.0*Nx1*Nx2*SQR(Nx3));
   } else if (gbflag==GravityBoundaryFlag::open) {
-    std::stringstream msg;
-    msg << "### FATAL ERROR in BlockFFTGravity::ExecuteBackward" << std::endl
-        << "open boundary condition is not yet implemented" << std::endl;
-    ATHENA_ERROR(msg);
-    return;
   } else {
     std::stringstream msg;
     msg << "### FATAL ERROR in BlockFFTGravity::ExecuteForward" << std::endl
@@ -311,11 +304,16 @@ void BlockFFTGravity::ApplyKernel() {
       }
     }
   } else if (gbflag==GravityBoundaryFlag::open) {
-    std::stringstream msg;
-    msg << "### FATAL ERROR in BlockFFTGravity::ApplyKernel" << std::endl
-        << "open boundary condition is not yet implemented" << std::endl;
-    ATHENA_ERROR(msg);
-    return;
+    // output Green's function as pgrav->phi
+    for (int k=0; k<fast_nx3; k++) {
+      for (int j=0; j<fast_nx2; j++) {
+        for (int i=0; i<fast_nx1; i++) {
+          int idx = i + fast_nx1*(j + fast_nx2*k);
+          in_[idx] = green_(k,j,i);
+//          in_[idx] = green_(k,j,fast_nx1+i);
+        }
+      }
+    }
   } else {
     std::stringstream msg;
     msg << "### FATAL ERROR in BlockFFTGravity::ExecuteForward" << std::endl
@@ -422,6 +420,37 @@ void BlockFFTGravity::Solve(int stage) {
     }
   }
   return;
+}
+
+//----------------------------------------------------------------------------------------
+//! \fn InitGreen()
+//! \brief Initialize Green's function and its Fourier transform for open BC.
+
+void BlockFFTGravity::InitGreen() {
+  Real gconst = pmy_block_->pgrav->four_pi_G/(4.0*PI);
+  for (int k=0; k<2*fast_nx3; k++) {
+    for (int j=0; j<2*fast_nx2; j++) {
+      for (int i=0; i<2*fast_nx1; i++) {
+        // get global index in 8x mesh
+        int gi = 2*fast_ilo + i;
+        int gj = 2*fast_jlo + j;
+        int gk = 2*fast_klo + k;
+        // restrict index range to [-Nx, Nx-1]
+        gi = (gi+Nx1)%(2*Nx1) - Nx1;
+        gj = (gj+Nx2)%(2*Nx2) - Nx2;
+        gk = (gk+Nx3)%(2*Nx3) - Nx3;
+        // point-mass Green's function
+        if ((gi==0)&&(gj==0)&&(gk==0)) {
+          green_(k,j,i) = 0.0;
+        } else {
+          green_(k,j,i) = -gconst/std::sqrt(SQR(gi)*dx1sq_ +
+                                            SQR(gj)*dx2sq_ +
+                                            SQR(gk)*dx3sq_);
+        }
+        // TODO(SMOON) add integrated Green's function
+      }
+    }
+  }
 }
 
 //----------------------------------------------------------------------------------------
