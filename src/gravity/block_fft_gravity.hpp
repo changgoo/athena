@@ -55,7 +55,12 @@ class BlockFFTGravity : public BlockFFT {
   Real Lx1_,Lx2_,Lx3_;
   const std::complex<Real> I_; // sqrt(-1)
   std::complex<Real> *in2_,*in_e_,*in_o_;
-  AthenaArray<Real> green_; // Green's function for open BC
+  std::complex<Real> *grf_; // Green's function for open BC
+#ifdef FFT
+#ifdef MPI_PARALLEL
+  FFTMPI_NS::FFT3d *pf3dgrf_;
+#endif
+#endif
 };
 
 #endif // GRAVITY_BLOCK_FFT_GRAVITY_HPP_
