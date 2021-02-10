@@ -40,9 +40,22 @@ BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
   in2_ = new std::complex<Real>[nx1*nx2*nx3];
   in_e_ = new std::complex<Real>[nx1*nx2*nx3];
   in_o_ = new std::complex<Real>[nx1*nx2*nx3];
-  green_.NewAthenaArray(2*fast_nx3, 2*fast_nx2, 2*fast_nx1);
+  grf_ = new std::complex<Real>[8*fast_nx3*fast_nx2*fast_nx1];
+#ifdef FFT
+#ifdef MPI_PARALLEL
+  // setup fft in the 8x extended domain for the Green's function
+  int permute=2; // will make output array (slow,mid,fast) = (y,x,z) = (j,i,k)
+  int fftsize, sendsize, recvsize; // to be returned from setup
+  pf3dgrf_ = new FFTMPI_NS::FFT3d(MPI_COMM_WORLD,2);
+  pf3dgrf_->setup(2*Nx1, 2*Nx2, 2*Nx3,
+                  2*fast_ilo, 2*fast_ihi+1, 2*fast_jlo, 2*fast_jhi+1,
+                  2*fast_klo, 2*fast_khi+1, 2*slow_ilo, 2*slow_ihi+1,
+                  2*slow_jlo, 2*slow_jhi+1, 2*slow_klo, 2*slow_khi+1,
+                  permute, fftsize, sendsize, recvsize);
   if (gbflag==GravityBoundaryFlag::open)
     InitGreen();
+#endif
+#endif
 }
 
 //----------------------------------------------------------------------------------------
@@ -54,6 +67,12 @@ BlockFFTGravity::~BlockFFTGravity() {
   delete[] in2_;
   delete[] in_e_;
   delete[] in_o_;
+  delete[] grf_;
+#ifdef FFT
+#ifdef MPI_PARALLEL
+  delete pf3dgrf_;
+#endif
+#endif
 }
 
 //----------------------------------------------------------------------------------------
@@ -309,8 +328,8 @@ void BlockFFTGravity::ApplyKernel() {
       for (int j=0; j<fast_nx2; j++) {
         for (int i=0; i<fast_nx1; i++) {
           int idx = i + fast_nx1*(j + fast_nx2*k);
-          in_[idx] = green_(k,j,i);
-//          in_[idx] = green_(k,j,fast_nx1+i);
+          int idx2 = (fast_nx1+i) + (2*fast_nx1)*(j + (2*fast_nx2)*k);
+          in_[idx] = grf_[idx2];
         }
       }
     }
@@ -440,17 +459,44 @@ void BlockFFTGravity::InitGreen() {
         gj = (gj+Nx2)%(2*Nx2) - Nx2;
         gk = (gk+Nx3)%(2*Nx3) - Nx3;
         // point-mass Green's function
+        int idx = i + (2*fast_nx1)*(j + (2*fast_nx2)*k);
         if ((gi==0)&&(gj==0)&&(gk==0)) {
-          green_(k,j,i) = 0.0;
+          grf_[idx] = {0.0, 0.0};
         } else {
-          green_(k,j,i) = -gconst/std::sqrt(SQR(gi)*dx1sq_ +
-                                            SQR(gj)*dx2sq_ +
-                                            SQR(gk)*dx3sq_);
+          grf_[idx] = {-gconst/std::sqrt(SQR(gi)*dx1sq_ +
+                                         SQR(gj)*dx2sq_ +
+                                         SQR(gk)*dx3sq_), 0.0};
         }
         // TODO(SMOON) add integrated Green's function
       }
     }
   }
+  // Apply DFT to the Green's function
+#ifdef FFT
+#ifdef MPI_PARALLEL
+  FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR*>(grf_);
+  // block2fast
+  if (pf3d->remap_prefast) {
+    std::cout << "### Warning in BlockFFTGravity::InitGreen()" << std::endl
+              << "Input data layout for the Green's function is not "
+              << "the x-pencil decomposition as desired." << std::endl;
+    pf3d->remap(data,data,pf3d->remap_prefast);
+  }
+  // fast_forward
+  pf3dgrf_->perform_ffts(reinterpret_cast<FFT_DATA *>(data), FFTW_FORWARD,
+                         pf3dgrf_->fft_fast);
+  // fast2mid
+  pf3dgrf_->remap(data,data,pf3dgrf_->remap_fastmid);
+  // mid_forward
+  pf3dgrf_->perform_ffts(reinterpret_cast<FFT_DATA *>(data), FFTW_FORWARD,
+                         pf3dgrf_->fft_mid);
+  // mid2slow
+  pf3dgrf_->remap(data,data,pf3dgrf_->remap_midslow);
+  // slow_forward
+  pf3dgrf_->perform_ffts(reinterpret_cast<FFT_DATA *>(data), FFTW_FORWARD,
+                         pf3dgrf_->fft_slow);
+#endif
+#endif
 }
 
 //----------------------------------------------------------------------------------------
