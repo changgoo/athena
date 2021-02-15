@@ -44,11 +44,8 @@ TracerParticles::TracerParticles(MeshBlock *pmb, ParameterInput *pin)
 //! \brief destroys a TracerParticles instance.
 
 TracerParticles::~TracerParticles() {
-  // Delete working arrays here
-  if (nwork > 0) {
-    work.DeleteAthenaArray();
-    nwork = 0;
-  }
+  // nothing to do
+  return;
 }
 
 //--------------------------------------------------------------------------------------

@@ -78,12 +78,6 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin)
 //! \brief destroys a DustParticles instance.
 
 DustParticles::~DustParticles() {
-  // Delete working arrays here
-  if (nwork > 0) {
-    work.DeleteAthenaArray();
-    nwork = 0;
-  }
-
   if (SELF_GRAVITY_ENABLED && backreaction)
     delete ppgrav;
 }

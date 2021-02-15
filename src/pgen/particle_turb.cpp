@@ -34,22 +34,17 @@
 #include <omp.h>
 #endif
 
-
+Real DeltaRho(MeshBlock *pmb, int iout);
 //========================================================================================
 //! \fn void Mesh::InitUserMeshData(ParameterInput *pin)
 //! \brief
 //========================================================================================
 void Mesh::InitUserMeshData(ParameterInput *pin) {
   if (SELF_GRAVITY_ENABLED) {
-    Real d0 = pin->GetOrAddReal("problem", "d0", 1.0);
     Real four_pi_G = pin->GetReal("problem","four_pi_G");
     Real eps = pin->GetOrAddReal("problem","grav_eps", 0.0);
     SetFourPiG(four_pi_G);
     SetGravityThreshold(eps);
-
-    if (PARTICLES) {
-      Real dpar0 = d0 * pin->GetOrAddReal("problem", "dtog", 1.0);
-    }
   }
 
   // turb_flag is initialzed in the Mesh constructor to 0 by default;
@@ -66,6 +61,11 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     return;
 #endif
   }
+
+  // Enroll user-defined functions
+  AllocateUserHistoryOutput(1);
+  EnrollUserHistoryOutput(0, DeltaRho, "delta_rho");
+
   return;
 }
 
@@ -177,7 +177,7 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
     if (!pin->GetOrAddBoolean("problem","compute_error",false)) return;
 
     Real l1_err{0}, max_err{0.0};
-    Particles::FindDensityOnMesh(this, false);
+    // Particles::FindDensityOnMesh(this, false);
 
     for (int b=0; b<nblocal; ++b) {
       MeshBlock* pmb = my_blocks(b);
@@ -186,11 +186,12 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
       int ks=pmb->ks, ke=pmb->ke;
       AthenaArray<Real> rho;
       rho.InitWithShallowSlice(pmb->phydro->u,4,IDN,1);
+      pmb->ppar->FindLocalDensityOnMesh(false);
       AthenaArray<Real> rhop(pmb->ppar->GetMassDensity());
       for (int k=ks; k<=ke; ++k) {
         for (int j=js; j<=je; ++j) {
           for (int i=is; i<=ie; ++i) {
-            Real drho = std::abs(rho(k,j,i) - rhop(IDN,k,j,i));
+            Real drho = std::abs(rho(k,j,i) - rhop(k,j,i));
             l1_err += std::abs(drho);
             max_err = std::max(drho, max_err);
           }
@@ -242,4 +243,30 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
   }
 
   return;
+}
+
+//========================================================================================
+//! \fn Real DeltaRho(MeshBlock *pmb, int iout)
+//! \brief Difference in gas and trace densities for history variable
+//========================================================================================
+Real DeltaRho(MeshBlock *pmb, int iout) {
+  pmb->ppar->FindLocalDensityOnMesh(false);
+  Real l1_err{0};
+  int is=pmb->is, ie=pmb->ie;
+  int js=pmb->js, je=pmb->je;
+  int ks=pmb->ks, ke=pmb->ke;
+  AthenaArray<Real> vol(pmb->ncells1);
+  AthenaArray<Real> rho;
+  rho.InitWithShallowSlice(pmb->phydro->u,4,IDN,1);
+  AthenaArray<Real> rhop(pmb->ppar->GetMassDensity());
+  for (int k=ks; k<=ke; ++k) {
+    for (int j=js; j<=je; ++j) {
+      pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
+      for (int i=is; i<=ie; ++i) {
+        Real drho = std::abs(rho(k,j,i) - rhop(k,j,i));
+        l1_err += std::abs(drho)*vol(i);
+      }
+    }
+  }
+  return l1_err;
 }

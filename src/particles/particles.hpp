@@ -92,6 +92,7 @@ friend class ParticleMesh;
   bool ReceiveFromNeighbors();
   bool ReceiveParticleMesh(int step);
   Real NewBlockTimeStep();
+  void FindLocalDensityOnMesh(bool include_momentum);
 
   std::size_t GetSizeInBytes();
   void UnpackParticlesForRestart(char *mbdata, std::size_t &os);
