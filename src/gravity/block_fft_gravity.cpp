@@ -149,6 +149,7 @@ void BlockFFTGravity::ExecuteForward() {
     pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(in_e_),FFTW_FORWARD,pf3d->fft_slow);
     pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(in_o_),FFTW_FORWARD,pf3d->fft_slow);
   } else if (gbflag==GravityBoundaryFlag::open) {
+    BlockFFT::ExecuteForward();
   } else {
     std::stringstream msg;
     msg << "### FATAL ERROR in BlockFFTGravity::ExecuteForward" << std::endl
@@ -237,6 +238,7 @@ void BlockFFTGravity::ExecuteBackward() {
     // multiply norm factor
     for (int i=0; i<2*nx1*nx2*nx3; ++i) data[i] *= Lx3_/(2.0*Nx1*Nx2*SQR(Nx3));
   } else if (gbflag==GravityBoundaryFlag::open) {
+    BlockFFT::ExecuteBackward();
   } else {
     std::stringstream msg;
     msg << "### FATAL ERROR in BlockFFTGravity::ExecuteForward" << std::endl
@@ -405,7 +407,7 @@ void BlockFFTGravity::Solve(int stage) {
           ExecuteForward();
           MultiplyGreen(px,py,pz);
           ExecuteBackward();
-          RetrieveOBCResult(rho,px,py,pz);
+          RetrieveOBCResult(pmy_block_->pgrav->phi,px,py,pz);
         }
       }
     }
@@ -530,18 +532,43 @@ void BlockFFTGravity::InitGreen() {
 //! \fn BlockFFTGravity::LoadOBCSource(const AthenaArray<Real> &src, int px, int py, int pz)
 //! \brief Load source and multiply phase shift term for the open boundary condition.
 void BlockFFTGravity::LoadOBCSource(const AthenaArray<Real> &src, int px, int py, int pz) {
+  for (int k=ks; k<=ke; k++) {
+    for (int j=js; j<=je; j++) {
+      for (int i=is; i<=ie; i++) {
+        int idx = (i-is) + nx1*((j-js) + nx2*(k-ks));
+        Real phase = PI*(i*px/(Real)Nx1+j*py/(Real)Nx2+k*pz/(Real)Nx3);
+        in_[idx] = {src(k,j,i)*std::cos(phase),
+                    -src(k,j,i)*std::sin(phase)};
+      }
+    }
+  }
+  return;
 }
 
 //----------------------------------------------------------------------------------------
 //! \fn BlockFFTGravity::RetrieveOBCResult(AthenaArray<Real> &dst, int px, int py, int pz)
 //! \brief Retrieve result and multiply phase shift term for the open boundary condition.
 void BlockFFTGravity::RetrieveOBCResult(AthenaArray<Real> &dst, int px, int py, int pz) {
+  for (int k=ks; k<=ke; k++) {
+    for (int j=js; j<=je; j++) {
+      for (int i=is; i<=ie; i++) {
+        int idx = (i-is) + nx1*((j-js) + nx2*(k-ks));
+        Real phase = PI*(i*px/(Real)Nx1+j*py/(Real)Nx2+k*pz/(Real)Nx3);
+        dst(k,j,i) = in_[idx].real()*std::cos(phase)
+                   - in_[idx].imag()*std::sin(phase);
+      }
+    }
+  }
+  return;
 }
 
 //----------------------------------------------------------------------------------------
 //! \fn BlockFFTGravity::MultiplyGreen(int px, int py, int pz)
 //! \brief Multiply Green's function
 void BlockFFTGravity::MultiplyGreen(int px, int py, int pz) {
+  //TODO(SMOON) multiply grf_ to in_ array
+
+  return;
 }
 
 //----------------------------------------------------------------------------------------
