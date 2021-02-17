@@ -106,34 +106,29 @@ void MGGravityDriver::Solve(int stage) {
   for (int i=0; i<pmy_mesh_->nblocal; ++i)
     vmg_.push_back(pmy_mesh_->my_blocks(i)->pmg);
 
-  if (PARTICLES) {
-    // Compute mass density of particles.
-    if (pmy_mesh_->my_blocks(0)->ppar->IsGravity())
-      Particles::FindDensityOnMesh(pmy_mesh_, false);
-  }
-
-
+  if (PARTICLES && pmy_mesh_->particle_gravity)
+    Particles::FindDensityOnMesh(pmy_mesh_, false, true);
 
   // load the source
   for (Multigrid* pmg : vmg_) {
     // assume all the data are located on the same node
-    if (PARTICLES) {
-      // TODO(ccyang): add gas density.
-      AthenaArray<Real> rho;
-      rho.InitWithShallowSlice(pmg->pmy_block_->phydro->u,4,IDN,1);
+    AthenaArray<Real> rho;
+    rho.InitWithShallowSlice(pmg->pmy_block_->phydro->u,4,IDN,1);
 
-      if (pmy_mesh_->my_blocks(0)->ppar->IsGravity()) {
-        AthenaArray<Real> rhop(pmg->pmy_block_->ppar->GetMassDensity());
-        for (int k = pmg->pmy_block_->ks; k <= pmg->pmy_block_->ke; ++k)
-          for (int j = pmg->pmy_block_->js; j <= pmg->pmy_block_->je; ++j)
-            for (int i = pmg->pmy_block_->is; i <= pmg->pmy_block_->ie; ++i)
-              rhop(k,j,i) += rho(k,j,i);
-        pmg->LoadSource(rhop, 0, NGHOST, four_pi_G_);
-      } else {
-        pmg->LoadSource(rho, 0, NGHOST, four_pi_G_);
+    if (PARTICLES && pmy_mesh_->particle_gravity) {
+      AthenaArray<Real> rhosum(rho);
+      for (int ipar = 0; ipar < Particles::num_particles; ++ipar) {
+        if (pmy_mesh_->my_blocks(0)->ppar[ipar]->IsGravity()) {
+          AthenaArray<Real> rhop(pmg->pmy_block_->ppar[ipar]->GetMassDensity());
+          for (int k = pmg->pmy_block_->ks; k <= pmg->pmy_block_->ke; ++k)
+            for (int j = pmg->pmy_block_->js; j <= pmg->pmy_block_->je; ++j)
+              for (int i = pmg->pmy_block_->is; i <= pmg->pmy_block_->ie; ++i)
+                rhosum(k,j,i) += rhop(k,j,i);
+        }
       }
+      pmg->LoadSource(rhosum, 0, NGHOST, four_pi_G_);
     } else {
-      pmg->LoadSource(pmg->pmy_block_->phydro->u, IDN, NGHOST, four_pi_G_);
+      pmg->LoadSource(rho, 0, NGHOST, four_pi_G_);
     }
     if (mode_ >= 2) // iterative mode - load initial guess
       pmg->LoadFinestData(pmg->pmy_block_->pgrav->phi, 0, NGHOST);

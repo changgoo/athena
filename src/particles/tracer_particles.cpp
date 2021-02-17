@@ -21,8 +21,9 @@
 //! \fn TracerParticles::TracerParticles(MeshBlock *pmb, ParameterInput *pin)
 //! \brief constructs a TracerParticles instance.
 
-TracerParticles::TracerParticles(MeshBlock *pmb, ParameterInput *pin)
-  : Particles(pmb, pin) {
+TracerParticles::TracerParticles(MeshBlock *pmb, ParameterInput *pin,
+  ParticleParameters *pp)
+  : Particles(pmb, pin, pp) {
   // Add working array at particles for gas velocity/particle momentum change.
   iwx = AddWorkingArray();
   iwy = AddWorkingArray();
@@ -33,7 +34,7 @@ TracerParticles::TracerParticles(MeshBlock *pmb, ParameterInput *pin)
   work.NewAthenaArray(nwork,nparmax);
 
   // Define mass.
-  mass = pin->GetOrAddReal("particles", "mass", 1.0);
+  mass = pin->GetOrAddReal(input_block_name, "mass", 1.0);
 
   // Assign shorthands (need to do this for every constructor of a derived class)
   AssignShorthands();
@@ -53,7 +54,7 @@ TracerParticles::~TracerParticles() {
 //! \brief sets the mass of each particle.
 
 void TracerParticles::SetOneParticleMass(Real new_mass) {
-  pinput->SetReal("particles", "mass", mass = new_mass);
+  pinput->SetReal(input_block_name, "mass", mass = new_mass);
 }
 
 //--------------------------------------------------------------------------------------

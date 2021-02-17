@@ -21,7 +21,7 @@
 //! \fn StarParticles::StarParticles(MeshBlock *pmb, ParameterInput *pin)
 //! \brief constructs a StarParticles instance.
 
-StarParticles::StarParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParmeters *pp)
+StarParticles::StarParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp)
   : Particles(pmb, pin, pp) {
   // Add working array at particles for gas velocity/particle momentum change.
   iwx = AddWorkingArray();
@@ -33,7 +33,7 @@ StarParticles::StarParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParmet
   work.NewAthenaArray(nwork,nparmax);
 
   // Define mass.
-  mass = pin->GetOrAddReal(input block_name, "mass", 1.0);
+  mass = pin->GetOrAddReal(input_block_name, "mass", 1.0);
 
   // Assign shorthands (need to do this for every constructor of a derived class)
   AssignShorthands();
@@ -53,7 +53,7 @@ StarParticles::~StarParticles() {
 //! \brief sets the mass of each particle.
 
 void StarParticles::SetOneParticleMass(Real new_mass) {
-  pinput->SetReal("particles", "mass", mass = new_mass);
+  pinput->SetReal(input_block_name, "mass", mass = new_mass);
 }
 
 //--------------------------------------------------------------------------------------
