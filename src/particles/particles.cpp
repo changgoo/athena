@@ -32,6 +32,8 @@
 // Class variable initialization
 bool Particles::initialized = false;
 int Particles::num_particles = 0;
+int Particles::num_particles_grav = 0;
+int Particles::num_particles_output = 0;
 ParameterInput* Particles::pinput = NULL;
 std::vector<int> Particles::idmax;
 #ifdef MPI_PARALLEL
@@ -129,6 +131,9 @@ void Particles::Initialize(Mesh *pm, ParameterInput *pin) {
           pp.ipar = num_particles++;
           idmax.push_back(0); // initialize idmax with 0
           pp.table_output = pin->GetOrAddBoolean(pp.block_name,"output",false);
+          pp.gravity = pin->GetOrAddBoolean(pp.block_name,"gravity",false);
+          if (pp.table_output) num_particles_output++;
+          if (pp.gravity) num_particles_grav++;
           pm->particle_params.push_back(pp);
         } else { // unsupported particle type
           std::stringstream msg;
@@ -192,13 +197,38 @@ void Particles::PostInitialize(Mesh *pm, ParameterInput *pin) {
 void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum, bool for_gravity) {
   // Assign particle properties to mesh and send boundary.
   int nblocks(pm->nblocal);
-  for (int b = 0; b < nblocks; ++b)
-    for (Particles *ppar : pm->my_blocks(b)->ppar)
-      if (for_gravity) {
-        if (ppar->IsGravity()) ppar->FindLocalDensityOnMesh(include_momentum);
-      } else {
-        ppar->FindLocalDensityOnMesh(include_momentum);
+  int np = for_gravity ? Particles::num_particles_grav : Particles::num_particles;
+  for (int b = 0; b < nblocks; ++b) {
+    MeshBlock *pmb(pm->my_blocks(b));
+    for (int i = 0; i < np; ++i) {
+      Particles *ppar = for_gravity ? pmb->ppar_grav[i] : pmb->ppar[i];
+      ppar->ppm->StartReceiving();
+      ppar->FindLocalDensityOnMesh(include_momentum);
+      ppar->ppm->SendBoundary();
+    }
+  }
+
+  std::vector<bool> completed(nblocks*np, false);
+  bool pending = true;
+  while (pending) {
+    pending = false;
+    for (int b = 0; b < nblocks; ++b) {
+      MeshBlock *pmb(pm->my_blocks(b));
+      for (int i = 0; i < np; ++i) {
+        Particles *ppar = for_gravity ? pmb->ppar_grav[i] : pmb->ppar[i];
+        ParticleMesh *ppm(ppar->ppm);
+        if (!completed[i+b*np]) {
+        // Finalize boundary communications.
+          if ((completed[i+b*np] = ppm->ReceiveBoundary())) {
+            ppar->ConvertToDensity(include_momentum);
+            ppm->ClearBoundary();
+          } else {
+            pending = true;
+          }
+        }
       }
+    }
+  }
 }
 
 //--------------------------------------------------------------------------------------
@@ -1197,6 +1227,20 @@ void Particles::FindLocalDensityOnMesh(bool include_momentum) {
   } else {
     ppm->AssignParticlesToMeshAux(realprop, 0, ppm->iweight, 0);
   }
+}
+//--------------------------------------------------------------------------------------
+//! \fn void Particles::ConvertToDensity(bool include_momentum)
+//! \brief finds the number density of particles on the mesh.
+//!
+//!   If include_momentum is true, the momentum density field is also computed,
+//!   assuming mass of each particle is unity.
+//! \note
+//!   Postcondition: ppm->weight becomes the density in each cell, and
+//!   if include_momentum is true, ppm->meshaux(imom1:imom3,:,:,:)
+//!   becomes the momentum density.
+
+void Particles::ConvertToDensity(bool include_momentum) {
+  Coordinates *pc(pmy_block->pcoord);
   // Convert to densities.
   int is = ppm->is, ie = ppm->ie;
   int js = ppm->js, je = ppm->je;

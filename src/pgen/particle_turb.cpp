@@ -125,7 +125,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       int npx1_loc = static_cast<int>(std::round(block_size.x1len / dx1)),
           npx2_loc = static_cast<int>(std::round(block_size.x2len / dx2)),
           npx3_loc = static_cast<int>(std::round(block_size.x3len / dx3));
-      int npar = ppar[ipar]->npar = npx1_loc * npx2_loc * npx3_loc / 2;
+      int npar = npx1_loc * npx2_loc * npx3_loc;
       if (npar > ppar[ipar]->nparmax)
         ppar[ipar]->UpdateCapacity(npar);
 
@@ -162,6 +162,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         }
       }
 
+      ppar[ipar]->npar = ipid;
+
       // Initialize the stopping time.
       if (DustParticles *pp = dynamic_cast<DustParticles*>(ppar[ipar])) {
         if (pp->GetVariableTaus()) {
@@ -186,7 +188,7 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
 
     Real l1_err{0}, max_err{0.0};
     // Particles::FindDensityOnMesh(this, false);
-
+    Particles::FindDensityOnMesh(this,false,false);
     for (int b=0; b<nblocal; ++b) {
       MeshBlock* pmb = my_blocks(b);
       int is=pmb->is, ie=pmb->ie;
@@ -194,7 +196,6 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
       int ks=pmb->ks, ke=pmb->ke;
       AthenaArray<Real> rho;
       rho.InitWithShallowSlice(pmb->phydro->u,4,IDN,1);
-      pmb->ppar[0]->FindLocalDensityOnMesh(false);
       AthenaArray<Real> rhop(pmb->ppar[0]->GetMassDensity());
       for (int k=ks; k<=ke; ++k) {
         for (int j=js; j<=je; ++j) {
@@ -258,7 +259,6 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
 //! \brief Difference in gas and trace densities for history variable
 //========================================================================================
 Real DeltaRho(MeshBlock *pmb, int iout) {
-  pmb->ppar[0]->FindLocalDensityOnMesh(false);
   Real l1_err{0};
   int is=pmb->is, ie=pmb->ie;
   int js=pmb->js, je=pmb->je;

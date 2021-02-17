@@ -117,14 +117,12 @@ void MGGravityDriver::Solve(int stage) {
 
     if (PARTICLES && pmy_mesh_->particle_gravity) {
       AthenaArray<Real> rhosum(rho);
-      for (int ipar = 0; ipar < Particles::num_particles; ++ipar) {
-        if (pmy_mesh_->my_blocks(0)->ppar[ipar]->IsGravity()) {
-          AthenaArray<Real> rhop(pmg->pmy_block_->ppar[ipar]->GetMassDensity());
-          for (int k = pmg->pmy_block_->ks; k <= pmg->pmy_block_->ke; ++k)
-            for (int j = pmg->pmy_block_->js; j <= pmg->pmy_block_->je; ++j)
-              for (int i = pmg->pmy_block_->is; i <= pmg->pmy_block_->ie; ++i)
-                rhosum(k,j,i) += rhop(k,j,i);
-        }
+      for (Particles *ppar : pmg->pmy_block_->ppar_grav) {
+        AthenaArray<Real> rhop(ppar->GetMassDensity());
+        for (int k = pmg->pmy_block_->ks; k <= pmg->pmy_block_->ke; ++k)
+          for (int j = pmg->pmy_block_->js; j <= pmg->pmy_block_->je; ++j)
+            for (int i = pmg->pmy_block_->is; i <= pmg->pmy_block_->ie; ++i)
+              rhosum(k,j,i) += rhop(k,j,i);
       }
       pmg->LoadSource(rhosum, 0, NGHOST, four_pi_G_);
     } else {

@@ -117,13 +117,14 @@ class MeshBlock {
   // physics-related objects (possibly containing their derived bvals classes)
   Hydro *phydro;
   Field *pfield;
-  std::vector<Particles *> ppar;
   Gravity *pgrav;
   MGGravity *pmg;
   PassiveScalars *pscalars;
   EquationOfState *peos;
   OrbitalAdvection *porb;
   BlockFFTGravity *pfft;
+  // pointer to particle classes
+  std::vector<Particles *> ppar, ppar_grav;
 
   // functions
   std::size_t GetBlockSizeInBytes();

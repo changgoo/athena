@@ -19,8 +19,7 @@ ghost_zones = false
 
 <output3>
 file_type  = partab     # Binary data dump
-variable   = prim       # variables to be output
-dt         = 0.1        # time increment between outputs
+dt         = -1         # time increment between outputs
 
 <time>
 cfl_number = 0.3        # The Courant, Friedrichs, & Lewy (CFL) Number

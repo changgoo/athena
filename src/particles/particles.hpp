@@ -46,11 +46,11 @@ struct Neighbor {
 
 struct ParticleParameters {
   int block_number, ipar;
-  bool table_output;
+  bool table_output, gravity;
   std::string block_name;
   std::string partype;
 
-  ParticleParameters() : block_number(0), ipar(-1), table_output(false) {}
+  ParticleParameters() : block_number(0), ipar(-1), table_output(false), gravity(false) {}
 };
 
 //--------------------------------------------------------------------------------------
@@ -76,7 +76,9 @@ friend class ParticleMesh;
 
   // Class constant
   static const int NHISTORY = 7;  //!> number of variables in history output
-  static int num_particles; //!> number of particle containers
+  // number of particle containers
+  static int num_particles, num_particles_grav, num_particles_output;
+
 
   // Constructor
   Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp);
@@ -107,7 +109,6 @@ friend class ParticleMesh;
   bool ReceiveFromNeighbors();
   bool ReceiveParticleMesh(int step);
   Real NewBlockTimeStep();
-  void FindLocalDensityOnMesh(bool include_momentum);
 
   std::size_t GetSizeInBytes();
   void UnpackParticlesForRestart(char *mbdata, std::size_t &os);
@@ -151,7 +152,9 @@ friend class ParticleMesh;
                                     //!> Be sure to call back when derived.
 
   void UpdateCapacity(int new_nparmax);  //!> Change the capacity of particle arrays
-
+  void FindLocalDensityOnMesh(bool include_momentum);
+  void ConvertToDensity(bool include_momentum);
+  
   // Instance variables
   // std::uint64_t npar;     //!> number of particles
   // std::uint64_t nparmax;  //!> maximum number of particles per meshblock

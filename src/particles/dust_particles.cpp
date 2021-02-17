@@ -56,7 +56,7 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParame
   }
 
   if (SELF_GRAVITY_ENABLED && backreaction) {
-    isgravity_ = true;
+    isgravity_ = pp->gravity;
     pmy_mesh->particle_gravity = true;
     // Add working arrays for gravity forces
     igx = AddWorkingArray();

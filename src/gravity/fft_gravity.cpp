@@ -80,14 +80,12 @@ void FFTGravityDriver::Solve(int stage, int mode) {
     in.InitWithShallowSlice(pmb->phydro->u,4,IDN,1);
     if (PARTICLES && pmy_mesh_->particle_gravity) {
       AthenaArray<Real> rhosum(in);
-      for (Particles *ppar : pmb->ppar) {
-        if (ppar->IsGravity()) {
-          AthenaArray<Real> rhop(ppar->GetMassDensity());
-          for (int k = pmb->ks; k <= pmb->ke; ++k)
-            for (int j = pmb->js; j <= pmb->je; ++j)
-              for (int i = pmb->is; i <= pmb->ie; ++i)
-                rhosum(k,j,i) += rhop(k,j,i);
-        }
+      for (Particles *ppar : pmb->ppar_grav) {
+        AthenaArray<Real> rhop(ppar->GetMassDensity());
+        for (int k = pmb->ks; k <= pmb->ke; ++k)
+          for (int j = pmb->js; j <= pmb->je; ++j)
+            for (int i = pmb->is; i <= pmb->ie; ++i)
+              rhosum(k,j,i) += rhop(k,j,i);
       }
       pfb->LoadSource(rhosum, 0, NGHOST, pmb->loc, pmb->block_size);
     } else {
