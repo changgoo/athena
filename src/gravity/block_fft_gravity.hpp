@@ -44,9 +44,10 @@ class BlockFFTGravity : public BlockFFT {
   void ApplyKernel() final;
   void ExecuteBackward() final;
   void Solve(int stage);
-
-  // utility functions
   void InitGreen();
+  void LoadOBCSource(const AthenaArray<Real> &src, int px, int py, int pz);
+  void RetrieveOBCResult(AthenaArray<Real> &dst, int px, int py, int pz);
+  void MultiplyGreen(int px, int py, int pz);
 
  private:
   FFTGravitySolverTaskList *gtlist_;

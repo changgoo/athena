@@ -352,12 +352,19 @@ void BlockFFTGravity::Solve(int stage) {
 #ifdef FFT
 #ifdef MPI_PARALLEL
   if (SHEAR_PERIODIC) {
+    // For shearing-periodic BC, we use a 'phase shift' method, instead of
+    // a roll-unroll method in old Athena. It was found that the phase shift
+    // method introduces spurious error when the sheared distance at the boundary
+    // is not an integer multiple of the cell width. To cure this, we solve the
+    // Poisson equation at the nearest two 'integer times' when the sheared distance
+    // is an integer multiple of the cell width, and then linearly interpolate the
+    // solution in time.
     Real time = pmy_block_->pmy_mesh->time;
     Real qomt = qshear_*Omega_0_*time;
     AthenaArray<Real> rho;
     Real p,eps;
 
-    // left integer point
+    // left integer time
     p = std::floor(qomt*Lx1_/Lx2_*(Real)Nx2);
     eps = qomt*Lx1_/Lx2_*(Real)Nx2 - p;
     rshear_ = p/(Real)Nx2;
@@ -368,7 +375,7 @@ void BlockFFTGravity::Solve(int stage) {
     ExecuteBackward();
     std::memcpy(in2_, in_, sizeof(std::complex<Real>)*nx1*nx2*nx3);
 
-    // right integer point
+    // right integer time
     p = std::floor(qomt*Lx1_/Lx2_*(Real)Nx2) + 1.;
     rshear_ = p/(Real)Nx2;
     rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
@@ -383,15 +390,35 @@ void BlockFFTGravity::Solve(int stage) {
     for (int i=0; i<2*nx1*nx2*nx3; ++i) {
       data[i] = (1.-eps)*data2[i] + eps*data[i];
     }
+    RetrieveResult(pmy_block_->pgrav->phi);
+  } else if (gbflag==GravityBoundaryFlag::open) {
+    // For open boundary condition, we use a convolution method in which the
+    // 8x-extended domain is assumed. Instead of zero-padding the density, we
+    // multiply the appropriate phase shift to each parity and then combine them
+    // to compute the full 8x-extended convolution.
+    AthenaArray<Real> rho;
+    rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
+    for (int pz=0; pz<=1; ++pz) {
+      for (int py=0; py<=1; ++py) {
+        for (int px=0; px<=1; ++px) {
+          LoadOBCSource(rho,px,py,pz);
+          ExecuteForward();
+          MultiplyGreen(px,py,pz);
+          ExecuteBackward();
+          RetrieveOBCResult(rho,px,py,pz);
+        }
+      }
+    }
   } else {
+    // Periodic or disk BC without shearing box
     AthenaArray<Real> rho;
     rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
     LoadSource(rho);
     ExecuteForward();
     ApplyKernel();
     ExecuteBackward();
+    RetrieveResult(pmy_block_->pgrav->phi);
   }
-  RetrieveResult(pmy_block_->pgrav->phi);
 #else
   std::stringstream msg;
   msg << "### FATAL ERROR in BlockFFTGravity::Solve" << std::endl
@@ -442,7 +469,7 @@ void BlockFFTGravity::Solve(int stage) {
 }
 
 //----------------------------------------------------------------------------------------
-//! \fn InitGreen()
+//! \fn BlockFFTGravity::InitGreen()
 //! \brief Initialize Green's function and its Fourier transform for open BC.
 
 void BlockFFTGravity::InitGreen() {
@@ -497,6 +524,24 @@ void BlockFFTGravity::InitGreen() {
                          pf3dgrf_->fft_slow);
 #endif
 #endif
+}
+
+//----------------------------------------------------------------------------------------
+//! \fn BlockFFTGravity::LoadOBCSource(const AthenaArray<Real> &src, int px, int py, int pz)
+//! \brief Load source and multiply phase shift term for the open boundary condition.
+void BlockFFTGravity::LoadOBCSource(const AthenaArray<Real> &src, int px, int py, int pz) {
+}
+
+//----------------------------------------------------------------------------------------
+//! \fn BlockFFTGravity::RetrieveOBCResult(AthenaArray<Real> &dst, int px, int py, int pz)
+//! \brief Retrieve result and multiply phase shift term for the open boundary condition.
+void BlockFFTGravity::RetrieveOBCResult(AthenaArray<Real> &dst, int px, int py, int pz) {
+}
+
+//----------------------------------------------------------------------------------------
+//! \fn BlockFFTGravity::MultiplyGreen(int px, int py, int pz)
+//! \brief Multiply Green's function
+void BlockFFTGravity::MultiplyGreen(int px, int py, int pz) {
 }
 
 //----------------------------------------------------------------------------------------
