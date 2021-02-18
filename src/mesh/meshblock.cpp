@@ -503,7 +503,7 @@ std::size_t MeshBlock::GetBlockSizeInBytes() {
     size += (pfield->b.x1f.GetSizeInBytes() + pfield->b.x2f.GetSizeInBytes()
              + pfield->b.x3f.GetSizeInBytes());
   if (PARTICLES) {
-    for (int ipar; ipar < Particles::num_particles; ++ipar)
+    for (int ipar=0; ipar < Particles::num_particles; ++ipar)
       size += ppar[ipar]->GetSizeInBytes();
   }
   if (SELF_GRAVITY_ENABLED)
