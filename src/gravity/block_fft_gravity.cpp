@@ -59,6 +59,14 @@ BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
     InitGreen();
 #endif
 #endif
+
+  // Compatibility checks
+  if ((SHEAR_PERIODIC)&&(gbflag==GravityBoundaryFlag::open)) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in BlockFFTGravity constructor" << std::endl
+        << "open BC gravity is not compatible with shearing box" << std::endl;
+    ATHENA_ERROR(msg);
+  }
 }
 
 //----------------------------------------------------------------------------------------
