@@ -40,8 +40,8 @@
 
 void Mesh::InitUserMeshData(ParameterInput *pin) {
   if (SELF_GRAVITY_ENABLED) {
-    Real four_pi_G = pin->GetReal("problem","four_pi_G");
-    Real eps = pin->GetOrAddReal("problem","grav_eps", 0.0);
+    Real four_pi_G = pin->GetReal("self_gravity","four_pi_G");
+    Real eps = pin->GetOrAddReal("self_gravity","grav_eps", 0.0);
     SetFourPiG(four_pi_G);
     SetGravityThreshold(eps);
   }
