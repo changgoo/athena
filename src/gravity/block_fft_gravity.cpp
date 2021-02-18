@@ -434,65 +434,8 @@ void BlockFFTGravity::Solve(int stage) {
   gtlist_->DoTaskListOneStage(pmy_block_->pmy_mesh, stage);
 
   // apply physical BC
-  if (gbflag==GravityBoundaryFlag::disk) {
-    if (pmy_block_->loc.lx3==0) {
-      for (int k=1; k<=NGHOST; k++) {
-        for (int j=js-NGHOST; j<=je+NGHOST; j++) {
-          for (int i=is-NGHOST; i<=ie+NGHOST; i++) {
-            // constant extrapolation
-            pmy_block_->pgrav->phi(ks-k,j,i) = pmy_block_->pgrav->phi(ks,j,i);
-            // linear extrapolation
-//            pmy_block_->pgrav->phi(ks-k,j,i) = pmy_block_->pgrav->phi(ks,j,i)
-//                + k*(pmy_block_->pgrav->phi(ks,j,i) - pmy_block_->pgrav->phi(ks+1,j,i));
-          }
-        }
-      }
-    }
-    if (pmy_block_->loc.lx3==Nx3/nx3-1) {
-      for (int k=1; k<=NGHOST; k++) {
-        for (int j=js-NGHOST; j<=je+NGHOST; j++) {
-          for (int i=is-NGHOST; i<=ie+NGHOST; i++) {
-            // constant extrapolation
-            pmy_block_->pgrav->phi(ke+k,j,i) = pmy_block_->pgrav->phi(ke,j,i);
-            // linear extrapolation
-//            pmy_block_->pgrav->phi(ke+k,j,i) = pmy_block_->pgrav->phi(ke,j,i)
-//                + k*(pmy_block_->pgrav->phi(ke,j,i) - pmy_block_->pgrav->phi(ke-1,j,i));
-          }
-        }
-      }
-    }
-  } else if (gbflag==GravityBoundaryFlag::open) {
-    for (int k=1; k<=NGHOST; k++) {
-      for (int j=js-NGHOST; j<=je+NGHOST; j++) {
-        for (int i=is-NGHOST; i<=ie+NGHOST; i++) {
-          if (pmy_block_->loc.lx3==0)
-            pmy_block_->pgrav->phi(ks-k,j,i) = pmy_block_->pgrav->phi(ks,j,i);
-          if (pmy_block_->loc.lx3==Nx3/nx3-1)
-            pmy_block_->pgrav->phi(ke+k,j,i) = pmy_block_->pgrav->phi(ke,j,i);
-        }
-      }
-    }
-    for (int k=ks-NGHOST; k<=ke+NGHOST; k++) {
-      for (int j=1; j<=NGHOST; j++) {
-        for (int i=is-NGHOST; i<=ie+NGHOST; i++) {
-          if (pmy_block_->loc.lx2==0)
-            pmy_block_->pgrav->phi(k,js-j,i) = pmy_block_->pgrav->phi(k,js,i);
-          if (pmy_block_->loc.lx2==Nx2/nx2-1)
-            pmy_block_->pgrav->phi(k,je+j,i) = pmy_block_->pgrav->phi(k,je,i);
-        }
-      }
-    }
-    for (int k=ks-NGHOST; k<=ke+NGHOST; k++) {
-      for (int j=js-NGHOST; j<=je+NGHOST; j++) {
-        for (int i=1; i<=NGHOST; i++) {
-          if (pmy_block_->loc.lx1==0)
-            pmy_block_->pgrav->phi(k,j,is-i) = pmy_block_->pgrav->phi(k,j,is);
-          if (pmy_block_->loc.lx1==Nx1/nx1-1)
-            pmy_block_->pgrav->phi(k,j,ie+i) = pmy_block_->pgrav->phi(k,j,ie);
-        }
-      }
-    }
-  }
+  SetPhysicalBoundaries();
+
   return;
 }
 
@@ -604,6 +547,98 @@ void BlockFFTGravity::MultiplyGreen(int px, int py, int pz) {
         int idx = k + slow_nx3*(i + slow_nx1*j);
         int grfidx = (2*k+pz) + (2*slow_nx3)*((2*i+px) + (2*slow_nx1)*(2*j+py));
         in_[idx] *= grf_[grfidx];
+      }
+    }
+  }
+  return;
+}
+
+//----------------------------------------------------------------------------------------
+//! \fn BlockFFTGravity::SetPhysicalBoundaries()
+//! \brief Multiply Green's function
+void BlockFFTGravity::SetPhysicalBoundaries() {
+  //TODO(SMOON) use BoundaryFace rather than loc.lx3, etc, and write Boundaryfunctions
+  if (gbflag==GravityBoundaryFlag::disk) {
+    if (pmy_block_->loc.lx3==0) {
+      for (int k=1; k<=NGHOST; k++) {
+        for (int j=js-NGHOST; j<=je+NGHOST; j++) {
+          for (int i=is-NGHOST; i<=ie+NGHOST; i++) {
+            // constant extrapolation
+            pmy_block_->pgrav->phi(ks-k,j,i) = pmy_block_->pgrav->phi(ks,j,i);
+            // linear extrapolation
+//            pmy_block_->pgrav->phi(ks-k,j,i) = pmy_block_->pgrav->phi(ks,j,i)
+//                + k*(pmy_block_->pgrav->phi(ks,j,i) - pmy_block_->pgrav->phi(ks+1,j,i));
+          }
+        }
+      }
+    }
+    if (pmy_block_->loc.lx3==Nx3/nx3-1) {
+      for (int k=1; k<=NGHOST; k++) {
+        for (int j=js-NGHOST; j<=je+NGHOST; j++) {
+          for (int i=is-NGHOST; i<=ie+NGHOST; i++) {
+            // constant extrapolation
+            pmy_block_->pgrav->phi(ke+k,j,i) = pmy_block_->pgrav->phi(ke,j,i);
+            // linear extrapolation
+//            pmy_block_->pgrav->phi(ke+k,j,i) = pmy_block_->pgrav->phi(ke,j,i)
+//                + k*(pmy_block_->pgrav->phi(ke,j,i) - pmy_block_->pgrav->phi(ke-1,j,i));
+          }
+        }
+      }
+    }
+  } else if (gbflag==GravityBoundaryFlag::open) {
+    if (pmy_block_->loc.lx3==0) {
+      for (int k=1; k<=NGHOST; k++) {
+        for (int j=js-NGHOST; j<=je+NGHOST; j++) {
+          for (int i=is-NGHOST; i<=ie+NGHOST; i++) {
+            pmy_block_->pgrav->phi(ks-k,j,i) = pmy_block_->pgrav->phi(ks,j,i);
+          }
+        }
+      }
+    }
+    if (pmy_block_->loc.lx3==Nx3/nx3-1) {
+      for (int k=1; k<=NGHOST; k++) {
+        for (int j=js-NGHOST; j<=je+NGHOST; j++) {
+          for (int i=is-NGHOST; i<=ie+NGHOST; i++) {
+            pmy_block_->pgrav->phi(ke+k,j,i) = pmy_block_->pgrav->phi(ke,j,i);
+          }
+        }
+      }
+    }
+
+    if (pmy_block_->loc.lx2==0) {
+      for (int k=ks-NGHOST; k<=ke+NGHOST; k++) {
+        for (int j=1; j<=NGHOST; j++) {
+          for (int i=is-NGHOST; i<=ie+NGHOST; i++) {
+            pmy_block_->pgrav->phi(k,js-j,i) = pmy_block_->pgrav->phi(k,js,i);
+          }
+        }
+      }
+    }
+    if (pmy_block_->loc.lx2==Nx2/nx2-1) {
+      for (int k=ks-NGHOST; k<=ke+NGHOST; k++) {
+        for (int j=1; j<=NGHOST; j++) {
+          for (int i=is-NGHOST; i<=ie+NGHOST; i++) {
+            pmy_block_->pgrav->phi(k,je+j,i) = pmy_block_->pgrav->phi(k,je,i);
+          }
+        }
+      }
+    }
+    if (pmy_block_->loc.lx1==0) {
+      for (int k=ks-NGHOST; k<=ke+NGHOST; k++) {
+        for (int j=js-NGHOST; j<=je+NGHOST; j++) {
+          for (int i=1; i<=NGHOST; i++) {
+            pmy_block_->pgrav->phi(k,j,is-i) = pmy_block_->pgrav->phi(k,j,is);
+          }
+        }
+      }
+    }
+    if (pmy_block_->loc.lx1==Nx1/nx1-1) {
+      for (int k=ks-NGHOST; k<=ke+NGHOST; k++) {
+        for (int j=js-NGHOST; j<=je+NGHOST; j++) {
+          for (int i=1; i<=NGHOST; i++) {
+            pmy_block_->pgrav->phi(k,j,ie+i) = pmy_block_->pgrav->phi(k,j,ie);
+          }
+        }
       }
     }
   }

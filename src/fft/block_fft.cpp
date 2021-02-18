@@ -48,8 +48,19 @@ BlockFFT::BlockFFT(MeshBlock *pmb) :
 #ifdef MPI_PARALLEL
     // use Plimpton's fftMPI
     pf3d = new FFTMPI_NS::FFT3d(MPI_COMM_WORLD,2); // 2 for double precision
-    // set output data layout equal to slow pencil decomposition
-    // in order to prevent unnecessary data remap
+    // The three-dimensional data cube is pencil-decomposed in x, y, and z directions.
+    // To complete three-dimensional FFTs, we do the followings:
+    // (1) block decomposition -> x-pencil decomposition
+    // (2) FFT in x-axis
+    // (3) x-pencil decomposition -> y-pencil decomposition
+    // (4) FFT in y-axis
+    // (5) y-pencil decomposition -> z-pencil decomposition
+    // (6) FFT in z-axis
+    // After (1)-(6), the data will be in z-pencil decomposition.
+    // By default, we don't perform z-pencil decomposition -> block decomposition
+    // which is unneccessary.
+    // To change the order of executions, override the ExecuteForward/ExecuteBackward
+    // functions (e.g., see BlockFFTGravity class).
     int permute=2; // will make output array (slow,mid,fast) = (y,x,z) = (j,i,k)
     int fftsize, sendsize, recvsize; // to be returned from setup
     // preliminary setup to get domain decomposition
@@ -150,7 +161,7 @@ void BlockFFT::RetrieveResult(AthenaArray<Real> &dst) {
     for (int j=js; j<=je; j++) {
       for (int i=is; i<=ie; i++) {
         int idx = (i-is) + nx1*((j-js) + nx2*(k-ks));
-        dst(k,j,i) = std::real(in_[idx]);
+        dst(k,j,i) = in_[idx].real();
       }
     }
   }
