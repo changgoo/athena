@@ -26,6 +26,9 @@
 BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
     : BlockFFT(pmb),
       SHEAR_PERIODIC(pmb->pmy_mesh->shear_periodic),
+      dx1_(pmb->pcoord->dx1v(NGHOST)),
+      dx2_(pmb->pcoord->dx2v(NGHOST)),
+      dx3_(pmb->pcoord->dx3v(NGHOST)),
       dx1sq_(SQR(pmb->pcoord->dx1v(NGHOST))),
       dx2sq_(SQR(pmb->pcoord->dx2v(NGHOST))),
       dx3sq_(SQR(pmb->pcoord->dx3v(NGHOST))),
@@ -45,11 +48,11 @@ BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
 #ifdef MPI_PARALLEL
   // setup fft in the 8x extended domain for the Green's function
   int permute=2; // will make output array (slow,mid,fast) = (y,x,z) = (j,i,k)
-  int fftsize, sendsize, recvsize; // to be returned from setup
+  int fftsize, sendsize, recvsize;
   pf3dgrf_ = new FFTMPI_NS::FFT3d(MPI_COMM_WORLD,2);
   pf3dgrf_->setup(2*Nx1, 2*Nx2, 2*Nx3,
-                  2*fast_ilo, 2*fast_ihi+1, 2*fast_jlo, 2*fast_jhi+1,
-                  2*fast_klo, 2*fast_khi+1, 2*slow_ilo, 2*slow_ihi+1,
+                  2*in_ilo, 2*in_ihi+1, 2*in_jlo, 2*in_jhi+1,
+                  2*in_klo, 2*in_khi+1, 2*slow_ilo, 2*slow_ihi+1,
                   2*slow_jlo, 2*slow_jhi+1, 2*slow_klo, 2*slow_khi+1,
                   permute, fftsize, sendsize, recvsize);
   if (gbflag==GravityBoundaryFlag::open)
@@ -239,6 +242,8 @@ void BlockFFTGravity::ExecuteBackward() {
     for (int i=0; i<2*nx1*nx2*nx3; ++i) data[i] *= Lx3_/(2.0*Nx1*Nx2*SQR(Nx3));
   } else if (gbflag==GravityBoundaryFlag::open) {
     BlockFFT::ExecuteBackward();
+    // divide by 8 to account for the normalization in the enlarged domain
+    for (int i=0; i<nx1*nx2*nx3; ++i) in_[i] *= 0.125;
   } else {
     std::stringstream msg;
     msg << "### FATAL ERROR in BlockFFTGravity::ExecuteForward" << std::endl
@@ -324,17 +329,6 @@ void BlockFFTGravity::ApplyKernel() {
         }
       }
     }
-  } else if (gbflag==GravityBoundaryFlag::open) {
-    // output Green's function as pgrav->phi
-    for (int k=0; k<fast_nx3; k++) {
-      for (int j=0; j<fast_nx2; j++) {
-        for (int i=0; i<fast_nx1; i++) {
-          int idx = i + fast_nx1*(j + fast_nx2*k);
-          int idx2 = (fast_nx1+i) + (2*fast_nx1)*(j + (2*fast_nx2)*k);
-          in_[idx] = grf_[idx2];
-        }
-      }
-    }
   } else {
     std::stringstream msg;
     msg << "### FATAL ERROR in BlockFFTGravity::ExecuteForward" << std::endl
@@ -400,6 +394,7 @@ void BlockFFTGravity::Solve(int stage) {
     // to compute the full 8x-extended convolution.
     AthenaArray<Real> rho;
     rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
+    pmy_block_->pgrav->phi.ZeroClear();
     for (int pz=0; pz<=1; ++pz) {
       for (int py=0; py<=1; ++py) {
         for (int px=0; px<=1; ++px) {
@@ -466,6 +461,37 @@ void BlockFFTGravity::Solve(int stage) {
         }
       }
     }
+  } else if (gbflag==GravityBoundaryFlag::open) {
+    for (int k=1; k<=NGHOST; k++) {
+      for (int j=js-NGHOST; j<=je+NGHOST; j++) {
+        for (int i=is-NGHOST; i<=ie+NGHOST; i++) {
+          if (pmy_block_->loc.lx3==0)
+            pmy_block_->pgrav->phi(ks-k,j,i) = pmy_block_->pgrav->phi(ks,j,i);
+          if (pmy_block_->loc.lx3==Nx3/nx3-1)
+            pmy_block_->pgrav->phi(ke+k,j,i) = pmy_block_->pgrav->phi(ke,j,i);
+        }
+      }
+    }
+    for (int k=ks-NGHOST; k<=ke+NGHOST; k++) {
+      for (int j=1; j<=NGHOST; j++) {
+        for (int i=is-NGHOST; i<=ie+NGHOST; i++) {
+          if (pmy_block_->loc.lx2==0)
+            pmy_block_->pgrav->phi(k,js-j,i) = pmy_block_->pgrav->phi(k,js,i);
+          if (pmy_block_->loc.lx2==Nx2/nx2-1)
+            pmy_block_->pgrav->phi(k,je+j,i) = pmy_block_->pgrav->phi(k,je,i);
+        }
+      }
+    }
+    for (int k=ks-NGHOST; k<=ke+NGHOST; k++) {
+      for (int j=js-NGHOST; j<=je+NGHOST; j++) {
+        for (int i=1; i<=NGHOST; i++) {
+          if (pmy_block_->loc.lx1==0)
+            pmy_block_->pgrav->phi(k,j,is-i) = pmy_block_->pgrav->phi(k,j,is);
+          if (pmy_block_->loc.lx1==Nx1/nx1-1)
+            pmy_block_->pgrav->phi(k,j,ie+i) = pmy_block_->pgrav->phi(k,j,ie);
+        }
+      }
+    }
   }
   return;
 }
@@ -476,41 +502,38 @@ void BlockFFTGravity::Solve(int stage) {
 
 void BlockFFTGravity::InitGreen() {
   Real gconst = pmy_block_->pgrav->four_pi_G/(4.0*PI);
-  for (int k=0; k<2*fast_nx3; k++) {
-    for (int j=0; j<2*fast_nx2; j++) {
-      for (int i=0; i<2*fast_nx1; i++) {
-        // get global index in 8x mesh
-        int gi = 2*fast_ilo + i;
-        int gj = 2*fast_jlo + j;
-        int gk = 2*fast_klo + k;
-        // restrict index range to [-Nx, Nx-1]
+  Real dvol = dx1_*dx2_*dx3_;
+
+  for (int k=0; k<2*nx3; k++) {
+    for (int j=0; j<2*nx2; j++) {
+      for (int i=0; i<2*nx1; i++) {
+        // get global index in 8x enlarged mesh
+        int gi = 2*in_ilo + i;
+        int gj = 2*in_jlo + j;
+        int gk = 2*in_klo + k;
+        // roll the index to [-Nx, Nx-1] range
         gi = (gi+Nx1)%(2*Nx1) - Nx1;
         gj = (gj+Nx2)%(2*Nx2) - Nx2;
         gk = (gk+Nx3)%(2*Nx3) - Nx3;
         // point-mass Green's function
-        int idx = i + (2*fast_nx1)*(j + (2*fast_nx2)*k);
+        int idx = i + (2*nx1)*(j + (2*nx2)*k);
         if ((gi==0)&&(gj==0)&&(gk==0)) {
           grf_[idx] = {0.0, 0.0};
         } else {
-          grf_[idx] = {-gconst/std::sqrt(SQR(gi)*dx1sq_ +
-                                         SQR(gj)*dx2sq_ +
-                                         SQR(gk)*dx3sq_), 0.0};
+          grf_[idx] = {-gconst/std::sqrt(SQR(gi*dx1_) + SQR(gj*dx2_) + SQR(gk*dx3_))*dvol,
+                       0.0};
         }
         // TODO(SMOON) add integrated Green's function
       }
     }
   }
-  // Apply DFT to the Green's function
+// Apply DFT to the Green's function
 #ifdef FFT
 #ifdef MPI_PARALLEL
   FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR*>(grf_);
   // block2fast
-  if (pf3d->remap_prefast) {
-    std::cout << "### Warning in BlockFFTGravity::InitGreen()" << std::endl
-              << "Input data layout for the Green's function is not "
-              << "the x-pencil decomposition as desired." << std::endl;
-    pf3d->remap(data,data,pf3d->remap_prefast);
-  }
+  if (pf3dgrf_->remap_prefast)
+    pf3dgrf_->remap(data,data,pf3dgrf_->remap_prefast);
   // fast_forward
   pf3dgrf_->perform_ffts(reinterpret_cast<FFT_DATA *>(data), FFTW_FORWARD,
                          pf3dgrf_->fft_fast);
@@ -529,14 +552,19 @@ void BlockFFTGravity::InitGreen() {
 }
 
 //----------------------------------------------------------------------------------------
-//! \fn BlockFFTGravity::LoadOBCSource(const AthenaArray<Real> &src, int px, int py, int pz)
+//! \fn BlockFFTGravity::LoadOBCSource(const AthenaArray<Real> &src, int px, int py,
+//                                     int pz)
 //! \brief Load source and multiply phase shift term for the open boundary condition.
-void BlockFFTGravity::LoadOBCSource(const AthenaArray<Real> &src, int px, int py, int pz) {
+void BlockFFTGravity::LoadOBCSource(const AthenaArray<Real> &src, int px, int py,
+                                    int pz) {
   for (int k=ks; k<=ke; k++) {
     for (int j=js; j<=je; j++) {
       for (int i=is; i<=ie; i++) {
         int idx = (i-is) + nx1*((j-js) + nx2*(k-ks));
-        Real phase = PI*(i*px/(Real)Nx1+j*py/(Real)Nx2+k*pz/(Real)Nx3);
+        int gi = in_ilo + i-is;
+        int gj = in_jlo + j-js;
+        int gk = in_klo + k-ks;
+        Real phase = PI*(gi*px/(Real)Nx1+gj*py/(Real)Nx2+gk*pz/(Real)Nx3);
         in_[idx] = {src(k,j,i)*std::cos(phase),
                     -src(k,j,i)*std::sin(phase)};
       }
@@ -546,15 +574,19 @@ void BlockFFTGravity::LoadOBCSource(const AthenaArray<Real> &src, int px, int py
 }
 
 //----------------------------------------------------------------------------------------
-//! \fn BlockFFTGravity::RetrieveOBCResult(AthenaArray<Real> &dst, int px, int py, int pz)
+//! \fn BlockFFTGravity::RetrieveOBCResult(AthenaArray<Real> &dst, int px, int py,
+//                                         int pz)
 //! \brief Retrieve result and multiply phase shift term for the open boundary condition.
 void BlockFFTGravity::RetrieveOBCResult(AthenaArray<Real> &dst, int px, int py, int pz) {
   for (int k=ks; k<=ke; k++) {
     for (int j=js; j<=je; j++) {
       for (int i=is; i<=ie; i++) {
         int idx = (i-is) + nx1*((j-js) + nx2*(k-ks));
-        Real phase = PI*(i*px/(Real)Nx1+j*py/(Real)Nx2+k*pz/(Real)Nx3);
-        dst(k,j,i) = in_[idx].real()*std::cos(phase)
+        int gi = in_ilo + i-is;
+        int gj = in_jlo + j-js;
+        int gk = in_klo + k-ks;
+        Real phase = PI*(gi*px/(Real)Nx1+gj*py/(Real)Nx2+gk*pz/(Real)Nx3);
+        dst(k,j,i) += in_[idx].real()*std::cos(phase)
                    - in_[idx].imag()*std::sin(phase);
       }
     }
@@ -566,8 +598,15 @@ void BlockFFTGravity::RetrieveOBCResult(AthenaArray<Real> &dst, int px, int py, 
 //! \fn BlockFFTGravity::MultiplyGreen(int px, int py, int pz)
 //! \brief Multiply Green's function
 void BlockFFTGravity::MultiplyGreen(int px, int py, int pz) {
-  //TODO(SMOON) multiply grf_ to in_ array
-
+  for (int j=0; j<slow_nx2; j++) {
+    for (int i=0; i<slow_nx1; i++) {
+      for (int k=0; k<slow_nx3; k++) {
+        int idx = k + slow_nx3*(i + slow_nx1*j);
+        int grfidx = (2*k+pz) + (2*slow_nx3)*((2*i+px) + (2*slow_nx1)*(2*j+py));
+        in_[idx] *= grf_[grfidx];
+      }
+    }
+  }
   return;
 }
 
