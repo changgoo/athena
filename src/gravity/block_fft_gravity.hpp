@@ -52,6 +52,7 @@ class BlockFFTGravity : public BlockFFT {
  private:
   FFTGravitySolverTaskList *gtlist_;
   Real Omega_0_,qshear_,rshear_;
+  Real dx1_,dx2_,dx3_;
   Real dx1sq_,dx2sq_,dx3sq_;
   Real Lx1_,Lx2_,Lx3_;
   const std::complex<Real> I_; // sqrt(-1)
