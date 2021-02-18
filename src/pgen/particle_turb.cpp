@@ -113,13 +113,12 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       Real dx1 = mesh_size.x1len / npx1,
            dx2 = mesh_size.x2len / npx2,
            dx3 = mesh_size.x3len / npx3;
-      if (DustParticles *pp = dynamic_cast<DustParticles*>(ppar[ipar])){
+      if (DustParticles *pp = dynamic_cast<DustParticles*>(ppar[ipar])) {
         Real dtog = pin->GetReal(ppar[ipar]->input_block_name,"dtog");
         pp->SetOneParticleMass(dtog * vol / (npx1 * npx2 * npx3));
-      }
-
-      else if (TracerParticles *pp = dynamic_cast<TracerParticles*>(ppar[ipar]))
+      } else if (TracerParticles *pp = dynamic_cast<TracerParticles*>(ppar[ipar])) {
         pp->SetOneParticleMass(d0 * vol / (npx1 * npx2 * npx3));
+      }
 
       // Determine number of particles in the block.
       int npx1_loc = static_cast<int>(std::round(block_size.x1len / dx1)),

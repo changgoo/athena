@@ -10,6 +10,7 @@
 
 // C/C++ Standard Libraries
 #include <string>
+#include <vector>
 
 // Athena headers
 #include "../athena.hpp"
@@ -154,7 +155,7 @@ friend class ParticleMesh;
   void UpdateCapacity(int new_nparmax);  //!> Change the capacity of particle arrays
   void FindLocalDensityOnMesh(bool include_momentum);
   void ConvertToDensity(bool include_momentum);
-  
+
   // Instance variables
   // std::uint64_t npar;     //!> number of particles
   // std::uint64_t nparmax;  //!> maximum number of particles per meshblock

@@ -679,7 +679,7 @@ void Mesh::RedistributeAndRefineMeshBlocks(ParameterInput *pin, int ntot) {
     for (int i = 0; i < nblocal; ++i) {
       for (Particles *ppar : my_blocks(i)->ppar) {
         ppar->ClearNeighbors();
-        ppar->LinkNeighbors(tree, nrbx1, nrbx2, nrbx3, root_level);  
+        ppar->LinkNeighbors(tree, nrbx1, nrbx2, nrbx3, root_level);
       }
     }
   }
