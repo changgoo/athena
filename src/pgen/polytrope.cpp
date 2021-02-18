@@ -80,9 +80,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         x1 = pcoord->x1v(i);
         x2 = pcoord->x2v(j);
         x3 = pcoord->x3v(k);
-        if (COORDINATE_SYSTEM=="cartesian")
+        if (strcmp(COORDINATE_SYSTEM,"cartesian")==0)
           xi = PI*std::sqrt(SQR(x1-x1c)+SQR(x2-x2c)+SQR(x3-x3c))/rsurf;
-        else if (COORDINATE_SYSTEM=="cylindrical")
+        else if (strcmp(COORDINATE_SYSTEM,"cylindrical")==0)
           xi = PI*std::sqrt(SQR(x1)+SQR(x1c)-2*x1*x1c*cos(x2-x2c)+SQR(x3-x3c))/rsurf;
         if (xi < PI) {
           den = rhoc*sin(xi)/xi;
