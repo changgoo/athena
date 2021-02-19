@@ -51,10 +51,12 @@
 //  \brief beam test
 //======================================================================================
 
-static Real sigma=1.e8;
 static Real vx = 0.0;
 static Real vy = 0.0;
 static Real vz = 0.0;
+static Real Bx = 0.0;
+static Real By = 0.0;
+static Real Bz = 0.0;
 static int direction =0;
 
 void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr, 
@@ -62,56 +64,60 @@ void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr,
 
 void Mesh::UserWorkAfterLoop(ParameterInput *pin)
 { 
- 
+    
 }
 
 
 
 void MeshBlock::InitUserMeshBlockData(ParameterInput *pin)
 {
-  
   if(CR_ENABLED){
     pcr->EnrollOpacityFunction(Diffusion);
   }
-
 }
 
 
 
 void MeshBlock::ProblemGenerator(ParameterInput *pin)
 {
-    
+  Real xsize;  
   // read in the mean velocity, diffusion coefficient
   direction = pin->GetOrAddReal("problem","direction",0); 
-  if(direction == 0)
+  if(direction == 0){
     vx = pin->GetOrAddReal("problem","v0",0);
-  else if(direction == 1)
+    Bx = pin->GetOrAddReal("problem","B0",0);  
+    xsize = (pmy_mesh->mesh_size.x1max - pmy_mesh->mesh_size.x1min)/pmy_mesh->mesh_size.nx1; 
+  }
+  else if(direction == 1){
     vy = pin->GetOrAddReal("problem","v0",0); 
-  else if(direction == 2)
+    By = pin->GetOrAddReal("problem","B0",0); 
+    xsize = (pmy_mesh->mesh_size.x2max - pmy_mesh->mesh_size.x2min)/pmy_mesh->mesh_size.nx2; 
+  }
+  else if(direction == 2){
     vz = pin->GetOrAddReal("problem","v0",0);   
-
+    Bz = pin->GetOrAddReal("problem","B0",0);  
+    xsize = (pmy_mesh->mesh_size.x3max - pmy_mesh->mesh_size.x3min)/pmy_mesh->mesh_size.nx3; 
+  }
+    
+  Real offset1 = pin->GetOrAddReal("problem","offset1",0.);
+  Real offset2 = pin->GetOrAddReal("problem","offset2",0.);
+  Real offset3 = pin->GetOrAddReal("problem","offset3",0.);
+  Real Rinj = xsize*pin->GetOrAddReal("problem","cells",1.);
+  
   Real gamma = peos->GetGamma();
-
-  // The Nfmo
-
-// the anslytic solution form the co
 
   // Initialize hydro variable
   for(int k=ks; k<=ke; ++k) {
     for (int j=js; j<=je; ++j) {
       for (int i=is; i<=ie; ++i) {
 
-        Real x1 = pcoord->x1v(i);
-        Real x2 = pcoord->x2v(j);
-        Real x3 = pcoord->x3v(k);
+        Real x1 = pcoord->x1v(i) - offset1;
+        Real x2 = pcoord->x2v(j) - offset2;
+        Real x3 = pcoord->x3v(k) - offset3;
 
-        Real dist_sq=x1*x1;
-        if(direction ==1){
-          dist_sq=x2*x2;
-        }else if(direction == 2){
-          dist_sq=x3*x3;
-        }
-      
+        //Real dist_sq = std::pow(x1-offset1,2) + std::pow(x2-offset2,2) + std::pow(x3-offset3,2);
+        //Real dist = std::sqrt(dist_sq);
+        
         phydro->u(IDN,k,j,i) = 1.0;
         phydro->u(IM1,k,j,i) = vx;
         phydro->u(IM2,k,j,i) = vy;
@@ -120,22 +126,25 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
           phydro->u(IEN,k,j,i) = 0.5*(vx*vx+vy*vy+vz*vz)+1.0/(gamma-1.0);
         }
         
+        Real dist_sq=x1*x1;
+        Real side1 = x2;
+        Real side2 = x3;
+        if(direction ==1){
+          dist_sq=x2*x2;
+          side1 = x1;
+          side2 = x3;
+        }else if(direction == 2){
+          dist_sq=x3*x3;
+          side1 = x2;
+          side2 = x3;
+        }
+        
         if(CR_ENABLED){
-            pcr->u_cr(CRE,k,j,i) = exp(-40.0*x1*x1);
-            if(direction == 0){
-              pcr->u_cr(CRF1,k,j,i) = 0.0;
-              pcr->u_cr(CRF2,k,j,i) = 0.0;
-              pcr->u_cr(CRF3,k,j,i) = 0.0;
-            } else if(direction == 1){
-              pcr->u_cr(CRF2,k,j,i) = 0.0;
-              pcr->u_cr(CRF1,k,j,i) = 0.0;
-              pcr->u_cr(CRF3,k,j,i) = 0.0;
-            }else if(direction == 2){
-              pcr->u_cr(CRF3,k,j,i) = 0.0;
-              pcr->u_cr(CRF1,k,j,i) = 0.0;
-              pcr->u_cr(CRF2,k,j,i) = 0.0;             
-            }
-
+          if (std::abs(side1) <= Rinj) pcr->u_cr(CRE,k,j,i) = 1e-6+exp(-40.0*dist_sq);
+          else pcr->u_cr(CRE,k,j,i) = 1e-6;
+          pcr->u_cr(CRF1,k,j,i) = 0.0;
+          pcr->u_cr(CRF2,k,j,i) = 0.0;
+          pcr->u_cr(CRF3,k,j,i) = 0.0;
         }
       }// end i
     }
@@ -152,9 +161,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
     for(int k=0; k<nz3; ++k){
       for(int j=0; j<nz2; ++j){
         for(int i=0; i<nz1; ++i){
-          pcr->sigma_diff(0,k,j,i) = sigma;
-          pcr->sigma_diff(1,k,j,i) = sigma;
-          pcr->sigma_diff(2,k,j,i) = sigma;
+          pcr->sigma_diff(0,k,j,i) = pcr->sigma;
+          pcr->sigma_diff(1,k,j,i) = pcr->max_opacity;
+          pcr->sigma_diff(2,k,j,i) = pcr->max_opacity;
         }
       }
     }// end k,j,i
@@ -168,7 +177,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
     for (int k=ks; k<=ke; ++k) {
       for (int j=js; j<=je; ++j) {
         for (int i=is; i<=ie+1; ++i) {
-          pfield->b.x1f(k,j,i) = 1.0;
+          pfield->b.x1f(k,j,i) = Bx;
         }
       }
     }
@@ -178,7 +187,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
       for (int k=ks; k<=ke; ++k) {
         for (int j=js; j<=je+1; ++j) {
           for (int i=is; i<=ie; ++i) {
-            pfield->b.x2f(k,j,i) = 0.0;
+            pfield->b.x2f(k,j,i) = By;
           }
         }
       }
@@ -190,7 +199,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
       for (int k=ks; k<=ke+1; ++k) {
         for (int j=js; j<=je; ++j) {
           for (int i=is; i<=ie; ++i) {
-            pfield->b.x3f(k,j,i) = 0.0;
+            pfield->b.x3f(k,j,i) = Bz;
           }
         }
       }
@@ -211,10 +220,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
         }
       }
     }
-
   }// end MHD
-  
-  
+
   return;
 }
 
@@ -223,7 +230,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
 void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr, 
         AthenaArray<Real> &prim, AthenaArray<Real> &bcc)
 { 
-
 
   // set the default opacity to be a large value in the default hydro case
   CosmicRay *pcr=pmb->pcr;
@@ -244,9 +250,9 @@ void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr,
 #pragma omp simd
       for(int i=il; i<=iu; ++i){
 
-        pcr->sigma_diff(0,k,j,i) = sigma;
-        pcr->sigma_diff(1,k,j,i) = sigma;
-        pcr->sigma_diff(2,k,j,i) = sigma;  
+        pcr->sigma_diff(0,k,j,i) = pcr->sigma;
+        pcr->sigma_diff(1,k,j,i) = pcr->max_opacity;
+        pcr->sigma_diff(2,k,j,i) = pcr->max_opacity;  
 
       }
     }
@@ -260,9 +266,6 @@ void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr,
   // b_angle[1]=cos_theta_b
   // b_angle[2]=sin_phi_b
   // b_angle[3]=cos_phi_b
-
-
-
 
   if(MAGNETIC_FIELDS_ENABLED){
     //First, calculate B_dot_grad_Pc
@@ -308,7 +311,7 @@ void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr,
 //            = -1.0;
 //          else pcr->b_grad_pc(k,j,i) = 0.0;
         }
-        
+
       // now calculate the streaming velocity
       // streaming velocity is calculated with respect to the current coordinate 
       //  system
@@ -324,26 +327,33 @@ void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr,
 
           Real va = sqrt(pb/prim(IDN,k,j,i));
           
-          Real dpc_sign = 0.0;
-          if(pcr->b_grad_pc(k,j,i) > TINY_NUMBER) dpc_sign = 1.0;
-          else if(-pcr->b_grad_pc(k,j,i) > TINY_NUMBER) dpc_sign = -1.0;
+          if(pcr->stream_flag){
+            Real dpc_sign = 0.0;
+            if(pcr->b_grad_pc(k,j,i) > TINY_NUMBER) dpc_sign = 1.0;
+            else if(-pcr->b_grad_pc(k,j,i) > TINY_NUMBER) dpc_sign = -1.0;
           
-          pcr->v_adv(0,k,j,i) = -va1 * dpc_sign;
-          pcr->v_adv(1,k,j,i) = -va2 * dpc_sign;
-          pcr->v_adv(2,k,j,i) = -va3 * dpc_sign;
-          
-          // now the diffusion coefficient
+            pcr->v_adv(0,k,j,i) = -va1 * dpc_sign;
+            pcr->v_adv(1,k,j,i) = -va2 * dpc_sign;
+            pcr->v_adv(2,k,j,i) = -va3 * dpc_sign;
 
-          if(va < TINY_NUMBER){
-            pcr->sigma_adv(0,k,j,i) = pcr->max_opacity;
-          }else{
-            pcr->sigma_adv(0,k,j,i) = fabs(pcr->b_grad_pc(k,j,i))
+            if(va < TINY_NUMBER){
+              pcr->sigma_adv(0,k,j,i) = pcr->max_opacity;
+            }else{
+              pcr->sigma_adv(0,k,j,i) = fabs(pcr->b_grad_pc(k,j,i))
                           /(sqrt(pb)* va * (1.0 + 1.0/3.0) 
                                     * invlim * u_cr(CRE,k,j,i)); 
+            }
+
+            pcr->sigma_adv(1,k,j,i) = pcr->max_opacity;
+            pcr->sigma_adv(2,k,j,i) = pcr->max_opacity;  
+          } else {
+            pcr->v_adv(0,k,j,i) = 0.;
+            pcr->v_adv(1,k,j,i) = 0.;
+            pcr->v_adv(2,k,j,i) = 0.;
+            pcr->sigma_adv(0,k,j,i) = pcr->max_opacity;
+            pcr->sigma_adv(1,k,j,i) = pcr->max_opacity;
+            pcr->sigma_adv(2,k,j,i) = pcr->max_opacity; 
           }
-          pcr->sigma_adv(1,k,j,i) = pcr->max_opacity;
-          pcr->sigma_adv(2,k,j,i) = pcr->max_opacity;  
-          //printf("%e %e %e %e \n", pcr->v_adv(0,k,j,i), invlim ,u_cr(CRE,k,j,i),pcr->sigma_adv(0,k,j,i));
           // Now calculate the angles of B
           Real bxby = sqrt(bcc(IB1,k,j,i)*bcc(IB1,k,j,i) +
                            bcc(IB2,k,j,i)*bcc(IB2,k,j,i));
@@ -362,20 +372,14 @@ void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr,
             pcr->b_angle(2,k,j,i) = 0.0;
             pcr->b_angle(3,k,j,i) = 1.0;            
           }
-
         }//        
-
       }// end j
     }// end k
-
   }// End MHD  
   else{
-
-
-
   for(int k=kl; k<=ku; ++k){
     for(int j=jl; j<=ju; ++j){
-  // x component
+      // x component
       pmb->pcoord->CenterWidth1(k,j,il-1,iu+1,pcr->cwidth);
       for(int i=il; i<=iu; ++i){
          Real distance = 0.5*(pcr->cwidth(i-1) + pcr->cwidth(i+1))
@@ -383,7 +387,7 @@ void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr,
          Real grad_pr=(u_cr(CRE,k,j,i+1) - u_cr(CRE,k,j,i-1))/3.0;
          grad_pr /= distance;
 
-         Real va = 1.0;
+         Real va = 0.0;
 
          if(va < TINY_NUMBER){
            pcr->sigma_adv(0,k,j,i) = pcr->max_opacity;
@@ -394,26 +398,18 @@ void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr,
            if(fabs(grad_pr) < TINY_NUMBER){
              pcr->sigma_adv(0,k,j,i) = 0.0;
              pcr->v_adv(0,k,j,i) = 0.0;
-           }else{
-             pcr->sigma_adv(0,k,j,i) = sigma2;
-             pcr->v_adv(0,k,j,i) = -va * grad_pr/fabs(grad_pr);     
-           }
+            }else{
+              pcr->sigma_adv(0,k,j,i) = sigma2;
+              pcr->v_adv(0,k,j,i) = -va * grad_pr/fabs(grad_pr);     
+            }
+          }
+          pcr->sigma_adv(1,k,j,i) = pcr->max_opacity;
+          pcr->sigma_adv(2,k,j,i) = pcr->max_opacity;
+          pcr->v_adv(1,k,j,i) = 0.0;
+          pcr->v_adv(2,k,j,i) = 0.0;
         }
-
-        pcr->sigma_adv(1,k,j,i) = pcr->max_opacity;
-        pcr->sigma_adv(2,k,j,i) = pcr->max_opacity;
-       
-        pcr->v_adv(1,k,j,i) = 0.0;
-        pcr->v_adv(2,k,j,i) = 0.0;
-
-
-
-
       }
-
     }
-  }
-
   }
 }
 

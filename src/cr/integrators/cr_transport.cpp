@@ -431,25 +431,27 @@ void CRIntegrator::CalculateFluxes(AthenaArray<Real> &w,
                          + bcc(IB2,k,j,i) * grad_pc_(1,k,j,i) 
                          + bcc(IB3,k,j,i) * grad_pc_(2,k,j,i);
 
-          Real va1 = bcc(IB1,k,j,i) * inv_sqrt_rho;
-          Real va2 = bcc(IB2,k,j,i) * inv_sqrt_rho;
-          Real va3 = bcc(IB3,k,j,i) * inv_sqrt_rho;
+          if(pcr->stream_flag){
+            Real va1 = bcc(IB1,k,j,i) * inv_sqrt_rho;
+            Real va2 = bcc(IB2,k,j,i) * inv_sqrt_rho;
+            Real va3 = bcc(IB3,k,j,i) * inv_sqrt_rho;
 
-          Real va = sqrt(pb) * inv_sqrt_rho;
-          Real dpc_sign = 0.0;
+            Real va = sqrt(pb) * inv_sqrt_rho;
+            Real dpc_sign = 0.0;
 
-          if(b_grad_pc > TINY_NUMBER) dpc_sign = 1.0;
-          else if(-b_grad_pc > TINY_NUMBER) dpc_sign = -1.0;
+            if(b_grad_pc > TINY_NUMBER) dpc_sign = 1.0;
+            else if(-b_grad_pc > TINY_NUMBER) dpc_sign = -1.0;
+          
+            pcr->v_adv(0,k,j,i) = -va1 * dpc_sign;
+            pcr->v_adv(1,k,j,i) = -va2 * dpc_sign;
+            pcr->v_adv(2,k,j,i) = -va3 * dpc_sign;
 
-          pcr->v_adv(0,k,j,i) = -va1 * dpc_sign;
-          pcr->v_adv(1,k,j,i) = -va2 * dpc_sign;
-          pcr->v_adv(2,k,j,i) = -va3 * dpc_sign;
-
-          if(va > TINY_NUMBER){
-            pcr->sigma_adv(0,k,j,i) = fabs(b_grad_pc)/(sqrt(pb) * va * 
+            if(va > TINY_NUMBER){
+              pcr->sigma_adv(0,k,j,i) = fabs(b_grad_pc)/(sqrt(pb) * va * 
                                    (4.0/3.0) * invlim * cr(CRE,k,j,i));
-            pcr->sigma_adv(1,k,j,i) = pcr->max_opacity;
-            pcr->sigma_adv(2,k,j,i) = pcr->max_opacity;
+              pcr->sigma_adv(1,k,j,i) = pcr->max_opacity;
+              pcr->sigma_adv(2,k,j,i) = pcr->max_opacity;
+            }
           }
           
           pcr->sigma_diff(0,k,j,i) = pcr->Get_SigmaParallel(w(IDN,k,j,i),w(IPR,k,j,i),cr(CRE,k,j,i),fabs(b_grad_pc)/sqrt(pb));

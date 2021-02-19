@@ -260,8 +260,8 @@ CosmicRay::CosmicRay(MeshBlock *pmb, ParameterInput *pin):
   //Flags 
   stream_flag = pin->GetOrAddInteger("cr","vs_flag",1);  
   src_flag = pin->GetOrAddInteger("cr","src_flag",1);
-  losses_flag = pin->GetOrAddInteger("cr","losses_flag",1);  
-  perp_diff_flag = pin->GetOrAddInteger("cr","perp_diff_flag",1);
+  losses_flag = pin->GetOrAddInteger("cr","losses_flag",0);  
+  perp_diff_flag = pin->GetOrAddInteger("cr","perp_diff_flag",0);
   self_consistent_flag = pin->GetOrAddInteger("cr","self_consistent_flag",0);
   if (self_consistent_flag == 1) losses_flag = 1;
   
