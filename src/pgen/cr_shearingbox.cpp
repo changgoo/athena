@@ -38,26 +38,15 @@
 #include "../cr/cr.hpp"
 #include "../cr/integrators/cr_integrators.hpp"
 
-
-//======================================================================================
-/*! \file beam.cpp
- *  Dynamic diffusion test for cosmic rays
- * Compare the numerical solution with analytic solution
- *====================================================================================*/
-
-
 //======================================================================================
 //! \fn void MeshBlock::ProblemGenerator(ParameterInput *pin)
-//  \brief beam test
+//  \brief Testing the propagation of CRs in the presence of shear
 //======================================================================================
 
-static Real vx = 0.0;
-static Real vy = 0.0;
-static Real vz = 0.0;
 static Real Bx = 0.0;
 static Real By = 0.0;
 static Real Bz = 0.0;
-static int direction =0;
+static int direction = 0;
 
 void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr, 
         AthenaArray<Real> &prim, AthenaArray<Real> &bcc);
@@ -67,8 +56,6 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin)
     
 }
 
-
-
 void MeshBlock::InitUserMeshBlockData(ParameterInput *pin)
 {
   if(CR_ENABLED){
@@ -76,25 +63,20 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin)
   }
 }
 
-
-
 void MeshBlock::ProblemGenerator(ParameterInput *pin)
 {
   Real xsize;  
   // read in the mean velocity, diffusion coefficient
   direction = pin->GetOrAddReal("problem","direction",0); 
   if(direction == 0){
-    vx = pin->GetOrAddReal("problem","v0",0);
     Bx = pin->GetOrAddReal("problem","B0",0);  
     xsize = (pmy_mesh->mesh_size.x1max - pmy_mesh->mesh_size.x1min)/pmy_mesh->mesh_size.nx1; 
   }
   else if(direction == 1){
-    vy = pin->GetOrAddReal("problem","v0",0); 
     By = pin->GetOrAddReal("problem","B0",0); 
     xsize = (pmy_mesh->mesh_size.x2max - pmy_mesh->mesh_size.x2min)/pmy_mesh->mesh_size.nx2; 
   }
-  else if(direction == 2){
-    vz = pin->GetOrAddReal("problem","v0",0);   
+  else if(direction == 2){  
     Bz = pin->GetOrAddReal("problem","B0",0);  
     xsize = (pmy_mesh->mesh_size.x3max - pmy_mesh->mesh_size.x3min)/pmy_mesh->mesh_size.nx3; 
   }
@@ -103,6 +85,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   Real offset2 = pin->GetOrAddReal("problem","offset2",0.);
   Real offset3 = pin->GetOrAddReal("problem","offset3",0.);
   Real Rinj = xsize*pin->GetOrAddReal("problem","cells",1.);
+  
+  Real Omega0 = pin->GetOrAddReal("orbital_advection","Omega0",0.0);
+  Real qshear  = pin->GetOrAddReal("orbital_advection","qshear",0.0);
   
   Real gamma = peos->GetGamma();
 
@@ -115,15 +100,15 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
         Real x2 = pcoord->x2v(j) - offset2;
         Real x3 = pcoord->x3v(k) - offset3;
 
-        //Real dist_sq = std::pow(x1-offset1,2) + std::pow(x2-offset2,2) + std::pow(x3-offset3,2);
-        //Real dist = std::sqrt(dist_sq);
+        Real vy = qshear*Omega0*pcoord->x1v(i);
         
         phydro->u(IDN,k,j,i) = 1.0;
-        phydro->u(IM1,k,j,i) = vx;
-        phydro->u(IM2,k,j,i) = vy;
-        phydro->u(IM3,k,j,i) = vz;
+        phydro->u(IM1,k,j,i) = 0.0;
+        //background shearing flow
+        phydro->u(IM2,k,j,i) -= phydro->u(IDN,k,j,i)*vy;
+        phydro->u(IM3,k,j,i) = 0.0;
         if (NON_BAROTROPIC_EOS){
-          phydro->u(IEN,k,j,i) = 0.5*(vx*vx+vy*vy+vz*vz)+1.0/(gamma-1.0);
+          phydro->u(IEN,k,j,i) = 0.5*(vy*vy)+1.0/(gamma-1.0);
         }
         
         Real dist_sq=x1*x1;
@@ -140,8 +125,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
         }
         
         if(CR_ENABLED){
-          if (std::abs(side1) <= Rinj) pcr->u_cr(CRE,k,j,i) = 1e-6+exp(-40.0*dist_sq);
-          else pcr->u_cr(CRE,k,j,i) = 1e-6;
+          if (std::abs(side1) <= Rinj) pcr->u_cr(CRE,k,j,i) = exp(-40.0*dist_sq);
+          else pcr->u_cr(CRE,k,j,i) = 1e-10;
           pcr->u_cr(CRF1,k,j,i) = 0.0;
           pcr->u_cr(CRF2,k,j,i) = 0.0;
           pcr->u_cr(CRF3,k,j,i) = 0.0;
@@ -151,8 +136,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
   }
   //Need to set opactiy sigma in the ghost zones
   if(CR_ENABLED){
-
-  // Default values are 1/3
     int nz1 = block_size.nx1 + 2*(NGHOST);
     int nz2 = block_size.nx2;
     if(nz2 > 1) nz2 += 2*(NGHOST);
@@ -191,11 +174,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
           }
         }
       }
-
     }
 
     if(block_size.nx3 > 1){
-
       for (int k=ks; k<=ke+1; ++k) {
         for (int j=js; j<=je; ++j) {
           for (int i=is; i<=ie; ++i) {
@@ -216,7 +197,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
             0.5*(SQR((pfield->bcc(IB1,k,j,i)))
                + SQR((pfield->bcc(IB2,k,j,i)))
                + SQR((pfield->bcc(IB3,k,j,i))));
-      
+          
         }
       }
     }
