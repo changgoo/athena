@@ -44,14 +44,26 @@ class BlockFFTGravity : public BlockFFT {
   void ApplyKernel() final;
   void ExecuteBackward() final;
   void Solve(int stage);
+  void InitGreen();
+  void LoadOBCSource(const AthenaArray<Real> &src, int px, int py, int pz);
+  void RetrieveOBCResult(AthenaArray<Real> &dst, int px, int py, int pz);
+  void MultiplyGreen(int px, int py, int pz);
+  void SetPhysicalBoundaries();
 
  private:
   FFTGravitySolverTaskList *gtlist_;
   Real Omega_0_,qshear_,rshear_;
+  Real dx1_,dx2_,dx3_;
   Real dx1sq_,dx2sq_,dx3sq_;
   Real Lx1_,Lx2_,Lx3_;
-  const std::complex<Real> I_;
+  const std::complex<Real> I_; // sqrt(-1)
   std::complex<Real> *in2_,*in_e_,*in_o_;
+  std::complex<Real> *grf_; // Green's function for open BC
+#ifdef FFT
+#ifdef MPI_PARALLEL
+  FFTMPI_NS::FFT3d *pf3dgrf_;
+#endif
+#endif
 };
 
 #endif // GRAVITY_BLOCK_FFT_GRAVITY_HPP_

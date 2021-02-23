@@ -47,8 +47,8 @@
 #endif
 
 void Mesh::InitUserMeshData(ParameterInput *pin) {
-  Real four_pi_G = pin->GetReal("problem","four_pi_G");
-  Real eps = pin->GetOrAddReal("problem","grav_eps", 0.0);
+  Real four_pi_G = pin->GetReal("self_gravity","four_pi_G");
+  Real eps = pin->GetOrAddReal("self_gravity","grav_eps", 0.0);
   SetFourPiG(four_pi_G);
   SetGravityThreshold(eps);
 }
@@ -69,7 +69,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real x2size = mesh_size.x2max - mesh_size.x2min;
   Real x3size = mesh_size.x3max - mesh_size.x3min;
 
-  Real four_pi_G = pin->GetReal("problem","four_pi_G");
+  Real four_pi_G = pin->GetReal("self_gravity","four_pi_G");
   Real gconst = four_pi_G / (4.0*PI);
 
   int iprob = pin->GetOrAddInteger("problem","iprob",1);
