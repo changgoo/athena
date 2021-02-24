@@ -125,7 +125,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
         }
         
         if(CR_ENABLED){
-          if (std::abs(side1) <= Rinj) pcr->u_cr(CRE,k,j,i) = exp(-40.0*dist_sq);
+          if (std::abs(side1) <= Rinj) pcr->u_cr(CRE,k,j,i) = 1e-10 + exp(-40.0*dist_sq);
           else pcr->u_cr(CRE,k,j,i) = 1e-10;
           pcr->u_cr(CRF1,k,j,i) = 0.0;
           pcr->u_cr(CRF2,k,j,i) = 0.0;
