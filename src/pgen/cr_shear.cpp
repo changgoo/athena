@@ -43,17 +43,76 @@
 //  \brief Testing the propagation of CRs in the presence of shear
 //======================================================================================
 
-static Real Bx = 0.0;
-static Real By = 0.0;
-static Real Bz = 0.0;
-static int direction = 0;
-
 void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr, 
         AthenaArray<Real> &prim, AthenaArray<Real> &bcc);
 
 void Mesh::UserWorkAfterLoop(ParameterInput *pin)
 { 
+  int Nx_mesh = mesh_size.nx1;
+  Real xmin = mesh_size.x1min;
+  Real xmax = mesh_size.x1max;
+  Real deltax = (xmax-xmin)/Nx_mesh; 
+  int Ny_mesh = mesh_size.nx2;
+  Real ymin = mesh_size.x2min;
+  Real ymax = mesh_size.x2max;
+  Real deltay = (ymax-ymin)/Ny_mesh; 
+
+  Real yt, yt_grid, yt0 = pin->GetOrAddReal("problem","offset2",0.);
+  int gridindex;
+  AthenaArray<Real> Ec, dataEc, dataxEc; 
+  Ec.NewAthenaArray(Nx_mesh);
+  dataEc.NewAthenaArray(Nx_mesh);
+  dataxEc.NewAthenaArray(Nx_mesh);
+  
+  Real Omega0 = pin->GetOrAddReal("orbital_advection","Omega0",0.0);
+  Real qshear  = pin->GetOrAddReal("orbital_advection","qshear",0.0);
     
+  for (int n=0; n<Nx_mesh; ++n){
+    Ec(n) = 0.;
+    dataxEc(n) = xmin + deltax * (0.5 + n);
+    for (int b=0; b<nblocal; ++b) {
+      MeshBlock *pmb = my_blocks(b);
+      int is=pmb->is; int ie=pmb->ie; int js=pmb->js; int ks=pmb->ks;
+      int Nx = pmb->block_size.nx1;
+      int Ny = pmb->block_size.nx2;
+      int gis = static_cast<int>(pmb->loc.lx1) * Nx;    
+      int gjs = static_cast<int>(pmb->loc.lx2) * Ny;  
+      int xindex = n;
+      if (xindex >= gis && xindex < gis + Nx){
+        Real yt = yt0 - Omega0*qshear*dataxEc(n)*time;
+        printf("time %e \n", time);
+        int yindex = int((yt - ymin)/deltay);
+        if (yindex >= gjs && yindex < gjs + Ny){
+          Ec(n) = pmb->pcr->u_cr(CRE,ks,yindex-gjs+js,xindex-gis+is);
+          dataEc(n) = Ec(n);
+        }
+      }
+    }  
+  }
+  
+#ifdef MPI_PARALLEL
+  MPI_Reduce(Ec.data(), dataEc.data(), Nx_mesh, MPI_ATHENA_REAL, MPI_SUM, 0, MPI_COMM_WORLD);
+#endif
+  
+  if (Globals::my_rank == 0){
+    std::string fname;
+    fname.assign("CR_energy_profile.dat");
+    std::stringstream msg;
+    FILE *pfile;
+    
+    if((pfile = fopen(fname.c_str(),"w")) == NULL){
+      msg << "### FATAL ERROR in function [Mesh::UserWorkAfterLoop]"
+          << std::endl << "Error output file could not be opened" <<std::endl;
+      throw std::runtime_error(msg.str().c_str());
+    }
+    fprintf(pfile,"#  x   Ec");
+    fprintf(pfile,"\n");
+
+    for(int i=0; i<Nx_mesh; ++i){
+      fprintf(pfile,"  %e  %e  \n", dataxEc(i), dataEc(i));}
+    
+    fclose(pfile);
+  }
 }
 
 void MeshBlock::InitUserMeshBlockData(ParameterInput *pin)
@@ -66,6 +125,9 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin)
 void MeshBlock::ProblemGenerator(ParameterInput *pin)
 {
   Real xsize;  
+  Real Bx, By, Bz;
+  Real direction;
+  
   // read in the mean velocity, diffusion coefficient
   direction = pin->GetOrAddReal("problem","direction",0); 
   if(direction == 0){
@@ -125,8 +187,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
         }
         
         if(CR_ENABLED){
-          if (std::abs(side1) <= Rinj) pcr->u_cr(CRE,k,j,i) = 1e-10 + exp(-40.0*dist_sq);
-          else pcr->u_cr(CRE,k,j,i) = 1e-10;
+          if (std::abs(side1) <= Rinj) pcr->u_cr(CRE,k,j,i) = 1e-6 + exp(-40.0*dist_sq);
+          else pcr->u_cr(CRE,k,j,i) = 1e-6;
           pcr->u_cr(CRF1,k,j,i) = 0.0;
           pcr->u_cr(CRF2,k,j,i) = 0.0;
           pcr->u_cr(CRF3,k,j,i) = 0.0;
@@ -153,7 +215,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
 
   }// End CR
 
-    // Add horizontal magnetic field lines, to show streaming and diffusion 
+  // Add horizontal magnetic field lines, to show streaming and diffusion 
   // along magnetic field ines
   if(MAGNETIC_FIELDS_ENABLED){
 
@@ -211,7 +273,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin)
 void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr, 
         AthenaArray<Real> &prim, AthenaArray<Real> &bcc)
 { 
-
   // set the default opacity to be a large value in the default hydro case
   CosmicRay *pcr=pmb->pcr;
   int kl=pmb->ks, ku=pmb->ke;
@@ -225,7 +286,7 @@ void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr,
     kl -= 1;
     ku += 1;
   }
-
+  
   for(int k=kl; k<=ku; ++k){
     for(int j=jl; j<=ju; ++j){
 #pragma omp simd
@@ -252,7 +313,7 @@ void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr,
     //First, calculate B_dot_grad_Pc
     for(int k=kl; k<=ku; ++k){
       for(int j=jl; j<=ju; ++j){
-    // x component
+        // x component
         pmb->pcoord->CenterWidth1(k,j,il-1,iu+1,pcr->cwidth);
         for(int i=il; i<=iu; ++i){
           Real distance = 0.5*(pcr->cwidth(i-1) + pcr->cwidth(i+1))
@@ -261,38 +322,36 @@ void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr,
           dprdx /= distance;
           pcr->b_grad_pc(k,j,i) = bcc(IB1,k,j,i) * dprdx;
         }
-    //y component
-        pmb->pcoord->CenterWidth2(k,j-1,il,iu,pcr->cwidth1);       
-        pmb->pcoord->CenterWidth2(k,j,il,iu,pcr->cwidth);
-        pmb->pcoord->CenterWidth2(k,j+1,il,iu,pcr->cwidth2);
+        //y component
+        if (pmb->block_size.nx2 > 1){
+          pmb->pcoord->CenterWidth2(k,j-1,il,iu,pcr->cwidth1);       
+          pmb->pcoord->CenterWidth2(k,j,il,iu,pcr->cwidth);
+          pmb->pcoord->CenterWidth2(k,j+1,il,iu,pcr->cwidth2);
 
-        for(int i=il; i<=iu; ++i){
-          Real distance = 0.5*(pcr->cwidth1(i) + pcr->cwidth2(i))
-                         + pcr->cwidth(i);
-          Real dprdy=(u_cr(CRE,k,j+1,i) - u_cr(CRE,k,j-1,i))/3.0;
-          dprdy /= distance;
-          pcr->b_grad_pc(k,j,i) += bcc(IB2,k,j,i) * dprdy;
-
+          for(int i=il; i<=iu; ++i){
+            Real distance = 0.5*(pcr->cwidth1(i) + pcr->cwidth2(i))
+                           + pcr->cwidth(i);
+            Real dprdy=(u_cr(CRE,k,j+1,i) - u_cr(CRE,k,j-1,i))/3.0;
+            dprdy /= distance;
+            pcr->b_grad_pc(k,j,i) += bcc(IB2,k,j,i) * dprdy;
+          }  
         }
-    // z component
-        pmb->pcoord->CenterWidth3(k-1,j,il,iu,pcr->cwidth1);       
-        pmb->pcoord->CenterWidth3(k,j,il,iu,pcr->cwidth);
-        pmb->pcoord->CenterWidth3(k+1,j,il,iu,pcr->cwidth2);
+        // z component
+        if (pmb->block_size.nx3 > 1){
+          pmb->pcoord->CenterWidth3(k-1,j,il,iu,pcr->cwidth1);       
+          pmb->pcoord->CenterWidth3(k,j,il,iu,pcr->cwidth);
+          pmb->pcoord->CenterWidth3(k+1,j,il,iu,pcr->cwidth2);
 
-        for(int i=il; i<=iu; ++i){
-          Real distance = 0.5*(pcr->cwidth1(i) + pcr->cwidth2(i))
+          for(int i=il; i<=iu; ++i){
+            Real distance = 0.5*(pcr->cwidth1(i) + pcr->cwidth2(i))
                           + pcr->cwidth(i);
-          Real dprdz=(u_cr(CRE,k+1,j,i) - u_cr(CRE,k-1,j,i))/3.0;
-          dprdz /= distance;
-          pcr->b_grad_pc(k,j,i) += bcc(IB3,k,j,i) * dprdz;
-
-          // now only get the sign
-//          if(pcr->b_grad_pc(k,j,i) > TINY_NUMBER) pcr->b_grad_pc(k,j,i) = 1.0;
-//          else if(-pcr->b_grad_pc(k,j,i) > TINY_NUMBER) pcr->b_grad_pc(k,j,i) 
-//            = -1.0;
-//          else pcr->b_grad_pc(k,j,i) = 0.0;
+            Real dprdz=(u_cr(CRE,k+1,j,i) - u_cr(CRE,k-1,j,i))/3.0;
+            dprdz /= distance;
+            pcr->b_grad_pc(k,j,i) += bcc(IB3,k,j,i) * dprdz;
+              
+          }
         }
-
+        
       // now calculate the streaming velocity
       // streaming velocity is calculated with respect to the current coordinate 
       //  system

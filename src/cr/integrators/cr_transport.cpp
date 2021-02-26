@@ -52,7 +52,6 @@ void CRIntegrator::CalculateFluxes(AthenaArray<Real> &w,
   Coordinates *pco = pmb->pcoord;
   Real invlim = 1.0/pcr->vmax;
 
-
   int ncells1 = pmb->ncells1, ncells2 = pmb->ncells2, 
   ncells3 = pmb->ncells3; 
 

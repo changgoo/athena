@@ -77,29 +77,33 @@ inline void DefaultOpacity(MeshBlock *pmb, AthenaArray<Real> &u_cr,
           pcr->b_grad_pc(k,j,i) = bcc(IB1,k,j,i) * dprdx;
         }
         // y component
-        pmb->pcoord->CenterWidth2(k,j-1,il,iu,pcr->cwidth1);       
-        pmb->pcoord->CenterWidth2(k,j,il,iu,pcr->cwidth);
-        pmb->pcoord->CenterWidth2(k,j+1,il,iu,pcr->cwidth2);
+        if (pmb->block_size.nx2 > 1){
+          pmb->pcoord->CenterWidth2(k,j-1,il,iu,pcr->cwidth1);       
+          pmb->pcoord->CenterWidth2(k,j,il,iu,pcr->cwidth);
+          pmb->pcoord->CenterWidth2(k,j+1,il,iu,pcr->cwidth2);
 
-        for(int i=il; i<=iu; ++i){
-          Real distance = 0.5*(pcr->cwidth1(i) + pcr->cwidth2(i))
-                         + pcr->cwidth(i);
-          Real dprdy=(u_cr(CRE,k,j+1,i) - u_cr(CRE,k,j-1,i))/3.0;
-          dprdy /= distance;
-          pcr->b_grad_pc(k,j,i) += bcc(IB2,k,j,i) * dprdy;
-        } 
+          for(int i=il; i<=iu; ++i){
+            Real distance = 0.5*(pcr->cwidth1(i) + pcr->cwidth2(i))
+                           + pcr->cwidth(i);
+            Real dprdy=(u_cr(CRE,k,j+1,i) - u_cr(CRE,k,j-1,i))/3.0;
+            dprdy /= distance;
+            pcr->b_grad_pc(k,j,i) += bcc(IB2,k,j,i) * dprdy;
+          } 
+        }
         // z component
-        pmb->pcoord->CenterWidth3(k-1,j,il,iu,pcr->cwidth1);       
-        pmb->pcoord->CenterWidth3(k,j,il,iu,pcr->cwidth);
-        pmb->pcoord->CenterWidth3(k+1,j,il,iu,pcr->cwidth2);
+        if (pmb->block_size.nx3 > 1){
+          pmb->pcoord->CenterWidth3(k-1,j,il,iu,pcr->cwidth1);       
+          pmb->pcoord->CenterWidth3(k,j,il,iu,pcr->cwidth);
+          pmb->pcoord->CenterWidth3(k+1,j,il,iu,pcr->cwidth2);
 
-        for(int i=il; i<=iu; ++i){
-          Real distance = 0.5*(pcr->cwidth1(i) + pcr->cwidth2(i))
-                          + pcr->cwidth(i);
-          Real dprdz=(u_cr(CRE,k+1,j,i) -  u_cr(CRE,k-1,j,i))/3.0;
-          dprdz /= distance;
-          pcr->b_grad_pc(k,j,i) += bcc(IB3,k,j,i) * dprdz;
-        }       
+          for(int i=il; i<=iu; ++i){
+            Real distance = 0.5*(pcr->cwidth1(i) + pcr->cwidth2(i))
+                            + pcr->cwidth(i);
+            Real dprdz=(u_cr(CRE,k+1,j,i) -  u_cr(CRE,k-1,j,i))/3.0;
+            dprdz /= distance;
+            pcr->b_grad_pc(k,j,i) += bcc(IB3,k,j,i) * dprdz;
+          }       
+        }
         
         for(int i=il; i<=iu; ++i){
           

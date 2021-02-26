@@ -49,6 +49,7 @@ void DefaultTemperature(Units *punit, Real rho, Real Press, Real &Temp, Real &mu
 
 Real CosmicRay::Get_SigmaParallel(Real rho, Real Press, Real ecr, Real grad_pc_par){
   Real sigma_par;
+  
   if (self_consistent_flag==1)
   {
     Real nu = 3.e-9; //frequency of collisions between ions and neutrals
