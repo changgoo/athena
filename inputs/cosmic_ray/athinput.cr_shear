@@ -48,7 +48,7 @@ ox3_bc     = periodic  # inner-X3 boundary flag
 
 <meshblock>
 nx1         = 512
-nx2         = 32
+nx2         = 128
 nx3         = 1
 
 <hydro>

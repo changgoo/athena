@@ -80,7 +80,6 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin)
       int xindex = n;
       if (xindex >= gis && xindex < gis + Nx){
         Real yt = yt0 - Omega0*qshear*dataxEc(n)*time;
-        printf("time %e \n", time);
         int yindex = int((yt - ymin)/deltay);
         if (yindex >= gjs && yindex < gjs + Ny){
           Ec(n) = pmb->pcr->u_cr(CRE,ks,yindex-gjs+js,xindex-gis+is);
@@ -96,7 +95,7 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin)
   
   if (Globals::my_rank == 0){
     std::string fname;
-    fname.assign("CR_energy_profile.dat");
+    fname.assign("cr_energy_profile.dat");
     std::stringstream msg;
     FILE *pfile;
     
@@ -109,7 +108,7 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin)
     fprintf(pfile,"\n");
 
     for(int i=0; i<Nx_mesh; ++i){
-      fprintf(pfile,"  %e  %e  \n", dataxEc(i), dataEc(i));}
+      fprintf(pfile,"  %lf  %lf  \n", dataxEc(i), dataEc(i));}
     
     fclose(pfile);
   }

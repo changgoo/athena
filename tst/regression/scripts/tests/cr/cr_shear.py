@@ -4,7 +4,6 @@
 import numpy as np
 import math
 import sys
-import h5py
 import scripts.utils.athena as athena
 import scripts.utils.comparison as comparison
 import os
@@ -12,7 +11,7 @@ sys.path.insert(0, '../../vis/python')
 
 # Prepare Athena++
 def prepare(*args, **kwargs):
-    athena.configure('cr', 'hdf5', *args,
+    athena.configure('cr', 'hdf5', 'b', *args,
       prob='cr_shear',
       coord='cartesian',
       **kwargs)
@@ -23,8 +22,8 @@ def run(**kwargs):
     #Both streaming and diffusion and advection are on, magnetic field along x direction
     arguments = ['mesh/nx1=512', 'mesh/ix1_bc=shear_periodic', 'mesh/ox1_bc=shear_periodic', 
     'mesh/nx2=128', 'mesh/ix2_bc=periodic', 'mesh/ox2_bc=periodic', 'meshblock/nx1=512', 
-    'meshblock/nx2=128', 'time/tlim=0.8','cr/vmax=100', 'cr/sigma=10','orbital_advection/Omega0=0.2',
-    'orbital_advection/qshear=1','problem/direction=0', 'problem/B0=1','problem/offset1 = 0.5', 
+    'meshblock/nx2=128', 'time/tlim=0.1','cr/vmax=200', 'cr/sigma=10','orbital_advection/Omega0=0.2',
+    'orbital_advection/qshear=1','problem/direction=0', 'problem/B0=1','problem/offset1=0.5', 
     'problem/cells=8']
     athena.run('cosmic_ray/athinput.cr_shear', arguments)
 
@@ -32,19 +31,19 @@ def run(**kwargs):
 def analyze():
     # Solution calculated in the absence of shear    
     filename1 = 'data/ref_cr_solutions/ShearTest.txt'
-    Ec = np.genfromtxt(filename1,usecols=1,skipheader=1)
+    Ec = np.genfromtxt(filename1,usecols=1,skip_header=1)
   
     # Solution of the test with shearing-periodic BCs
-    filename2 = 'bin/cr_energy_profile.dat '
-    x = np.genfromtxt(filename2,usecols=0,skipheader=1)
-    Ec_shear = np.genfromtxt(filename2,usecols=1,skipheader=1)
+    filename2 = 'bin/cr_energy_profile.dat'
+    x = np.genfromtxt(filename2,usecols=0,skip_header=1)
+    Ec_shear = np.genfromtxt(filename2,usecols=1,skip_header=1)
   
     err = np.abs(Ec-Ec_shear)
   
     # check absolute error 
-    if (any(err) > 1e-4):
-        index = np.where((err)>3e-4)[0]
-        print ("error in cosmic-ray propagation =", err[index],"in x =", x[index])
+    if (any(err>3e-5)):
+        index = np.where((err)>3e-5)[0]
+        print ("error in cosmic-ray propagation =", err[index], "in x =", x[index])
         return False
     
     return True
