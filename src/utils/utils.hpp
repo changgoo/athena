@@ -21,14 +21,14 @@ void ChangeRunDir(const char *pdir);
 double ran2(std::int64_t *idum);
 void ShowConfig();
 
-void RotateVec(const Real sint, const Real cost, 
-              const Real sinp, const Real cosp, 
+void RotateVec(const Real sint, const Real cost,
+              const Real sinp, const Real cosp,
               Real &v1, Real &v2, Real &v3);
 
-void InvRotateVec(const Real sint, const Real cost, 
-                 const Real sinp, const Real cosp, 
+void InvRotateVec(const Real sint, const Real cost,
+                 const Real sinp, const Real cosp,
                  Real &v1, Real &v2, Real &v3);
-                 
+
 //----------------------------------------------------------------------------------------
 //! \namespace SignalHandler
 //! \brief static data and functions that implement a simple signal handling system

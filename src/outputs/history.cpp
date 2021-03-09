@@ -24,6 +24,7 @@
 #include "../athena.hpp"
 #include "../athena_arrays.hpp"
 #include "../coordinates/coordinates.hpp"
+#include "../cr/cr.hpp"
 #include "../field/field.hpp"
 #include "../globals.hpp"
 #include "../gravity/gravity.hpp"
@@ -31,7 +32,6 @@
 #include "../mesh/mesh.hpp"
 #include "../orbital_advection/orbital_advection.hpp"
 #include "../scalars/scalars.hpp"
-#include "../cr/cr.hpp"
 #include "outputs.hpp"
 
 // NEW_OUTPUT_TYPES:
@@ -43,7 +43,8 @@
 #endif
 
 // "3" for 1-KE, 2-KE, 3-KE additional columns (come before tot-E)
-#define NHISTORY_VARS ((NHYDRO) + (SELF_GRAVITY_ENABLED) + (NFIELD) + 3 + (NSCALARS) + (NCRV))
+#define NHISTORY_VARS ((NHYDRO) + (SELF_GRAVITY_ENABLED)
+                   + (NFIELD) + 3 + (NSCALARS) + (NCRV))
 
 //----------------------------------------------------------------------------------------
 //! \fn void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag)
@@ -183,8 +184,9 @@ void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
               constexpr int prev_out = NHYDRO + 3 + SELF_GRAVITY_ENABLED + NFIELD;
               hst_data[prev_out + n] += vol(i)*s;
             }
-            if(CR_ENABLED){
-              constexpr int prev_out = NHYDRO + 3 + SELF_GRAVITY_ENABLED + NFIELD + NSCALARS;
+            if(CR_ENABLED) {
+              constexpr int prev_out = NHYDRO + 3 + SELF_GRAVITY_ENABLED
+                 + NFIELD + NSCALARS;
               hst_data[prev_out + 0] += vol(i)*pcr->u_cr(CRE,k,j,i);
               hst_data[prev_out + 1] += vol(i)*pcr->u_cr(CRF1,k,j,i);
               hst_data[prev_out + 2] += vol(i)*pcr->u_cr(CRF2,k,j,i);
@@ -290,11 +292,11 @@ void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
       for (int n=0; n<NSCALARS; n++) {
         std::fprintf(pfile,"[%d]=%d-scalar    ", iout++, n);
       }
-      if(CR_ENABLED){
+      if(CR_ENABLED) {
         std::fprintf(pfile,"[%d]=Ec    ", iout++);
         std::fprintf(pfile,"[%d]=Fc1    ", iout++);
         std::fprintf(pfile,"[%d]=Fc2    ", iout++);
-        std::fprintf(pfile,"[%d]=Fc3    ", iout++);       
+        std::fprintf(pfile,"[%d]=Fc3    ", iout++);
       }
       for (int n=0; n<pm->nuser_history_output_; n++)
         std::fprintf(pfile,"[%d]=%-8s", iout++,

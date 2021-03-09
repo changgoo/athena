@@ -217,7 +217,7 @@ class TimeIntegratorTaskList : public TaskList {
   TaskStatus ReceiveCRShear(MeshBlock *pmb, int stage);
   TaskStatus ReceiveCRFluxShear(MeshBlock *pmb, int stage);
   TaskStatus SendCRFluxShear(MeshBlock *pmb, int stage);
-    
+
  private:
   bool ORBITAL_ADVECTION; // flag for orbital advection (true w/ , false w/o)
   bool SHEAR_PERIODIC; // flag for shear periodic boundary (true w/ , false w/o)

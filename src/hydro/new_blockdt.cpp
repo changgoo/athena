@@ -17,13 +17,13 @@
 #include "../athena.hpp"
 #include "../athena_arrays.hpp"
 #include "../coordinates/coordinates.hpp"
+#include "../cr/cr.hpp"
 #include "../eos/eos.hpp"
 #include "../field/field.hpp"
 #include "../field/field_diffusion/field_diffusion.hpp"
 #include "../mesh/mesh.hpp"
 #include "../orbital_advection/orbital_advection.hpp"
 #include "../scalars/scalars.hpp"
-#include "../cr/cr.hpp"
 #include "hydro.hpp"
 #include "hydro_diffusion/hydro_diffusion.hpp"
 
@@ -63,7 +63,7 @@ void Hydro::NewBlockTimeStep() {
   Real cspeed = 0.0;
   if(CR_ENABLED)
     cspeed = std::max(cspeed,pmb->pcr->vmax);
-  
+
   // TODO(felker): skip this next loop if pm->fluid_setup == FluidFormulation::disabled
   FluidFormulation fluid_status = pmb->pmy_mesh->fluid_setup;
   for (int k=ks; k<=ke; ++k) {
@@ -196,6 +196,6 @@ void Hydro::NewBlockTimeStep() {
   pmb->new_block_dt_hyperbolic_ = min_dt_hyperbolic;
   pmb->new_block_dt_parabolic_ = min_dt_parabolic;
   pmb->new_block_dt_user_ = min_dt_user;
-  
+
   return;
 }

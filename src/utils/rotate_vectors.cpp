@@ -16,13 +16,12 @@
 
 //--------------------------------------------------------------------------------------
 
-void RotateVec(const Real sint, const Real cost, 
-              const Real sinp, const Real cosp, 
-              Real &v1, Real &v2, Real &v3)
-{
+void RotateVec(const Real sint, const Real cost,
+              const Real sinp, const Real cosp,
+              Real &v1, Real &v2, Real &v3) {
   // vel1, vel2, vel3 are input
   // v1, v2, v3 are output
-  // The two rotation matrix 
+  // The two rotation matrix
   //R_1=
   //[cos_p  sin_p 0]
   //[-sin_p cos_p 0]
@@ -42,18 +41,15 @@ void RotateVec(const Real sint, const Real cost,
   v1 =  sint * newv1 + cost * v3;
   Real newv3 = -cost * newv1 + sint * v3;
   v3 = newv3;
-
 }
 
 
-
-void InvRotateVec(const Real sint, const Real cost, 
-                 const Real sinp, const Real cosp, 
-                 Real &v1, Real &v2, Real &v3)
-{
+void InvRotateVec(const Real sint, const Real cost,
+                 const Real sinp, const Real cosp,
+                 Real &v1, Real &v2, Real &v3) {
   // vel1, vel2, vel3 are input
   // v1, v2, v3 are output
-  // The two rotation matrix 
+  // The two rotation matrix
   //R_1^-1=
   //[cos_p  -sin_p 0]
   //[sin_p cos_p 0]
@@ -73,5 +69,4 @@ void InvRotateVec(const Real sint, const Real cost,
   v1 = cosp * newv1 - sinp * v2;
   Real newv2 = sinp * newv1 + cosp * v2;
   v2 = newv2;
-
 }

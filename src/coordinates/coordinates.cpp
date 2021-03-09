@@ -740,14 +740,12 @@ void Coordinates::AddCoordTermsDivergence(
 }
 
 void Coordinates::AddCoordTermsDivergence(int flag,
-                     const AthenaArray<Real> &u_cr1, AthenaArray<Real> &u_cr){
-
+                     const AthenaArray<Real> &u_cr1, AthenaArray<Real> &u_cr) {
   return;
 }
 
-void Coordinates::AddCoordTermsDivergence(const AthenaArray<Real> &u_cr, 
+void Coordinates::AddCoordTermsDivergence(const AthenaArray<Real> &u_cr,
                                                 AthenaArray<Real> &grad_pc) {
-  
   return;
 }
 

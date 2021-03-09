@@ -20,6 +20,8 @@
 #include "../athena.hpp"
 #include "../athena_arrays.hpp"
 #include "../coordinates/coordinates.hpp"
+#include "../cr/cr.hpp"
+#include "../cr/integrators/cr_integrators.hpp"
 #include "../defs.hpp"
 #include "../eos/eos.hpp"
 #include "../field/field.hpp"
@@ -27,8 +29,6 @@
 #include "../mesh/mesh.hpp"
 #include "../parameter_input.hpp"
 #include "../utils/utils.hpp"
-#include "../cr/cr.hpp"
-#include "../cr/integrators/cr_integrators.hpp"
 
 #define MAXLEN 256
 
@@ -40,9 +40,8 @@ CoolingFunctionBase *pcool;
 // total rate of CR injection at a given time step
 static Real tot_InjectionRate;
 
-static std::string starparfile; //vtk athena file containing information about star particles
 //star particle structure
-struct StarParS{
+struct StarParS {
   int id;
   int merge_history;
   int isnew;
@@ -71,36 +70,39 @@ static void ath_bswap(void *vdat, int len, int cnt);
 //function to calculate the gas temperature
 void TempCalculation(Units *punit, Real rho, Real Press, Real &Temp, Real &mu, Real &muH);
 
-//functions for the injection of CR energy density 
+//functions for the injection of CR energy density
 void CalculateInjectionRate(MeshBlock *pmb, AthenaArray<Real> &CRInjectionRate);
-void Source_CR(MeshBlock *pmb, Real time, Real dt, const AthenaArray<Real> &prim, const AthenaArray<Real> &bcc, 
+void Source_CR(MeshBlock *pmb, Real time, Real dt,
+               const AthenaArray<Real> &prim, const AthenaArray<Real> &bcc,
                AthenaArray<Real> &u_cr, AthenaArray<Real> &CRInjectionRate);
 Real set_CR_Luminosity(const Real tage);
-static inline Real lin_interpol(const Real x, const Real xi, const Real xi1,const Real yi, const Real yi1);
+static inline Real lin_interpol(const Real x, const Real xi,
+                    const Real xi1,const Real yi, const Real yi1);
 
 //functions to read data field from vtk files
-static void read_starpar_vtk(MeshBlock *mb, std::string filename, std::vector<StarParS> &pList);
+static void read_starpar_vtk(MeshBlock *mb, std::string filename,
+                             std::vector<StarParS> &pList);
 static void read_vtk(MeshBlock *mb, std::string vtkdir, std::string vtkfile0,
   std::string field, int component, AthenaArray<Real> &data);
 
 void Outflow_down(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
-     FaceField &b, Real time, Real dt, int is, int ie, int js, int je, 
+     FaceField &b, Real time, Real dt, int is, int ie, int js, int je,
      int ks, int ke, int ngh);
-void CROutflow_down(MeshBlock *pmb, Coordinates *pco, CosmicRay *pcr, 
+void CROutflow_down(MeshBlock *pmb, Coordinates *pco, CosmicRay *pcr,
     const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
-    AthenaArray<Real> &u_cr, Real time, Real dt, int is, int ie, 
+    AthenaArray<Real> &u_cr, Real time, Real dt, int is, int ie,
     int js, int je, int ks, int ke, int ngh);
 void Outflow_up(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
-     FaceField &b, Real time, Real dt, int is, int ie, int js, int je, 
+     FaceField &b, Real time, Real dt, int is, int ie, int js, int je,
      int ks, int ke, int ngh);
-void CROutflow_up(MeshBlock *pmb, Coordinates *pco, CosmicRay *pcr, 
+void CROutflow_up(MeshBlock *pmb, Coordinates *pco, CosmicRay *pcr,
     const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
-    AthenaArray<Real> &u_cr, Real time, Real dt, int is, int ie, 
+    AthenaArray<Real> &u_cr, Real time, Real dt, int is, int ie,
     int js, int je, int ks, int ke, int ngh);
 
-// function to calculate the total rate of injected CR energy density -- for the hystory file
-static Real hst_Injected_CRenergy(MeshBlock *pmb, int iout)
-{
+// function to calculate the total rate of injected CR
+//energy density -- for the hystory file
+static Real hst_Injected_CRenergy(MeshBlock *pmb, int iout) {
   Real Inj_en = 0;
   int is=pmb->is, ie=pmb->ie, js=pmb->js, je=pmb->je, ks=pmb->ks, ke=pmb->ke;
 
@@ -113,11 +115,10 @@ static Real hst_Injected_CRenergy(MeshBlock *pmb, int iout)
   }
   return Inj_en;
 }
-          
-void Mesh::InitUserMeshData(ParameterInput *pin)
-{
+
+void Mesh::InitUserMeshData(ParameterInput *pin) {
   // Pointer to Cooling function class,
-  // will be set to specific function depending on the input parameter (cooling/coolftn).
+  // will be set to specific function depending on the input parameter (cooling/coolftn)
   std::string coolftn = pin->GetOrAddString("cooling", "coolftn", "tigress");
   if (coolftn.compare("tigress") == 0) {
     pcool = new TigressClassic(pin);
@@ -133,31 +134,31 @@ void Mesh::InitUserMeshData(ParameterInput *pin)
     return;
   }
   punit = pcool->punit;
-  
-  // CR energy density is injected as a consequence of supernova explosion
-  starparfile = pin->GetString("problem", "star_vtkfile"); //vtk athena file containing information about star particles
-  age_th = pin->GetOrAddReal("problem", "young_stars_age", 0); //maximum age of stars exploding as supernovae
-  inj_cells = pin->GetOrAddInteger("problem", "inj_cells", 0); //parameter to calculate the distribution of injected CR energy
-  
+
+  //CR energy density is injected as a consequence of supernova explosion
+  //maximum age of stars exploding as supernovae
+  age_th = pin->GetOrAddReal("problem", "young_stars_age", 0);
+  //parameter to calculate the distribution of injected CR energy
+  inj_cells = pin->GetOrAddInteger("problem", "inj_cells", 0);
+
   // User boundary conditions
   EnrollUserBoundaryFunction(inner_x3, Outflow_down);
   EnrollUserBoundaryFunction(outer_x3, Outflow_up);
-  if(CR_ENABLED){  
+  if(CR_ENABLED) {
     EnrollUserCRBoundaryFunction(inner_x3, CROutflow_down);
     EnrollUserCRBoundaryFunction(outer_x3, CROutflow_up);
-    
     AllocateUserHistoryOutput(1);
-    EnrollUserHistoryOutput(0, hst_Injected_CRenergy, "CRInjEn", UserHistoryOperation::sum);
+    EnrollUserHistoryOutput(0, hst_Injected_CRenergy,
+              "CRInjEn", UserHistoryOperation::sum);
   }
 }
 
-void MeshBlock::InitUserMeshBlockData(ParameterInput *pin)
-{
-  if(CR_ENABLED){
+void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
+  if(CR_ENABLED) {
     pcr->punit = punit;
     CalculateInjectionRate(this,pcr->CRInjectionRate);
     pcr->EnrollUserCRSource(Source_CR);
-    pcr->EnrollTemperatureFunction(TempCalculation);    
+    pcr->EnrollTemperatureFunction(TempCalculation);
     pcr->sigma = pin->GetOrAddReal("cr","sigma",1.0);
     pcr->sigma *= pcr->vmax;
     pcr->sigma *= punit->second/(punit->cm*punit->cm);
@@ -165,9 +166,8 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin)
     pcr->lambdac /= punit->second;
   }
 }
- 
-void CalculateInjectionRate(MeshBlock *pmb, AthenaArray<Real> &CRInjectionRate)
-{
+
+void CalculateInjectionRate(MeshBlock *pmb, AthenaArray<Real> &CRInjectionRate) {
   int ks=pmb->ks, ke=pmb->ke;
   int js=pmb->js, je=pmb->je;
   int is=pmb->is, ie=pmb->ie;
@@ -175,34 +175,39 @@ void CalculateInjectionRate(MeshBlock *pmb, AthenaArray<Real> &CRInjectionRate)
   int Nstars;
 
   std::vector<StarParS> pList;
-  
+
   //In each cell the injection rate of CR energy density is inizialised to zero
   for(int k=ks; k<=ke; ++k) {
     for (int j=js; j<=je; ++j) {
-      for (int i=is; i<=ie; ++i) {      
+      for (int i=is; i<=ie; ++i) {
         CRInjectionRate(k,j,i) = 0.0;
       }
     }
   }
-  
+
+  //vtk athena file containing information about star particles
+  std::string starparfile = pin->GetString("problem", "star_vtkfile");
   //Reading the star-particle information from the vtk file
   if (Globals::my_rank == 0) {
-    if (pmb->loc.lx1 == 0 && pmb->loc.lx2 == 0 && pmb->loc.lx3 == 0)	
+    if (pmb->loc.lx1 == 0 && pmb->loc.lx2 == 0 && pmb->loc.lx3 == 0)
       std::cout<<"Reading star particle vtk file..."<<std::endl;
     read_starpar_vtk(pmb,starparfile,pList);
     Nstars = pList.size();
     if (pmb->loc.lx1 == 0 && pmb->loc.lx2 == 0 && pmb->loc.lx3 == 0)
       std::cout<<"Number of stars = "<<Nstars<<std::endl;
   }
-  
+
   #ifdef MPI_PARALLEL
   ierr = MPI_Bcast(&Nstars, 1, MPI_INT, 0, MPI_COMM_WORLD);
   pList.resize(Nstars);
-  ierr = MPI_Bcast(&pList[0], Nstars*sizeof(struct StarParS), MPI_BYTE, 0, MPI_COMM_WORLD);
+  ierr = MPI_Bcast(&pList[0], Nstars*sizeof(struct StarParS),
+                MPI_BYTE, 0, MPI_COMM_WORLD);
   #endif
-  
-  
-  //The amount of CR luminosity injected from each star cluster follows a Gaussian distribution -- here we calculate the standard devation depending on the value of inj_cells.
+
+
+  //The amount of CR luminosity injected from each star cluster follows
+  //a Gaussian distribution -- here we calculate the standard devation
+  //depending on the value of inj_cells
   Real cell_x = pmb->pcoord->x1f(1) - pmb->pcoord->x1f(0);
   Real cell_y = pmb->pcoord->x2f(1) - pmb->pcoord->x2f(0);
   Real cell_z = pmb->pcoord->x3f(1) - pmb->pcoord->x3f(0);
@@ -210,9 +215,9 @@ void CalculateInjectionRate(MeshBlock *pmb, AthenaArray<Real> &CRInjectionRate)
   Real cell_volume = cell_x * cell_y * cell_z;
   Real inj_volume = 0.;
   //Calculate the volume within a sphere with radius inj_R
-  for(int k=-inj_cells; k<=inj_cells; ++k){
-    for(int j=-inj_cells; j<=inj_cells; ++j){
-      for(int i=-inj_cells; i<=inj_cells; ++i){
+  for(int k=-inj_cells; k<=inj_cells; ++k) {
+    for(int j=-inj_cells; j<=inj_cells; ++j) {
+      for(int i=-inj_cells; i<=inj_cells; ++i) {
         Real xx = i * cell_x;
         Real yy = j * cell_y;
         Real zz = k * cell_z;
@@ -222,94 +227,114 @@ void CalculateInjectionRate(MeshBlock *pmb, AthenaArray<Real> &CRInjectionRate)
       }
     }
   }
-  // sigma is calculated in order for the Gaussian distribution to occupy the same volume and to have the same amplitude as a uniform spherical distribution with injection radius inj_R
+  // sigma is calculated in order for the Gaussian distribution
+  //to occupy the same volume and to have the same amplitude as
+  //a uniform spherical distribution with injection radius inj_R
   Real sigma = std::pow(inj_volume/(2.*PI),1./3.)*std::pow(2*PI,-1./6.);
- 
+
   int tot_young_stars = 0;
   tot_InjectionRate = 0.;
   Real InjectionRate;
   Real InjectionRate_in_code;
-  
-  for(int s=0; s<Nstars; ++s){
-    Real tstar = pList[s].mage / punit->Myr_in_code; // convert the star age from code units in Myr
-    if (tstar<age_th && pList[s].m>0.){ 
+
+  for(int s=0; s<Nstars; ++s) {
+    // convert the star age from code units in Myr
+    Real tstar = pList[s].mage / punit->Myr_in_code;
+    if (tstar<age_th && pList[s].m>0.) {
       tot_young_stars++;
-      
       //Calculate the CR luminosity produced by each star cluster
-      InjectionRate =  set_CR_Luminosity(tstar) * pList[s].m / punit->Msun_in_code; //in cgs units
-      InjectionRate_in_code = InjectionRate * punit->erg / punit->Myr_in_code; //in code units
+      InjectionRate =  set_CR_Luminosity(tstar) * pList[s].m
+                       / punit->Msun_in_code; //in cgs units
+      InjectionRate_in_code = InjectionRate * punit->erg
+                        / punit->Myr_in_code; //in code units
       tot_InjectionRate += InjectionRate_in_code;
-        
-      //Calculate the cell-centered grid position associated to each star cluster 
-      Real sign_xs = pList[s].x1 / std::abs(pList[s].x1);   
-      Real sign_ys = pList[s].x2 / std::abs(pList[s].x2);   
-      Real sign_zs = pList[s].x3 / std::abs(pList[s].x3);    
-      Real grid_xs = int(pList[s].x1/cell_x) * cell_x + sign_xs * 0.5 * cell_x;
-      Real grid_ys = int(pList[s].x2/cell_y) * cell_y + sign_ys * 0.5 * cell_y;
-      Real grid_zs = int(pList[s].x3/cell_z) * cell_z + sign_zs * 0.5 * cell_z;	    
-      
-      for(int k=ks; k<=ke; ++k){
-        for(int j=js; j<=je; ++j){
-          for(int i=is; i<=ie; ++i){
-            Real R2 = std::pow(pmb->pcoord->x1v(i)-grid_xs,2) + std::pow(pmb->pcoord->x2v(j)-grid_ys,2) + std::pow(pmb->pcoord->x3v(k)-grid_zs,2);
+
+      //Calculate the cell-centered grid position associated to each star cluster
+      Real sign_xs = pList[s].x1 / std::abs(pList[s].x1);
+      Real sign_ys = pList[s].x2 / std::abs(pList[s].x2);
+      Real sign_zs = pList[s].x3 / std::abs(pList[s].x3);
+      Real grid_xs = static_cast<int>(pList[s].x1/cell_x) *
+                     cell_x + sign_xs * 0.5 * cell_x;
+      Real grid_ys = static_cast<int>(pList[s].x2/cell_y) *
+                     cell_y + sign_ys * 0.5 * cell_y;
+      Real grid_zs = static_cast<int>(pList[s].x3/cell_z) *
+                     cell_z + sign_zs * 0.5 * cell_z;
+
+      for(int k=ks; k<=ke; ++k) {
+        for(int j=js; j<=je; ++j) {
+          for(int i=is; i<=ie; ++i) {
+            Real R2 = std::pow(pmb->pcoord->x1v(i)-grid_xs,2)
+                    + std::pow(pmb->pcoord->x2v(j)-grid_ys,2)
+                    + std::pow(pmb->pcoord->x3v(k)-grid_zs,2);
             Real R = sqrt(R2);
-            
-            CRInjectionRate(k,j,i) += InjectionRate_in_code/inj_volume * exp(-R2/(2.*sigma*sigma)); //gaussian distribution
-            
+            CRInjectionRate(k,j,i) += InjectionRate_in_code/inj_volume
+              * exp(-R2/(2.*sigma*sigma)); //gaussian distribution
+
             // This is done for periodic boundaries only
             Real Rper1, Rper2;
-            if (pmb->pmy_mesh->mesh_bcs[BoundaryFace::inner_x1] == BoundaryFlag::periodic 
-              && pmb->pmy_mesh->mesh_bcs[BoundaryFace::outer_x1] == BoundaryFlag::periodic)
-            {
+            if (pmb->pmy_mesh->mesh_bcs[BoundaryFace::inner_x1]
+               == BoundaryFlag::periodic
+            && pmb->pmy_mesh->mesh_bcs[BoundaryFace::outer_x1]
+               == BoundaryFlag::periodic) {
               Real Bound_x1 = pmb->pmy_mesh->mesh_size.x1max;
-              if (grid_xs<0) Rper1 = std::pow(-2*Bound_x1+pmb->pcoord->x1v(i)-grid_xs,2) 
-                + std::pow(pmb->pcoord->x2v(j)-grid_ys,2) + std::pow(pmb->pcoord->x3v(k)-grid_zs,2);
-              if (grid_xs>=0) Rper1 = std::pow(2*Bound_x1+pmb->pcoord->x1v(i)-grid_xs,2) 
-                + std::pow(pmb->pcoord->x2v(j)-grid_ys,2) + std::pow(pmb->pcoord->x3v(k)-grid_zs,2);
-              CRInjectionRate(k,j,i) += InjectionRate_in_code/inj_volume * exp(-Rper1/(2.*sigma*sigma));
-            }	
-            if (pmb->pmy_mesh->mesh_bcs[BoundaryFace::inner_x2] == BoundaryFlag::periodic 
-              && pmb->pmy_mesh->mesh_bcs[BoundaryFace::outer_x2] == BoundaryFlag::periodic)
-            {
+              if (grid_xs<0)
+                Rper1 = std::pow(-2*Bound_x1+pmb->pcoord->x1v(i)-grid_xs,2)
+                      + std::pow(pmb->pcoord->x2v(j)-grid_ys,2)
+                      + std::pow(pmb->pcoord->x3v(k)-grid_zs,2);
+              if (grid_xs>=0)
+                Rper1 = std::pow(2*Bound_x1+pmb->pcoord->x1v(i)-grid_xs,2)
+                      + std::pow(pmb->pcoord->x2v(j)-grid_ys,2)
+                      + std::pow(pmb->pcoord->x3v(k)-grid_zs,2);
+              CRInjectionRate(k,j,i) += InjectionRate_in_code/inj_volume
+                                     * exp(-Rper1/(2.*sigma*sigma));
+            }
+            if (pmb->pmy_mesh->mesh_bcs[BoundaryFace::inner_x2]
+               == BoundaryFlag::periodic
+            && pmb->pmy_mesh->mesh_bcs[BoundaryFace::outer_x2]
+               == BoundaryFlag::periodic) {
               Real Bound_x2 = pmb->pmy_mesh->mesh_size.x2max;
-              if (grid_ys<0) Rper2 = std::pow(pmb->pcoord->x1v(i)-grid_xs,2) 
-                + std::pow(-2*Bound_x2+pmb->pcoord->x2v(j)-grid_ys,2) + std::pow(pmb->pcoord->x3v(k)-grid_zs,2);
-              if (grid_ys>=0) Rper2 = std::pow(pmb->pcoord->x1v(i)-grid_xs,2) 
-                + std::pow(2*Bound_x2+pmb->pcoord->x2v(j)-grid_ys,2) + std::pow(pmb->pcoord->x3v(k)-grid_zs,2);
-              CRInjectionRate(k,j,i) += InjectionRate_in_code/inj_volume * exp(-(Rper2)/(2.*sigma*sigma));
+              if (grid_ys<0)
+                Rper2 = std::pow(pmb->pcoord->x1v(i)-grid_xs,2)
+                      + std::pow(-2*Bound_x2+pmb->pcoord->x2v(j)-grid_ys,2)
+                      + std::pow(pmb->pcoord->x3v(k)-grid_zs,2);
+              if (grid_ys>=0)
+                Rper2 = std::pow(pmb->pcoord->x1v(i)-grid_xs,2)
+                      + std::pow(2*Bound_x2+pmb->pcoord->x2v(j)-grid_ys,2)
+                      + std::pow(pmb->pcoord->x3v(k)-grid_zs,2);
+              CRInjectionRate(k,j,i) += InjectionRate_in_code/inj_volume
+                                     * exp(-(Rper2)/(2.*sigma*sigma));
             }
           }
         }
       }// end k,j,i
     }
   }//end star-particle cycle
-  if (pmb->loc.lx1 == 0 && pmb->loc.lx2 == 0 && pmb->loc.lx3 == 0) 
+  if (pmb->loc.lx1 == 0 && pmb->loc.lx2 == 0 && pmb->loc.lx3 == 0)
     std::cout<<"Number of young stars = "<<tot_young_stars<<std::endl;
-  
-} 
+}
 
-void Source_CR(MeshBlock *pmb, Real time, Real dt, const AthenaArray<Real> &prim, const AthenaArray<Real> &bcc, 
-              AthenaArray<Real> &u_cr, AthenaArray<Real> &CRInjectionRate)
-{
+void Source_CR(MeshBlock *pmb, Real time, Real dt,
+              const AthenaArray<Real> &prim, const AthenaArray<Real> &bcc,
+              AthenaArray<Real> &u_cr, AthenaArray<Real> &CRInjectionRate) {
   int ks=pmb->ks, ke=pmb->ke;
   int js=pmb->js, je=pmb->je;
   int is=pmb->is, ie=pmb->ie;
   for(int k=ks; k<=ke; ++k) {
     for (int j=js; j<=je; ++j) {
-      for (int i=is; i<=ie; ++i) {             
+      for (int i=is; i<=ie; ++i) {
         u_cr(CRE,k,j,i) += CRInjectionRate(k,j,i) * dt;
       }
     }
   }
 }
 
-void TempCalculation(Units *punit, Real rho, Real Press, Real &Temp, Real &mu, Real &muH)
-{
+void TempCalculation(Units *punit, Real rho, Real Press,
+                     Real &Temp, Real &mu, Real &muH) {
   Temp = pcool->GetTemperature(rho, Press);
   muH = pcool->Get_muH();
   mu = pcool->Get_mu(rho, Press);
 }
-  
+
 //! \fn void MeshBlock::ProblemGenerator(ParameterInput *pin)
 //! \brief Problem Generator to initialize mesh by reading in athena vtk files
 //!
@@ -537,26 +562,25 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
                                      is, ie, js, je, ks, ke);
   }
   b.DeleteAthenaArray();
-  
-  if (CR_ENABLED)
-  {
+
+  if (CR_ENABLED) {
     Real x1size = pmy_mesh->mesh_size.x1max - pmy_mesh->mesh_size.x1min;
     Real x2size = pmy_mesh->mesh_size.x2max - pmy_mesh->mesh_size.x2min;
     for(int k=ks; k<=ke; ++k) {
       for (int j=js; j<=je; ++j) {
         for (int i=is; i<=ie; ++i) {
           Real z1 = pcoord->x3v(k);
-          Real v2 = phydro->w(IVX,k,j,i)*phydro->w(IVX,k,j,i)+phydro->w(IVY,k,j,i)*phydro->w(IVY,k,j,i)+phydro->w(IVZ,k,j,i)*phydro->w(IVZ,k,j,i);
+          Real v2 = phydro->w(IVX,k,j,i)*phydro->w(IVX,k,j,i)+phydro->w(IVY,k,j,i)*
+            phydro->w(IVY,k,j,i)+phydro->w(IVZ,k,j,i)*phydro->w(IVZ,k,j,i);
           Real Flux_Bs = 0.5 * tot_InjectionRate / (x1size * x2size);
           pcr->u_cr(CRE,k,j,i) = 3./4.*Flux_Bs/sqrt(v2);
           pcr->u_cr(CRF1,k,j,i) = 0.0;
-          pcr->u_cr(CRF2,k,j,i) = 0.0; 
+          pcr->u_cr(CRF2,k,j,i) = 0.0;
           pcr->u_cr(CRF3,k,j,i) = z1/std::abs(z1)*Flux_Bs/pcr->vmax;
         }
       }
     }
   }
-  
   return;
 }
 
@@ -851,10 +875,11 @@ static void read_vtk(MeshBlock *mb, std::string vtkdir, std::string vtkfile0,
   }
 }
 
-//! \fn void read_vtk(MeshBlock *mb, std::string filename, std::vector<StarParS> &pList)
+//! \fn void read_vtk(MeshBlock *mb, std::string filename,
+//!                   std::vector<StarParS> &pList)
 //! \brief Read the star particle information in the athena vtk file
-static void read_starpar_vtk(MeshBlock *mb, std::string filename, std::vector<StarParS> &pList)
-{
+static void read_starpar_vtk(MeshBlock *mb, std::string filename,
+                             std::vector<StarParS> &pList) {
   std::stringstream msg;
   FILE *fp = NULL;
   char cline[256], type[256], variable[256], format[256], t_type[256], t_format[256];
@@ -881,7 +906,7 @@ static void read_starpar_vtk(MeshBlock *mb, std::string filename, std::vector<St
   if (line != athena_header && line != athena_header3) {
     fclose(fp);
     msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
-      << "Assuming Athena4.2 header " << athena_header << ", get header " 
+      << "Assuming Athena4.2 header " << athena_header << ", get header "
       << line << std::endl;
     throw std::runtime_error(msg.str().c_str());
   }
@@ -922,73 +947,73 @@ static void read_starpar_vtk(MeshBlock *mb, std::string filename, std::vector<St
     throw std::runtime_error(msg.str().c_str());
   }
 
-  // I'm assuming from this point on that the header is in good shape 
-  
+  // I'm assuming from this point on that the header is in good shape
+
   fgets(cline,256,fp);
   if (SHOW_OUTPUT) {
     std::cout << cline;
   }
   sscanf(cline,"POINTS %d \n",&nstars);
   if (SHOW_OUTPUT) std::cout<<"POINTS"<<nstars<<std::endl;
-  
+
   /* Read in star particle locations */
   for (i=0; i<nstars; i++) {
-    if ((nread = fread(&fvec, sizeof(float), 3, fp)) != 3){
+    if ((nread = fread(&fvec, sizeof(float), 3, fp)) != 3) {
       fclose(fp);
       msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
         << "Error reading star particle locations... " << std::endl;
       throw std::runtime_error(msg.str().c_str());
     }
-    ath_bswap(&fvec,sizeof(float),3); 
+    ath_bswap(&fvec,sizeof(float),3);
 
-    // Allocate new star particle list element 
+    // Allocate new star particle list element
     StarParS pStar;
     pStar.x1 = (Real)fvec[0];
     pStar.x2 = (Real)fvec[1];
     pStar.x3 = (Real)fvec[2];
     pStar.active = -99;
-    pList.push_back(pStar);   
+    pList.push_back(pStar);
   }
-  fscanf(fp,"\n"); 
-  
+  fscanf(fp,"\n");
+
   /* Read in CELL data */
   fscanf(fp,"CELLS %d %d\n",&itmp1,&itmp2);
   if (SHOW_OUTPUT) std::cout<<"CELLS"<<itmp1<<" "<<itmp2<<std::endl;
-  if (itmp1 != nstars && itmp2 != 2*nstars){
+  if (itmp1 != nstars && itmp2 != 2*nstars) {
     fclose(fp);
     msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
       << "Error reading CELLS " << std::endl;
     throw std::runtime_error(msg.str().c_str());
   }
   for (i=0; i<nstars; i++) {
-    if ((nread = fread(&ivec, sizeof(int), 2, fp)) != 2){
+    if ((nread = fread(&ivec, sizeof(int), 2, fp)) != 2) {
     fclose(fp);
     msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
       << "Error reading CELLS List" << std::endl;
     throw std::runtime_error(msg.str().c_str());
   }
     ath_bswap(&ivec,sizeof(int),2);
-  }  
+  }
   fscanf(fp,"\n");
-  
-  // Real in CELL_TYPES 
+
+  // Real in CELL_TYPES
   fscanf(fp,"CELLS_TYPES %d \n",&itmp1);
   if (SHOW_OUTPUT) std::cout<<"CELL_TYPES"<<itmp1<<std::endl;
-  if (itmp1 != nstars){
+  if (itmp1 != nstars) {
     fclose(fp);
     msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
       << "Error reading CELLS_TYPES " << std::endl;
     throw std::runtime_error(msg.str().c_str());
   }
   for (i=0; i<nstars; i++) {
-    if ((nread = fread(&idat, sizeof(int), 1, fp)) != 1){
+    if ((nread = fread(&idat, sizeof(int), 1, fp)) != 1) {
     fclose(fp);
     msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
       << "Error reading CELLS_TYPES List" << std::endl;
     throw std::runtime_error(msg.str().c_str());
   }
     ath_bswap(&ivec,sizeof(int),2);
-  }  
+  }
   fscanf(fp,"\n");
 
   fgets(cline,256,fp);
@@ -997,10 +1022,10 @@ static void read_starpar_vtk(MeshBlock *mb, std::string filename, std::vector<St
   if (SHOW_OUTPUT) {
     std::cout << cline << std::endl;
   }
-  // Time & Cycle 
+  // Time & Cycle
   fscanf(fp,"FIELD FieldData %d\n",&itmp1);
   if (SHOW_OUTPUT) std::cout<<"FIELD FieldData "<<itmp1<<std::endl;
-  if (itmp1 != 2){
+  if (itmp1 != 2) {
     fclose(fp);
     msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
       << "Expected 2 fields for time and cycle..." << std::endl;
@@ -1012,7 +1037,7 @@ static void read_starpar_vtk(MeshBlock *mb, std::string filename, std::vector<St
   if (SHOW_OUTPUT) {
     std::cout << line << std::endl;
   }
-  if ((nread = fread(&fdat, sizeof(float), 1, fp)) != 1){
+  if ((nread = fread(&fdat, sizeof(float), 1, fp)) != 1) {
     fclose(fp);
     msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
       << "Error reading TIME..." << std::endl;
@@ -1028,7 +1053,7 @@ static void read_starpar_vtk(MeshBlock *mb, std::string filename, std::vector<St
   if (SHOW_OUTPUT) {
     std::cout << line << std::endl;
   }
-  if ((nread = fread(&itmp1, sizeof(int), 1, fp)) != 1){
+  if ((nread = fread(&itmp1, sizeof(int), 1, fp)) != 1) {
     fclose(fp);
     msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
       << "Error reading CYCLE..." << std::endl;
@@ -1038,39 +1063,39 @@ static void read_starpar_vtk(MeshBlock *mb, std::string filename, std::vector<St
   if (SHOW_OUTPUT) std::cout << idat << std::endl;
   fscanf(fp,"\n");
 
-  // Read star particle CELL/POINT data 
+  // Read star particle CELL/POINT data
   fscanf(fp,"CELL_DATA %d\n",&itmp1);
   if (SHOW_OUTPUT) std::cout<<"CELL_DATA "<<itmp1<<std::endl;
-  if (itmp1 != nstars){
+  if (itmp1 != nstars) {
     fclose(fp);
     msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
       << "Error reading CELL_DATA..." << std::endl;
     throw std::runtime_error(msg.str().c_str());
-  } 
+  }
   fscanf(fp,"POINT_DATA %d\n",&itmp1);
   if (SHOW_OUTPUT) std::cout<<"POINT_DATA "<<itmp1<<std::endl;
-  if (itmp1 != nstars){
+  if (itmp1 != nstars) {
     fclose(fp);
     msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
       << "Error reading POINT_DATA..." << std::endl;
     throw std::runtime_error(msg.str().c_str());
-  } 
-  
+  }
+
   while (true) {
     retval = fscanf(fp,"%s %s %s\n",type,variable,format);
-            
-    if (retval == EOF) { /* Assuming no errors, we are done... */
+
+    if (retval == EOF) { //Assuming no errors, we are done...
       fclose(fp);
       return;
     }
-            
+
     if (strcmp(type, "SCALARS") == 0) {
-      // Read in the LOOKUP_TABLE (only default supported for now) 
+      // Read in the LOOKUP_TABLE (only default supported for now)
       fscanf(fp,"%s %s\n",t_type,t_format);
-      if (strcmp(t_type, "LOOKUP_TABLE") != 0 || strcmp(t_format, "default") != 0 ){
+      if (strcmp(t_type, "LOOKUP_TABLE") != 0 || strcmp(t_format, "default") != 0 ) {
         fclose(fp);
         msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
-          << "Expected \"LOOKUP_TABLE default, found " 
+          << "Expected \"LOOKUP_TABLE default, found "
           << t_type << " " << t_format << std::endl;
         throw std::runtime_error(msg.str().c_str());
       }
@@ -1080,63 +1105,63 @@ static void read_starpar_vtk(MeshBlock *mb, std::string filename, std::vector<St
     }
 
     if (strcmp(type, "SCALARS") == 0) {
-      if (strcmp(variable, "star_particle_id") == 0) {      
-        // Read star particle IDs 
+      if (strcmp(variable, "star_particle_id") == 0) {
+        // Read star particle IDs
         if (SHOW_OUTPUT) std::cout<<"Reading..."<<variable<<std::endl;
         for (i=0; i<nstars; i++) {
-          if ((nread = fread(&idat, sizeof(int), 1, fp)) != 1){
+          if ((nread = fread(&idat, sizeof(int), 1, fp)) != 1) {
             fclose(fp);
             msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
             << "Error reading star_particle_id list..." << std::endl;
             throw std::runtime_error(msg.str().c_str());
           }
            ath_bswap(&idat,sizeof(int),1);
-          // Assign star particle IDs 
+          // Assign star particle IDs
           pList[i].id = idat;
-        } 
+        }
         fscanf(fp,"\n");
       } else if (strcmp(variable, "star_particle_flag") == 0) {
-        // Read star particle IDs 
+        // Read star particle IDs
         if (SHOW_OUTPUT) std::cout<<"Reading..."<<variable<<std::endl;
         for (i=0; i<nstars; i++) {
-          if ((nread = fread(&idat, sizeof(int), 1, fp)) != 1){
+          if ((nread = fread(&idat, sizeof(int), 1, fp)) != 1) {
             fclose(fp);
             msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
             << "Error reading star_particle_id list..." << std::endl;
             throw std::runtime_error(msg.str().c_str());
           }
           ath_bswap(&idat,sizeof(int),1);
-          // Assign star particle IDs 
+          // Assign star particle IDs
           pList[i].active = idat;
-        }  
+        }
         fscanf(fp,"\n");
       } else if (strcmp(variable, "star_particle_mass") == 0) {
         // Read star particle mass
         if (SHOW_OUTPUT) std::cout<<"Reading..."<<variable<<std::endl;
         for (i=0; i<nstars; i++) {
-          if ((nread = fread(&fdat, sizeof(float), 1, fp)) != 1){
+          if ((nread = fread(&fdat, sizeof(float), 1, fp)) != 1) {
             fclose(fp);
             msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
             << "Error reading star_particle_mass list..." << std::endl;
             throw std::runtime_error(msg.str().c_str());
           }
           ath_bswap(&fdat,sizeof(float),1);
-          // Assign star particle masses 
+          // Assign star particle masses
           pList[i].m = (Real)fdat;
-        } 
+        }
         fscanf(fp,"\n");
       } else if (strcmp(variable, "star_particle_age") == 0) {
         // Read star particle age
         if (SHOW_OUTPUT) std::cout<<"Reading..."<<variable<<std::endl;
         for (i=0; i<nstars; i++) {
-          if ((nread = fread(&fdat, sizeof(float), 1, fp)) != 1){
+          if ((nread = fread(&fdat, sizeof(float), 1, fp)) != 1) {
             fclose(fp);
             msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
             << "Error reading star_particle_age list..." << std::endl;
             throw std::runtime_error(msg.str().c_str());
           }
           ath_bswap(&fdat,sizeof(float),1);
-          // Assign star particle ages 
+          // Assign star particle ages
           pList[i].age = (Real)fdat;
         }
         fscanf(fp,"\n");
@@ -1144,26 +1169,26 @@ static void read_starpar_vtk(MeshBlock *mb, std::string filename, std::vector<St
         // Read star particle mage
         if (SHOW_OUTPUT) std::cout<<"Reading..."<<variable<<std::endl;
         for (i=0; i<nstars; i++) {
-          if ((nread = fread(&fdat, sizeof(float), 1, fp)) != 1){
+          if ((nread = fread(&fdat, sizeof(float), 1, fp)) != 1) {
             fclose(fp);
             msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
             << "Error reading star_particle_age list..." << std::endl;
             throw std::runtime_error(msg.str().c_str());
           }
           ath_bswap(&fdat,sizeof(float),1);
-          // Assign star particle mages 
+          // Assign star particle mages
           pList[i].mage = (Real)fdat;
-        } 
-        fscanf(fp,"\n");		  
+        }
+        fscanf(fp,"\n");
       } else {
         if (SHOW_OUTPUT) printf("  Skipping %s...\n",variable);
-        fseek(fp, nstars*sizeof(float), SEEK_CUR); 
+        fseek(fp, nstars*sizeof(float), SEEK_CUR);
       }
     } else if (strcmp(type, "VECTORS") == 0) {
       if (strcmp(variable, "star_particle_position") == 0) {
         if (SHOW_OUTPUT) std::cout<<"Reading..."<<variable<<std::endl;
         for (i=0; i<nstars; i++) {
-          if ((nread = fread(&fvec, sizeof(float), 3, fp)) != 3){
+          if ((nread = fread(&fvec, sizeof(float), 3, fp)) != 3) {
             fclose(fp);
             msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
             << "Error reading star_particle_position... " << std::endl;
@@ -1179,18 +1204,18 @@ static void read_starpar_vtk(MeshBlock *mb, std::string filename, std::vector<St
       } else if (strcmp(variable, "star_particle_velocity") == 0) {
         if (SHOW_OUTPUT) printf("Reading %s...\n",variable);
         for (i=0; i<nstars; i++) {
-          if ((nread = fread(&fvec, sizeof(float), 3, fp)) != 3){
+          if ((nread = fread(&fvec, sizeof(float), 3, fp)) != 3) {
             fclose(fp);
             msg << "### FATAL ERROR in Problem Generator [read_vtk]" << std::endl
             << "Error reading star_particle_velocity... " << std::endl;
             throw std::runtime_error(msg.str().c_str());
           }
           ath_bswap(&fvec,sizeof(float),3);
-          // Assign star particle positions 
+          // Assign star particle positions
           pList[i].v1 = (Real)fvec[0];
           pList[i].v2 = (Real)fvec[1];
           pList[i].v3 = (Real)fvec[2];
-        } 
+        }
         fscanf(fp,"\n");
       }
     } else {
@@ -1200,7 +1225,7 @@ static void read_starpar_vtk(MeshBlock *mb, std::string filename, std::vector<St
       throw std::runtime_error(msg.str().c_str());
     }
   }
-  
+
   fclose(fp);
 
   return;
@@ -1276,15 +1301,16 @@ static std::vector<std::string> split(std::string str, char delimiter) {
 }
 
 //! \fn Real set_CR_Luminosity(Real tage)
-//! \brief This function calculate the cosmic-rate luminosity produced pruduced by each star cluster
-Real set_CR_Luminosity(Real tage){
+//! \brief This function calculate the cosmic-rate luminosity
+//! produced pruduced by each star cluster
+Real set_CR_Luminosity(Real tage) {
   int i, iage;
   Real dage = 0.2; //Myr
   int const Narray = 201;
   Real N_SNe, CR_Lum;
   Real SN_energy = 1e51;
   Real CR_eff = 0.1;
-  
+
   // SNRate for Msun cluster per Myr (Starburst99)
   Real SNR[Narray] = {
          0.00000000e+00,   0.00000000e+00,   0.00000000e+00,
@@ -1355,64 +1381,68 @@ Real set_CR_Luminosity(Real tage){
          1.65576996e-04,   1.64816239e-04,   1.64437172e-04,
          1.63681652e-04,   1.63305195e-04,   1.62554876e-04,
   };
-  
-  iage = (int) (tage / dage);
+
+  iage = static_cast<int>(tage / dage);
   iage = std::max(iage, 0);
   iage = std::min(iage,Narray-1);
   if (tage >= 40) iage--;
 
   if (SNR[iage] == SNR[iage+1]) return 0;
 
-  //instanteneous rate of supernove per cluster mass 
+  //instanteneous rate of supernove per cluster mass
   N_SNe = lin_interpol(tage,iage*dage,(iage+1)*dage,SNR[iage],SNR[iage+1]);
-  //time-averaged CR energy injection rate per cluster mass = 0.1 * SN luminosity per cluster mass
+  //time-averaged CR energy injection rate per cluster mass =
+  //0.1 * SN luminosity per cluster mass
   CR_Lum = CR_eff * (N_SNe * SN_energy);
-  
+
   return CR_Lum;
 }
 
-//! \fn static inline Real lin_interpol(const Real x, const Real xi, const Real xi1, const Real yi, const Real yi1)
+//! \fn static inline Real lin_interpol(const Real x, const Real xi,
+//! const Real xi1, const Real yi, const Real yi1)
 //! \brief Function for linear interpolation
-static inline Real lin_interpol(const Real x, const Real xi, const Real xi1, const Real yi, const Real yi1){
+static inline Real lin_interpol(const Real x, const Real xi, const Real xi1,
+                                const Real yi, const Real yi1) {
   return (yi*(xi1-x)+yi1*(x-xi))/(xi1-xi);
 }
 
 //! \fn Outflow_down (MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
-//! FaceField &b, Real time, Real dt, int is, int ie, int js, int je, 
+//! FaceField &b, Real time, Real dt, int is, int ie, int js, int je,
 //! int ks, int ke, int ngh)
 //! \brief MHD boundary conditions on the left side of the z-axis
 void Outflow_down (MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
-     FaceField &b, Real time, Real dt, int is, int ie, int js, int je, 
-     int ks, int ke, int ngh)
-{
+     FaceField &b, Real time, Real dt, int is, int ie, int js, int je,
+     int ks, int ke, int ngh) {
   for (int k=1; k<=ngh; ++k) {
     for (int j=js; j<=je; ++j) {
       for (int i=is; i<=ie; ++i) {
         prim(IDN,ks-k,j,i) = prim(IDN,ks,j,i);
-        prim(IVX,ks-k,j,i) = prim(IVX,ks,j,i); 
+        prim(IVX,ks-k,j,i) = prim(IVX,ks,j,i);
         prim(IVY,ks-k,j,i) = prim(IVY,ks,j,i);
-        if (prim(IVZ,ks,j,i) <= 0.) prim(IVZ,ks-k,j,i) = prim(IVZ,ks,j,i);
-        else prim(IVZ,ks-k,j,i) = 0.;
+        if (prim(IVZ,ks,j,i) <= 0.)
+          prim(IVZ,ks-k,j,i) = prim(IVZ,ks,j,i);
+        else
+          prim(IVZ,ks-k,j,i) = 0.;
         if(NON_BAROTROPIC_EOS)
-          prim(IEN,ks-k,j,i) = prim(IEN,ks,j,i);	
+          prim(IEN,ks-k,j,i) = prim(IEN,ks,j,i);
       }
     }
   }
   if (MAGNETIC_FIELDS_ENABLED) {
-    for (int k=1; k<=ngh; ++k) { 
-      for (int j=js; j<=je; ++j) { 
-        for (int i=is; i<=ie; ++i) { 
-          b.x3f(ks-k,j,i) =  b.x3f(ks-k+2,j,i);  
-        } 
+    for (int k=1; k<=ngh; ++k) {
+      for (int j=js; j<=je; ++j) {
+        for (int i=is; i<=ie; ++i) {
+          b.x3f(ks-k,j,i) =  b.x3f(ks-k+2,j,i);
+        }
       }
-      if(je > js){ 
+      if(je > js) {
         for (int j=js; j<=je+1; ++j) {
           for (int i=is; i<=ie; ++i) {
             b.x2f(ks-k,j,i) =  b.x2f(ks,j,i);
           }
-        }  
+        }
       }
-      if(ie > is){        
+      if(ie > is) {
         for (int j=js; j<=je; ++j) {
           for (int i=is; i<=ie+1; ++i) {
             b.x1f(ks-k,j,i) = b.x1f(ks,j,i);
@@ -1424,41 +1454,42 @@ void Outflow_down (MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
 }
 
 //! \fn Outflow_up (MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
-//! FaceField &b, Real time, Real dt, int is, int ie, int js, int je, 
+//! FaceField &b, Real time, Real dt, int is, int ie, int js, int je,
 //! int ks, int ke, int ngh)
 //! \brief MHD boundary conditions on the right side of the z-axis
 void Outflow_up (MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
-     FaceField &b, Real time, Real dt, int is, int ie, int js, int je, 
-     int ks, int ke, int ngh)
-{
+     FaceField &b, Real time, Real dt, int is, int ie, int js, int je,
+     int ks, int ke, int ngh) {
   for (int k=1; k<=ngh; ++k) {
     for (int j=js; j<=je; ++j) {
       for (int i=is; i<=ie; ++i) {
         prim(IDN,ke+k,j,i) = prim(IDN,ke,j,i);
-        prim(IVX,ke+k,j,i) = prim(IVX,ke,j,i); 
+        prim(IVX,ke+k,j,i) = prim(IVX,ke,j,i);
         prim(IVY,ke+k,j,i) = prim(IVY,ke,j,i);
-        if (prim(IVZ,ke,j,i) >= 0.) prim(IVZ,ke+k,j,i) = prim(IVZ,ke,j,i);
-        else prim(IVZ,ke+k,j,i) = 0.;
+        if (prim(IVZ,ke,j,i) >= 0.)
+          prim(IVZ,ke+k,j,i) = prim(IVZ,ke,j,i);
+        else
+           prim(IVZ,ke+k,j,i) = 0.;
         if(NON_BAROTROPIC_EOS)
-          prim(IEN,ke+k,j,i) = prim(IEN,ke,j,i);	
+          prim(IEN,ke+k,j,i) = prim(IEN,ke,j,i);
       }
     }
   }
   if (MAGNETIC_FIELDS_ENABLED) {
-    for (int k=1; k<=ngh; ++k) { 
-      for (int j=js; j<=je; ++j) { 
-        for (int i=is; i<=ie; ++i) { 
-          b.x3f(ke+k+1,j,i) =  b.x3f(ke+k-1,j,i);  
-        } 
+    for (int k=1; k<=ngh; ++k) {
+      for (int j=js; j<=je; ++j) {
+        for (int i=is; i<=ie; ++i) {
+          b.x3f(ke+k+1,j,i) =  b.x3f(ke+k-1,j,i);
+        }
       }
-      if(je > js){ 
+      if(je > js) {
         for (int j=js; j<=je+1; ++j) {
           for (int i=is; i<=ie; ++i) {
             b.x2f(ke+k,j,i) =  b.x2f(ke,j,i);
           }
-        }  
+        }
       }
-      if(ie > is){        
+      if(ie > is) {
         for (int j=js; j<=je; ++j) {
           for (int i=is; i<=ie+1; ++i) {
             b.x1f(ke+k,j,i) = b.x1f(ke,j,i);
@@ -1470,50 +1501,52 @@ void Outflow_up (MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
 }
 
 
-//! \fn CROutflow_down (MeshBlock *pmb, Coordinates *pco, CosmicRay *pcr, 
-//!    const AthenaArray<Real> &w, const AthenaArray<Real> &bcc, 
-//!    AthenaArray<Real> &u_cr, Real time, Real dt, int is, int ie, 
+//! \fn CROutflow_down (MeshBlock *pmb, Coordinates *pco, CosmicRay *pcr,
+//!    const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
+//!    AthenaArray<Real> &u_cr, Real time, Real dt, int is, int ie,
 //!    int js, int je, int ks, int ke, int ngh)
 //! \brief CR boundary conditions on the left side of the z-axis
-void CROutflow_down (MeshBlock *pmb, Coordinates *pco, CosmicRay *pcr, 
-    const AthenaArray<Real> &w, const AthenaArray<Real> &bcc, 
-    AthenaArray<Real> &u_cr, Real time, Real dt, int is, int ie, 
-    int js, int je, int ks, int ke, int ngh)
-{
-  if(CR_ENABLED){
+void CROutflow_down (MeshBlock *pmb, Coordinates *pco, CosmicRay *pcr,
+    const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
+    AthenaArray<Real> &u_cr, Real time, Real dt, int is, int ie,
+    int js, int je, int ks, int ke, int ngh) {
+  if(CR_ENABLED) {
     for (int k=1; k<=ngh; ++k) {
       for (int j=js; j<=je; ++j) {
         for (int i=is; i<=ie; ++i) {
           u_cr(CRE,ks-k,j,i) = u_cr(CRE,ks,j,i) - k*(u_cr(CRE,ks+1,j,i)-u_cr(CRE,ks,j,i));
           u_cr(CRF1,ks-k,j,i) = u_cr(CRF1,ks,j,i);
           u_cr(CRF2,ks-k,j,i) = u_cr(CRF2,ks,j,i);
-          if (u_cr(CRF3,ks,j,i)<=0.) u_cr(CRF3,ks-k,j,i) = u_cr(CRF3,ks,j,i);
-          else u_cr(CRF3,ks-k,j,i) = 0;
+          if (u_cr(CRF3,ks,j,i)<=0.)
+            u_cr(CRF3,ks-k,j,i) = u_cr(CRF3,ks,j,i);
+          else
+            u_cr(CRF3,ks-k,j,i) = 0;
         }
       }
     }
   }
-} 
+}
 
-//! \fn CROutflow_up (MeshBlock *pmb, Coordinates *pco, CosmicRay *pcr, 
-//!    const AthenaArray<Real> &w, const AthenaArray<Real> &bcc, 
-//!    AthenaArray<Real> &u_cr, Real time, Real dt, int is, int ie, 
+//! \fn CROutflow_up (MeshBlock *pmb, Coordinates *pco, CosmicRay *pcr,
+//!    const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
+//!    AthenaArray<Real> &u_cr, Real time, Real dt, int is, int ie,
 //!    int js, int je, int ks, int ke, int ngh)
 //! \brief CR boundary conditions on the right side of the z-axis
-void CROutflow_up (MeshBlock *pmb, Coordinates *pco, CosmicRay *pcr, 
-    const AthenaArray<Real> &w, const AthenaArray<Real> &bcc, 
-    AthenaArray<Real> &u_cr, Real time, Real dt, int is, int ie, 
-    int js, int je, int ks, int ke, int ngh)
-{
-  if(CR_ENABLED){
+void CROutflow_up (MeshBlock *pmb, Coordinates *pco, CosmicRay *pcr,
+    const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
+    AthenaArray<Real> &u_cr, Real time, Real dt, int is, int ie,
+    int js, int je, int ks, int ke, int ngh) {
+  if(CR_ENABLED) {
     for (int k=1; k<=ngh; ++k) {
       for (int j=js; j<=je; ++j) {
         for (int i=is; i<=ie; ++i) {
           u_cr(CRE,ke+k,j,i) = u_cr(CRE,ke,j,i) + k*(u_cr(CRE,ke,j,i)-u_cr(CRE,ke-1,j,i));
           u_cr(CRF1,ke+k,j,i) = u_cr(CRF1,ke,j,i);
           u_cr(CRF2,ke+k,j,i) = u_cr(CRF2,ke,j,i);
-          if (u_cr(CRF3,ke,j,i)>=0.) u_cr(CRF3,ke+k,j,i) = u_cr(CRF3,ke,j,i);
-          else u_cr(CRF3,ke+k,j,i) = 0;
+          if (u_cr(CRF3,ke,j,i)>=0.)
+            u_cr(CRF3,ke+k,j,i) = u_cr(CRF3,ke,j,i);
+          else
+            u_cr(CRF3,ke+k,j,i) = 0;
         }
       }
     }

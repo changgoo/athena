@@ -90,6 +90,7 @@
 #include "../athena.hpp"
 #include "../athena_arrays.hpp"
 #include "../coordinates/coordinates.hpp"
+#include "../cr/cr.hpp"
 #include "../field/field.hpp"
 #include "../gravity/gravity.hpp"
 #include "../hydro/hydro.hpp"
@@ -97,7 +98,6 @@
 #include "../orbital_advection/orbital_advection.hpp"
 #include "../parameter_input.hpp"
 #include "../scalars/scalars.hpp"
-#include "../cr/cr.hpp"
 #include "outputs.hpp"
 
 //----------------------------------------------------------------------------------------
@@ -586,9 +586,8 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
     }
   }
 
-  if(CR_ENABLED){
-
-    if (output_params.variable.compare("Ec") == 0 || 
+  if(CR_ENABLED) {
+    if (output_params.variable.compare("Ec") == 0 ||
       output_params.variable.compare("cons") == 0 ||
       output_params.variable.compare("prim") == 0) {
       pod = new OutputData;
@@ -598,9 +597,9 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
       AppendOutputDataNode(pod);
       num_vars_++;
     }
-    
-   // comoving frame fram radiation flux vector
-    if (output_params.variable.compare("Fc") == 0 || 
+
+    // comoving frame fram radiation flux vector
+    if (output_params.variable.compare("Fc") == 0 ||
         output_params.variable.compare("cons") == 0 ||
         output_params.variable.compare("prim") == 0) {
       pod = new OutputData;
@@ -623,7 +622,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
       }
     }
 
-    if (output_params.variable.compare("Sigma_diff") == 0 || 
+    if (output_params.variable.compare("Sigma_diff") == 0 ||
         output_params.variable.compare("cons") == 0 ||
         output_params.variable.compare("prim") == 0) {
       pod = new OutputData;
@@ -634,7 +633,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
       num_vars_+=3;
     }
 
-    if (output_params.variable.compare("Sigma_adv") == 0 || 
+    if (output_params.variable.compare("Sigma_adv") == 0 ||
         output_params.variable.compare("cons") == 0 ||
         output_params.variable.compare("prim") == 0) {
       pod = new OutputData;
@@ -646,7 +645,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
     }
 
     // The streaming velocity
-    if (output_params.variable.compare("Vc") == 0 || 
+    if (output_params.variable.compare("Vc") == 0 ||
         output_params.variable.compare("cons") == 0 ||
         output_params.variable.compare("prim") == 0) {
       pod = new OutputData;
@@ -662,7 +661,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
         pod->type = "VECTORS";
         pod->name = "Vc_xyz";
         pod->data.NewAthenaArray(3,pcr->v_adv.GetDim3(),
-                                   pcr->v_adv.GetDim2(), 
+                                   pcr->v_adv.GetDim2(),
                                    pcr->v_adv.GetDim1());
         CalculateCartesianVector(src, pod->data, pmb->pcoord);
         AppendOutputDataNode(pod);
@@ -670,7 +669,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
       }
     }
   }// end Cosmic Rays
-    
+
   // note, the Bcc variables are stored in a separate HDF5 dataset from the above Output
   // nodes, and it must come after those nodes in the linked list
   if (MAGNETIC_FIELDS_ENABLED) {

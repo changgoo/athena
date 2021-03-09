@@ -30,6 +30,7 @@
 #include "../athena_arrays.hpp"
 #include "../bvals/bvals.hpp"
 #include "../coordinates/coordinates.hpp"
+#include "../cr/cr.hpp"
 #include "../eos/eos.hpp"
 #include "../fft/athena_fft.hpp"
 #include "../fft/turbulence.hpp"
@@ -48,7 +49,6 @@
 #include "../reconstruct/reconstruction.hpp"
 #include "../scalars/scalars.hpp"
 #include "../utils/buffer_utils.hpp"
-#include "../cr/cr.hpp"
 #include "mesh.hpp"
 #include "mesh_refinement.hpp"
 #include "meshblock_tree.hpp"
@@ -1603,17 +1603,17 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
 
         pbval->ApplyPhysicalBoundaries(time, 0.0, pbval->bvars_main_int);
       }
-      
+
       // calculate opacity
-      if(CR_ENABLED){
-        for(int i=0; i<nblocal; ++i){
+      if(CR_ENABLED) {
+        for(int i=0; i<nblocal; ++i) {
           pmb=my_blocks(i); ph=pmb->phydro;
           CosmicRay *pcr = pmb->pcr;
           pf=pmb->pfield;
           pcr->UpdateOpacity(pmb,pcr->u_cr,ph->w,pf->bcc);
         }
       }
-      
+
       // Calc initial diffusion coefficients
 #pragma omp for private(pmb,ph,pf)
       for (int i=0; i<nblocal; ++i) {
@@ -1934,9 +1934,9 @@ void Mesh::ReserveMeshBlockPhysIDs() {
   if (NSCALARS > 0) {
     ReserveTagPhysIDs(CellCenteredBoundaryVariable::max_phys_id);
   }
-  if(CR_ENABLED){
+  if(CR_ENABLED) {
     ReserveTagPhysIDs(CellCenteredBoundaryVariable::max_phys_id);
-  }  
+  }
 #endif
   return;
 }

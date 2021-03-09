@@ -225,21 +225,21 @@ Reconstruction::Reconstruction(MeshBlock *pmb, ParameterInput *pin) :
   scr02_i_.NewAthenaArray(nc1);
 
   int nsize = NWAVE;
-  
+
   if(CR_ENABLED)
     nsize = std::max(nsize,5);
-  
+
   scr1_ni_.NewAthenaArray(std::max(nsize, NSCALARS), nc1);
   scr2_ni_.NewAthenaArray(std::max(nsize, NSCALARS), nc1);
   scr3_ni_.NewAthenaArray(std::max(nsize, NSCALARS), nc1);
   scr4_ni_.NewAthenaArray(std::max(nsize, NSCALARS), nc1);
 
   int order_flag = xorder;
-  if(CR_ENABLED){
+  if(CR_ENABLED) {
     int cr_order=pin->GetOrAddInteger("time", "cr_xorder", 2);
     order_flag = std::max(cr_order,order_flag);
   }
-  
+
   if ((xorder == 3) || (xorder == 4)) {
     Coordinates *pco = pmb->pcoord;
     scr03_i_.NewAthenaArray(nc1);

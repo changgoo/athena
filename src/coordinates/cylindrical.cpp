@@ -15,12 +15,12 @@
 // Athena++ headers
 #include "../athena.hpp"
 #include "../athena_arrays.hpp"
+#include "../cr/cr.hpp"
 #include "../eos/eos.hpp"
 #include "../hydro/hydro.hpp"
 #include "../hydro/hydro_diffusion/hydro_diffusion.hpp"
 #include "../mesh/mesh.hpp"
 #include "../parameter_input.hpp"
-#include "../cr/cr.hpp"
 #include "coordinates.hpp"
 
 //----------------------------------------------------------------------------------------
@@ -327,23 +327,22 @@ void Cylindrical::AddCoordTermsDivergence(
   return;
 }
 
-void Cylindrical::AddCoordTermsDivergence(int flag, 
-         const AthenaArray<Real> &u_input, AthenaArray<Real> &coord_src)
-{
+void Cylindrical::AddCoordTermsDivergence(int flag,
+         const AthenaArray<Real> &u_input, AthenaArray<Real> &coord_src) {
   // Go through cellscosmicray
-  if(CR_ENABLED && (flag == 1)){
+  if(CR_ENABLED && (flag == 1)) {
     CosmicRay *pcr=pmy_block->pcr;
     for (int k=pmy_block->ks; k<=pmy_block->ke; ++k) {
       for (int j=pmy_block->js; j<=pmy_block->je; ++j) {
 #pragma omp simd
         for (int i=pmy_block->is; i<=pmy_block->ie; ++i) {
         // src_1 = <M_{phi phi}><1/r>
-          Real m_pp =  u_input(CRE,k,j,i)/3.0;        
+          Real m_pp =  u_input(CRE,k,j,i)/3.0;
           coord_src(CRF1,k,j,i) =  pcr->vmax * coord_src1_i_(i)*m_pp;
           // 0 for other components
           coord_src(CRE,k,j,i) = 0.0;
           coord_src(CRF2,k,j,i) = 0.0;
-          coord_src(CRF3,k,j,i) = 0.0;     
+          coord_src(CRF3,k,j,i) = 0.0;
         }
       }
     }
@@ -354,11 +353,10 @@ void Cylindrical::AddCoordTermsDivergence(int flag,
 //----------------------------------------------------------------------------------------
 // subtract Coordinate (Geometric) source term to get Grad Pc
 
-void Cylindrical::AddCoordTermsDivergence( 
-  const AthenaArray<Real> &u_cr, AthenaArray<Real> &grad_pc)
-{
+void Cylindrical::AddCoordTermsDivergence(
+  const AthenaArray<Real> &u_cr, AthenaArray<Real> &grad_pc) {
   // Go through cellscosmicray
-  if(CR_ENABLED){
+  if(CR_ENABLED) {
     CosmicRay *pcr=pmy_block->pcr;
     for (int k=pmy_block->ks; k<=pmy_block->ke; ++k) {
       for (int j=pmy_block->js; j<=pmy_block->je; ++j) {
@@ -366,7 +364,6 @@ void Cylindrical::AddCoordTermsDivergence(
         // src_1 = <M_{phi phi}><1/r>
           Real m_ii = u_cr(CRE,k,j,i)/3.0;
           grad_pc(0,k,j,i) -= coord_src1_i_(i)*m_ii;
-
         }
       }// end j
     }// end k
