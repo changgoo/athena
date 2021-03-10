@@ -336,9 +336,9 @@ void BoundaryValues::CheckUserBoundaries() {
         if (pmy_mesh_->CRBoundaryFunc_[i] == nullptr) {
           std::stringstream msg;
           msg << "### FATAL ERROR in BoundaryValues::CheckBoundary" << std::endl
-              << "A user-defined boundary is specified but" <<
-              << "the actual CR_boundary function " <<
-              << "is not enrolled in direction " << i  << " (in [0,6])." << std::endl;
+              << "A user-defined boundary is specified but"
+              << "the actual CR_boundary function "
+              << "is not enrolled in direction " << i << " (in [0,6])." << std::endl;
           ATHENA_ERROR(msg);
         }
       }

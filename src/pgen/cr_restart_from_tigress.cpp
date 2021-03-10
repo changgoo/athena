@@ -71,7 +71,8 @@ static void ath_bswap(void *vdat, int len, int cnt);
 void TempCalculation(Units *punit, Real rho, Real Press, Real &Temp, Real &mu, Real &muH);
 
 //functions for the injection of CR energy density
-void CalculateInjectionRate(MeshBlock *pmb, AthenaArray<Real> &CRInjectionRate);
+void CalculateInjectionRate(ParameterInput *pin, MeshBlock *pmb,
+                            AthenaArray<Real> &CRInjectionRate);
 void Source_CR(MeshBlock *pmb, Real time, Real dt,
                const AthenaArray<Real> &prim, const AthenaArray<Real> &bcc,
                AthenaArray<Real> &u_cr, AthenaArray<Real> &CRInjectionRate);
@@ -156,7 +157,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   if(CR_ENABLED) {
     pcr->punit = punit;
-    CalculateInjectionRate(this,pcr->CRInjectionRate);
+    CalculateInjectionRate(pin,this,pcr->CRInjectionRate);
     pcr->EnrollUserCRSource(Source_CR);
     pcr->EnrollTemperatureFunction(TempCalculation);
     pcr->sigma = pin->GetOrAddReal("cr","sigma",1.0);
@@ -167,12 +168,13 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   }
 }
 
-void CalculateInjectionRate(MeshBlock *pmb, AthenaArray<Real> &CRInjectionRate) {
+void CalculateInjectionRate(ParameterInput *pin, MeshBlock *pmb,
+         AthenaArray<Real> &CRInjectionRate) {
   int ks=pmb->ks, ke=pmb->ke;
   int js=pmb->js, je=pmb->je;
   int is=pmb->is, ie=pmb->ie;
   int ierr;
-  int Nstars;
+  size_t Nstars;
 
   std::vector<StarParS> pList;
 
@@ -237,7 +239,7 @@ void CalculateInjectionRate(MeshBlock *pmb, AthenaArray<Real> &CRInjectionRate) 
   Real InjectionRate;
   Real InjectionRate_in_code;
 
-  for(int s=0; s<Nstars; ++s) {
+  for(size_t s=0; s<Nstars; ++s) {
     // convert the star age from code units in Myr
     Real tstar = pList[s].mage / punit->Myr_in_code;
     if (tstar<age_th && pList[s].m>0.) {
@@ -883,7 +885,8 @@ static void read_starpar_vtk(MeshBlock *mb, std::string filename,
   std::stringstream msg;
   FILE *fp = NULL;
   char cline[256], type[256], variable[256], format[256], t_type[256], t_format[256];
-  int retval,i,itmp1,itmp2,nstars,nread,idat,ivec[3];
+  int retval,i,itmp1,itmp2,nstars,idat,ivec[3];
+  size_t nread;
   float fdat,fvec[3];
   std::string line;
   bool SHOW_OUTPUT = false;

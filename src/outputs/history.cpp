@@ -43,8 +43,8 @@
 #endif
 
 // "3" for 1-KE, 2-KE, 3-KE additional columns (come before tot-E)
-#define NHISTORY_VARS ((NHYDRO) + (SELF_GRAVITY_ENABLED)
-                   + (NFIELD) + 3 + (NSCALARS) + (NCRV))
+#define NHISTORY_VARS ((NHYDRO)+(SELF_GRAVITY_ENABLED)+(NFIELD)\
+                      +3+(NSCALARS)+(NCRV))
 
 //----------------------------------------------------------------------------------------
 //! \fn void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag)

@@ -202,26 +202,27 @@ inline void DefaultOpacity(MeshBlock *pmb, AthenaArray<Real> &u_cr,
 }
 
 CosmicRay::CosmicRay(MeshBlock *pmb, ParameterInput *pin):
-    pmy_block(pmb), u_cr(NCR,pmb->ncells3,pmb->ncells2,pmb->ncells1),
+    u_cr(NCR,pmb->ncells3,pmb->ncells2,pmb->ncells1),
     u_cr1(NCR,pmb->ncells3,pmb->ncells2,pmb->ncells1),
+    //constructor overload resolution of non-aggregate class type AthenaArray<Real>
+    coarse_cr_(NCR,pmb->ncc3, pmb->ncc2, pmb->ncc1,
+              (pmb->pmy_mesh->multilevel ? AthenaArray<Real>::DataStatus::allocated :
+              AthenaArray<Real>::DataStatus::empty)),
     sigma_diff(3,pmb->ncells3,pmb->ncells2,pmb->ncells1),
     sigma_adv(3,pmb->ncells3,pmb->ncells2,pmb->ncells1),
     v_adv(3,pmb->ncells3,pmb->ncells2,pmb->ncells1),
     v_diff(3,pmb->ncells3,pmb->ncells2,pmb->ncells1),
     CRInjectionRate(pmb->ncells3,pmb->ncells2,pmb->ncells1),
-    //constructor overload resolution of non-aggregate class type AthenaArray<Real>
     flux{{NCR, pmb->ncells3, pmb->ncells2, pmb->ncells1+1},
         {NCR,pmb->ncells3, pmb->ncells2+1, pmb->ncells1,
         (pmb->pmy_mesh->f2 ? AthenaArray<Real>::DataStatus::allocated :
         AthenaArray<Real>::DataStatus::empty)},
         {NCR,pmb->ncells3+1, pmb->ncells2, pmb->ncells1,
-          (pmb->pmy_mesh->f3 ? AthenaArray<Real>::DataStatus::allocated :
-          AthenaArray<Real>::DataStatus::empty)}},
-    UserSourceTerm_{},
-    coarse_cr_(NCR,pmb->ncc3, pmb->ncc2, pmb->ncc1,
-              (pmb->pmy_mesh->multilevel ? AthenaArray<Real>::DataStatus::allocated :
-              AthenaArray<Real>::DataStatus::empty)),
-    cr_bvar(pmb, &u_cr, &coarse_cr_, flux) {
+        (pmb->pmy_mesh->f3 ? AthenaArray<Real>::DataStatus::allocated :
+        AthenaArray<Real>::DataStatus::empty)}},
+    pmy_block(pmb),
+    cr_bvar(pmb, &u_cr, &coarse_cr_, flux),
+    UserSourceTerm_{} {
   Mesh *pm = pmy_block->pmy_mesh;
   // "Enroll" in S/AMR by adding to vector of tuples of pointers in MeshRefinement class
   if (pm->multilevel) {
@@ -256,7 +257,7 @@ CosmicRay::CosmicRay(MeshBlock *pmb, ParameterInput *pin):
   losses_flag = pin->GetOrAddInteger("cr","losses_flag",0);
   perp_diff_flag = pin->GetOrAddInteger("cr","perp_diff_flag",0);
   self_consistent_flag = pin->GetOrAddInteger("cr","self_consistent_flag",0);
-  if (self_consistent_flag == 1) losses_flag = 1;
+  if (self_consistent_flag) losses_flag = 1;
 
   //Code units
   DensityUnit = pin->GetOrAddReal("problem", "DensityUnit",1.);

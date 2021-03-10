@@ -56,7 +56,9 @@ void CRIntegrator::CRFlux(int fdir, int il, int iu,
     Real fl_e = vmax * w_l(fdir,i) - bm * w_l(CRE,i);
     Real fr_e = vmax * w_r(fdir,i) - bp * w_r(CRE,i);
 
-    Real fl_f1, fr_f1, fl_f2, fr_f2, fl_f3, fr_f3;
+    Real fl_f1 = 0., fr_f1 = 0., fl_f2 = 0.;
+    Real fr_f2 = 0., fl_f3 = 0., fr_f3 = 0.;
+
     if(fdir == CRF1) {
       fl_f1 = vmax * eddl * w_l(CRE,i) - bm * w_l(CRF1,i);
       fr_f1 = vmax * eddr * w_r(CRE,i) - bp * w_r(CRF1,i);

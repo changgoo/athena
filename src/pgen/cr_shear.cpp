@@ -125,6 +125,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real xsize;
   Real Bx, By, Bz;
   Real direction;
+  std::stringstream msg;
 
   // read in the mean velocity, diffusion coefficient
   direction = pin->GetOrAddReal("problem","direction",0);
@@ -140,6 +141,11 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     Bz = pin->GetOrAddReal("problem","B0",0);
     xsize = (pmy_mesh->mesh_size.x3max - pmy_mesh->mesh_size.x3min)
             /pmy_mesh->mesh_size.nx3;
+  } else {
+    msg << "### FATAL ERROR in Problem Generator" << std::endl
+      << "Invalid direction: " << direction << "!"
+      << "It must be either 0 or 1 or 2" << std::endl;
+    throw std::runtime_error(msg.str().c_str());
   }
 
   Real offset1 = pin->GetOrAddReal("problem","offset1",0.);

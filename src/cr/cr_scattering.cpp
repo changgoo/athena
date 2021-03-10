@@ -50,7 +50,10 @@ void DefaultTemperature(Units *punit, Real rho, Real Press,
 Real CosmicRay::Get_SigmaParallel(Real rho, Real Press, Real ecr, Real grad_pc_par) {
   Real sigma_par;
 
-  if (self_consistent_flag==1) {
+  if (self_consistent_flag==0) {
+    sigma_par = sigma;
+  } else {
+    //Self-conistent calculation of sigma_par
     Real nu = 3.e-9; //frequency of collisions between ions and neutrals
     Real nu_in_code = nu*(1./punit->second);
     Real cr_kinenergy = 1e9 * 1.6021773e-12; //1 GeV in erg
@@ -83,8 +86,6 @@ Real CosmicRay::Get_SigmaParallel(Real rho, Real Press, Real ecr, Real grad_pc_p
                      punit->e_in_code/punit->c_in_code / kinenergy_in_code
                      / std::sqrt(rho_ion) / (0.3 * vi * punit->c_in_code));
     sigma_par = std::min(sigma_nll,sigma_in) * vmax;
-  } else {
-    sigma_par = sigma;
   }
 
   return sigma_par;
@@ -134,12 +135,13 @@ Real Get_IonFraction(Real Temp, Real rho, Real ecr, Real ion_rate_norm) {
 
 Real Get_mui(Real Temp, Real mu, Real xi) {
   Real mui, mu_cold;
+  Real mui_max = 1.236;
   Real xM = 1.68e-4;
   Real xH = xi - xM;
 
   if (Temp<=2e4) {
-    mu_cold = (xH + 12*xM)/xi;
-    mui = std::max(1.236,mu_cold);
+    mu_cold = (xH + 12.*xM)/xi;
+    mui = std::max(mui_max,mu_cold);
   } else {
     mui = 2*mu;
   }
