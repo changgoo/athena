@@ -26,6 +26,8 @@
 enum class GravityBoundaryFlag {periodic, disk, open};
 //! free functions to return boundary flag given input string
 GravityBoundaryFlag GetGravityBoundaryFlag(const std::string& input_string);
+//! indefinite integral for the integrated Green's function
+Real _GetIGF(Real x, Real y, Real z);
 
 //! \class BlockFFTGravity
 //! \brief minimalist FFT gravity solver for each block

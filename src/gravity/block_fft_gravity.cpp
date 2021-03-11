@@ -19,6 +19,8 @@
 #include "../coordinates/coordinates.hpp"
 #include "block_fft_gravity.hpp"
 
+#define INTEGRATED_GREEN 1
+
 //----------------------------------------------------------------------------------------
 //! \fn BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
 //! \brief BlockFFTGravity constructor
@@ -466,15 +468,28 @@ void BlockFFTGravity::InitGreen() {
         gi = (gi+Nx1)%(2*Nx1) - Nx1;
         gj = (gj+Nx2)%(2*Nx2) - Nx2;
         gk = (gk+Nx3)%(2*Nx3) - Nx3;
-        // point-mass Green's function
-        int idx = i + (2*nx1)*(j + (2*nx2)*k);
-        if ((gi==0)&&(gj==0)&&(gk==0)) {
-          grf_[idx] = {0.0, 0.0};
+        if (INTEGRATED_GREEN) {
+          // cell-integrated Green's function
+          int idx = i + (2*nx1)*(j + (2*nx2)*k);
+          grf_[idx]  = _GetIGF((-gi+0.5)*dx1_, (-gj+0.5)*dx2_, (-gk+0.5)*dx3_);
+          grf_[idx] -= _GetIGF((-gi+0.5)*dx1_, (-gj+0.5)*dx2_, (-gk-0.5)*dx3_);
+          grf_[idx] -= _GetIGF((-gi+0.5)*dx1_, (-gj-0.5)*dx2_, (-gk+0.5)*dx3_);
+          grf_[idx] += _GetIGF((-gi+0.5)*dx1_, (-gj-0.5)*dx2_, (-gk-0.5)*dx3_);
+          grf_[idx] -= _GetIGF((-gi-0.5)*dx1_, (-gj+0.5)*dx2_, (-gk+0.5)*dx3_);
+          grf_[idx] += _GetIGF((-gi-0.5)*dx1_, (-gj+0.5)*dx2_, (-gk-0.5)*dx3_);
+          grf_[idx] += _GetIGF((-gi-0.5)*dx1_, (-gj-0.5)*dx2_, (-gk+0.5)*dx3_);
+          grf_[idx] -= _GetIGF((-gi-0.5)*dx1_, (-gj-0.5)*dx2_, (-gk-0.5)*dx3_);
+          grf_[idx] *= -gconst;
         } else {
-          grf_[idx] = {-gconst/std::sqrt(SQR(gi*dx1_) + SQR(gj*dx2_) + SQR(gk*dx3_))*dvol,
-                       0.0};
+          // point-mass Green's function
+          int idx = i + (2*nx1)*(j + (2*nx2)*k);
+          if ((gi==0)&&(gj==0)&&(gk==0)) {
+            // avoid singularity at r=0
+            grf_[idx] = 0.0;
+          } else {
+            grf_[idx] = -gconst/std::sqrt(SQR(gi*dx1_) + SQR(gj*dx2_) + SQR(gk*dx3_))*dvol;
+          }
         }
-        // TODO(SMOON) add integrated Green's function
       }
     }
   }
@@ -672,4 +687,13 @@ GravityBoundaryFlag GetGravityBoundaryFlag(const std::string& input_string) {
         << "is an invalid boundary type" << std::endl;
     ATHENA_ERROR(msg);
   }
+}
+
+//! \fn indefinite integral for the integrated Green's function
+Real _GetIGF(Real x, Real y, Real z) {
+  Real r = std::sqrt(SQR(x) + SQR(y) + SQR(z));
+  return y*z*std::log(x+r) + z*x*std::log(y+r) + x*y*std::log(z+r)
+         - 0.5*SQR(x)*std::atan(y*z/x/r)
+         - 0.5*SQR(y)*std::atan(z*x/y/r)
+         - 0.5*SQR(z)*std::atan(x*y/z/r);
 }
