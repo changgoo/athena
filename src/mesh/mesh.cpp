@@ -37,6 +37,7 @@
 #include "../field/field.hpp"
 #include "../field/field_diffusion/field_diffusion.hpp"
 #include "../globals.hpp"
+#include "../gravity/block_fft_gravity.hpp"
 #include "../gravity/fft_gravity.hpp"
 #include "../gravity/gravity.hpp"
 #include "../gravity/mg_gravity.hpp"
@@ -527,6 +528,8 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
   } else if (SELF_GRAVITY_ENABLED == 2) {
     // MGDriver must be initialzied before MeshBlocks
     pmgrd = new MGGravityDriver(this, pin);
+  } else if (SELF_GRAVITY_ENABLED == 3) {
+    gflag = 1; // set gravity flag
   }
   //  if (SELF_GRAVITY_ENABLED == 2 && ...) // independent allocation
   //    gflag = 2;
@@ -852,6 +855,8 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
   } else if (SELF_GRAVITY_ENABLED == 2) {
     // MGDriver must be initialzied before MeshBlocks
     pmgrd = new MGGravityDriver(this, pin);
+  } else if (SELF_GRAVITY_ENABLED == 3) {
+    gflag = 1; // set gravity flag
   }
   //  if (SELF_GRAVITY_ENABLED == 2 && ...) // independent allocation
   //    gflag=2;
@@ -1413,7 +1418,7 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
       // BoundaryVariable objects evolved in main TimeIntegratorTaskList:
       pmb->pbval->SetupPersistentMPI();
       // other BoundaryVariable objects:
-      if (SELF_GRAVITY_ENABLED == 1)
+      if ((SELF_GRAVITY_ENABLED == 1) || (SELF_GRAVITY_ENABLED == 3))
         pmb->pgrav->gbvar.SetupPersistentMPI();
     }
 
@@ -1422,6 +1427,8 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
       pfgrd->Solve(1, 0);
     else if (SELF_GRAVITY_ENABLED == 2)
       pmgrd->Solve(1);
+    else if (SELF_GRAVITY_ENABLED == 3)
+      my_blocks(0)->pfft->Solve(1);
 
 #pragma omp parallel num_threads(nthreads)
     {

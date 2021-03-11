@@ -29,6 +29,7 @@
 #include "../fft/athena_fft.hpp"
 #include "../field/field.hpp"
 #include "../globals.hpp"
+#include "../gravity/block_fft_gravity.hpp"
 #include "../gravity/gravity.hpp"
 #include "../gravity/mg_gravity.hpp"
 #include "../hydro/hydro.hpp"
@@ -159,6 +160,8 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
     pbval->AdvanceCounterPhysID(CellCenteredBoundaryVariable::max_phys_id);
     if (SELF_GRAVITY_ENABLED == 2)
       pmg = new MGGravity(pmy_mesh->pmgrd, this);
+    if (SELF_GRAVITY_ENABLED == 3)
+      pfft = new BlockFFTGravity(this, pin);
   }
   if (NSCALARS > 0) {
     // if (this->scalars_block)
@@ -290,6 +293,8 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
     pbval->AdvanceCounterPhysID(CellCenteredBoundaryVariable::max_phys_id);
     if (SELF_GRAVITY_ENABLED == 2)
       pmg = new MGGravity(pmy_mesh->pmgrd, this);
+    if (SELF_GRAVITY_ENABLED == 3)
+      pfft = new BlockFFTGravity(this, pin);
   }
 
   if (NSCALARS > 0) {
@@ -315,8 +320,6 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
 
   // load hydro and field data
   std::memcpy(phydro->u.data(), &(mbdata[os]), phydro->u.GetSizeInBytes());
-  // load it into the other memory register(s) too
-  std::memcpy(phydro->u1.data(), &(mbdata[os]), phydro->u1.GetSizeInBytes());
   os += phydro->u.GetSizeInBytes();
   if (GENERAL_RELATIVITY) {
     std::memcpy(phydro->w.data(), &(mbdata[os]), phydro->w.GetSizeInBytes());
@@ -326,13 +329,10 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
   }
   if (MAGNETIC_FIELDS_ENABLED) {
     std::memcpy(pfield->b.x1f.data(), &(mbdata[os]), pfield->b.x1f.GetSizeInBytes());
-    std::memcpy(pfield->b1.x1f.data(), &(mbdata[os]), pfield->b1.x1f.GetSizeInBytes());
     os += pfield->b.x1f.GetSizeInBytes();
     std::memcpy(pfield->b.x2f.data(), &(mbdata[os]), pfield->b.x2f.GetSizeInBytes());
-    std::memcpy(pfield->b1.x2f.data(), &(mbdata[os]), pfield->b1.x2f.GetSizeInBytes());
     os += pfield->b.x2f.GetSizeInBytes();
     std::memcpy(pfield->b.x3f.data(), &(mbdata[os]), pfield->b.x3f.GetSizeInBytes());
-    std::memcpy(pfield->b1.x3f.data(), &(mbdata[os]), pfield->b1.x3f.GetSizeInBytes());
     os += pfield->b.x3f.GetSizeInBytes();
   }
 
@@ -345,8 +345,6 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
   // (conserved variable) Passive scalars:
   if (NSCALARS > 0) {
     std::memcpy(pscalars->s.data(), &(mbdata[os]), pscalars->s.GetSizeInBytes());
-    // load it into the other memory register(s) too
-    std::memcpy(pscalars->s1.data(), &(mbdata[os]), pscalars->s1.GetSizeInBytes());
     os += pscalars->s.GetSizeInBytes();
   }
 
@@ -378,6 +376,7 @@ MeshBlock::~MeshBlock() {
   delete peos;
   delete porb;
   if (SELF_GRAVITY_ENABLED) delete pgrav;
+  if (SELF_GRAVITY_ENABLED == 3) delete pfft;
   if (NSCALARS > 0) delete pscalars;
   if (CR_ENABLED) delete pcr;
 

@@ -54,6 +54,7 @@ class FFTDriver;
 class FFTGravityDriver;
 class TurbulenceDriver;
 class OrbitalAdvection;
+class BlockFFTGravity;
 
 FluidFormulation GetFluidFormulation(const std::string& input_string);
 
@@ -120,6 +121,7 @@ class MeshBlock {
   EquationOfState *peos;
   CosmicRay *pcr;
   OrbitalAdvection *porb;
+  BlockFFTGravity *pfft;
 
   // functions
   std::size_t GetBlockSizeInBytes();
