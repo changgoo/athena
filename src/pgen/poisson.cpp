@@ -129,6 +129,17 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 //            phia = 0;
           }
           phia *= four_pi_G;
+        } else if (iprob == 5) {
+          Real a0 = pin->GetOrAddReal("problem","a0",1.0);
+          Real xi = PI*std::sqrt(r2)/a0;
+          if (xi < PI) {
+            den = sin(xi)/xi;
+            phia = (1.0 + std::sin(xi)/xi);
+          } else {
+            den = 0.0;
+            phia = PI/xi;
+          }
+          phia *= -four_pi_G*SQR(a0/PI);
         }
 
         if (nlim > 0) {
@@ -261,7 +272,7 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
       Real x1size = mesh_size.x1max - mesh_size.x1min;
       Real x2size = mesh_size.x2max - mesh_size.x2min;
       Real x3size = mesh_size.x3max - mesh_size.x3min;
-      Real four_pi_G = pin->GetReal("problem", "four_pi_G");
+      Real four_pi_G = pin->GetReal("self_gravity", "four_pi_G");
       Real phiamp = SQR(TWO_PI/x1size);
       phiamp += SQR(TWO_PI/x2size);
       phiamp += SQR(TWO_PI/x3size);
