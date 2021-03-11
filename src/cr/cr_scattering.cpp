@@ -105,6 +105,8 @@ Real CosmicRay::Get_IonDensity(Real rho, Real Press, Real ecr) {
   Real ni = xion * rho;
   Real mui = Get_mui(Temp, mu, xion);
   rho_ion = ni * mui/muH;
+  if (rho_ion < rho)
+    rho_ion = 0.999;
 
   return rho_ion;
 }

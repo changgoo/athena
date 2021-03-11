@@ -200,13 +200,6 @@ void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Rea
           new_ec += dt * ec_source_(k,j,i);
         }
 
-        if (pcr->losses_flag>0) {
-          new_ec -= pcr->lambdac * new_ec * rho * dt;
-          newfr1 -= pcr->lambdac * newfr1 * rho * dt;
-          newfr2 -= pcr->lambdac * newfr2 * rho * dt;
-          newfr3 -= pcr->lambdac * newfr3 * rho * dt;
-        }
-
         if(new_ec < 0.0)
           new_ec = ec[i];
 
@@ -221,6 +214,13 @@ void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Rea
           u(IM1,k,j,i) += (-(newfr1 - fc1[i]) * invlim);
           u(IM2,k,j,i) += (-(newfr2 - fc2[i]) * invlim);
           u(IM3,k,j,i) += (-(newfr3 - fc3[i]) * invlim);
+        }
+
+        if (pcr->losses_flag>0) {
+          new_ec -= pcr->lambdac * new_ec * rho * dt;
+          newfr1 -= pcr->lambdac * newfr1 * rho * dt;
+          newfr2 -= pcr->lambdac * newfr2 * rho * dt;
+          newfr3 -= pcr->lambdac * newfr3 * rho * dt;
         }
 
         u_cr(CRE,k,j,i) = new_ec;
