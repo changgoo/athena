@@ -213,13 +213,14 @@ CosmicRay::CosmicRay(MeshBlock *pmb, ParameterInput *pin):
     v_adv(3,pmb->ncells3,pmb->ncells2,pmb->ncells1),
     v_diff(3,pmb->ncells3,pmb->ncells2,pmb->ncells1),
     CRInjectionRate(pmb->ncells3,pmb->ncells2,pmb->ncells1),
-    flux{{NCR, pmb->ncells3, pmb->ncells2, pmb->ncells1+1},
-        {NCR,pmb->ncells3, pmb->ncells2+1, pmb->ncells1,
-        (pmb->pmy_mesh->f2 ? AthenaArray<Real>::DataStatus::allocated :
-        AthenaArray<Real>::DataStatus::empty)},
-        {NCR,pmb->ncells3+1, pmb->ncells2, pmb->ncells1,
-        (pmb->pmy_mesh->f3 ? AthenaArray<Real>::DataStatus::allocated :
-        AthenaArray<Real>::DataStatus::empty)}},
+    flux{ {NCR, pmb->ncells3, pmb->ncells2, pmb->ncells1+1},
+          {NCR,pmb->ncells3, pmb->ncells2+1, pmb->ncells1,
+           (pmb->pmy_mesh->f2 ? AthenaArray<Real>::DataStatus::allocated :
+            AthenaArray<Real>::DataStatus::empty)},
+          {NCR,pmb->ncells3+1, pmb->ncells2, pmb->ncells1,
+           (pmb->pmy_mesh->f3 ? AthenaArray<Real>::DataStatus::allocated :
+            AthenaArray<Real>::DataStatus::empty)}
+    },
     pmy_block(pmb),
     cr_bvar(pmb, &u_cr, &coarse_cr_, flux),
     UserSourceTerm_{} {
