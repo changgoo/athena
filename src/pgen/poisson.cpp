@@ -130,6 +130,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           }
           phia *= four_pi_G;
         } else if (iprob == 5) {
+          // n=1 polytrope in spherical geometry
           Real a0 = pin->GetOrAddReal("problem","a0",1.0);
           Real xi = PI*std::sqrt(r2)/a0;
           if (xi < PI) {
@@ -140,6 +141,18 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
             phia = PI/xi;
           }
           phia *= -four_pi_G*SQR(a0/PI);
+        } else if (iprob == 6) {
+          // n=1 polytrope in planar geometry (J.-G. Kim et al. 2012)
+          Real a0 = pin->GetOrAddReal("problem","a0",1.0);
+          Real xi = z/a0;
+          if (std::abs(xi) < 0.5*PI) {
+            den = std::cos(xi);
+            phia = 0.5*PI - std::cos(xi);
+          } else {
+            den = 0.0;
+            phia = std::abs(xi);
+          }
+          phia *= four_pi_G*SQR(a0);
         }
 
         if (nlim > 0) {
