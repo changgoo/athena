@@ -528,10 +528,10 @@ void SphericalPolar::AddCoordTermsDivergence(const Real dt, const AthenaArray<Re
 //----------------------------------------------------------------------------------------
 // Coordinate (Geometric) source term function for cosmic rays
 
-void SphericalPolar::AddCoordTermsDivergence(int flag,
+void SphericalPolar::AddCoordTermsDivergence_CR(
   const AthenaArray<Real> &u_input, AthenaArray<Real> &coord_src) {
   // Go through cellscosmicray
-  if(CR_ENABLED && (flag == 1)) {
+  if(CR_ENABLED) {
     CosmicRay *pcr=pmy_block->pcr;
     for (int k=pmy_block->ks; k<=pmy_block->ke; ++k) {
       for (int j=pmy_block->js; j<=pmy_block->je; ++j) {
@@ -553,7 +553,7 @@ void SphericalPolar::AddCoordTermsDivergence(int flag,
 //----------------------------------------------------------------------------------------
 // subtract Coordinate (Geometric) source term to get Grad Pc
 
-void SphericalPolar::AddCoordTermsDivergence(
+void SphericalPolar::SubtractCoordTermsDivergence_CR(
   const AthenaArray<Real> &u_cr, AthenaArray<Real> &grad_pc) {
   // Go through cellscosmicray
   if(CR_ENABLED) {

@@ -389,7 +389,7 @@ void CRIntegrator::CalculateFluxes(AthenaArray<Real> &w,
 
         //need to subtract the coordinate source term to get the actual grad Pc for c
         // curlinear coordinate system
-        pmb->pcoord->AddCoordTermsDivergence(cr, grad_pc_);
+        pmb->pcoord->SubtractCoordTermsDivergence_CR(cr, grad_pc_);
 
         // calculate streaming velocity with magnetic field
         for(int i=is; i<=ie; ++i) {
@@ -468,7 +468,7 @@ void CRIntegrator::CalculateFluxes(AthenaArray<Real> &w,
 
   //-----------------------------------------------------------------------
   // calculate coordinate source terms for Cosmic ray
-  pco->AddCoordTermsDivergence(1,cr,coord_source_);
+  pco->AddCoordTermsDivergence_CR(cr,coord_source_);
 }
 
 
