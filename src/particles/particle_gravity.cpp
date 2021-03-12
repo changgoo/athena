@@ -55,13 +55,17 @@ ParticleGravity::~ParticleGravity() {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void ParticleGravity::ExertGravitationalForce(Real dt)
-//! \brief exerts the gravitational force on each particle.
-
-void ParticleGravity::ExertGravitationalForce(Real dt) {
+//! \fn void ParticleGravity::InterpolateGravitationalForce(Real dt)
+//! \brief interpolartes the gravitational force onto each particle.
+void ParticleGravity::InterpolateGravitationalForce() {
   // Interpolate the gravitational force onto each particle.
   pmy_pm->InterpolateMeshToParticles(gforce, 0, pmy_par->work, igx, 3);
+}
 
+//--------------------------------------------------------------------------------------
+//! \fn void ParticleGravity::ExertGravitationalForce(Real dt)
+//! \brief exerts the gravitational force on each particle.
+void ParticleGravity::ExertGravitationalForce(Real dt) {
   // Add the force.
   for (int k = 0; k < pmy_par->npar; ++k) {
     pmy_par->vpx(k) += dt * pmy_par->work(igx,k);

@@ -25,6 +25,7 @@ class ParticleGravity {
   ~ParticleGravity();
 
   // Instance methods
+  void InterpolateGravitationalForce();
   void ExertGravitationalForce(Real dt);
   void FindGravitationalForce(const AthenaArray<Real>& phi);
 

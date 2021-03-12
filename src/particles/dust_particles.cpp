@@ -211,6 +211,7 @@ void DustParticles::SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsr
   if (SELF_GRAVITY_ENABLED && backreaction) {
     // Add gravitational force from the Poisson solution.
     ppgrav->FindGravitationalForce(pmy_block->pgrav->phi);
+    ppgrav->InterpolateGravitationalForce();
     ppgrav->ExertGravitationalForce(dt);
   }
 }
