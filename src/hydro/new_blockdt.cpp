@@ -105,9 +105,9 @@ void Hydro::NewBlockTimeStep() {
               dt3(i) /= (speed);
             } else {
               Real cs = pmb->peos->SoundSpeed(wi);
-              Real speed1 = std::max(cspeed, (fabs(wi[IVX]) + cs));
-              Real speed2 = std::max(cspeed, (fabs(wi[IVY]) + cs));
-              Real speed3 = std::max(cspeed, (fabs(wi[IVZ]) + cs));
+              Real speed1 = std::max(cspeed, (std::fabs(wi[IVX]) + cs));
+              Real speed2 = std::max(cspeed, (std::fabs(wi[IVY]) + cs));
+              Real speed3 = std::max(cspeed, (std::fabs(wi[IVZ]) + cs));
               dt1(i) /= speed1;
               dt2(i) /= speed2;
               dt3(i) /= speed3;

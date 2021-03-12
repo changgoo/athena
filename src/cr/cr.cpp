@@ -102,7 +102,7 @@ inline void DefaultOpacity(MeshBlock *pmb, AthenaArray<Real> &u_cr,
           //diffusion coefficient
           pcr->sigma_diff(0,k,j,i) = pcr->Get_SigmaParallel(prim(IDN,k,j,i),
                                      prim(IPR,k,j,i),u_cr(CRE,k,j,i),
-                                     fabs(b_grad_pc)/btot);
+                                     std::fabs(b_grad_pc)/btot);
           if (pcr->perp_diff_flag == 0) {
             pcr->sigma_diff(1,k,j,i) = pcr->max_opacity;
             pcr->sigma_diff(2,k,j,i) = pcr->max_opacity;
@@ -135,7 +135,7 @@ inline void DefaultOpacity(MeshBlock *pmb, AthenaArray<Real> &u_cr,
           if(va < TINY_NUMBER) {
             pcr->sigma_adv(0,k,j,i) = pcr->max_opacity;
           } else {
-            pcr->sigma_adv(0,k,j,i) = fabs(b_grad_pc)/(btot * va * (1.0 + 1.0/3.0)
+            pcr->sigma_adv(0,k,j,i) = std::fabs(b_grad_pc)/(btot * va * (1.0 + 1.0/3.0)
                                                * invlim * u_cr(CRE,k,j,i));
           }
           pcr->sigma_adv(1,k,j,i) = pcr->max_opacity;
@@ -203,13 +203,14 @@ CosmicRay::CosmicRay(MeshBlock *pmb, ParameterInput *pin):
     v_adv(3,pmb->ncells3,pmb->ncells2,pmb->ncells1),
     v_diff(3,pmb->ncells3,pmb->ncells2,pmb->ncells1),
     CRInjectionRate(pmb->ncells3,pmb->ncells2,pmb->ncells1),
-    flux{{NCR, pmb->ncells3, pmb->ncells2, pmb->ncells1+1},
-        {NCR,pmb->ncells3, pmb->ncells2+1, pmb->ncells1,
-        (pmb->pmy_mesh->f2 ? AthenaArray<Real>::DataStatus::allocated :
-        AthenaArray<Real>::DataStatus::empty)},
-        {NCR,pmb->ncells3+1, pmb->ncells2, pmb->ncells1,
-        (pmb->pmy_mesh->f3 ? AthenaArray<Real>::DataStatus::allocated :
-        AthenaArray<Real>::DataStatus::empty)}},
+    flux{ {NCR, pmb->ncells3, pmb->ncells2, pmb->ncells1+1},
+          {NCR,pmb->ncells3, pmb->ncells2+1, pmb->ncells1,
+           (pmb->pmy_mesh->f2 ? AthenaArray<Real>::DataStatus::allocated :
+            AthenaArray<Real>::DataStatus::empty)},
+          {NCR,pmb->ncells3+1, pmb->ncells2, pmb->ncells1,
+           (pmb->pmy_mesh->f3 ? AthenaArray<Real>::DataStatus::allocated :
+            AthenaArray<Real>::DataStatus::empty)}
+    },
     pmy_block(pmb),
     cr_bvar(pmb, &u_cr, &coarse_cr_, flux),
     UserSourceTerm_{} {

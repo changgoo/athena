@@ -137,11 +137,11 @@ void CRIntegrator::CalculateFluxes(AthenaArray<Real> &w,
                                               pcr->v_diff(2,k,j,i));
           // take the absolute value
           // Also add the Alfven velocity for the streaming flux
-          pcr->v_diff(0,k,j,i) = fabs(pcr->v_diff(0,k,j,i));
+          pcr->v_diff(0,k,j,i) = std::fabs(pcr->v_diff(0,k,j,i));
 
-          pcr->v_diff(1,k,j,i) = fabs(pcr->v_diff(1,k,j,i));
+          pcr->v_diff(1,k,j,i) = std::fabs(pcr->v_diff(1,k,j,i));
 
-          pcr->v_diff(2,k,j,i) = fabs(pcr->v_diff(2,k,j,i));
+          pcr->v_diff(2,k,j,i) = std::fabs(pcr->v_diff(2,k,j,i));
         }
       }// end MHD
 
@@ -425,7 +425,7 @@ void CRIntegrator::CalculateFluxes(AthenaArray<Real> &w,
             pcr->v_adv(2,k,j,i) = -va3 * dpc_sign;
 
             if(va > TINY_NUMBER) {
-              pcr->sigma_adv(0,k,j,i) = fabs(b_grad_pc)/(std::sqrt(pb) * va *
+              pcr->sigma_adv(0,k,j,i) = std::fabs(b_grad_pc)/(std::sqrt(pb) * va *
                                    (4.0/3.0) * invlim * cr(CRE,k,j,i));
               pcr->sigma_adv(1,k,j,i) = pcr->max_opacity;
               pcr->sigma_adv(2,k,j,i) = pcr->max_opacity;
@@ -433,7 +433,7 @@ void CRIntegrator::CalculateFluxes(AthenaArray<Real> &w,
           }
 
           pcr->sigma_diff(0,k,j,i) = pcr->Get_SigmaParallel(w(IDN,k,j,i),w(IPR,k,j,i),
-                                     cr(CRE,k,j,i),fabs(b_grad_pc)/std::sqrt(pb));
+                                     cr(CRE,k,j,i),std::fabs(b_grad_pc)/std::sqrt(pb));
           if (pcr->perp_diff_flag == 0) {
             pcr->sigma_diff(1,k,j,i) = pcr->max_opacity;
             pcr->sigma_diff(2,k,j,i) = pcr->max_opacity;

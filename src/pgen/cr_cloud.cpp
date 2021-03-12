@@ -276,7 +276,7 @@ void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr,
             if(va < TINY_NUMBER) {
               pcr->sigma_adv(0,k,j,i) = pcr->max_opacity;
             } else {
-              pcr->sigma_adv(0,k,j,i) = fabs(pcr->b_grad_pc(k,j,i))
+              pcr->sigma_adv(0,k,j,i) = std::fabs(pcr->b_grad_pc(k,j,i))
                           /(std::sqrt(pb)* va * (1.0 + 1.0/3.0)
                           * invlim * u_cr(CRE,k,j,i));
             }
@@ -329,14 +329,14 @@ void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr,
             pcr->sigma_adv(0,k,j,i) = pcr->max_opacity;
             pcr->v_adv(0,k,j,i) = 0.0;
           } else {
-            Real sigma2 = fabs(grad_pr)/(va * (1.0 + 1.0/3.0)
+            Real sigma2 = std::fabs(grad_pr)/(va * (1.0 + 1.0/3.0)
                             * invlim * u_cr(CRE,k,j,i));
-            if(fabs(grad_pr) < TINY_NUMBER) {
+            if(std::fabs(grad_pr) < TINY_NUMBER) {
               pcr->sigma_adv(0,k,j,i) = 0.0;
               pcr->v_adv(0,k,j,i) = 0.0;
             } else {
               pcr->sigma_adv(0,k,j,i) = sigma2;
-              pcr->v_adv(0,k,j,i) = -va * grad_pr/fabs(grad_pr);
+              pcr->v_adv(0,k,j,i) = -va * grad_pr/std::fabs(grad_pr);
             }
           }
           pcr->sigma_adv(1,k,j,i) = pcr->max_opacity;
