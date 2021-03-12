@@ -1,5 +1,5 @@
 <comment>
-problem   = Cloud test
+problem   = Bottleneck effect test
 reference = 
 configure = --prob=cr_cloud
 
