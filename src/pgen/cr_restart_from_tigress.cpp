@@ -224,7 +224,7 @@ void CalculateInjectionRate(ParameterInput *pin, MeshBlock *pmb,
         Real yy = j * cell_y;
         Real zz = k * cell_z;
         Real R2 = std::pow(xx,2) + std::pow(yy,2) + std::pow(zz,2);
-        Real R = sqrt(R2);
+        Real R = std::sqrt(R2);
         if (R <= inj_R) inj_volume += cell_volume;
       }
     }
@@ -268,7 +268,7 @@ void CalculateInjectionRate(ParameterInput *pin, MeshBlock *pmb,
             Real R2 = std::pow(pmb->pcoord->x1v(i)-grid_xs,2)
                     + std::pow(pmb->pcoord->x2v(j)-grid_ys,2)
                     + std::pow(pmb->pcoord->x3v(k)-grid_zs,2);
-            Real R = sqrt(R2);
+            Real R = std::sqrt(R2);
             CRInjectionRate(k,j,i) += InjectionRate_in_code/inj_volume
               * exp(-R2/(2.*sigma*sigma)); //gaussian distribution
 
@@ -575,7 +575,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           Real v2 = phydro->w(IVX,k,j,i)*phydro->w(IVX,k,j,i)+phydro->w(IVY,k,j,i)*
             phydro->w(IVY,k,j,i)+phydro->w(IVZ,k,j,i)*phydro->w(IVZ,k,j,i);
           Real Flux_Bs = 0.5 * tot_InjectionRate / (x1size * x2size);
-          pcr->u_cr(CRE,k,j,i) = 3./4.*Flux_Bs/sqrt(v2);
+          pcr->u_cr(CRE,k,j,i) = 3./4.*Flux_Bs/std::sqrt(v2);
           pcr->u_cr(CRF1,k,j,i) = 0.0;
           pcr->u_cr(CRF2,k,j,i) = 0.0;
           pcr->u_cr(CRF3,k,j,i) = z1/std::abs(z1)*Flux_Bs/pcr->vmax;

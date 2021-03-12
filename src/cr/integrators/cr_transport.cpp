@@ -82,12 +82,12 @@ void CRIntegrator::CalculateFluxes(AthenaArray<Real> &w,
                         + 1.0/pcr->sigma_adv(0,k,j,i));
         Real taux = taufact_ * totsigma * pco->dx1f(i);
         taux = taux * taux/(2.0 * eddxx);
-        Real diffv = sqrt((1.0 - exp(-taux)) / taux);
+        Real diffv = std::sqrt((1.0 - exp(-taux)) / taux);
 
         if(taux < 1.e-3)
-          diffv = sqrt((1.0 - 0.5* taux));
+          diffv = std::sqrt((1.0 - 0.5* taux));
 
-        pcr->v_diff(0,k,j,i) = pcr->vmax * sqrt(eddxx) * diffv;
+        pcr->v_diff(0,k,j,i) = pcr->vmax * std::sqrt(eddxx) * diffv;
       }// end i direction
 
        // y direction
@@ -102,12 +102,12 @@ void CRIntegrator::CalculateFluxes(AthenaArray<Real> &w,
                         + 1.0/pcr->sigma_adv(1,k,j,i));
           Real tauy = taufact_ * totsigma * cwidth2_(i);
           tauy = tauy * tauy/(2.0 * eddyy);
-          Real diffv = sqrt((1.0 - exp(-tauy)) / tauy);
+          Real diffv = std::sqrt((1.0 - exp(-tauy)) / tauy);
 
           if(tauy < 1.e-3)
-            diffv = sqrt((1.0 - 0.5* tauy));
+            diffv = std::sqrt((1.0 - 0.5* tauy));
 
-          pcr->v_diff(1,k,j,i) = pcr->vmax * sqrt(eddyy) * diffv;
+          pcr->v_diff(1,k,j,i) = pcr->vmax * std::sqrt(eddyy) * diffv;
         } // end i
       } else {
         for(int i=0; i<ncells1; ++i)
@@ -126,12 +126,12 @@ void CRIntegrator::CalculateFluxes(AthenaArray<Real> &w,
                         + 1.0/pcr->sigma_adv(2,k,j,i));
           Real tauz = taufact_ * totsigma * cwidth3_(i);
           tauz = tauz * tauz/(2.0 * eddzz);
-          Real diffv = sqrt((1.0 - exp(-tauz)) / tauz);
+          Real diffv = std::sqrt((1.0 - exp(-tauz)) / tauz);
 
           if(tauz < 1.e-3)
-            diffv = sqrt((1.0 - 0.5* tauz));
+            diffv = std::sqrt((1.0 - 0.5* tauz));
 
-          pcr->v_diff(2,k,j,i) = pcr->vmax * sqrt(eddzz) * diffv;
+          pcr->v_diff(2,k,j,i) = pcr->vmax * std::sqrt(eddzz) * diffv;
         }
       } else {
         for(int i=0; i<ncells1; ++i)
@@ -157,22 +157,22 @@ void CRIntegrator::CalculateFluxes(AthenaArray<Real> &w,
 
       // need to add additional sound speed for stability
       for(int i=0; i<ncells1; ++i) {
-         Real cr_sound_x = vel_flx_flag_ * sqrt((4.0/9.0) *
+         Real cr_sound_x = vel_flx_flag_ * std::sqrt((4.0/9.0) *
                           cr(CRE,k,j,i)/w(IDN,k,j,i)) *
-                          pcr->v_diff(0,k,j,i)/(pcr->vmax * sqrt(1./3.));
+                          pcr->v_diff(0,k,j,i)/(pcr->vmax * std::sqrt(1./3.));
          pcr->v_diff(0,k,j,i) += cr_sound_x;
 
          if(ncells2 > 1) {
-           Real cr_sound_y = vel_flx_flag_ * sqrt((4.0/9.0) *
+           Real cr_sound_y = vel_flx_flag_ * std::sqrt((4.0/9.0) *
                              cr(CRE,k,j,i)/w(IDN,k,j,i)) *
-                             pcr->v_diff(1,k,j,i)/(pcr->vmax * sqrt(1./3.));
+                             pcr->v_diff(1,k,j,i)/(pcr->vmax * std::sqrt(1./3.));
            pcr->v_diff(1,k,j,i) += cr_sound_y;
          }
 
          if(ncells3 > 1) {
-           Real cr_sound_z = vel_flx_flag_ * sqrt((4.0/9.0) *
+           Real cr_sound_z = vel_flx_flag_ * std::sqrt((4.0/9.0) *
                              cr(CRE,k,j,i)/w(IDN,k,j,i)) *
-                             pcr->v_diff(2,k,j,i)/(pcr->vmax * sqrt(1./3.));
+                             pcr->v_diff(2,k,j,i)/(pcr->vmax * std::sqrt(1./3.));
            pcr->v_diff(2,k,j,i) += cr_sound_z;
          }
       } // end i
@@ -405,10 +405,10 @@ void CRIntegrator::CalculateFluxes(AthenaArray<Real> &w,
         for(int i=is; i<=ie; ++i) {
           Real inv_sqrt_rho;
           if (pcr->self_consistent_flag == 0) {
-            inv_sqrt_rho = 1.0/sqrt(w(IDN,k,j,i));
+            inv_sqrt_rho = 1.0/std::sqrt(w(IDN,k,j,i));
           } else {
             Real rhoi = pcr->Get_IonDensity(w(IDN,k,j,i),w(IPR,k,j,i),cr(CRE,k,j,i));
-            inv_sqrt_rho = 1.0/sqrt(rhoi);
+            inv_sqrt_rho = 1.0/std::sqrt(rhoi);
           }
 
           Real pb= bcc(IB1,k,j,i)*bcc(IB1,k,j,i)
@@ -424,7 +424,7 @@ void CRIntegrator::CalculateFluxes(AthenaArray<Real> &w,
             Real va2 = bcc(IB2,k,j,i) * inv_sqrt_rho;
             Real va3 = bcc(IB3,k,j,i) * inv_sqrt_rho;
 
-            Real va = sqrt(pb) * inv_sqrt_rho;
+            Real va = std::sqrt(pb) * inv_sqrt_rho;
             Real dpc_sign = 0.0;
 
             if(b_grad_pc > TINY_NUMBER) dpc_sign = 1.0;
@@ -435,7 +435,7 @@ void CRIntegrator::CalculateFluxes(AthenaArray<Real> &w,
             pcr->v_adv(2,k,j,i) = -va3 * dpc_sign;
 
             if(va > TINY_NUMBER) {
-              pcr->sigma_adv(0,k,j,i) = fabs(b_grad_pc)/(sqrt(pb) * va *
+              pcr->sigma_adv(0,k,j,i) = fabs(b_grad_pc)/(std::sqrt(pb) * va *
                                    (4.0/3.0) * invlim * cr(CRE,k,j,i));
               pcr->sigma_adv(1,k,j,i) = pcr->max_opacity;
               pcr->sigma_adv(2,k,j,i) = pcr->max_opacity;
@@ -443,7 +443,7 @@ void CRIntegrator::CalculateFluxes(AthenaArray<Real> &w,
           }
 
           pcr->sigma_diff(0,k,j,i) = pcr->Get_SigmaParallel(w(IDN,k,j,i),w(IPR,k,j,i),
-                                     cr(CRE,k,j,i),fabs(b_grad_pc)/sqrt(pb));
+                                     cr(CRE,k,j,i),fabs(b_grad_pc)/std::sqrt(pb));
           if (pcr->perp_diff_flag == 0) {
             pcr->sigma_diff(1,k,j,i) = pcr->max_opacity;
             pcr->sigma_diff(2,k,j,i) = pcr->max_opacity;

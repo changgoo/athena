@@ -265,12 +265,12 @@ void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr,
           Real pb= bcc(IB1,k,j,i)*bcc(IB1,k,j,i)
                   +bcc(IB2,k,j,i)*bcc(IB2,k,j,i)
                   +bcc(IB3,k,j,i)*bcc(IB3,k,j,i);
-          Real inv_sqrt_rho = 1.0/sqrt(prim(IDN,k,j,i));
+          Real inv_sqrt_rho = 1.0/std::sqrt(prim(IDN,k,j,i));
           Real va1 = bcc(IB1,k,j,i)*inv_sqrt_rho;
           Real va2 = bcc(IB2,k,j,i)*inv_sqrt_rho;
           Real va3 = bcc(IB3,k,j,i)*inv_sqrt_rho;
 
-          Real va = sqrt(pb/prim(IDN,k,j,i));
+          Real va = std::sqrt(pb/prim(IDN,k,j,i));
 
           if(pcr->stream_flag) {
             Real dpc_sign = 0.0;
@@ -284,7 +284,7 @@ void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr,
               pcr->sigma_adv(0,k,j,i) = pcr->max_opacity;
             } else {
               pcr->sigma_adv(0,k,j,i) = fabs(pcr->b_grad_pc(k,j,i))
-                          /(sqrt(pb)* va * (1.0 + 1.0/3.0)
+                          /(std::sqrt(pb)* va * (1.0 + 1.0/3.0)
                           * invlim * u_cr(CRE,k,j,i));
             }
             pcr->sigma_adv(1,k,j,i) = pcr->max_opacity;
@@ -299,9 +299,9 @@ void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr,
           }
 
           // Now calculate the angles of B
-          Real bxby = sqrt(bcc(IB1,k,j,i)*bcc(IB1,k,j,i) +
+          Real bxby = std::sqrt(bcc(IB1,k,j,i)*bcc(IB1,k,j,i) +
                            bcc(IB2,k,j,i)*bcc(IB2,k,j,i));
-          Real btot = sqrt(pb);
+          Real btot = std::sqrt(pb);
           if(btot > TINY_NUMBER) {
             pcr->b_angle(0,k,j,i) = bxby/btot;
             pcr->b_angle(1,k,j,i) = bcc(IB3,k,j,i)/btot;
@@ -330,7 +330,7 @@ void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr,
           Real grad_pr=(u_cr(CRE,k,j,i+1) - u_cr(CRE,k,j,i-1))/3.0;
           grad_pr /= distance;
 
-          Real va = 1.0/sqrt(prim(IDN,k,j,i));
+          Real va = 1.0/std::sqrt(prim(IDN,k,j,i));
 
           if(va < TINY_NUMBER) {
             pcr->sigma_adv(0,k,j,i) = pcr->max_opacity;
@@ -399,7 +399,7 @@ void FixMHDLeft(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
       for (int j=js; j<=je; ++j) {
 #pragma simd
         for (int i=1; i<=(NGHOST); ++i) {
-          //b.x1f(k,j,(is-i)) = sqrt(2.0*const_pb);  // reflect 1-field
+          //b.x1f(k,j,(is-i)) = std::sqrt(2.0*const_pb);  // reflect 1-field
           b.x1f(k,j,(is-i)) =  b.x1f(k,j,is);
         }
       }

@@ -103,7 +103,7 @@ inline void DefaultOpacity(MeshBlock *pmb, AthenaArray<Real> &u_cr,
         }
 
         for(int i=il; i<=iu; ++i) {
-          Real btot = sqrt(bcc(IB1,k,j,i)*bcc(IB1,k,j,i) +
+          Real btot = std::sqrt(bcc(IB1,k,j,i)*bcc(IB1,k,j,i) +
                            bcc(IB2,k,j,i)*bcc(IB2,k,j,i) +
                            bcc(IB3,k,j,i)*bcc(IB3,k,j,i));
 
@@ -123,11 +123,11 @@ inline void DefaultOpacity(MeshBlock *pmb, AthenaArray<Real> &u_cr,
 
           Real inv_sqrt_rho;
           if (pcr->self_consistent_flag == 0) {
-            inv_sqrt_rho = 1.0/sqrt(prim(IDN,k,j,i));
+            inv_sqrt_rho = 1.0/std::sqrt(prim(IDN,k,j,i));
           } else {
             Real rhoi = pcr->Get_IonDensity(prim(IDN,k,j,i),
                         prim(IPR,k,j,i),u_cr(CRE,k,j,i));
-            inv_sqrt_rho = 1.0/sqrt(rhoi);
+            inv_sqrt_rho = 1.0/std::sqrt(rhoi);
           }
           Real va1 = bcc(IB1,k,j,i) * inv_sqrt_rho;
           Real va2 = bcc(IB2,k,j,i) * inv_sqrt_rho;
@@ -159,7 +159,7 @@ inline void DefaultOpacity(MeshBlock *pmb, AthenaArray<Real> &u_cr,
           // b_angle[2]=sin_phi_b
           // b_angle[3]=cos_phi_b
 
-          Real bxby = sqrt(bcc(IB1,k,j,i)*bcc(IB1,k,j,i) +
+          Real bxby = std::sqrt(bcc(IB1,k,j,i)*bcc(IB1,k,j,i) +
                            bcc(IB2,k,j,i)*bcc(IB2,k,j,i));
 
           if(btot > TINY_NUMBER) {

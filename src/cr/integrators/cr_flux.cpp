@@ -43,8 +43,8 @@ void CRIntegrator::CRFlux(int fdir, int il, int iu,
     Real ar = std::max((meanadv + meandiffv),(vr+vdiff_r(i)));
     //Real al = std::min((-meandiffv),(-vdiff_l(i)));
     //Real ar = std::max((meandiffv),(vdiff_r(i)));
-    ar = std::min(ar,vmax * sqrt(eddr));
-    al = std::max(al,-vmax * sqrt(eddl));
+    ar = std::min(ar,vmax * std::sqrt(eddr));
+    al = std::max(al,-vmax * std::sqrt(eddl));
 
     Real bp = ar > 0.0 ? ar : 0.0;
     Real bm = al < 0.0 ? al : 0.0;
