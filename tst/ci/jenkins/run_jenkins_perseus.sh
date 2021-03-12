@@ -136,10 +136,12 @@ time python -u ./run_tests.py diffusion --silent
 #time python -u ./run_tests.py hydro4 --coverage="${lcov_capture_cmd}" -r="time/nlim=10" --silent || true
 time python -u ./run_tests.py hydro4 --silent
 
-# cooling regressiong
-time python -u ./run_tests.py cooling --coverage="${lcov_capture_cmd}" -r="time/nlim=10" --silent || true
+# cooling regression
+# time python -u ./run_tests.py cooling --coverage="${lcov_capture_cmd}" -r="time/nlim=10" --silent || true
 time python -u ./run_tests.py cooling --silent
 
+# CR regression
+time python -u ./run_tests.py cr --silent
 
 # Swap serial HDF5 library module for parallel HDF5 library:
 module unload hdf5/gcc/1.10.0
@@ -240,6 +242,9 @@ time python -u ./run_tests.py hydro4 --config=--cxx=icpc --silent
 
 # cooling regression
 time python -u ./run_tests.py cooling --config=--cxx=icpc --silent
+
+# CR regression
+time python -u ./run_tests.py cr --config=--cxx=icpc --silent
 
 # Swap serial HDF5 library module for parallel HDF5 library:
 module unload hdf5/intel-17.0/1.10.0
