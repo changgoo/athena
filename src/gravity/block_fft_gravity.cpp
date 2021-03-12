@@ -323,16 +323,35 @@ void BlockFFTGravity::ApplyKernel() {
           }
           kxy = std::sqrt((2.-2.*std::cos(kxt))/dx1sq_ +
                           (2.-2.*std::cos(ky ))/dx2sq_);
-          if ((slow_ilo+i==0)&&(slow_jlo+j==0)) {
-            kernel_e = k==0 ? 0.5*four_pi_G*Lx3_*(Real)(Nx3) : 0;
-            kernel_o = -four_pi_G*(Lx3_/(Real)(Nx3)) / (1. - std::cos(kz+PI/(Real)(Nx3)));
+
+          if (INTEGRATED_GREEN) {
+            if ((slow_ilo+i==0)&&(slow_jlo+j==0)) {
+              kernel_e = k==0 ? 0.5*four_pi_G*dx3_*(SQR(Nx3) + 0.25)
+                              : 0.125*four_pi_G*dx3_;
+              kernel_o = -four_pi_G*dx3_ / (1. - std::cos(kz+PI/Nx3))
+                         + 0.125*four_pi_G*dx3_;
+            } else {
+              kernel_e = -0.5*four_pi_G/kxy*(1. - std::exp(-kxy*Lx3_))
+                * std::sinh(0.5*kxy*dx3_)/(0.5*kxy*dx3_)
+                * std::sinh(kxy*dx3_) / (std::cosh(kxy*dx3_) - std::cos(kz))
+                + std::exp(-0.25*kxy*dx3_)*std::sinh(0.25*kxy*dx3_)/(0.25*kxy*dx3_)
+                - std::sinh(0.5*kxy*dx3_)/(0.5*kxy*dx3_);
+              kernel_o = -0.5*four_pi_G/kxy*(1. + std::exp(-kxy*Lx3_))
+                * std::sinh(0.5*kxy*dx3_)/(0.5*kxy*dx3_)
+                * std::sinh(kxy*dx3_) / (std::cosh(kxy*dx3_) - std::cos(kz+PI/Nx3))
+                + std::exp(-0.25*kxy*dx3_)*std::sinh(0.25*kxy*dx3_)/(0.25*kxy*dx3_)
+                - std::sinh(0.5*kxy*dx3_)/(0.5*kxy*dx3_);
+            }
           } else {
-            kernel_e = -0.5*four_pi_G/kxy*(1. - std::exp(-kxy*Lx3_))*
-              std::sinh(kxy*Lx3_/(Real)(Nx3)) /
-              (std::cosh(kxy*Lx3_/(Real)(Nx3)) - std::cos(kz));
-            kernel_o = -0.5*four_pi_G/kxy*(1. + std::exp(-kxy*Lx3_))*
-              std::sinh(kxy*Lx3_/(Real)(Nx3)) /
-              (std::cosh(kxy*Lx3_/(Real)(Nx3)) - std::cos(kz+PI/(Real)(Nx3)));
+            if ((slow_ilo+i==0)&&(slow_jlo+j==0)) {
+              kernel_e = k==0 ? 0.5*four_pi_G*dx3_*SQR(Nx3) : 0;
+              kernel_o = -four_pi_G*dx3_ / (1. - std::cos(kz+PI/Nx3));
+            } else {
+              kernel_e = -0.5*four_pi_G/kxy*(1. - std::exp(-kxy*Lx3_))*
+                std::sinh(kxy*dx3_) / (std::cosh(kxy*dx3_) - std::cos(kz));
+              kernel_o = -0.5*four_pi_G/kxy*(1. + std::exp(-kxy*Lx3_))*
+                std::sinh(kxy*dx3_) / (std::cosh(kxy*dx3_) - std::cos(kz+PI/Nx3));
+            }
           }
           in_e_[idx] *= kernel_e;
           in_o_[idx] *= kernel_o;
