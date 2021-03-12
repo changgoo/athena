@@ -174,7 +174,7 @@ void CalculateInjectionRate(ParameterInput *pin, MeshBlock *pmb,
   int js=pmb->js, je=pmb->je;
   int is=pmb->is, ie=pmb->ie;
   int ierr;
-  size_t Nstars;
+  size_t Nstars(0);
 
   std::vector<StarParS> pList;
 
