@@ -17,7 +17,7 @@
 
 //----------------------------------------------------------------------------------------
 //! \fn Reconstruction::CRFlux()
-//  \brief HLLE flux for Cosmic Ray Transport
+//! \brief HLLE flux for Cosmic Ray Transport
 
 void CRIntegrator::CRFlux(int fdir, int il, int iu,
       AthenaArray<Real> &w_l, AthenaArray<Real> &w_r,

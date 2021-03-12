@@ -225,7 +225,7 @@ Reconstruction::Reconstruction(MeshBlock *pmb, ParameterInput *pin) :
   int nsize = NWAVE;
 
   if(CR_ENABLED)
-    nsize = std::max(nsize,5);
+    nsize = std::max(nsize,NCR+1);
 
   scr1_ni_.NewAthenaArray(std::max(nsize, NSCALARS), nc1);
   scr2_ni_.NewAthenaArray(std::max(nsize, NSCALARS), nc1);

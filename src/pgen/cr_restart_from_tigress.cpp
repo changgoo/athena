@@ -3,8 +3,10 @@
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
-//! \file from_athena_vtk.cpp
-//! \brief problem generator, initialize mesh by reading in athena rst files.
+//! \file cr_restart_from_tigress.cpp
+//! \brief Problem generator to study the propagation of cosmic rays in the galactic
+//! environment reproduced in TIGRESS. MHD quantities are initialised by reading in
+//! athena vtk files.
 //======================================================================================
 
 // C++ headers
@@ -46,7 +48,6 @@ struct StarParS {
   int merge_history;
   int isnew;
   int active;
-/* fundamental parameters NREAL=10 */
   Real m;
   Real x1;
   Real x2;
@@ -979,7 +980,7 @@ static void read_starpar_vtk(MeshBlock *mb, std::string filename,
   }
   fscanf(fp,"\n");
 
-  /* Read in CELL data */
+  // Read in CELL data
   fscanf(fp,"CELLS %d %d\n",&itmp1,&itmp2);
   if (SHOW_OUTPUT) std::cout<<"CELLS"<<itmp1<<" "<<itmp2<<std::endl;
   if (itmp1 != nstars && itmp2 != 2*nstars) {

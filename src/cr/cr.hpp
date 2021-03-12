@@ -6,7 +6,7 @@
 // See LICENSE file for full public license information.
 //======================================================================================
 //! \file cr.hpp
-//  \brief definitions for CosmicRay class
+//! \brief definitions for CosmicRay class
 //======================================================================================
 
 #include <string>
@@ -23,7 +23,7 @@ class ParameterInput;
 class CRIntegrator;
 
 //! \class CosmicRay
-//  \brief CosmicRay data and functions
+//! \brief CosmicRay data and functions
 
 // Array indices for  moments
 enum {CRE=0, CRF1=1, CRF2=2, CRF3=3};

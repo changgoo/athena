@@ -6,7 +6,7 @@
 // See LICENSE file for full public license information.
 //======================================================================================
 //! \file cr_integrators.hpp
-//  \brief definitions for CosmicRay class
+//! \brief definitions for CosmicRay class
 //======================================================================================
 
 // Athena++ classes headers
@@ -20,7 +20,7 @@ class ParameterInput;
 class CosmicRay;
 
 //! \class CRIntegrator
-//  \brief integrate algorithm for cosmic ray transport
+//! \brief integrate algorithm for cosmic ray transport
 
 class CRIntegrator {
   friend class CosmicRay;
