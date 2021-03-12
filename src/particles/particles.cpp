@@ -316,12 +316,6 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
   active2_ = pmy_mesh->mesh_size.nx2 > 1;
   active3_ = pmy_mesh->mesh_size.nx3 > 1;
 
-  // Allocate integer properties.
-  intprop.NewAthenaArray(nint,nparmax);
-
-  // Allocate integer properties.
-  realprop.NewAthenaArray(nreal,nparmax);
-
   // Initiate ParticleMesh class.
   ParticleMesh::Initialize(pin);
 
@@ -331,19 +325,9 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
   imom2 = ppm->imom2;
   imom3 = ppm->imom3;
 
-  // Initiate ParticleBuffer class.
-  ParticleBuffer::SetNumberOfProperties(nint, nreal + naux);
-
-  // Allocate auxiliary properties.
-  if (naux > 0) auxprop.NewAthenaArray(naux,nparmax);
-
-  // Allocate working arrays.
-  if (nwork > 0) work.NewAthenaArray(nwork,nparmax);
-
-  // Shallow copy to shorthands.
-  AssignShorthands();
-
-  // PrintVariables();
+  // Actual memory allocation and shorthand assignment will be done in the derived class
+  // Initialization of ParticleBuffer, ParticleGravity
+  // has moved to the derived class
 }
 
 //--------------------------------------------------------------------------------------
@@ -368,6 +352,26 @@ Particles::~Particles() {
 
   // Delete mesh auxiliaries.
   delete ppm;
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void Particles::AllocateMemory()
+//! \brief memory allocation will be done at the end of derived class initialization
+void Particles::AllocateMemory() {
+  // Initiate ParticleBuffer class.
+  ParticleBuffer::SetNumberOfProperties(nint, nreal + naux);
+
+  // Allocate integer properties.
+  intprop.NewAthenaArray(nint,nparmax);
+
+  // Allocate integer properties.
+  realprop.NewAthenaArray(nreal,nparmax);
+
+  // Allocate auxiliary properties.
+  if (naux > 0) auxprop.NewAthenaArray(naux,nparmax);
+
+  // Allocate working arrays.
+  if (nwork > 0) work.NewAthenaArray(nwork,nparmax);
 }
 
 //--------------------------------------------------------------------------------------

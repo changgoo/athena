@@ -66,11 +66,8 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParame
     ppgrav = new ParticleGravity(this);
   }
 
-  // Re-Allocate working arrays.
-  work.DeleteAthenaArray();
-  work.NewAthenaArray(nwork,nparmax);
+  Particles::AllocateMemory();
 
-  // Assign shorthands (need to do this for every constructor of a derived class)
   AssignShorthands();
 }
 

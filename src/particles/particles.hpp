@@ -151,7 +151,7 @@ friend class ParticleMesh;
   virtual void AssignShorthands();  //!> Needs to be called everytime
                                     //!> intprop, realprop, & auxprop are resized
                                     //!> Be sure to call back when derived.
-
+  virtual void AllocateMemory();    //!> Needs to be called in the derived class init
   void UpdateCapacity(int new_nparmax);  //!> Change the capacity of particle arrays
   void FindLocalDensityOnMesh(bool include_momentum);
   void ConvertToDensity(bool include_momentum);

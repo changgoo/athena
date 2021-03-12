@@ -29,13 +29,12 @@ TracerParticles::TracerParticles(MeshBlock *pmb, ParameterInput *pin,
   iwy = AddWorkingArray();
   iwz = AddWorkingArray();
 
-  // Re-Allocate working arrays.
-  work.DeleteAthenaArray();
-  work.NewAthenaArray(nwork,nparmax);
-
   // Define mass.
   mass = pin->GetOrAddReal(input_block_name, "mass", 1.0);
 
+  // allocate memory
+  Particles::AllocateMemory();
+  
   // Assign shorthands (need to do this for every constructor of a derived class)
   AssignShorthands();
 }
