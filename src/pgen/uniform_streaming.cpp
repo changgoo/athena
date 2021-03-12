@@ -33,6 +33,23 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     ATHENA_ERROR(msg);
   }
 
+  // This problem is for the dust particles and one container
+  if (Particles::num_particles != 1) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in function [MeshBlock::ProblemGenerator]" << std::endl
+        << "Only one dust particle container is allowed. " << std::endl;
+    ATHENA_ERROR(msg);
+  }
+
+  if (!(ppar[0]->partype.compare("dust") == 0)){
+    std::stringstream msg;
+    msg << "### FATAL ERROR in function [MeshBlock::ProblemGenerator]" << std::endl
+        << "Only dust particle is allowed. " << std::endl;
+    ATHENA_ERROR(msg);
+  }
+
+  DustParticles *pp = dynamic_cast<DustParticles*>(ppar[0]);
+
   // Get the (uniform) velocity of the gas.
   Real ux0, uy0, uz0;
   ux0 = pin->GetOrAddReal("problem", "ux0", 0.0);
@@ -78,16 +95,15 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real dx1 = mesh_size.x1len / npx1,
        dx2 = mesh_size.x2len / npx2,
        dx3 = mesh_size.x3len / npx3;
-  if (DustParticles *pp = dynamic_cast<DustParticles*>(ppar))
-    pp->SetOneParticleMass(dtog * vol / (npx1 * npx2 * npx3));
+  pp->SetOneParticleMass(dtog * vol / (npx1 * npx2 * npx3));
 
   // Determine number of particles in the block.
   int npx1_loc = static_cast<int>(std::round(block_size.x1len / dx1)),
       npx2_loc = static_cast<int>(std::round(block_size.x2len / dx2)),
       npx3_loc = static_cast<int>(std::round(block_size.x3len / dx3));
-  int npar = ppar->npar = npx1_loc * npx2_loc * npx3_loc;
-  if (npar > ppar->nparmax)
-    ppar->UpdateCapacity(npar);
+  int npar = pp->npar = npx1_loc * npx2_loc * npx3_loc;
+  if (npar > pp->nparmax)
+    pp->UpdateCapacity(npar);
 
   // Assign the particles.
   int ipar = 0;
@@ -97,23 +113,21 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       Real yp1 = block_size.x2min + (j + 0.5) * dx2;
       for (int i = 0; i < npx1_loc; ++i) {
         Real xp1 = block_size.x1min + (i + 0.5) * dx1;
-        ppar->xp(ipar) = xp1;
-        ppar->yp(ipar) = yp1;
-        ppar->zp(ipar) = zp1;
-        ppar->vpx(ipar) = vpx0;
-        ppar->vpy(ipar) = vpy0;
-        ppar->vpz(ipar) = vpz0;
+        pp->xp(ipar) = xp1;
+        pp->yp(ipar) = yp1;
+        pp->zp(ipar) = zp1;
+        pp->vpx(ipar) = vpx0;
+        pp->vpy(ipar) = vpy0;
+        pp->vpz(ipar) = vpz0;
         ++ipar;
       }
     }
   }
 
   // Initialize the stopping time.
-  if (DustParticles *pp = dynamic_cast<DustParticles*>(ppar)) {
-    if (pp->GetVariableTaus()) {
-      Real taus0 = pp->GetStoppingTime();
-      for (int k = 0; k < npar; ++k)
-        pp->taus(k) = taus0;
-    }
+  if (pp->GetVariableTaus()) {
+    Real taus0 = pp->GetStoppingTime();
+    for (int k = 0; k < npar; ++k)
+      pp->taus(k) = taus0;
   }
 }

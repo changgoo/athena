@@ -1,6 +1,6 @@
 <comment>
 problem   = Uniform Streaming
-reference = 
+reference =
 configure = --prob=uniform_streaming -p
 
 <job>
@@ -9,6 +9,12 @@ problem_id  = UniStream # problem ID: basename of output filenames
 <output1>
 file_type   = tab       # Tabular data dump
 variable    = prim      # variables to be output
+data_format = %24.17e   # Optional data format string
+dt          = 0.1       # time increment between outputs
+
+<output2>
+file_type  = partab     # Particle Tabular data dump
+variable   = prim       # variables to be output
 data_format = %24.17e   # Optional data format string
 dt          = 0.1       # time increment between outputs
 
@@ -68,10 +74,11 @@ level =  1
 gamma           = 1.4   # gamma = C_p/C_v
 iso_sound_speed = 1.0   # isothermal sound speed
 
-<particles>
-partype = dust
+<particle1>
+type = dust
 taus0 = 0.5          # drag stopping time
 backreaction = true  # turn on/off the back reaction of the gas drag
+output = true        # turn on/off output of this container
 
 <problem>
 npx1 = 32            # number of particles in the X1 direction

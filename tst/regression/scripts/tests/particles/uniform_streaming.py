@@ -43,7 +43,7 @@ def analyze():
     # Read the input file.
     athinput = athena_read.athinput("../../inputs/particles//athinput.uniform_streaming")
     input_mesh = athinput["mesh"]
-    input_particles = athinput["particles"]
+    input_particles = athinput["particle1"]
     input_problem = athinput["problem"]
 
     # Get the initial conditions.
