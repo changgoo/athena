@@ -284,8 +284,8 @@ const TaskID CALC_FLDFLX(3);
 const TaskID CALC_RADFLX(4);
 const TaskID CALC_CHMFLX(5);
 
-const TaskID SEND_HYDFLX(7);
-const TaskID SEND_FLDFLX(8);
+const TaskID SEND_HYDFLX(6);
+const TaskID SEND_FLDFLX(7);
 // const TaskID SEND_RADFLX(8);
 // const TaskID SEND_CHMFLX(9);
 
