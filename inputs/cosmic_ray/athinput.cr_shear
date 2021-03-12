@@ -1,38 +1,38 @@
 <comment>
-problem   = cosmic ray diffusion
+problem   = cosmic ray shear
 reference = 
-configure = --prob=cr_shearingbox
+configure = --prob=cr_shear
 
 <job>
 problem_id = cr        # problem ID: basename of output filenames
 
 <output1>
 file_type  = hdf5       # Binary data dump
-dt         = 0.01       # time increment between outputs
+dt         = 0.02       # time increment between outputs
 variable   = prim
 
 <output2>
 file_type  = hst       # Binary data dump
-dt         = 0.01       # time increment between outputs
+dt         = 0.02       # time increment between outputs
 
 <output3>
 file_type  = rst       # Binary data dump
-dt         = 0.01      # time increment between outputs
+dt         = 0.02      # time increment between outputs
 
 <time>
 cfl_number = 0.3       # The Courant, Friedrichs, & Lewy (CFL) Number
 nlim       = -1        # cycle limit
-tlim       = 0.1       # time limit
+tlim       = 0.02      # time limit
 ncycle_out = 10
 
 <mesh>
-nx1        = 512           # Number of zones in X1-direction
+nx1        = 256           # Number of zones in X1-direction
 x1min      = -1.0          # minimum value of X1
 x1max      = 1.0           # maximum value of X1
 ix1_bc     = shear_periodic    # inner-X1 boundary flag
 ox1_bc     = shear_periodic    # inner-X1 boundary flag
 
-nx2        = 128       # Number of zones in X2-direction
+nx2        = 64         # Number of zones in X2-direction
 x2min      = -0.25      # minimum value of X2
 x2max      = 0.25       # maximum value of X2
 ix2_bc     = periodic   # inner-X2 boundary flag
@@ -48,8 +48,8 @@ ox3_bc     = periodic  # inner-X3 boundary flag
 #refinement = static
 
 <meshblock>
-nx1         = 512
-nx2         = 128
+nx1         = 256
+nx2         = 64
 nx3         = 1
 
 <hydro>
@@ -64,7 +64,7 @@ sigma        = 10.
 vs_flag      = 1
 
 <orbital_advection>
-Omega0 = 0.2
+Omega0 = 0.5
 qshear = 1
 
 <problem>
