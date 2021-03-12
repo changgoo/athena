@@ -492,7 +492,9 @@ int main(int argc, char *argv[]) {
     pmesh->ncycle++;
     pmesh->time += pmesh->dt;
     mbcnt += pmesh->nbtotal;
-    if (PARTICLES) npcnt += pmesh->my_blocks(0)->ppar->GetTotalNumber(pmesh);
+    if (PARTICLES) {
+      npcnt += Particles::GetTotalNumber(pmesh);
+    }
     pmesh->step_since_lb++;
 
     pmesh->LoadBalancingAndAdaptiveMeshRefinement(pinput);

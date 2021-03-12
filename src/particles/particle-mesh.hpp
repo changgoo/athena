@@ -40,6 +40,7 @@ class ParticleMesh {
 friend class Particles;
 friend class DustParticles;
 friend class TracerParticles;
+friend class StarParticles;
 friend class ParticleGravity;
 friend class OutputType;
 
@@ -57,7 +58,7 @@ friend class OutputType;
 
   // methods
   int AddMeshAux();
-  
+
  protected:
   // Class variables
   int nmeshaux;  //!> number of auxiliaries to the meshblock
@@ -107,6 +108,7 @@ friend class OutputType;
   int ncells_;                        // total number of cells in meshaux
   int npc1_, npc2_, npc3_;            // size of a particle cloud
 
+  int my_ipar_;                //!> index to my particle container
   Particles *ppar_;            //!> ptr to my Particles instance
   MeshBlock *pmb_;             //!> ptr to my MeshBlock
   Mesh *pmesh_;                //!> ptr to my Mesh

@@ -25,7 +25,6 @@
 
 ParticleGravity::ParticleGravity(Particles *ppar) :
   igx(ppar->igx), igy(ppar->igy), igz(ppar->igz) {
-
   // Remember my parent Particles instance.
   pmy_par = ppar;
   pmy_pm = ppar->ppm;

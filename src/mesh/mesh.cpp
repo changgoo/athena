@@ -101,7 +101,6 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
     sts_loc(TaskType::main_int),
     muj(), nuj(), muj_tilde(), gammaj_tilde(),
     nbnew(), nbdel(),
-    partype(pin->GetOrAddString("particles", "partype", "none")),
     step_since_lb(), gflag(), turb_flag(), amr_updated(multilevel),
     // private members:
     next_phys_id_(), num_mesh_threads_(pin->GetOrAddInteger("mesh", "num_threads", 1)),
@@ -554,7 +553,8 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
   // Initialize neighbor lists in Particle class.
   if (PARTICLES) {
     for (int i = gids_; i <= gide_; i++)
-      my_blocks(i-gids_)->ppar->LinkNeighbors(tree, nrbx1, nrbx2, nrbx3, root_level);
+      for (Particles *ppar : my_blocks(i-gids_)->ppar)
+        ppar->LinkNeighbors(tree, nrbx1, nrbx2, nrbx3, root_level);
   }
 
   ResetLoadBalanceVariables();
@@ -606,6 +606,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     sts_loc(TaskType::main_int),
     muj(), nuj(), muj_tilde(), gammaj_tilde(),
     nbnew(), nbdel(),
+    particle_gravity(false),
     step_since_lb(), gflag(), turb_flag(), amr_updated(multilevel),
     // private members:
     next_phys_id_(), num_mesh_threads_(pin->GetOrAddInteger("mesh", "num_threads", 1)),
@@ -736,7 +737,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
   }
 
   // Initialize Particles class.
-  if (PARTICLES) DustParticles::Initialize(this, pin);
+  if (PARTICLES) Particles::Initialize(this, pin);
 
   if (EOS_TABLE_ENABLED) peos_table = new EosTable(pin);
   InitUserMeshData(pin);
@@ -907,7 +908,8 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
   // Initialize neighbor lists in Particle class.
   if (PARTICLES) {
     for (int i = 0; i < nblocal; ++i)
-      my_blocks(i)->ppar->LinkNeighbors(tree, nrbx1, nrbx2, nrbx3, root_level);
+      for (Particles *ppar : my_blocks(i)->ppar)
+        ppar->LinkNeighbors(tree, nrbx1, nrbx2, nrbx3, root_level);
   }
 
   // clean up

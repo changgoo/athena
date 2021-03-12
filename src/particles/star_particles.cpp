@@ -3,8 +3,8 @@
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //======================================================================================
-//! \file tracer_particles.cpp
-//! \brief implements functions in the TracerParticles class
+//! \file star_particles.cpp
+//! \brief implements functions in the starParticles class
 
 // C++ headers
 #include <algorithm>  // min()
@@ -18,11 +18,10 @@
 #include "particles.hpp"
 
 //--------------------------------------------------------------------------------------
-//! \fn TracerParticles::TracerParticles(MeshBlock *pmb, ParameterInput *pin)
-//! \brief constructs a TracerParticles instance.
+//! \fn StarParticles::StarParticles(MeshBlock *pmb, ParameterInput *pin)
+//! \brief constructs a StarParticles instance.
 
-TracerParticles::TracerParticles(MeshBlock *pmb, ParameterInput *pin,
-  ParticleParameters *pp)
+StarParticles::StarParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp)
   : Particles(pmb, pin, pp) {
   // Add working array at particles for gas velocity/particle momentum change.
   iwx = AddWorkingArray();
@@ -41,27 +40,27 @@ TracerParticles::TracerParticles(MeshBlock *pmb, ParameterInput *pin,
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn TracerParticles::~TracerParticles()
-//! \brief destroys a TracerParticles instance.
+//! \fn StarParticles::~StarParticles()
+//! \brief destroys a StarParticles instance.
 
-TracerParticles::~TracerParticles() {
+StarParticles::~StarParticles() {
   // nothing to do
   return;
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void TracerParticles::SetOneParticleMass(Real new_mass)
+//! \fn void StarParticles::SetOneParticleMass(Real new_mass)
 //! \brief sets the mass of each particle.
 
-void TracerParticles::SetOneParticleMass(Real new_mass) {
+void StarParticles::SetOneParticleMass(Real new_mass) {
   pinput->SetReal(input_block_name, "mass", mass = new_mass);
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void TracerParticles::AssignShorthands()
+//! \fn void StarParticles::AssignShorthands()
 //! \brief assigns shorthands by shallow coping slices of the data.
 
-void TracerParticles::AssignShorthands() {
+void StarParticles::AssignShorthands() {
   Particles::AssignShorthands();
   wx.InitWithShallowSlice(work, 2, iwx, 1);
   wy.InitWithShallowSlice(work, 2, iwy, 1);
@@ -69,10 +68,10 @@ void TracerParticles::AssignShorthands() {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void TracerParticles::SourceTerms()
+//! \fn void StarParticles::SourceTerms()
 //! \brief adds acceleration to particles.
 
-void TracerParticles::SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
+void StarParticles::SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
   ppm->InterpolateMeshToParticles(meshsrc, IVX, work, iwx, 3);
 
   // Transform the gas velocity into Cartesian.
@@ -86,7 +85,7 @@ void TracerParticles::SourceTerms(Real t, Real dt, const AthenaArray<Real>& mesh
                                                 wx(k), wy(k), wz(k));
   }
 
-  // Tracer particles
+  // Star particles
   for (int k = 0; k < npar; ++k) {
     vpx(k) = wx(k);
     vpy(k) = wy(k);
@@ -97,31 +96,31 @@ void TracerParticles::SourceTerms(Real t, Real dt, const AthenaArray<Real>& mesh
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void TracerParticles::UserSourceTerms(Real t, Real dt,
+//! \fn void StarParticles::UserSourceTerms(Real t, Real dt,
 //!                                         const AthenaArray<Real>& meshsrc)
 //! \brief adds additional source terms to particles, overloaded by the user.
 
-void __attribute__((weak)) TracerParticles::UserSourceTerms(
+void __attribute__((weak)) StarParticles::UserSourceTerms(
     Real t, Real dt, const AthenaArray<Real>& meshsrc) {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void TracerParticles::ReactToMeshAux(
+//! \fn void StarParticles::ReactToMeshAux(
 //!              Real t, Real dt, const AthenaArray<Real>& meshsrc)
 //! \brief Reacts to meshaux before boundary communications.
 
-void TracerParticles::ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
-  // Nothing to do for tracers
+void StarParticles::ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
+  // Nothing to do for stars
   return;
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void TracerParticles::DepositToMesh(Real t, Real dt,
+//! \fn void StarParticles::DepositToMesh(Real t, Real dt,
 //!              const AthenaArray<Real>& meshsrc, AthenaArray<Real>& meshdst);
 //! \brief Deposits meshaux to Mesh.
 
-void TracerParticles::DepositToMesh(
+void StarParticles::DepositToMesh(
          Real t, Real dt, const AthenaArray<Real>& meshsrc, AthenaArray<Real>& meshdst) {
-  // Nothing to do for tracers
+  // Nothing to do for stars
   return;
 }

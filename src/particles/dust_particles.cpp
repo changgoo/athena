@@ -18,19 +18,11 @@
 #include "particles.hpp"
 
 //--------------------------------------------------------------------------------------
-//! \fn void DustParticles::SetOneParticleMass(Real new_mass)
-//! \brief sets the mass of each particle.
-
-void DustParticles::SetOneParticleMass(Real new_mass) {
-  pinput->SetReal("particles", "mass", mass = new_mass);
-}
-
-//--------------------------------------------------------------------------------------
 //! \fn DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin)
 //! \brief constructs a DustParticles instance.
 
-DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin)
-  : Particles(pmb, pin), backreaction(false), dragforce(true), variable_taus(false),
+DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp)
+  : Particles(pmb, pin, pp), backreaction(false), dragforce(true), variable_taus(false),
   iwx(-1), iwy(-1), iwz(-1), idpx1(-1), idpx2(-1), idpx3(-1),
   itaus(-1), taus0(0.0) {
   // Add working array at particles for gas velocity/particle momentum change.
@@ -39,16 +31,16 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin)
   iwz = AddWorkingArray();
 
   // Define mass.
-  mass = pin->GetOrAddReal("particles", "mass", 1.0);
+  mass = pin->GetOrAddReal(input_block_name, "mass", 1.0);
 
   // Define stopping time.
-  variable_taus = pin->GetOrAddBoolean("particles", "variable_taus", variable_taus);
-  taus0 = pin->GetOrAddReal("particles", "taus0", taus0);
+  variable_taus = pin->GetOrAddBoolean(input_block_name, "variable_taus", variable_taus);
+  taus0 = pin->GetOrAddReal(input_block_name, "taus0", taus0);
   if (variable_taus) itaus = AddAuxProperty();
 
   // Turn on/off back reaction.
   dragforce = taus0 >= 0.0;
-  backreaction = pin->GetOrAddBoolean("particles", "backreaction", false);
+  backreaction = pin->GetOrAddBoolean(input_block_name, "backreaction", false);
   if (taus0 == 0.0) backreaction = false;
 
   if (backreaction) {
@@ -64,7 +56,8 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin)
   }
 
   if (SELF_GRAVITY_ENABLED && backreaction) {
-    isgravity_ = true;
+    isgravity_ = pp->gravity;
+    pmy_mesh->particle_gravity = true;
     // Add working arrays for gravity forces
     igx = AddWorkingArray();
     igy = AddWorkingArray();
@@ -86,14 +79,16 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin)
 //! \brief destroys a DustParticles instance.
 
 DustParticles::~DustParticles() {
-  // Delete working arrays here
-  if (nwork > 0) {
-    work.DeleteAthenaArray();
-    nwork = 0;
-  }
-
   if (SELF_GRAVITY_ENABLED && backreaction)
     delete ppgrav;
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void DustParticles::SetOneParticleMass(Real new_mass)
+//! \brief sets the mass of each particle.
+
+void DustParticles::SetOneParticleMass(Real new_mass) {
+  pinput->SetReal(input_block_name, "mass", mass = new_mass);
 }
 
 //--------------------------------------------------------------------------------------

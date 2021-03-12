@@ -10,6 +10,7 @@
 
 // C/C++ Standard Libraries
 #include <string>
+#include <vector>
 
 // Athena headers
 #include "../athena.hpp"
@@ -40,6 +41,19 @@ struct Neighbor {
   Neighbor() : pnb(NULL), pmb(NULL), next(NULL), prev(NULL) {}
 };
 
+//----------------------------------------------------------------------------------------
+//! \struct ParticleParameters
+//! \brief  container for parameters read from `<particle?>` block in the input file
+
+struct ParticleParameters {
+  int block_number, ipar;
+  bool table_output, gravity;
+  std::string block_name;
+  std::string partype;
+
+  ParticleParameters() : block_number(0), ipar(-1), table_output(false), gravity(false) {}
+};
+
 //--------------------------------------------------------------------------------------
 //! \class Particles
 //! \brief defines the base class for all implementations of particles.
@@ -52,21 +66,23 @@ friend class ParticleMesh;
 
  public:
   // Class methods
-  static void AMRCoarseToFine(MeshBlock* pmbc, MeshBlock* pmbf);
-  static void AMRFineToCoarse(MeshBlock* pmbf, MeshBlock* pmbc);
+  static void AMRCoarseToFine(Particles *pparc, Particles *pparf, MeshBlock* pmbf);
+  static void AMRFineToCoarse(Particles *pparc, Particles *pparf);
   static void Initialize(Mesh *pm, ParameterInput *pin);
   static void PostInitialize(Mesh *pm, ParameterInput *pin);
-  static void FindDensityOnMesh(Mesh *pm, bool include_momentum);
-  static void FindHistoryOutput(Mesh *pm, Real data_sum[], int pos);
+  static void FindDensityOnMesh(Mesh *pm, bool include_momentum, bool for_gravity);
   static void FormattedTableOutput(Mesh *pm, OutputParameters op);
-  static void GetHistoryOutputNames(std::string output_names[]);
-  static int GetTotalNumber(Mesh *pm);
+  static void GetHistoryOutputNames(std::string output_names[], int ipar);
+  static std::int64_t GetTotalNumber(Mesh *pm);
 
   // Class constant
   static const int NHISTORY = 7;  //!> number of variables in history output
+  // number of particle containers
+  static int num_particles, num_particles_grav, num_particles_output;
+
 
   // Constructor
-  Particles(MeshBlock *pmb, ParameterInput *pin);
+  Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp);
 
   // Destructor
   virtual ~Particles();
@@ -79,6 +95,8 @@ friend class ParticleMesh;
 
 
   // Instance methods
+  void AddHistoryOutput(Real data_sum[], int pos);
+
   void ClearBoundary();
   void ClearNeighbors();
   void Integrate(int step);
@@ -106,10 +124,11 @@ friend class ParticleMesh;
 
   // Class variables
   static bool initialized;  //!> whether or not the class is initialized
-  static Real cfl_par;  //!> CFL number for particles
   static ParameterInput *pinput;
 
   // Instance variables
+  std::string input_block_name, partype;
+
   int nint;          //!> numbers of integer particle properties
   int nreal;         //!> numbers of real particle properties
   int naux;          //!> number of auxiliary particle properties
@@ -127,21 +146,25 @@ friend class ParticleMesh;
   int imom1, imom2, imom3;  // indices for momentum components on mesh
 
   int igx, igy, igz; // indices for gravity force
-  
+
   // Instance methods
   virtual void AssignShorthands();  //!> Needs to be called everytime
                                     //!> intprop, realprop, & auxprop are resized
                                     //!> Be sure to call back when derived.
 
   void UpdateCapacity(int new_nparmax);  //!> Change the capacity of particle arrays
+  void FindLocalDensityOnMesh(bool include_momentum);
+  void ConvertToDensity(bool include_momentum);
 
   // Instance variables
   // std::uint64_t npar;     //!> number of particles
   // std::uint64_t nparmax;  //!> maximum number of particles per meshblock
   int npar;     //!> number of particles
   int nparmax;  //!> maximum number of particles per meshblock
+  int my_ipar_;
   bool isgravity_; //!> flag for gravity
   Real mass;   //!> mass of each particle
+  Real cfl_par;  //!> CFL number for particles
 
                                // Data attached to the particles:
   AthenaArray<int> intprop;    //!>   integer properties
@@ -165,7 +188,7 @@ friend class ParticleMesh;
 
  private:
   // Class method
-  static void ProcessNewParticles(Mesh *pmesh);
+  static void ProcessNewParticles(Mesh *pmesh, int ipar);
 
   // Instance methods
   virtual void SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc)=0;
@@ -191,10 +214,11 @@ friend class ParticleMesh;
       int ox1, int ox2, int ox3, int xi1, int xi2, int xi3);
 
   // Class variable
-  static int idmax;
+  static std::vector<int> idmax;
 
   // Instance variables
   bool active1_, active2_, active3_;  // active dimensions
+  int my_particle_num_;
 
   // MeshBlock-to-MeshBlock communication:
   BoundaryValues *pbval_;            //!> ptr to my BoundaryValues
@@ -232,7 +256,7 @@ friend class MeshBlock;
   Real GetStoppingTime() { return taus0; }
 
   //!Constructor
-  DustParticles(MeshBlock *pmb, ParameterInput *pin);
+  DustParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp);
 
   // Destructor
   ~DustParticles();
@@ -270,21 +294,54 @@ friend class MeshBlock;
 
 //--------------------------------------------------------------------------------------
 //! \class TracerParticles
-//! \brief defines the class for Tracer particles that interact with the gas via drag
-//!        force.
+//! \brief defines the class for Tracer particles
 
 class TracerParticles : public Particles {
 friend class MeshBlock;
 
  public:
   //!Constructor
-  TracerParticles(MeshBlock *pmb, ParameterInput *pin);
+  TracerParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp);
 
   // Destructor
   ~TracerParticles();
 
   // Instance method
-  Real NewBlockTimeStep();
+  void SetOneParticleMass(Real new_mass);
+  Real GetOneParticleMass() { return mass; }
+
+ private:
+  int iwx, iwy, iwz;         // indices for working arrays
+
+  // Instance methods.
+  void AssignShorthands() override;
+  void SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
+  void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
+  void ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
+  void DepositToMesh(Real t, Real dt, const AthenaArray<Real>& meshsrc,
+                     AthenaArray<Real>& meshdst) override;
+
+  // Instance variables
+  AthenaArray<Real> wx, wy, wz;        // shorthand for working arrays
+};
+
+//--------------------------------------------------------------------------------------
+//! \class StarParticles
+//! \brief defines the class for Star particles (currently just a copy of Tracer)
+
+class StarParticles : public Particles {
+friend class MeshBlock;
+
+ public:
+  //!Constructor
+  StarParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp);
+
+  // Destructor
+  ~StarParticles();
+
+  // Instance method
+  void SetOneParticleMass(Real new_mass);
+  Real GetOneParticleMass() { return mass; }
 
  private:
   int iwx, iwy, iwz;         // indices for working arrays

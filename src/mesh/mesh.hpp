@@ -25,6 +25,7 @@
 #include "../bvals/bvals.hpp"
 #include "../outputs/io_wrapper.hpp"
 #include "../parameter_input.hpp"
+#include "../particles/particles.hpp"
 #include "../task_list/task_list.hpp"
 #include "../utils/interp_table.hpp"
 #include "mesh_refinement.hpp"
@@ -116,13 +117,14 @@ class MeshBlock {
   // physics-related objects (possibly containing their derived bvals classes)
   Hydro *phydro;
   Field *pfield;
-  Particles *ppar;
   Gravity *pgrav;
   MGGravity *pmg;
   PassiveScalars *pscalars;
   EquationOfState *peos;
   OrbitalAdvection *porb;
   BlockFFTGravity *pfft;
+  // pointer to particle classes
+  std::vector<Particles *> ppar, ppar_grav;
 
   // functions
   std::size_t GetBlockSizeInBytes();
@@ -237,7 +239,8 @@ class Mesh {
   TaskType sts_loc;
   Real muj, nuj, muj_tilde, gammaj_tilde;
   int nbtotal, nblocal, nbnew, nbdel;
-  std::string partype;
+  std::vector<ParticleParameters> particle_params;
+  bool particle_gravity;
 
   int step_since_lb;
   int gflag;

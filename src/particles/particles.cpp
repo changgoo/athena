@@ -31,9 +31,11 @@
 
 // Class variable initialization
 bool Particles::initialized = false;
-int Particles::idmax = 0;
-Real Particles::cfl_par = 1;
+int Particles::num_particles = 0;
+int Particles::num_particles_grav = 0;
+int Particles::num_particles_output = 0;
 ParameterInput* Particles::pinput = NULL;
+std::vector<int> Particles::idmax;
 #ifdef MPI_PARALLEL
 MPI_Comm Particles::my_comm = MPI_COMM_NULL;
 #endif
@@ -45,9 +47,8 @@ static int CheckSide(int xi, int xi1, int xi2);
 //! \fn void Particles::AMRCoarseToFine(MeshBlock* pmbc, MeshBlock* pmbf)
 //! \brief load particles from a coarse meshblock to a fine meshblock.
 
-void Particles::AMRCoarseToFine(MeshBlock* pmbc, MeshBlock* pmbf) {
+void Particles::AMRCoarseToFine(Particles *pparc, Particles *pparf, MeshBlock* pmbf) {
   // Initialization
-  Particles *pparc = pmbc->ppar, *pparf = pmbf->ppar;
   const Real x1min = pmbf->block_size.x1min, x1max = pmbf->block_size.x1max;
   const Real x2min = pmbf->block_size.x2min, x2max = pmbf->block_size.x2max;
   const Real x3min = pmbf->block_size.x3min, x3max = pmbf->block_size.x3max;
@@ -82,9 +83,8 @@ void Particles::AMRCoarseToFine(MeshBlock* pmbc, MeshBlock* pmbf) {
 //! \fn void Particles::AMRFineToCoarse(MeshBlock* pmbf, MeshBlock* pmbc)
 //! \brief load particles from a fine meshblock to a coarse meshblock.
 
-void Particles::AMRFineToCoarse(MeshBlock* pmbf, MeshBlock* pmbc) {
+void Particles::AMRFineToCoarse(Particles *pparc, Particles *pparf) {
   // Check the capacity.
-  Particles *pparf = pmbf->ppar, *pparc = pmbc->ppar;
   int nparf = pparf->npar, nparc = pparc->npar;
   int npar_new = nparf + nparc;
   if (npar_new > pparc->nparmax) pparc->UpdateCapacity(npar_new);
@@ -109,9 +109,54 @@ void Particles::AMRFineToCoarse(MeshBlock* pmbf, MeshBlock* pmbc) {
 void Particles::Initialize(Mesh *pm, ParameterInput *pin) {
   if (initialized) return;
 
-  // Get the CFL number for particles.
-  cfl_par = pin->GetOrAddReal("particles", "cfl_par", pm->cfl_number);
+  InputBlock *pib = pin->pfirst_block;
+  // pm->particle_params.reserve(1);
+  // loop over input block names.  Find those that start with "particle", read parameters,
+  // and construct singly linked list of ParticleTypes.
+  while (pib != nullptr) {
+    if (pib->block_name.compare(0, 8, "particle") == 0) {
+      ParticleParameters pp;  // define temporary ParticleParameters struct
 
+      // extract integer number of particle block.  Save name and number
+      std::string parn = pib->block_name.substr(8); // 7 because counting starts at 0!
+      pp.block_number = atoi(parn.c_str());
+      pp.block_name.assign(pib->block_name);
+
+      // set particle type = [tracer, star, dust, none]
+      pp.partype = pin->GetString(pp.block_name, "type");
+      if (pp.partype.compare("none") != 0) { // skip input block if the type is none
+        if ((pp.partype.compare("dust") == 0) ||
+            (pp.partype.compare("tracer") == 0) ||
+            (pp.partype.compare("star") == 0)) {
+          pp.ipar = num_particles++;
+          idmax.push_back(0); // initialize idmax with 0
+          pp.table_output = pin->GetOrAddBoolean(pp.block_name,"output",false);
+          pp.gravity = pin->GetOrAddBoolean(pp.block_name,"gravity",false);
+          if (pp.table_output) num_particles_output++;
+          if (pp.gravity) num_particles_grav++;
+          pm->particle_params.push_back(pp);
+        } else { // unsupported particle type
+          std::stringstream msg;
+          msg << "### FATAL ERROR in Particle Initializer" << std::endl
+              << "Unrecognized particle type = '" << pp.partype
+              << "' in particle block '" << pp.block_name << "'" << std::endl;
+          ATHENA_ERROR(msg);
+        }
+      }
+    }
+    pib = pib->pnext;  // move to next input block name
+  }
+
+  if (Globals::my_rank == 0) {
+    std::cout << "Particles are initalized with "
+              << "N containers = " << num_particles << std::endl;
+    for (ParticleParameters ppnew : pm->particle_params)
+      std::cout << "  ipar = " << ppnew.ipar
+                << "  partype = " << ppnew.partype
+                << "  output = " << ppnew.table_output
+                << "  block_name = " << ppnew.block_name
+                << std::endl;
+  }
   // Remember the pointer to input parameters.
   pinput = pin;
 
@@ -129,11 +174,13 @@ void Particles::Initialize(Mesh *pm, ParameterInput *pin) {
 
 void Particles::PostInitialize(Mesh *pm, ParameterInput *pin) {
   // Set particle IDs.
-  ProcessNewParticles(pm);
+  for (int ipar = 0; ipar < Particles::num_particles; ++ipar)
+    ProcessNewParticles(pm, ipar);
 
   // Set position indices.
   for (int b = 0; b < pm->nblocal; ++b)
-    pm->my_blocks(b)->ppar->SetPositionIndices();
+    for (Particles *ppar : pm->my_blocks(b)->ppar)
+      ppar->SetPositionIndices();
 }
 
 //--------------------------------------------------------------------------------------
@@ -147,67 +194,37 @@ void Particles::PostInitialize(Mesh *pm, ParameterInput *pin) {
 //!   if include_momentum is true, ppm->meshaux(imom1:imom3,:,:,:)
 //!   becomes the momentum density.
 
-void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
+void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum, bool for_gravity) {
   // Assign particle properties to mesh and send boundary.
   int nblocks(pm->nblocal);
+  int np = for_gravity ? Particles::num_particles_grav : Particles::num_particles;
   for (int b = 0; b < nblocks; ++b) {
-    const MeshBlock *pmb(pm->my_blocks(b));
-    const Particles *ppar(pmb->ppar);
-    ParticleMesh *ppm(ppar->ppm);
-    ppm->StartReceiving();
-    if (include_momentum) {
-      AthenaArray<Real> vp, vp1, vp2, vp3;
-      vp.NewAthenaArray(3, ppar->npar);
-      vp1.InitWithShallowSlice(vp, 2, 0, 1);
-      vp2.InitWithShallowSlice(vp, 2, 1, 1);
-      vp3.InitWithShallowSlice(vp, 2, 2, 1);
-      const Coordinates *pcoord = pmb->pcoord;
-      for (int k = 0; k < ppar->npar; ++k)
-        pcoord->CartesianToMeshCoordsVector(ppar->xp(k), ppar->yp(k), ppar->zp(k),
-            ppar->vpx(k), ppar->vpy(k), ppar->vpz(k), vp1(k), vp2(k), vp3(k));
-      ppm->AssignParticlesToMeshAux(vp, 0, ppm->imom1, 3);
-    } else {
-      ppm->AssignParticlesToMeshAux(ppar->realprop, 0, ppm->iweight, 0);
+    MeshBlock *pmb(pm->my_blocks(b));
+    for (int i = 0; i < np; ++i) {
+      Particles *ppar = for_gravity ? pmb->ppar_grav[i] : pmb->ppar[i];
+      ppar->ppm->StartReceiving();
+      ppar->FindLocalDensityOnMesh(include_momentum);
+      ppar->ppm->SendBoundary();
     }
-    ppm->SendBoundary();
   }
 
-  std::vector<bool> completed(nblocks, false);
+  std::vector<bool> completed(nblocks*np, false);
   bool pending = true;
   while (pending) {
     pending = false;
-    for (int i = 0; i < nblocks; ++i) {
-      const MeshBlock *pmb(pm->my_blocks(i));
-      const Particles *ppar(pmb->ppar);
-      Coordinates *pc(pmb->pcoord);
-      ParticleMesh *ppm(ppar->ppm);
-      if (!completed[i]) {
+    for (int b = 0; b < nblocks; ++b) {
+      MeshBlock *pmb(pm->my_blocks(b));
+      for (int i = 0; i < np; ++i) {
+        Particles *ppar = for_gravity ? pmb->ppar_grav[i] : pmb->ppar[i];
+        ParticleMesh *ppm(ppar->ppm);
+        if (!completed[i+b*np]) {
         // Finalize boundary communications.
-        if ((completed[i] = ppm->ReceiveBoundary())) {
-          // Convert to densities.
-          const int is = ppm->is, ie = ppm->ie;
-          const int js = ppm->js, je = ppm->je;
-          const int ks = ppm->ks, ke = ppm->ke;
-          if (include_momentum) {
-            for (int k = ks; k <= ke; ++k)
-              for (int j = js; j <= je; ++j)
-                for (int i = is; i <= ie; ++i) {
-                  Real vol(pc->GetCellVolume(k,j,i));
-                  Real rhop(ppar->mass/vol);
-                  ppm->weight(k,j,i) *= rhop;
-                  ppm->meshaux(ppm->imom1,k,j,i) *= rhop;
-                  ppm->meshaux(ppm->imom2,k,j,i) *= rhop;
-                  ppm->meshaux(ppm->imom3,k,j,i) *= rhop;
-                }
+          if ((completed[i+b*np] = ppm->ReceiveBoundary())) {
+            ppar->ConvertToDensity(include_momentum);
+            ppm->ClearBoundary();
           } else {
-            for (int k = ks; k <= ke; ++k)
-              for (int j = js; j <= je; ++j)
-                for (int i = is; i <= ie; ++i)
-                  ppm->weight(k,j,i) *= ppar->mass/pc->GetCellVolume(k,j,i);
+            pending = true;
           }
-          ppm->ClearBoundary();
-        } else {
-          pending = true;
         }
       }
     }
@@ -215,66 +232,32 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void Particles::FindHistoryOutput(Mesh *pm, Real data_sum[], int pos)
-//! \brief finds the data sums of history output from particles in my process and assign
-//!   them to data_sum beginning at index pos.
-
-void Particles::FindHistoryOutput(Mesh *pm, Real data_sum[], int pos) {
-  const int NSUM = NHISTORY - 1;
-
-  // Initiate the summations.
-  std::int64_t np = 0;
-  std::vector<Real> sum(NSUM, 0.0);
-
-  // Sum over each meshblock.
-  Real vp1, vp2, vp3;
-  for (int b = 0; b < pm->nblocal; ++b) {
-    const MeshBlock *pmb(pm->my_blocks(b));
-    const Particles *ppar(pmb->ppar);
-    np += ppar->npar;
-    const Coordinates *pcoord(pmb->pcoord);
-    for (int k = 0; k < ppar->npar; ++k) {
-      pcoord->CartesianToMeshCoordsVector(ppar->xp(k), ppar->yp(k), ppar->zp(k),
-          ppar->vpx(k), ppar->vpy(k), ppar->vpz(k), vp1, vp2, vp3);
-      sum[0] += vp1;
-      sum[1] += vp2;
-      sum[2] += vp3;
-      sum[3] += vp1 * vp1;
-      sum[4] += vp2 * vp2;
-      sum[5] += vp3 * vp3;
-    }
-  }
-
-  // Assign the values to output variables.
-  data_sum[pos++] = static_cast<Real>(np);
-  for (int i = 0; i < NSUM; ++i)
-    data_sum[pos++] = sum[i];
-}
-
-//--------------------------------------------------------------------------------------
 //! \fn void Particles::GetHistoryOutputNames(std::string output_names[])
 //! \brief gets the names of the history output variables in history_output_names[].
 
-void Particles::GetHistoryOutputNames(std::string output_names[]) {
-  output_names[0] = "np";
-  output_names[1] = "vp1";
-  output_names[2] = "vp2";
-  output_names[3] = "vp3";
-  output_names[4] = "vp1^2";
-  output_names[5] = "vp2^2";
-  output_names[6] = "vp3^2";
+void Particles::GetHistoryOutputNames(std::string output_names[], int ipar) {
+  std::string head = "p";
+  head.append(std::to_string(ipar));
+  output_names[0] = head + "-n";
+  output_names[1] = head + "-v1";
+  output_names[2] = head + "-v2";
+  output_names[3] = head + "-v3";
+  output_names[4] = head + "-v1sq";
+  output_names[5] = head + "-v2sq";
+  output_names[6] = head + "-v3sq";
 }
 
 //--------------------------------------------------------------------------------------
 //! \fn int Particles::GetTotalNumber(Mesh *pm)
 //! \brief returns total number of particles (from all processes).
-
-int Particles::GetTotalNumber(Mesh *pm) {
-  int npartot(0);
+//! \todo This should separately count different types of particles
+std::int64_t Particles::GetTotalNumber(Mesh *pm) {
+  std::int64_t npartot(0);
   for (int b = 0; b < pm->nblocal; ++b)
-    npartot += pm->my_blocks(b)->ppar->npar;
+    for (Particles *ppar : pm->my_blocks(b)->ppar)
+      npartot += ppar->npar;
 #ifdef MPI_PARALLEL
-  MPI_Allreduce(MPI_IN_PLACE, &npartot, 1, MPI_INT, MPI_SUM, my_comm);
+  MPI_Allreduce(MPI_IN_PLACE, &npartot, 1, MPI_LONG, MPI_SUM, my_comm);
 #endif
   return npartot;
 }
@@ -283,12 +266,13 @@ int Particles::GetTotalNumber(Mesh *pm) {
 //! \fn Particles::Particles(MeshBlock *pmb, ParameterInput *pin)
 //! \brief constructs a Particles instance.
 
-Particles::Particles(MeshBlock *pmb, ParameterInput *pin) :
+Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp) :
+  input_block_name(pp->block_name), partype(pp->partype),
   nint(0), nreal(0), naux(0), nwork(0),
   ipid(-1), ixp(-1), iyp(-1), izp(-1), ivpx(-1), ivpy(-1), ivpz(-1),
   ixp0(-1), iyp0(-1), izp0(-1), ivpx0(-1), ivpy0(-1), ivpz0(-1),
   ixi1(-1), ixi2(-1), ixi3(-1), imom1(-1), imom2(-1), imom3(-1),
-  igx(-1), igy(-1), igz(-1), isgravity_(false), mass(1.0) {
+  igx(-1), igy(-1), igz(-1), my_ipar_(pp->ipar), isgravity_(false), mass(1.0) {
   // Add particle ID.
   ipid = AddIntProperty();
 
@@ -321,8 +305,11 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin) :
   pmy_block = pmb;
   pmy_mesh = pmb->pmy_mesh;
   pbval_ = pmb->pbval;
-  nparmax = pin->GetOrAddInteger("particles", "nparmax", 1);
+  nparmax = pin->GetOrAddInteger(input_block_name, "nparmax", 1);
   npar = 0;
+
+  // Get the CFL number for particles.
+  cfl_par = pin->GetOrAddReal(input_block_name, "cfl_par", 1);
 
   // Check active dimensions.
   active1_ = pmy_mesh->mesh_size.nx1 > 1;
@@ -381,6 +368,38 @@ Particles::~Particles() {
 
   // Delete mesh auxiliaries.
   delete ppm;
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void Particles::FindHistoryOutput(Real data_sum[], int pos)
+//! \brief finds the data sums of history output from particles in my process and assign
+//!   them to data_sum beginning at index pos.
+
+void Particles::AddHistoryOutput(Real data_sum[], int pos) {
+  const int NSUM = NHISTORY - 1;
+
+  // Initiate the summations.
+  std::int64_t np = 0;
+  std::vector<Real> sum(NSUM, 0.0);
+
+  Real vp1, vp2, vp3;
+  np += npar;
+
+  for (int k = 0; k < npar; ++k) {
+    pmy_block->pcoord->CartesianToMeshCoordsVector(xp(k), yp(k), zp(k),
+        vpx(k), vpy(k), vpz(k), vp1, vp2, vp3);
+    sum[0] += vp1;
+    sum[1] += vp2;
+    sum[2] += vp3;
+    sum[3] += vp1 * vp1;
+    sum[4] += vp2 * vp2;
+    sum[5] += vp3 * vp3;
+  }
+
+  // Assign the values to output variables.
+  data_sum[pos] = static_cast<Real>(np);
+  for (int i = 0; i < NSUM; ++i)
+    data_sum[pos+i+1] = sum[i];
 }
 
 //--------------------------------------------------------------------------------------
@@ -632,7 +651,7 @@ void Particles::SendToNeighbors() {
         continue;
       }
       // Use the target receive buffer.
-      ppb = &pn->pmb->ppar->recv_[pnb->targetid];
+      ppb = &pn->pmb->ppar[my_ipar_]->recv_[pnb->targetid];
 
     } else {
 #ifdef MPI_PARALLEL
@@ -665,7 +684,7 @@ void Particles::SendToNeighbors() {
     NeighborBlock& nb = pbval_->neighbor[i];
     int dst = nb.snb.rank;
     if (dst == Globals::my_rank) {
-      Particles *ppar = pmy_mesh->FindMeshBlock(nb.snb.gid)->ppar;
+      Particles *ppar = pmy_mesh->FindMeshBlock(nb.snb.gid)->ppar[my_ipar_];
       ppar->bstatus_[nb.targetid] =
           (ppar->recv_[nb.targetid].npar > 0) ? BoundaryStatus::arrived
                                               : BoundaryStatus::completed;
@@ -821,13 +840,13 @@ bool Particles::ReceiveParticleMesh(int stage) {
 //! \fn void Particles::ProcessNewParticles()
 //! \brief searches for and books new particles.
 
-void Particles::ProcessNewParticles(Mesh *pmesh) {
+void Particles::ProcessNewParticles(Mesh *pmesh, int ipar) {
   // Count new particles.
   const int nbtotal(pmesh->nbtotal), nblocks(pmesh->nblocal);
   std::vector<int> nnewpar(nbtotal, 0);
   for (int b = 0; b < nblocks; ++b) {
     const MeshBlock *pmb(pmesh->my_blocks(b));
-    nnewpar[pmb->gid] = pmb->ppar->CountNewParticles();
+    nnewpar[pmb->gid] = pmb->ppar[ipar]->CountNewParticles();
   }
 #ifdef MPI_PARALLEL
   MPI_Allreduce(MPI_IN_PLACE, &nnewpar[0], nbtotal, MPI_INT, MPI_MAX, my_comm);
@@ -840,9 +859,9 @@ void Particles::ProcessNewParticles(Mesh *pmesh) {
   // Set particle IDs.
   for (int b = 0; b < nblocks; ++b) {
     const MeshBlock *pmb(pmesh->my_blocks(b));
-    pmb->ppar->SetNewParticleID(idmax + (pmb->gid > 0 ? nnewpar[pmb->gid - 1] : 0));
+    pmb->ppar[ipar]->SetNewParticleID((pmb->gid > 0 ? nnewpar[pmb->gid - 1] : 0));
   }
-  idmax += nnewpar[nbtotal - 1];
+  idmax[ipar] += nnewpar[nbtotal - 1];
 }
 
 //--------------------------------------------------------------------------------------
@@ -1182,6 +1201,70 @@ Real Particles::NewBlockTimeStep() {
 }
 
 //--------------------------------------------------------------------------------------
+//! \fn void Particles::FindLocalDensityOnMesh(Mesh *pm, bool include_momentum)
+//! \brief finds the number density of particles on the mesh.
+//!
+//!   If include_momentum is true, the momentum density field is also computed,
+//!   assuming mass of each particle is unity.
+//! \note
+//!   Postcondition: ppm->weight becomes the density in each cell, and
+//!   if include_momentum is true, ppm->meshaux(imom1:imom3,:,:,:)
+//!   becomes the momentum density.
+
+void Particles::FindLocalDensityOnMesh(bool include_momentum) {
+  Coordinates *pc(pmy_block->pcoord);
+
+  if (include_momentum) {
+    AthenaArray<Real> vp, vp1, vp2, vp3;
+    vp.NewAthenaArray(3, npar);
+    vp1.InitWithShallowSlice(vp, 2, 0, 1);
+    vp2.InitWithShallowSlice(vp, 2, 1, 1);
+    vp3.InitWithShallowSlice(vp, 2, 2, 1);
+    for (int k = 0; k < npar; ++k)
+      pc->CartesianToMeshCoordsVector(xp(k), yp(k), zp(k),
+        vpx(k), vpy(k), vpz(k), vp1(k), vp2(k), vp3(k));
+    ppm->AssignParticlesToMeshAux(vp, 0, ppm->imom1, 3);
+  } else {
+    ppm->AssignParticlesToMeshAux(realprop, 0, ppm->iweight, 0);
+  }
+}
+//--------------------------------------------------------------------------------------
+//! \fn void Particles::ConvertToDensity(bool include_momentum)
+//! \brief finds the number density of particles on the mesh.
+//!
+//!   If include_momentum is true, the momentum density field is also computed,
+//!   assuming mass of each particle is unity.
+//! \note
+//!   Postcondition: ppm->weight becomes the density in each cell, and
+//!   if include_momentum is true, ppm->meshaux(imom1:imom3,:,:,:)
+//!   becomes the momentum density.
+
+void Particles::ConvertToDensity(bool include_momentum) {
+  Coordinates *pc(pmy_block->pcoord);
+  // Convert to densities.
+  int is = ppm->is, ie = ppm->ie;
+  int js = ppm->js, je = ppm->je;
+  int ks = ppm->ks, ke = ppm->ke;
+  if (include_momentum) {
+    for (int k = ks; k <= ke; ++k)
+      for (int j = js; j <= je; ++j)
+        for (int i = is; i <= ie; ++i) {
+          Real vol(pc->GetCellVolume(k,j,i));
+          Real rhop(mass/vol);
+          ppm->weight(k,j,i) *= rhop;
+          ppm->meshaux(ppm->imom1,k,j,i) *= rhop;
+          ppm->meshaux(ppm->imom2,k,j,i) *= rhop;
+          ppm->meshaux(ppm->imom3,k,j,i) *= rhop;
+        }
+  } else {
+    for (int k = ks; k <= ke; ++k)
+      for (int j = js; j <= je; ++j)
+        for (int i = is; i <= ie; ++i)
+          ppm->weight(k,j,i) *= mass/pc->GetCellVolume(k,j,i);
+  }
+}
+
+//--------------------------------------------------------------------------------------
 //! \fn std::size_t Particles::GetSizeInBytes()
 //! \brief returns the data size in bytes in the meshblock.
 
@@ -1252,39 +1335,44 @@ void Particles::FormattedTableOutput(Mesh *pm, OutputParameters op) {
   std::stringstream fname, msg;
   std::ofstream os;
 
-  // Loop over MeshBlocks
-  for (int b = 0; b < pm->nblocal; ++b) {
-    const MeshBlock *pmb(pm->my_blocks(b));
-    const Particles *ppar(pmb->ppar);
+  // Loop over Particle containers
+  for (int ipar = 0; ipar < num_particles ; ++ipar) {
+    if (pm->particle_params[ipar].table_output) {
+      // Loop over MeshBlocks
+      for (int b = 0; b < pm->nblocal; ++b) {
+        const MeshBlock *pmb(pm->my_blocks(b));
+        const Particles *ppar(pmb->ppar[ipar]);
 
-    // Create the filename.
-    fname << op.file_basename
-          << ".block" << pmb->gid << '.' << op.file_id
-          << '.' << std::setw(5) << std::right << std::setfill('0') << op.file_number
-          << '.' << "par.tab";
+        // Create the filename.
+        fname << op.file_basename
+              << ".block" << pmb->gid << '.' << op.file_id
+              << '.' << std::setw(5) << std::right << std::setfill('0') << op.file_number
+              << '.' << "par" << ipar << ".tab";
 
-    // Open the file for write.
-    os.open(fname.str().data());
-    if (!os.is_open()) {
-      msg << "### FATAL ERROR in function [Particles::FormattedTableOutput]"
-          << std::endl << "Output file '" << fname.str() << "' could not be opened"
-          << std::endl;
-      ATHENA_ERROR(msg);
+        // Open the file for write.
+        os.open(fname.str().data());
+        if (!os.is_open()) {
+          msg << "### FATAL ERROR in function [Particles::FormattedTableOutput]"
+              << std::endl << "Output file '" << fname.str() << "' could not be opened"
+              << std::endl;
+          ATHENA_ERROR(msg);
+        }
+
+        // Write the time.
+        os << std::scientific << std::showpoint << std::setprecision(18);
+        os << "# Athena++ particle data at time = " << pm->time << std::endl;
+
+        // Write the particle data in the meshblock.
+        for (int k = 0; k < ppar->npar; ++k)
+          os << ppar->pid(k) << "  "
+             << ppar->xp(k) << "  " << ppar->yp(k) << "  " << ppar->zp(k) << "  "
+             << ppar->vpx(k) << "  " << ppar->vpy(k) << "  " << ppar->vpz(k) << std::endl;
+
+        // Close the file and get the next meshblock.
+        os.close();
+        fname.str("");
+      }
     }
-
-    // Write the time.
-    os << std::scientific << std::showpoint << std::setprecision(18);
-    os << "# Athena++ particle data at time = " << pm->time << std::endl;
-
-    // Write the particle data in the meshblock.
-    for (int k = 0; k < ppar->npar; ++k)
-      os << ppar->pid(k) << "  "
-         << ppar->xp(k) << "  " << ppar->yp(k) << "  " << ppar->zp(k) << "  "
-         << ppar->vpx(k) << "  " << ppar->vpy(k) << "  " << ppar->vpz(k) << std::endl;
-
-    // Close the file and get the next meshblock.
-    os.close();
-    fname.str("");
   }
 }
 

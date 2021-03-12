@@ -192,7 +192,10 @@ void RestartOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool force_wr
       pdata += pmb->pfield->b.x3f.GetSizeInBytes();
     }
 
-    if (PARTICLES) pmb->ppar->PackParticlesForRestart(pdata);
+    if (PARTICLES) {
+      for (Particles *ppar : pmb->ppar)
+        ppar->PackParticlesForRestart(pdata);
+    }
 
     // (conserved variable) Passive scalars:
     if (NSCALARS > 0) {

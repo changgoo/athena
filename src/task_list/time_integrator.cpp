@@ -1518,7 +1518,8 @@ void TimeIntegratorTaskList::StartupTaskList(MeshBlock *pmb, int stage) {
 
   if (stage_wghts[stage-1].main_stage) {
     pmb->pbval->StartReceivingSubset(BoundaryCommSubset::all, pmb->pbval->bvars_main_int);
-    if (PARTICLES) pmb->ppar->StartReceiving();
+    for (int ipar = 0; ipar<Particles::num_particles; ++ipar)
+      pmb->ppar[ipar]->StartReceiving();
   } else {
     pmb->pbval->StartReceivingSubset(BoundaryCommSubset::orbital,
                                      pmb->pbval->bvars_main_int);
@@ -1540,7 +1541,8 @@ TaskStatus TimeIntegratorTaskList::ClearAllBoundary(MeshBlock *pmb, int stage) {
   if (stage_wghts[stage-1].main_stage) {
     pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::all,
                                     pmb->pbval->bvars_main_int);
-    if (PARTICLES) pmb->ppar->ClearBoundary();
+    for (int ipar = 0; ipar<Particles::num_particles; ++ipar)
+      pmb->ppar[ipar]->ClearBoundary();
   } else {
     pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::orbital,
                                     pmb->pbval->bvars_main_int);
@@ -2045,31 +2047,44 @@ TaskStatus TimeIntegratorTaskList::ReceiveEMFShear(MeshBlock *pmb, int stage) {
 
 enum TaskStatus TimeIntegratorTaskList::ParticlesIntegrate(MeshBlock *pmb, int stage) {
   if (integrator == "vl2") {
-    pmb->ppar->Integrate(stage);
+    for (Particles *ppar : pmb->ppar)
+      ppar->Integrate(stage);
     return TaskStatus::next;
   }
   return TaskStatus::fail;
 }
 
 enum TaskStatus TimeIntegratorTaskList::ParticlesSend(MeshBlock *pmb, int stage) {
-  pmb->ppar->SendToNeighbors();
+  for (Particles *ppar : pmb->ppar)
+    ppar->SendToNeighbors();
   return TaskStatus::success;
 }
 
 enum TaskStatus TimeIntegratorTaskList::ParticlesReceive(MeshBlock *pmb, int stage) {
-  if (pmb->ppar->ReceiveFromNeighbors())
+  bool ret_all(true), ret(false);
+  for (Particles *ppar : pmb->ppar) {
+    ret = ppar->ReceiveFromNeighbors();
+    ret_all = (ret_all && ret);
+  }
+  if (ret_all)
     return TaskStatus::success;
   else
     return TaskStatus::fail;
 }
 
 enum TaskStatus TimeIntegratorTaskList::ParticleMeshSend(MeshBlock *pmb, int stage) {
-  pmb->ppar->SendParticleMesh();
+  for (Particles *ppar : pmb->ppar)
+    ppar->SendParticleMesh();
   return TaskStatus::success;
 }
 
 enum TaskStatus TimeIntegratorTaskList::ParticleMeshReceive(MeshBlock *pmb, int stage) {
-  if (pmb->ppar->ReceiveParticleMesh(stage))
+  bool ret_all(true), ret(false);
+  for (Particles *ppar : pmb->ppar) {
+    ret = ppar->ReceiveParticleMesh(stage);
+    ret_all = (ret_all && ret);
+  }
+  if (ret_all)
     return TaskStatus::success;
   else
     return TaskStatus::fail;
@@ -2204,7 +2219,9 @@ TaskStatus TimeIntegratorTaskList::NewBlockTimeStep(MeshBlock *pmb, int stage) {
 
   pmb->phydro->NewBlockTimeStep();
   if (PARTICLES) {
-    Real min_dt = pmb->ppar->NewBlockTimeStep();
+    Real min_dt = pmb->new_block_dt_;
+    for (Particles *ppar : pmb->ppar)
+      min_dt = std::min(min_dt,ppar->NewBlockTimeStep());
     pmb->new_block_dt_ = std::min(pmb->new_block_dt_, min_dt);
   }
   return TaskStatus::success;

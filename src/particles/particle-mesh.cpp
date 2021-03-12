@@ -67,6 +67,8 @@ ParticleMesh::ParticleMesh(Particles *ppar) : nmeshaux(0), iweight(-1),
 
   // Save some inputs.
   ppar_ = ppar;
+  my_ipar_ = ppar->my_ipar_;
+
   pmb_ = ppar->pmy_block;
   pmesh_ = pmb_->pmy_mesh;
   pbval_ = pmb_->pbval;
@@ -831,7 +833,7 @@ void ParticleMesh::AssignParticlesToDifferentLevels(
     Real *pbuf0 = NULL;
     BoundaryData<> *pnbd = NULL;
     if (nb.snb.rank == Globals::my_rank) {
-      pnbd = &(pmesh_->FindMeshBlock(snb.gid)->ppar->ppm->bd_);
+      pnbd = &(pmesh_->FindMeshBlock(snb.gid)->ppar[my_ipar_]->ppm->bd_);
       pbuf0 = pnbd->recv[nb.targetid];
     }
 #ifdef MPI_PARALLEL
@@ -980,7 +982,7 @@ void ParticleMesh::SendBoundary() {
 
     // Load boundary values.
     if (snb.rank == Globals::my_rank) {
-      BoundaryData<> *pnbd = &(pmesh_->FindMeshBlock(snb.gid)->ppar->ppm->bd_);
+      BoundaryData<> *pnbd = &(pmesh_->FindMeshBlock(snb.gid)->ppar[my_ipar_]->ppm->bd_);
       if (snb.level == mylevel)
         LoadBoundaryBufferSameLevel(pnbd->recv[nb.targetid], ba_[n]);
       pnbd->flag[nb.targetid] = BoundaryStatus::arrived;

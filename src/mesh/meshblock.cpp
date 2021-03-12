@@ -180,10 +180,18 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
 
   peos = new EquationOfState(this, pin);
   if (PARTICLES) {
-    if (pm->partype == "dust")
-      ppar = new DustParticles(this, pin);
-    else
-      ppar = new TracerParticles(this, pin);
+    for (ParticleParameters pp : pm->particle_params) {
+      Particles *newppar;
+      if (pp.partype.compare("dust") == 0) {
+        newppar = new DustParticles(this, pin, &pp);
+      } else if (pp.partype.compare("tracer") == 0) {
+        newppar = new TracerParticles(this, pin, &pp);
+      } else if (pp.partype.compare("star") == 0) {
+        newppar = new StarParticles(this, pin, &pp);
+      }
+      ppar.push_back(newppar);
+      if (pp.gravity) ppar_grav.push_back(newppar);
+    }
   }
 
   // OrbitalAdvection: constructor depends on Coordinates, Hydro, Field, PassiveScalars.
@@ -305,7 +313,20 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
   }
 
   peos = new EquationOfState(this, pin);
-  if (PARTICLES) ppar = new DustParticles(this, pin);
+  if (PARTICLES) {
+    for (ParticleParameters pp : pm->particle_params) {
+      Particles *newppar;
+      if (pp.partype.compare("dust") == 0) {
+        newppar = new DustParticles(this, pin, &pp);
+      } else if (pp.partype.compare("tracer") == 0) {
+        newppar = new TracerParticles(this, pin, &pp);
+      } else if (pp.partype.compare("star") == 0) {
+        newppar = new StarParticles(this, pin, &pp);
+      }
+      ppar.push_back(newppar);
+      if (pp.gravity) ppar_grav.push_back(newppar);
+    }
+  }
 
   // OrbitalAdvection: constructor depends on Coordinates, Hydro, Field, PassiveScalars.
   porb = new OrbitalAdvection(this, pin);
@@ -338,7 +359,10 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
     os += pfield->b.x3f.GetSizeInBytes();
   }
 
-  if (PARTICLES) ppar->UnpackParticlesForRestart(mbdata, os);
+  if (PARTICLES) {
+    for (int ipar = 0; ipar < Particles::num_particles; ++ipar)
+      ppar[ipar]->UnpackParticlesForRestart(mbdata, os);
+  }
 
   // (conserved variable) Passive scalars:
   if (NSCALARS > 0) {
@@ -374,7 +398,10 @@ MeshBlock::~MeshBlock() {
   delete phydro;
   if (MAGNETIC_FIELDS_ENABLED) delete pfield;
   delete peos;
-  if (PARTICLES) delete ppar;
+
+  for (int ipar = 0; ipar < Particles::num_particles; ++ipar)
+    delete ppar[ipar];
+
   delete porb;
   if (SELF_GRAVITY_ENABLED) delete pgrav;
   if (SELF_GRAVITY_ENABLED == 3) delete pfft;
@@ -475,7 +502,10 @@ std::size_t MeshBlock::GetBlockSizeInBytes() {
   if (MAGNETIC_FIELDS_ENABLED)
     size += (pfield->b.x1f.GetSizeInBytes() + pfield->b.x2f.GetSizeInBytes()
              + pfield->b.x3f.GetSizeInBytes());
-  if (PARTICLES) size += ppar->GetSizeInBytes();
+  if (PARTICLES) {
+    for (int ipar=0; ipar < Particles::num_particles; ++ipar)
+      size += ppar[ipar]->GetSizeInBytes();
+  }
   if (SELF_GRAVITY_ENABLED)
     size += pgrav->phi.GetSizeInBytes();
   if (NSCALARS > 0)

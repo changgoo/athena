@@ -135,6 +135,16 @@ class FormattedTableOutput : public OutputType {
 };
 
 //----------------------------------------------------------------------------------------
+//! \class ParticleFormattedTableOutput
+//! \brief derived OutputType class for formatted table (tabular) data
+
+class ParticleFormattedTableOutput : public OutputType {
+ public:
+  explicit ParticleFormattedTableOutput(OutputParameters oparams) : OutputType(oparams) {}
+  void WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) override;
+};
+
+//----------------------------------------------------------------------------------------
 //! \class VTKOutput
 //! \brief derived OutputType class for vtk dumps
 

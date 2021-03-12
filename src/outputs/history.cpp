@@ -43,7 +43,7 @@ HistoryOutput::HistoryOutput(OutputParameters oparams)
   // NEW_OUTPUT_TYPES:
   // "3" for 1-KE, 2-KE, 3-KE additional columns (come before tot-E)
   num_vars_ = (NHYDRO) + (NGRAV) + (NFIELD) + 3 + (NSCALARS);
-  if (PARTICLES) num_vars_ += Particles::NHISTORY;
+  if (PARTICLES) num_vars_ += Particles::NHISTORY*Particles::num_particles;
 }
 
 //----------------------------------------------------------------------------------------
@@ -210,9 +210,15 @@ void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
 
   // Get history output from Particles class.
   if (PARTICLES) {
-    constexpr int prev_out =
-        (NHYDRO) + 3 + (NGRAV) + (NFIELD) + (NSCALARS);
-    Particles::FindHistoryOutput(pm, hst_data.get(), prev_out);
+    for (int ipar=0; ipar<Particles::num_particles; ++ipar) {
+      int prev_out = (NHYDRO) + 3 + (NGRAV) + (NFIELD) + (NSCALARS) +
+                     (Particles::NHISTORY)*ipar;
+      for (int b=0; b<pm->nblocal; ++b) {
+        pmb = pm->my_blocks(b);
+        Particles *ppar(pmb->ppar[ipar]);
+        ppar->AddHistoryOutput(hst_data.get(),prev_out);
+      }
+    }
   }
 
 #ifdef MPI_PARALLEL
@@ -292,9 +298,11 @@ void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
       }
       if (PARTICLES) {
         std::string output_names[Particles::NHISTORY];
-        Particles::GetHistoryOutputNames(output_names);
-        for (int i = 0; i < Particles::NHISTORY; ++i)
-          std::fprintf(pfile, "[%d]=%-8s", iout++, output_names[i].data());
+        for (int ipar = 0; ipar<Particles::num_particles; ++ipar) {
+          Particles::GetHistoryOutputNames(output_names, ipar);
+          for (int i = 0; i < Particles::NHISTORY; ++i)
+            std::fprintf(pfile, "[%d]=%-8s", iout++, output_names[i].data());
+        }
       }
       for (int n=0; n<pm->nuser_history_output_; n++)
         std::fprintf(pfile,"[%d]=%-8s", iout++,
