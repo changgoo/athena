@@ -112,7 +112,7 @@ inline void DefaultOpacity(MeshBlock *pmb, AthenaArray<Real> &u_cr,
           //diffusion coefficient
           pcr->sigma_diff(0,k,j,i) = pcr->Get_SigmaParallel(prim(IDN,k,j,i),
                                      prim(IPR,k,j,i),u_cr(CRE,k,j,i),
-                                     fabs(b_grad_pc)/btot);
+                                     std::fabs(b_grad_pc)/btot);
           if (pcr->perp_diff_flag == 0) {
             pcr->sigma_diff(1,k,j,i) = pcr->max_opacity;
             pcr->sigma_diff(2,k,j,i) = pcr->max_opacity;
@@ -145,7 +145,7 @@ inline void DefaultOpacity(MeshBlock *pmb, AthenaArray<Real> &u_cr,
           if(va < TINY_NUMBER) {
             pcr->sigma_adv(0,k,j,i) = pcr->max_opacity;
           } else {
-            pcr->sigma_adv(0,k,j,i) = fabs(b_grad_pc)/(btot * va * (1.0 + 1.0/3.0)
+            pcr->sigma_adv(0,k,j,i) = std::fabs(b_grad_pc)/(btot * va * (1.0 + 1.0/3.0)
                                                * invlim * u_cr(CRE,k,j,i));
           }
           pcr->sigma_adv(1,k,j,i) = pcr->max_opacity;

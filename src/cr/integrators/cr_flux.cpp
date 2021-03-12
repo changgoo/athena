@@ -4,10 +4,11 @@
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
 
-// Athena++ headers
 #include <iostream>   // endl
 #include <sstream>    // stringstream
 #include <stdexcept>  // runtime_error
+
+// Athena++ headers
 #include "../../athena.hpp"
 #include "../../athena_arrays.hpp"
 #include "../../coordinates/coordinates.hpp"
@@ -84,7 +85,7 @@ void CRIntegrator::CRFlux(int fdir, int il, int iu,
 
     //calculate the HLLE flux
     Real tmp = 0.0;
-    if(fabs(bm-bp) > TINY_NUMBER)
+    if(std::fabs(bm-bp) > TINY_NUMBER)
       tmp = 0.5*(bp + bm)/(bp - bm);
     flx(CRE,i) = 0.5*(fl_e + fr_e) + (fl_e - fr_e) * tmp;
     flx(CRF1,i) = 0.5*(fl_f1 + fr_f1) + (fl_f1 - fr_f1) * tmp;
