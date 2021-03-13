@@ -390,7 +390,7 @@ void FixMHDLeft(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
   if (MAGNETIC_FIELDS_ENABLED) {
     for (int k=ks; k<=ke; ++k) {
       for (int j=js; j<=je; ++j) {
-#pragma simd
+#pragma omp simd
         for (int i=1; i<=(NGHOST); ++i) {
           //b.x1f(k,j,(is-i)) = std::sqrt(2.0*const_pb);  // reflect 1-field
           b.x1f(k,j,(is-i)) =  b.x1f(k,j,is);
@@ -400,7 +400,7 @@ void FixMHDLeft(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
     if(je > js) {
       for (int k=ks; k<=ke; ++k) {
         for (int j=js; j<=je+1; ++j) {
-#pragma simd
+#pragma omp simd
           for (int i=1; i<=(NGHOST); ++i) {
             b.x2f(k,j,(is-i)) =  b.x2f(k,j,is);
           }
@@ -410,7 +410,7 @@ void FixMHDLeft(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
     if(ke > ks) {
       for (int k=ks; k<=ke+1; ++k) {
         for (int j=js; j<=je; ++j) {
-#pragma simd
+#pragma omp simd
          for (int i=1; i<=(NGHOST); ++i) {
            b.x3f(k,j,(is-i)) = b.x3f(k,j,is);
          }
