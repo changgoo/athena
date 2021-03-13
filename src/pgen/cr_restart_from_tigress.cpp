@@ -1312,7 +1312,7 @@ Real set_CR_Luminosity(Real tage) {
   Real dage = 0.2; //Myr
   int const Narray = 201;
   Real N_SNe, CR_Lum;
-  Real SN_energy = 1e51;
+  Real SN_energy = 1.e51;
   Real CR_eff = 0.1;
 
   // SNRate for Msun cluster per Myr (Starburst99)
