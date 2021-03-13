@@ -247,9 +247,8 @@ void CalculateInjectionRate(ParameterInput *pin, MeshBlock *pmb,
       tot_young_stars++;
       //Calculate the CR luminosity produced by each star cluster
       InjectionRate =  set_CR_Luminosity(tstar) * pList[s].m
-                       / punit->Msun_in_code; //in cgs units
-      InjectionRate_in_code = InjectionRate * punit->erg
-                        / punit->Myr_in_code; //in code units
+                       / (punit->Msun_in_code * punit->erg); //in cgs units
+      InjectionRate_in_code = InjectionRate / punit->Myr_in_code; //in code units
       tot_InjectionRate += InjectionRate_in_code;
 
       //Calculate the cell-centered grid position associated to each star cluster
@@ -1312,7 +1311,7 @@ Real set_CR_Luminosity(Real tage) {
   Real dage = 0.2; //Myr
   int const Narray = 201;
   Real N_SNe, CR_Lum;
-  Real SN_energy = 1.e51;
+  Real SN_energy = punit->Bethe_in_code;
   Real CR_eff = 0.1;
 
   // SNRate for Msun cluster per Myr (Starburst99)

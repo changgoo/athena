@@ -64,5 +64,6 @@ class Units {
   Real kB_in_code;
   Real c_in_code;
   Real e_in_code;
+  Real Bethe_in_code;
 };
 #endif // UTILS_UNITS_HPP_

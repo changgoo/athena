@@ -68,6 +68,7 @@ void Units::SetUnitsConstants() {
   kB_in_code = Constants::kB * erg/Kelvin;
   c_in_code = Constants::c * cm/second;
   e_in_code = Constants::e * std::sqrt(dyne*4*PI)*cm;
+  Bethe_in_code = 1.e51 * erg;
 }
 
 void Units::PrintCodeUnits() {
