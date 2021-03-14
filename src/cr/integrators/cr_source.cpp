@@ -5,7 +5,7 @@
 //========================================================================================
 //! \file cr_source.cpp
 //! \brief Add cosmic ray source terms to both cosmic ray and gas
-//======================================================================================
+//========================================================================================
 
 
 // Athena++ headers
@@ -227,5 +227,3 @@ void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Rea
     pcr->UserSourceTerm_(pmb, pmb->pmy_mesh->time, dt, w, bcc,
          u_cr, pcr->CRInjectionRate);
 }
-
-

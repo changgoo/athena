@@ -5,7 +5,8 @@
 //========================================================================================
 //! \file cr_integrators.cpp
 //! \brief implementation of integrators for cosmic ray trasport
-//======================================================================================
+//========================================================================================
+
 #include <sstream>
 #include <stdexcept>  // runtime_error
 #include <string>     // c_str()
@@ -109,6 +110,3 @@ CRIntegrator::~CRIntegrator() {
   coord_source_.DeleteAthenaArray();
   ucr_vel_.DeleteAthenaArray();
 }
-
-
-

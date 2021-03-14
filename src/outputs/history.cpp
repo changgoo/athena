@@ -184,7 +184,7 @@ void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
               constexpr int prev_out = NHYDRO + 3 + SELF_GRAVITY_ENABLED + NFIELD;
               hst_data[prev_out + n] += vol(i)*s;
             }
-            if(CR_ENABLED) {
+            if (CR_ENABLED) {
               constexpr int prev_out = NHYDRO + 3 + SELF_GRAVITY_ENABLED
                  + NFIELD + NSCALARS;
               hst_data[prev_out + 0] += vol(i)*pcr->u_cr(CRE,k,j,i);
@@ -292,7 +292,7 @@ void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
       for (int n=0; n<NSCALARS; n++) {
         std::fprintf(pfile,"[%d]=%d-scalar    ", iout++, n);
       }
-      if(CR_ENABLED) {
+      if (CR_ENABLED) {
         std::fprintf(pfile,"[%d]=Ec    ", iout++);
         std::fprintf(pfile,"[%d]=Fc1    ", iout++);
         std::fprintf(pfile,"[%d]=Fc2    ", iout++);

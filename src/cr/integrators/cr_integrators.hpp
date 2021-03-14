@@ -1,13 +1,13 @@
 #ifndef CR_INTEGRATORS_CR_INTEGRATORS_HPP_
 #define CR_INTEGRATORS_CR_INTEGRATORS_HPP_
-//======================================================================================
+//========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright (C) 2014 James M. Stone  <jmstone@princeton.edu>
-// See LICENSE file for full public license information.
-//======================================================================================
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
+// Licensed under the 3-clause BSD License, see LICENSE file for details
+//========================================================================================
 //! \file cr_integrators.hpp
 //! \brief definitions for CosmicRay class
-//======================================================================================
+//========================================================================================
 
 // Athena++ classes headers
 #include "../../athena.hpp"

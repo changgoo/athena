@@ -2,10 +2,10 @@
 // Athena++ astrophysical MHD code
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
 // Licensed under the 3-clause BSD License, see LICENSE file for details
-//======================================================================================
+//========================================================================================
 //! \file cr.cpp
 //! \brief implementation of functions in class CosmicRay
-//======================================================================================
+//========================================================================================
 
 
 #include <stdio.h>  // fopen and fwrite
@@ -289,4 +289,3 @@ void CosmicRay::EnrollUserCRSource(CRSrcTermFunc my_func) {
   UserSourceTerm_ = my_func;
   cr_source_defined = true;
 }
-

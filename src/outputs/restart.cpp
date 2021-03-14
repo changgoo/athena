@@ -171,7 +171,7 @@ void RestartOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool force_wr
       pdata += pmb->pfield->b.x3f.GetSizeInBytes();
     }
 
-    if(CR_ENABLED) {
+    if (CR_ENABLED) {
       std::memcpy(pdata,pmb->pcr->u_cr.data(),pmb->pcr->u_cr.GetSizeInBytes());
       pdata += pmb->pcr->u_cr.GetSizeInBytes();
     }

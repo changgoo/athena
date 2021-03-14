@@ -419,5 +419,3 @@ void FixMHDLeft(MeshBlock *pmb, Coordinates *pco, AthenaArray<Real> &prim,
     }
   }
 }
-
-

@@ -1613,11 +1613,12 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
 
       // calculate opacity
       if(CR_ENABLED) {
-        for(int i=0; i<nblocal; ++i) {
-          pmb=my_blocks(i); ph=pmb->phydro;
-          CosmicRay *pcr = pmb->pcr;
-          pf=pmb->pfield;
-          pcr->UpdateOpacity(pmb,pcr->u_cr,ph->w,pf->bcc);
+        CosmicRay *pcr;
+#pragma omp for private(pmb,ph,pf,pcr)
+        for (int i=0; i<nblocal; ++i) {
+          pmb = my_blocks(i);
+          ph = pmb->phydro, pf = pmb->pfield, pcr = pmb->pcr;
+          pcr->UpdateOpacity(pmb, pcr->u_cr, ph->w, pf->bcc);
         }
       }
 

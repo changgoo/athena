@@ -4,32 +4,37 @@
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
 //! \file rotate_vectors.cpp
+//! \brief rotate vectors
 //========================================================================================
 
 // Athena headers
 #include "../athena.hpp"
 #include "./utils.hpp"
 
-
-//--------------------------------------------------------------------------------------
-
+//----------------------------------------------------------------------------------------
+//! \fn void RotateVec(const Real sint, const Real cost,
+//!              const Real sinp, const Real cosp,
+//!              Real &v1, Real &v2, Real &v3)
+//! \brief
+//!
+//! \note
+//! - vel1, vel2, vel3 are input
+//! - v1, v2, v3 are output
+//!
+//! The two rotation matrices
+//! R_1=
+//! [cos_p  sin_p 0]
+//! [-sin_p cos_p 0]
+//! [0       0    1]
+//!
+//! R_2=
+//! [sin_t  0 cos_t]
+//! [0      1    0]
+//! [-cos_t 0 sin_t]
+//----------------------------------------------------------------------------------------
 void RotateVec(const Real sint, const Real cost,
               const Real sinp, const Real cosp,
               Real &v1, Real &v2, Real &v3) {
-  //! vel1, vel2, vel3 are input
-  //! v1, v2, v3 are output
-  //! The two rotation matrices
-  //! R_1=
-  //! [cos_p  sin_p 0]
-  //! [-sin_p cos_p 0]
-  //! [0       0    1]
-
-  //! R_2=
-  //! [sin_t  0 cos_t]
-  //! [0      1    0]
-  //! [-cos_t 0 sin_t]
-
-
   // First apply R1, then apply R2
   Real newv1 =  cosp * v1 + sinp * v2;
   v2 = -sinp * v1 + cosp * v2;
@@ -40,24 +45,30 @@ void RotateVec(const Real sint, const Real cost,
   v3 = newv3;
 }
 
-
+//----------------------------------------------------------------------------------------
+//! \fn void InvRotateVec(const Real sint, const Real cost,
+//!              const Real sinp, const Real cosp,
+//!              Real &v1, Real &v2, Real &v3)
+//! \brief
+//!
+//! \note
+//! - vel1, vel2, vel3 are input
+//! - v1, v2, v3 are output
+//!
+//! The two rotation matrices
+//! R_1^-1=
+//! [cos_p  -sin_p 0]
+//! [sin_p cos_p 0]
+//! [0       0    1]
+//!
+//! R_2^-1=
+//! [sin_t  0 -cos_t]
+//! [0      1    0]
+//! [cos_t 0 sin_t]
+//----------------------------------------------------------------------------------------
 void InvRotateVec(const Real sint, const Real cost,
                  const Real sinp, const Real cosp,
                  Real &v1, Real &v2, Real &v3) {
-  // vel1, vel2, vel3 are input
-  // v1, v2, v3 are output
-  // The two rotation matrix
-  //R_1^-1=
-  //[cos_p  -sin_p 0]
-  //[sin_p cos_p 0]
-  //[0       0    1]
-
-  //R_2^-1=
-  //[sin_t  0 -cos_t]
-  //[0      1    0]
-  //[cos_t 0 sin_t]
-
-
   // First apply R2^-1, then apply R1^-1
   Real newv1 = sint * v1 - cost * v3;
   v3 = cost * v1 + sint * v3;

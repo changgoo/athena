@@ -3,6 +3,9 @@
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
+//! \file cr_flux.cpp
+//! \brief cosmic ray flux
+//========================================================================================
 
 #include <iostream>   // endl
 #include <sstream>    // stringstream
@@ -96,5 +99,3 @@ void CRIntegrator::CRFlux(int fdir, int il, int iu,
 
   return;
 }
-
-

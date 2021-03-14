@@ -586,7 +586,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
     }
   }
 
-  if(CR_ENABLED) {
+  if (CR_ENABLED) {
     if (output_params.variable.compare("Ec") == 0 ||
       output_params.variable.compare("cons") == 0 ||
       output_params.variable.compare("prim") == 0) {
@@ -668,7 +668,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
         num_vars_+=3;
       }
     }
-  }// end Cosmic Rays
+  } // endif (CR_ENABLED)
 
   // note, the Bcc variables are stored in a separate HDF5 dataset from the above Output
   // nodes, and it must come after those nodes in the linked list

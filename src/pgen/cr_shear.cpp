@@ -3,7 +3,7 @@
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
-//! \file cr_diffusion.cpp
+//! \file cr_shear.cpp
 //! \brief Problem generator to reproduce the propagation of cosmic ray in the presence
 //! of shear.
 //========================================================================================
@@ -444,4 +444,3 @@ void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr,
     }
   }
 }
-

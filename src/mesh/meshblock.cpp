@@ -180,7 +180,7 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
 
   peos = new EquationOfState(this, pin);
 
-  if(CR_ENABLED) {
+  if (CR_ENABLED) {
     pcr = new CosmicRay(this, pin);
     pbval->AdvanceCounterPhysID(CellCenteredBoundaryVariable::max_phys_id);
   }
