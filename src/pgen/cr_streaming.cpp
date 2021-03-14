@@ -4,7 +4,7 @@
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
 //! \file cr_streaming.cpp
-//! \brief Problem generator to test the streaming of cosmic rays.
+//! \brief Problem generator to test streaming of cosmic rays.
 //========================================================================================
 
 // C++ headers
@@ -33,11 +33,6 @@
 #include "../parameter_input.hpp"
 
 
-//======================================================================================
-//! \fn void MeshBlock::ProblemGenerator(ParameterInput *pin)
-//! \brief CR streaming test
-//======================================================================================
-
 static Real vx = 0.0;
 static Real vy = 0.0;
 static Real vz = 0.0;
@@ -52,6 +47,10 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   }
 }
 
+//======================================================================================
+//! \fn void MeshBlock::ProblemGenerator(ParameterInput *pin)
+//! \brief CR streaming test
+//======================================================================================
 void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   direction = pin->GetOrAddReal("problem","direction",0);
   if(direction == 0)

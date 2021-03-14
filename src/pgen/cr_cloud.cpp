@@ -4,7 +4,7 @@
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
 //! \file cr_cloud.cpp
-//! \brief Problem generator to reproduce the bottleneck effect for cosmic ray.
+//! \brief Problem generator to reproduce the bottleneck effect for cosmic rays.
 //========================================================================================
 
 // C++ headers
@@ -32,10 +32,6 @@
 #include "../mesh/mesh.hpp"
 #include "../parameter_input.hpp"
 
-//======================================================================================
-//! \fn void MeshBlock::ProblemGenerator(ParameterInput *pin)
-//! \brief Bottleneck test
-//======================================================================================
 
 static Real vx = 0.0;
 static Real vy = 0.0;
@@ -65,6 +61,10 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   }
 }
 
+//======================================================================================
+//! \fn void MeshBlock::ProblemGenerator(ParameterInput *pin)
+//! \brief Bottleneck test
+//======================================================================================
 void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real gamma = peos->GetGamma();
   Real vx=0.0;

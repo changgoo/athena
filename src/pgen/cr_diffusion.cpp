@@ -4,7 +4,7 @@
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
 //! \file cr_diffusion.cpp
-//! \brief Problem generator to test the diffusion of cosmic ray.
+//! \brief Problem generator to test diffusion of cosmic rays.
 //========================================================================================
 
 // C++ headers
@@ -32,10 +32,6 @@
 #include "../mesh/mesh.hpp"
 #include "../parameter_input.hpp"
 
-//======================================================================================
-//! \fn void MeshBlock::ProblemGenerator(ParameterInput *pin)
-//! \brief CR diffusion test
-//======================================================================================
 
 static Real vx = 0.0;
 static Real vy = 0.0;
@@ -124,6 +120,10 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   }
 }
 
+//======================================================================================
+//! \fn void MeshBlock::ProblemGenerator(ParameterInput *pin)
+//! \brief CR diffusion test
+//======================================================================================
 void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   // read in the mean velocity
   direction = pin->GetOrAddReal("problem","direction",0);

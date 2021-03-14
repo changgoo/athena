@@ -4,7 +4,7 @@
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
 //! \file cr_shear.cpp
-//! \brief Problem generator to reproduce the propagation of cosmic ray in the presence
+//! \brief Problem generator to reproduce the propagation of cosmic rays in the presence
 //! of shear.
 //========================================================================================
 
@@ -32,10 +32,6 @@
 #include "../mesh/mesh.hpp"
 #include "../parameter_input.hpp"
 
-//======================================================================================
-//! \fn void MeshBlock::ProblemGenerator(ParameterInput *pin)
-//! \brief Testing the propagation of CRs in the presence of shear
-//======================================================================================
 
 void Diffusion(MeshBlock *pmb, AthenaArray<Real> &u_cr,
         AthenaArray<Real> &prim, AthenaArray<Real> &bcc);
@@ -115,6 +111,10 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   }
 }
 
+//======================================================================================
+//! \fn void MeshBlock::ProblemGenerator(ParameterInput *pin)
+//! \brief Testing propagation of cosmic rays in the presence of shear
+//======================================================================================
 void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real xsize;
   Real Bx, By, Bz;

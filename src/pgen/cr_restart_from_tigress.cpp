@@ -337,12 +337,13 @@ void TempCalculation(Units *punit, Real rho, Real Press,
   mu = pcool->Get_mu(rho, Press);
 }
 
+//======================================================================================
 //! \fn void MeshBlock::ProblemGenerator(ParameterInput *pin)
 //! \brief Problem Generator to initialize mesh by reading in athena vtk files
 //!
 //! \note This Problem Generator can be used only to read vtk files corresponding to
 //! times t that are integer multiples of 1/Omega, where Omega is the Galactic Rotation
-
+//======================================================================================
 void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   int ierr;
 
