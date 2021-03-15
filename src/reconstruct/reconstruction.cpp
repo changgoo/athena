@@ -222,10 +222,21 @@ Reconstruction::Reconstruction(MeshBlock *pmb, ParameterInput *pin) :
   scr01_i_.NewAthenaArray(nc1);
   scr02_i_.NewAthenaArray(nc1);
 
-  scr1_ni_.NewAthenaArray(std::max(NWAVE, NSCALARS), nc1);
-  scr2_ni_.NewAthenaArray(std::max(NWAVE, NSCALARS), nc1);
-  scr3_ni_.NewAthenaArray(std::max(NWAVE, NSCALARS), nc1);
-  scr4_ni_.NewAthenaArray(std::max(NWAVE, NSCALARS), nc1);
+  int nsize = NWAVE;
+
+  if (CR_ENABLED)
+    nsize = std::max(nsize,NCR+1);
+
+  scr1_ni_.NewAthenaArray(std::max(nsize, NSCALARS), nc1);
+  scr2_ni_.NewAthenaArray(std::max(nsize, NSCALARS), nc1);
+  scr3_ni_.NewAthenaArray(std::max(nsize, NSCALARS), nc1);
+  scr4_ni_.NewAthenaArray(std::max(nsize, NSCALARS), nc1);
+
+  int order_flag = xorder;
+  if (CR_ENABLED) {
+    int cr_order=pin->GetOrAddInteger("time", "cr_xorder", 2);
+    order_flag = std::max(cr_order,order_flag);
+  }
 
   if ((xorder == 3) || (xorder == 4)) {
     Coordinates *pco = pmb->pcoord;
@@ -242,10 +253,10 @@ Reconstruction::Reconstruction(MeshBlock *pmb, ParameterInput *pin) :
     scr13_i_.NewAthenaArray(nc1);
     scr14_i_.NewAthenaArray(nc1);
 
-    scr5_ni_.NewAthenaArray(std::max(NWAVE, NSCALARS), nc1);
-    scr6_ni_.NewAthenaArray(std::max(NWAVE, NSCALARS), nc1);
-    scr7_ni_.NewAthenaArray(std::max(NWAVE, NSCALARS), nc1);
-    scr8_ni_.NewAthenaArray(std::max(NWAVE, NSCALARS), nc1);
+    scr5_ni_.NewAthenaArray(std::max(nsize, NSCALARS), nc1);
+    scr6_ni_.NewAthenaArray(std::max(nsize, NSCALARS), nc1);
+    scr7_ni_.NewAthenaArray(std::max(nsize, NSCALARS), nc1);
+    scr8_ni_.NewAthenaArray(std::max(nsize, NSCALARS), nc1);
 
     // Precompute PPM coefficients in x1-direction ---------------------------------------
     c1i.NewAthenaArray(nc1);

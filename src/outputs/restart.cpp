@@ -21,6 +21,7 @@
 // Athena++ headers
 #include "../athena.hpp"
 #include "../athena_arrays.hpp"
+#include "../cr/cr.hpp"
 #include "../field/field.hpp"
 #include "../globals.hpp"
 #include "../hydro/hydro.hpp"
@@ -168,6 +169,11 @@ void RestartOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool force_wr
       pdata += pmb->pfield->b.x2f.GetSizeInBytes();
       std::memcpy(pdata, pmb->pfield->b.x3f.data(), pmb->pfield->b.x3f.GetSizeInBytes());
       pdata += pmb->pfield->b.x3f.GetSizeInBytes();
+    }
+
+    if (CR_ENABLED) {
+      std::memcpy(pdata,pmb->pcr->u_cr.data(),pmb->pcr->u_cr.GetSizeInBytes());
+      pdata += pmb->pcr->u_cr.GetSizeInBytes();
     }
 
     // (conserved variable) Passive scalars:

@@ -30,6 +30,7 @@
 #include "../athena_arrays.hpp"
 #include "../bvals/bvals.hpp"
 #include "../coordinates/coordinates.hpp"
+#include "../cr/cr.hpp"
 #include "../eos/eos.hpp"
 #include "../fft/athena_fft.hpp"
 #include "../fft/turbulence.hpp"
@@ -1153,6 +1154,23 @@ void Mesh::EnrollUserBoundaryFunction(BoundaryFace dir, BValFunc my_bc) {
   return;
 }
 
+void Mesh::EnrollUserCRBoundaryFunction(BoundaryFace dir, CRBoundaryFunc my_bc) {
+  std::stringstream msg;
+  if (dir < 0 || dir > 5) {
+    msg << "### FATAL ERROR in EnrollUserCRBoundaryCondition function" << std::endl
+        << "dirName = " << dir << " not valid" << std::endl;
+    ATHENA_ERROR(msg);
+  }
+  if (mesh_bcs[dir] != BoundaryFlag::user) {
+    msg << "### FATAL ERROR in EnrollUserCRBoundaryFunction" << std::endl
+        << "The boundary condition flag must be set to the string 'user' in the "
+        << " <mesh> block in the input file to use user-enrolled BCs" << std::endl;
+    ATHENA_ERROR(msg);
+  }
+  CRBoundaryFunc_[static_cast<int>(dir)]=my_bc;
+  return;
+}
+
 //----------------------------------------------------------------------------------------
 //! \fn void Mesh::EnrollUserMGGravityBoundaryFunction(BoundaryFace dir,
 //!                                                    MGBoundaryFunc my_bc)
@@ -1440,6 +1458,8 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
         // and (conserved variable) passive scalar masses:
         if (NSCALARS > 0)
           pmb->pscalars->sbvar.SendBoundaryBuffers();
+        if(CR_ENABLED)
+          pmb->pcr->cr_bvar.SendBoundaryBuffers();
       }
 
       // wait to receive conserved variables
@@ -1451,6 +1471,8 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
           pmb->pfield->fbvar.ReceiveAndSetBoundariesWithWait();
         if (NSCALARS > 0)
           pmb->pscalars->sbvar.ReceiveAndSetBoundariesWithWait();
+        if(CR_ENABLED)
+          pmb->pcr->cr_bvar.ReceiveAndSetBoundariesWithWait();
         if (shear_periodic && orbital_advection==0) {
           pmb->phydro->hbvar.AddHydroShearForInit();
         }
@@ -1587,6 +1609,17 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
           ps->sbvar.var_cc = &(ps->r);
 
         pbval->ApplyPhysicalBoundaries(time, 0.0, pbval->bvars_main_int);
+      }
+
+      // calculate opacity
+      if(CR_ENABLED) {
+        CosmicRay *pcr;
+#pragma omp for private(pmb,ph,pf,pcr)
+        for (int i=0; i<nblocal; ++i) {
+          pmb = my_blocks(i);
+          ph = pmb->phydro, pf = pmb->pfield, pcr = pmb->pcr;
+          pcr->UpdateOpacity(pmb, pcr->u_cr, ph->w, pf->bcc);
+        }
       }
 
       // Calc initial diffusion coefficients
@@ -1836,6 +1869,8 @@ void Mesh::CorrectMidpointInitialCondition() {
     // and (conserved variable) passive scalar masses:
     if (NSCALARS > 0)
       pmb->pscalars->sbvar.SendBoundaryBuffers();
+    if(CR_ENABLED)
+      pmb->pcr->cr_bvar.SendBoundaryBuffers();
   }
 
   // wait to receive conserved variables
@@ -1849,6 +1884,8 @@ void Mesh::CorrectMidpointInitialCondition() {
       pmb->pfield->fbvar.ReceiveAndSetBoundariesWithWait();
     if (NSCALARS > 0)
       pmb->pscalars->sbvar.ReceiveAndSetBoundariesWithWait();
+    if(CR_ENABLED)
+      pmb->pcr->cr_bvar.ReceiveAndSetBoundariesWithWait();
     if (shear_periodic && orbital_advection==0) {
       pmb->phydro->hbvar.AddHydroShearForInit();
     }
@@ -1903,6 +1940,9 @@ void Mesh::ReserveMeshBlockPhysIDs() {
     ReserveTagPhysIDs(CellCenteredBoundaryVariable::max_phys_id);
   }
   if (NSCALARS > 0) {
+    ReserveTagPhysIDs(CellCenteredBoundaryVariable::max_phys_id);
+  }
+  if(CR_ENABLED) {
     ReserveTagPhysIDs(CellCenteredBoundaryVariable::max_phys_id);
   }
 #endif

@@ -61,6 +61,7 @@
 // Athena++ headers
 #include "../athena.hpp"
 #include "../athena_arrays.hpp"
+#include "../cr/cr.hpp"
 #include "../eos/eos.hpp"
 #include "../field/field.hpp"
 #include "../hydro/hydro.hpp"
@@ -89,6 +90,7 @@
 //!   not require ph, pf due to MeshRefinement::SetHydroRefinement(hydro_type)
 //! - downcast BoundaryVariable pointers to known derived class pointer types:
 //!   RTTI via dynamic_case
+
 
 void BoundaryValues::ProlongateBoundaries(const Real time, const Real dt,
                                           std::vector<BoundaryVariable *> bvars_subset) {
@@ -127,6 +129,13 @@ void BoundaryValues::ProlongateBoundaries(const Real time, const Real dt,
   if (MAGNETIC_FIELDS_ENABLED) {
     pf = pmb->pfield;
     pfbvar = dynamic_cast<FaceCenteredBoundaryVariable *>(bvars_main_int[1]);
+  }
+
+  CosmicRay *pcr=nullptr;
+  CellCenteredBoundaryVariable *pcrbvar = nullptr;
+  if(CR_ENABLED) {
+    pcr = pmb->pcr;
+    pcrbvar = &(pcr->cr_bvar);
   }
 
   // For each finer neighbor, to prolongate a boundary we need to fill one more cell
@@ -207,6 +216,8 @@ void BoundaryValues::ProlongateBoundaries(const Real time, const Real dt,
       ps = pmb->pscalars;
       ps->sbvar.var_cc = &(ps->coarse_r_);
     }
+    if(CR_ENABLED)
+      pcrbvar->var_cc = &(pcr->coarse_cr_);
 
     // Step 2. Re-apply physical boundaries on the coarse boundary:
     ApplyPhysicalBoundariesOnCoarseLevel(nb, time, dt, si, ei, sj, ej, sk, ek,
@@ -221,6 +232,8 @@ void BoundaryValues::ProlongateBoundaries(const Real time, const Real dt,
       ps = pmb->pscalars;
       ps->sbvar.var_cc = &(ps->r);
     }
+    if(CR_ENABLED)
+      pcrbvar->var_cc = &(pcr->u_cr);
 
     // Step 3. Finally, the ghost-ghost zones are ready for prolongation:
     ProlongateGhostCells(nb, si, ei, sj, ej, sk, ek);
@@ -348,6 +361,10 @@ void BoundaryValues::ApplyPhysicalBoundariesOnCoarseLevel(
     pf = pmb->pfield;
   }
 
+  CosmicRay *pcr = nullptr;
+  if(CR_ENABLED)
+    pcr = pmb->pcr;
+
   // convert the ghost zone and ghost-ghost zones into primitive variables
   // this includes cell-centered field calculation
   int f1m = 0, f1p = 0, f2m = 0, f2p = 0, f3m = 0, f3p = 0;
@@ -402,13 +419,15 @@ void BoundaryValues::ApplyPhysicalBoundariesOnCoarseLevel(
     if (apply_bndry_fn_[BoundaryFace::inner_x1]) {
       DispatchBoundaryFunctions(pmb, pmr->pcoarsec, time, dt,
                                 pmb->cis, pmb->cie, sj, ej, sk, ek, 1,
-                                ph->coarse_prim_, pf->coarse_b_, BoundaryFace::inner_x1,
+                                ph->coarse_prim_, pf->coarse_b_, pf->coarse_bcc_,
+                                pcr->coarse_cr_, BoundaryFace::inner_x1,
                                 bvars_subset);
     }
     if (apply_bndry_fn_[BoundaryFace::outer_x1]) {
       DispatchBoundaryFunctions(pmb, pmr->pcoarsec, time, dt,
                                 pmb->cis, pmb->cie, sj, ej, sk, ek, 1,
-                                ph->coarse_prim_, pf->coarse_b_, BoundaryFace::outer_x1,
+                                ph->coarse_prim_, pf->coarse_b_, pf->coarse_bcc_,
+                                pcr->coarse_cr_, BoundaryFace::outer_x1,
                                 bvars_subset);
     }
   }
@@ -416,13 +435,15 @@ void BoundaryValues::ApplyPhysicalBoundariesOnCoarseLevel(
     if (apply_bndry_fn_[BoundaryFace::inner_x2]) {
       DispatchBoundaryFunctions(pmb, pmr->pcoarsec, time, dt,
                                 si, ei, pmb->cjs, pmb->cje, sk, ek, 1,
-                                ph->coarse_prim_, pf->coarse_b_, BoundaryFace::inner_x2,
+                                ph->coarse_prim_, pf->coarse_b_, pf->coarse_bcc_,
+                                pcr->coarse_cr_, BoundaryFace::inner_x2,
                                 bvars_subset);
     }
     if (apply_bndry_fn_[BoundaryFace::outer_x2]) {
       DispatchBoundaryFunctions(pmb, pmr->pcoarsec, time, dt,
                                 si, ei, pmb->cjs, pmb->cje, sk, ek, 1,
-                                ph->coarse_prim_, pf->coarse_b_, BoundaryFace::outer_x2,
+                                ph->coarse_prim_, pf->coarse_b_, pf->coarse_bcc_,
+                                pcr->coarse_cr_, BoundaryFace::outer_x2,
                                 bvars_subset);
     }
   }
@@ -430,13 +451,15 @@ void BoundaryValues::ApplyPhysicalBoundariesOnCoarseLevel(
     if (apply_bndry_fn_[BoundaryFace::inner_x3]) {
       DispatchBoundaryFunctions(pmb, pmr->pcoarsec, time, dt,
                                 si, ei, sj, ej, pmb->cks, pmb->cke, 1,
-                                ph->coarse_prim_, pf->coarse_b_, BoundaryFace::inner_x3,
+                                ph->coarse_prim_, pf->coarse_b_, pf->coarse_bcc_,
+                                pcr->coarse_cr_, BoundaryFace::inner_x3,
                                 bvars_subset);
     }
     if (apply_bndry_fn_[BoundaryFace::outer_x3]) {
       DispatchBoundaryFunctions(pmb, pmr->pcoarsec, time, dt,
                                 si, ei, sj, ej, pmb->cks, pmb->cke, 1,
-                                ph->coarse_prim_, pf->coarse_b_, BoundaryFace::outer_x3,
+                                ph->coarse_prim_, pf->coarse_b_, pf->coarse_bcc_,
+                                pcr->coarse_cr_, BoundaryFace::outer_x3,
                                 bvars_subset);
     }
   }

@@ -1,0 +1,76 @@
+<comment>
+problem   = cosmic ray shear
+reference = 
+configure = --prob=cr_shear
+
+<job>
+problem_id = cr        # problem ID: basename of output filenames
+
+<output1>
+file_type  = hdf5       # Binary data dump
+dt         = 0.02       # time increment between outputs
+variable   = prim
+
+<output2>
+file_type  = hst       # Binary data dump
+dt         = 0.02       # time increment between outputs
+
+<output3>
+file_type  = rst       # Binary data dump
+dt         = 0.02      # time increment between outputs
+
+<time>
+cfl_number = 0.3       # The Courant, Friedrichs, & Lewy (CFL) Number
+nlim       = -1        # cycle limit
+tlim       = 0.02      # time limit
+ncycle_out = 10
+
+<mesh>
+nx1        = 256           # Number of zones in X1-direction
+x1min      = -1.0          # minimum value of X1
+x1max      = 1.0           # maximum value of X1
+ix1_bc     = shear_periodic    # inner-X1 boundary flag
+ox1_bc     = shear_periodic    # inner-X1 boundary flag
+
+nx2        = 64         # Number of zones in X2-direction
+x2min      = -0.25      # minimum value of X2
+x2max      = 0.25       # maximum value of X2
+ix2_bc     = periodic   # inner-X2 boundary flag
+ox2_bc     = periodic   # inner-X2 boundary flag
+
+nx3        = 1         # Number of zones in X3-direction
+x3min      = -1.0      # minimum value of X3
+x3max      = 1.0       # maximum value of X3
+ix3_bc     = periodic  # inner-X3 boundary flag
+ox3_bc     = periodic  # inner-X3 boundary flag
+
+
+#refinement = static
+
+<meshblock>
+nx1         = 256
+nx2         = 64
+nx3         = 1
+
+<hydro>
+gamma           = 1.6666666666667       # gamma = C_p/C_v
+dfloor          = 1.e-8
+pfloor          = 1.e-7
+
+<cr>
+vmax         = 200
+src_flag     = 0
+sigma        = 10.
+vs_flag      = 1
+
+<orbital_advection>
+Omega0 = 0.5
+qshear = 1
+
+<problem>
+vx = 0
+B0 = 1
+direction = 0
+cells = 8
+offset1 = 0.5
+offset2 = 0.1

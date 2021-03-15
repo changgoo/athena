@@ -19,6 +19,7 @@
 // Athena++ headers
 #include "../athena.hpp"
 #include "../athena_arrays.hpp"
+#include "../cr/cr.hpp"
 #include "../eos/eos.hpp"
 #include "../hydro/hydro.hpp"
 #include "../hydro/hydro_diffusion/hydro_diffusion.hpp"
@@ -520,6 +521,53 @@ void SphericalPolar::AddCoordTermsDivergence(const Real dt, const AthenaArray<Re
     }
   }
 
+  return;
+}
+
+
+//----------------------------------------------------------------------------------------
+// Coordinate (Geometric) source term function for cosmic rays
+
+void SphericalPolar::AddCoordTermsDivergence_CR(
+  const AthenaArray<Real> &u_input, AthenaArray<Real> &coord_src) {
+  // Go through cellscosmicray
+  if(CR_ENABLED) {
+    CosmicRay *pcr=pmy_block->pcr;
+    for (int k=pmy_block->ks; k<=pmy_block->ke; ++k) {
+      for (int j=pmy_block->js; j<=pmy_block->je; ++j) {
+        for (int i=pmy_block->is; i<=pmy_block->ie; ++i) {
+        // src_1 = < M_{theta theta} + M_{phi phi} ><1/r>
+          Real m_ii = (2.0/3.0) * u_input(CRE,k,j,i);
+          coord_src(CRF1,k,j,i) = pcr->vmax * coord_src1_i_(i)*m_ii;
+          // set 0 for other components
+          coord_src(CRE,k,j,i) = 0.0;
+          coord_src(CRF2,k,j,i) = 0.0;
+          coord_src(CRF3,k,j,i) = 0.0;
+        }
+      }// end j
+    }// end k
+  }
+  return;
+}
+
+//----------------------------------------------------------------------------------------
+// subtract Coordinate (Geometric) source term to get Grad Pc
+
+void SphericalPolar::SubtractCoordTermsDivergence_CR(
+  const AthenaArray<Real> &u_cr, AthenaArray<Real> &grad_pc) {
+  // Go through cellscosmicray
+  if(CR_ENABLED) {
+    CosmicRay *pcr=pmy_block->pcr;
+    for (int k=pmy_block->ks; k<=pmy_block->ke; ++k) {
+      for (int j=pmy_block->js; j<=pmy_block->je; ++j) {
+        for (int i=pmy_block->is; i<=pmy_block->ie; ++i) {
+        // src_1 = < M_{theta theta} + M_{phi phi} ><1/r>
+          Real m_ii = (2.0/3.0) * u_cr(CRE,k,j,i);
+          grad_pc(0,k,j,i) -= coord_src1_i_(i)*m_ii;
+        }
+      }// end j
+    }// end k
+  }
   return;
 }
 

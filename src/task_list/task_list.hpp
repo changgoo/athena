@@ -203,6 +203,21 @@ class TimeIntegratorTaskList : public TaskList {
 
   bool CheckNextMainStage(int stage) const {return stage_wghts[stage%nstages].main_stage;}
 
+  // Tasks functionc for cosmic rays
+  TaskStatus CalculateCRFlux(MeshBlock *pmb, int stage);
+  TaskStatus IntegrateCR(MeshBlock *pmb, int stage);
+  TaskStatus AddSourceTermsCR(MeshBlock *pmb, int stage);
+  TaskStatus SendCRFlux(MeshBlock *pmb, int stage);
+  TaskStatus ReceiveAndCorrectCRFlux(MeshBlock *pmb, int stage);
+  TaskStatus SendCR(MeshBlock *pmb, int stage);
+  TaskStatus ReceiveCR(MeshBlock *pmb, int stage);
+  TaskStatus SetBoundariesCR(MeshBlock *pmb, int stage);
+  TaskStatus CROpacity(MeshBlock *pmb, int stage);
+  TaskStatus SendCRShear(MeshBlock *pmb, int stage);
+  TaskStatus ReceiveCRShear(MeshBlock *pmb, int stage);
+  TaskStatus ReceiveCRFluxShear(MeshBlock *pmb, int stage);
+  TaskStatus SendCRFluxShear(MeshBlock *pmb, int stage);
+
  private:
   bool ORBITAL_ADVECTION; // flag for orbital advection (true w/ , false w/o)
   bool SHEAR_PERIODIC; // flag for shear periodic boundary (true w/ , false w/o)
@@ -342,6 +357,20 @@ const TaskID CALC_HYDORB(64);
 const TaskID SEND_FLDORB(65);
 const TaskID RECV_FLDORB(66);
 const TaskID CALC_FLDORB(67);
+
+const TaskID CALC_CRFLX(68);
+const TaskID INT_CR(69);
+const TaskID SEND_CRFLX(70);
+const TaskID RECV_CRFLX(71);
+const TaskID SEND_CR(72);
+const TaskID RECV_CR(73);
+const TaskID SETB_CR(74);
+const TaskID SEND_CRFLXSH(75);
+const TaskID RECV_CRFLXSH(76);
+const TaskID SEND_CRSH(77);
+const TaskID RECV_CRSH(78);
+const TaskID SRCTERM_CR(79);
+const TaskID CR_OPACITY(80);
 
 }  // namespace HydroIntegratorTaskNames
 #endif  // TASK_LIST_TASK_LIST_HPP_

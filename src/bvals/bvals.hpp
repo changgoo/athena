@@ -205,7 +205,8 @@ class BoundaryValues : public BoundaryBase, //public BoundaryPhysics,
   void DispatchBoundaryFunctions(
       MeshBlock *pmb, Coordinates *pco, Real time, Real dt,
       int il, int iu, int jl, int ju, int kl, int ku, int ngh,
-      AthenaArray<Real> &prim, FaceField &b, BoundaryFace face,
+      AthenaArray<Real> &prim, FaceField &b, AthenaArray<Real> &bcc,
+      AthenaArray<Real> &u_cr, BoundaryFace face,
       std::vector<BoundaryVariable *> bvars_subset);
 
   void CheckPolarBoundaries();  // called in BoundaryValues() ctor

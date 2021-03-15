@@ -132,6 +132,8 @@ void ATHDF5Output::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
     // Graviatational potential:
     if (SELF_GRAVITY_ENABLED)
       num_variables[n_dataset] += 1;
+    if (CR_ENABLED)
+      num_variables[n_dataset] += 13;
     // Passive scalars:
     if (NSCALARS > 0)
       num_variables[n_dataset] += NSCALARS;
