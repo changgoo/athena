@@ -145,14 +145,14 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           // n=1 polytrope in planar geometry (J.-G. Kim et al. 2012)
           Real a0 = pin->GetOrAddReal("problem","a0",1.0);
           Real xi = z/a0;
-          if (std::abs(xi) < 0.5*PI) {
-            den = std::cos(xi);
-            phia = 0.5*PI - std::cos(xi);
+          if (std::abs(xi) < 1) {
+            den = std::cos(0.5*PI*xi);
+            phia = 0.5*PI - std::cos(0.5*PI*xi);
           } else {
             den = 0.0;
-            phia = std::abs(xi);
+            phia = std::abs(0.5*PI*xi);
           }
-          phia *= four_pi_G*SQR(a0);
+          phia *= four_pi_G*SQR(a0/(0.5*PI));
         }
 
         if (nlim > 0) {
