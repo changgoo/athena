@@ -155,6 +155,7 @@ friend class ParticleMesh;
   void UpdateCapacity(int new_nparmax);  //!> Change the capacity of particle arrays
   void FindLocalDensityOnMesh(bool include_momentum);
   void ConvertToDensity(bool include_momentum);
+  void SaveStatus();
 
   // Instance variables
   // std::uint64_t npar;     //!> number of particles
@@ -209,7 +210,6 @@ friend class ParticleMesh;
                           AthenaArray<Real>& xi2,
                           AthenaArray<Real>& xi3);
   void SetNewParticleID(int id);
-  void SaveStatus();
   struct Neighbor* FindTargetNeighbor(
       int ox1, int ox2, int ox3, int xi1, int xi2, int xi3);
 
@@ -343,9 +343,16 @@ friend class MeshBlock;
   void SetOneParticleMass(Real new_mass);
   Real GetOneParticleMass() { return mass; }
 
- private:
-  int iwx, iwy, iwz;         // indices for working arrays
+  // override integrator
+  void Integrate(int step);
+  void Kick(Real t, Real dt, const AthenaArray<Real>& meshsrc);
+  void Drift(Real t, Real dt);
+  void Age(Real t, Real dt);
 
+ private:
+  int imass, imetal, iage; // indices for additional Real properties
+  int igas;                // indices for additional Aux properties
+  int igx, igy, igz;       // indices for working arrays for gravity
   // Instance methods.
   void AssignShorthands() override;
   void SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
@@ -355,7 +362,10 @@ friend class MeshBlock;
                      AthenaArray<Real>& meshdst) override;
 
   // Instance variables
-  AthenaArray<Real> wx, wy, wz;        // shorthand for working arrays
+  AthenaArray<Real> mp, mzp, tage;        // shorthand for real properties
+  AthenaArray<Real> fgas;                     // shorthand for aux properties
+
+  ParticleGravity *ppgrav;
 };
 
 #endif  // PARTICLES_PARTICLES_HPP_

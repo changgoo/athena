@@ -5,7 +5,7 @@ configure = --prob=particle_turb -p -fft (--grav=fft -hdf5 -mpi)
 
 
 <job>
-problem_id = pTurb    # problem ID: basename of output filenames
+problem_id = pStar    # problem ID: basename of output filenames
 
 <output1>
 file_type  = hst        # History data dump
@@ -19,7 +19,9 @@ ghost_zones = false
 
 <output3>
 file_type  = partab     # Binary data dump
-dt         = -1         # time increment between outputs
+variable   = prim       # variables to be output
+data_format = %24.17e   # Optional data format string
+dt          = 0.1       # time increment between outputs
 
 <time>
 cfl_number = 0.3        # The Courant, Friedrichs, & Lewy (CFL) Number
@@ -51,9 +53,9 @@ ox3_bc     = periodic   # outer-X3 boundary flag
 refinement = none
 
 <meshblock>
-nx1        = 16
-nx2        = 16
-nx3        = 16
+nx1        = 32
+nx2        = 32
+nx3        = 32
 
 <refinement1>
 x1min      = -0.5
@@ -69,21 +71,10 @@ gamma           = 1.666666666667 # gamma = C_p/C_v
 iso_sound_speed = 1.00           # equavalent to sqrt(gamma*p/d) for p=0.1, d=1
 
 <particle1>
-type        = tracer
+type        = star
+npartot     = 10000
+gravity     = true
 output      = true
-gravity     = false
-np_per_cell = 2
-x1min       = -0.5
-x1max       = 0.0
-
-
-<particle2>
-type        = tracer
-output      = true
-gravity     = false
-np_per_cell = 2
-x1min       = 0.0
-x1max       = 0.5
 
 <turbulence>
 dedt       = 10.0 # Energy injection rate (for driven) or Total energy (for decaying)
@@ -97,5 +88,7 @@ rseed      = 1    # if non-negative, seed will be set by hand (slow PS generatio
 
 <problem>
 turb_flag  = 1    # 1 for decaying, 2 (impulsive) or 3 (continuous) for driven turbulence
-four_pi_G  = 39.4784176 # 4*pi^2 for nJ = 1 if cs=d0=L=1
+four_pi_G  = 12.5663706144 # 4*pi for G=1
+Mtot       = 1.0
+a          = 1.0
 compute_error = false

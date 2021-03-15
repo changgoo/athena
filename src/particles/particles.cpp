@@ -1367,10 +1367,13 @@ void Particles::FormattedTableOutput(Mesh *pm, OutputParameters op) {
         os << "# Athena++ particle data at time = " << pm->time << std::endl;
 
         // Write the particle data in the meshblock.
-        for (int k = 0; k < ppar->npar; ++k)
-          os << ppar->pid(k) << "  "
-             << ppar->xp(k) << "  " << ppar->yp(k) << "  " << ppar->zp(k) << "  "
-             << ppar->vpx(k) << "  " << ppar->vpy(k) << "  " << ppar->vpz(k) << std::endl;
+        for (int k = 0; k < ppar->npar; ++k) {
+          for (int ip = 0; ip < ppar->nint; ++ip)
+            os << ppar->intprop(ip,k) << "  ";
+          for (int ip = 0; ip < ppar->nreal; ++ip)
+            os << ppar->realprop(ip,k) << "  ";
+          os << std::endl;
+        }
 
         // Close the file and get the next meshblock.
         os.close();

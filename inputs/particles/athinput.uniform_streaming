@@ -79,6 +79,7 @@ type = dust
 taus0 = 0.5          # drag stopping time
 backreaction = true  # turn on/off the back reaction of the gas drag
 output = true        # turn on/off output of this container
+gravity = false      # turn on/off gravity
 
 <problem>
 npx1 = 32            # number of particles in the X1 direction
