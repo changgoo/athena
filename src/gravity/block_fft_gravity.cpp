@@ -331,26 +331,38 @@ void BlockFFTGravity::ApplyKernel() {
               kernel_o = -four_pi_G*dx3_ / (1. - std::cos(kz+PI/Nx3))
                          + 0.125*four_pi_G*dx3_;
             } else {
-              kernel_e = -0.5*four_pi_G/kxy*(1. - std::exp(-kxy*Lx3_))
-                * std::sinh(0.5*kxy*dx3_)/(0.5*kxy*dx3_)
-                * std::sinh(kxy*dx3_) / (std::cosh(kxy*dx3_) - std::cos(kz))
-                + std::exp(-0.25*kxy*dx3_)*std::sinh(0.25*kxy*dx3_)/(0.25*kxy*dx3_)
-                - std::sinh(0.5*kxy*dx3_)/(0.5*kxy*dx3_);
-              kernel_o = -0.5*four_pi_G/kxy*(1. + std::exp(-kxy*Lx3_))
-                * std::sinh(0.5*kxy*dx3_)/(0.5*kxy*dx3_)
-                * std::sinh(kxy*dx3_) / (std::cosh(kxy*dx3_) - std::cos(kz+PI/Nx3))
-                + std::exp(-0.25*kxy*dx3_)*std::sinh(0.25*kxy*dx3_)/(0.25*kxy*dx3_)
-                - std::sinh(0.5*kxy*dx3_)/(0.5*kxy*dx3_);
+              kernel_e = -0.5*four_pi_G/SQR(kxy)/dx3_*(
+                  2*(1. - std::exp(-0.5*kxy*dx3_))
+                  + (2*std::exp(-0.5*kxy*dx3_)*(1. - std::exp(-kxy*dx3_))*(std::cos(kz)
+                     - std::exp(-kxy*dx3_)))
+                     / (1. + std::exp(-2.*kxy*dx3_) - 2.*std::exp(-kxy*dx3_)*std::cos(kz))
+                  - std::exp(-kxy*(Lx3_-0.5*dx3_))*(1. - std::exp(-kxy*dx3_)
+                    - std::exp(-2.*kxy*dx3_) + std::exp(-3.*kxy*dx3_))
+                    / (1. + std::exp(-2.*kxy*dx3_) - 2.*std::exp(-kxy*dx3_)*std::cos(kz))
+                  );
+              kernel_o = -0.5*four_pi_G/SQR(kxy)/dx3_*(
+                  2*(1. - std::exp(-0.5*kxy*dx3_))
+                  + (2*std::exp(-0.5*kxy*dx3_)*(1. - std::exp(-kxy*dx3_))
+                     * (std::cos(kz + PI/Nx3) - std::exp(-kxy*dx3_)))
+                     / (1. + std::exp(-2.*kxy*dx3_)
+                        - 2.*std::exp(-kxy*dx3_)*std::cos(kz + PI/Nx3))
+                  + std::exp(-kxy*(Lx3_-0.5*dx3_))*(1. - std::exp(-kxy*dx3_)
+                    - std::exp(-2.*kxy*dx3_) + std::exp(-3.*kxy*dx3_))
+                    / (1. + std::exp(-2.*kxy*dx3_)
+                       - 2.*std::exp(-kxy*dx3_)*std::cos(kz + PI/Nx3))
+                  );
             }
           } else {
             if ((slow_ilo+i==0)&&(slow_jlo+j==0)) {
               kernel_e = k==0 ? 0.5*four_pi_G*dx3_*SQR(Nx3) : 0;
               kernel_o = -four_pi_G*dx3_ / (1. - std::cos(kz+PI/Nx3));
             } else {
-              kernel_e = -0.5*four_pi_G/kxy*(1. - std::exp(-kxy*Lx3_))*
-                std::sinh(kxy*dx3_) / (std::cosh(kxy*dx3_) - std::cos(kz));
-              kernel_o = -0.5*four_pi_G/kxy*(1. + std::exp(-kxy*Lx3_))*
-                std::sinh(kxy*dx3_) / (std::cosh(kxy*dx3_) - std::cos(kz+PI/Nx3));
+              kernel_e = -0.5*four_pi_G/kxy*(1. - std::exp(-kxy*Lx3_))
+                * (1. - std::exp(-2.*kxy*dx3_)) / (1. + std::exp(-2.*kxy*dx3_)
+                    - 2.*std::exp(-kxy*dx3_)*std::cos(kz));
+              kernel_o = -0.5*four_pi_G/kxy*(1. + std::exp(-kxy*Lx3_))
+                * (1. - std::exp(-2.*kxy*dx3_)) / (1. + std::exp(-2.*kxy*dx3_)
+                    - 2.*std::exp(-kxy*dx3_)*std::cos(kz + PI/Nx3));
             }
           }
           in_e_[idx] *= kernel_e;
@@ -487,9 +499,9 @@ void BlockFFTGravity::InitGreen() {
         gi = (gi+Nx1)%(2*Nx1) - Nx1;
         gj = (gj+Nx2)%(2*Nx2) - Nx2;
         gk = (gk+Nx3)%(2*Nx3) - Nx3;
+        int idx = i + (2*nx1)*(j + (2*nx2)*k);
         if (INTEGRATED_GREEN) {
           // cell-integrated Green's function
-          int idx = i + (2*nx1)*(j + (2*nx2)*k);
           grf_[idx]  = _GetIGF((-gi+0.5)*dx1_, (-gj+0.5)*dx2_, (-gk+0.5)*dx3_);
           grf_[idx] -= _GetIGF((-gi+0.5)*dx1_, (-gj+0.5)*dx2_, (-gk-0.5)*dx3_);
           grf_[idx] -= _GetIGF((-gi+0.5)*dx1_, (-gj-0.5)*dx2_, (-gk+0.5)*dx3_);
@@ -498,17 +510,16 @@ void BlockFFTGravity::InitGreen() {
           grf_[idx] += _GetIGF((-gi-0.5)*dx1_, (-gj+0.5)*dx2_, (-gk-0.5)*dx3_);
           grf_[idx] += _GetIGF((-gi-0.5)*dx1_, (-gj-0.5)*dx2_, (-gk+0.5)*dx3_);
           grf_[idx] -= _GetIGF((-gi-0.5)*dx1_, (-gj-0.5)*dx2_, (-gk-0.5)*dx3_);
-          grf_[idx] *= -gconst;
         } else {
           // point-mass Green's function
-          int idx = i + (2*nx1)*(j + (2*nx2)*k);
           if ((gi==0)&&(gj==0)&&(gk==0)) {
             // avoid singularity at r=0
             grf_[idx] = 0.0;
           } else {
-            grf_[idx] = -gconst/std::sqrt(SQR(gi*dx1_) + SQR(gj*dx2_) + SQR(gk*dx3_))*dvol;
+            grf_[idx] = 1./std::sqrt(SQR(gi*dx1_) + SQR(gj*dx2_) + SQR(gk*dx3_))*dvol;
           }
         }
+        grf_[idx] *= -gconst;
       }
     }
   }
