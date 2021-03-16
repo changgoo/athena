@@ -57,6 +57,8 @@ BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
                   2*in_klo, 2*in_khi+1, 2*slow_ilo, 2*slow_ihi+1,
                   2*slow_jlo, 2*slow_jhi+1, 2*slow_klo, 2*slow_khi+1,
                   permute, fftsize, sendsize, recvsize);
+
+  // initialize Green's function for open BC
   if (gbflag==GravityBoundaryFlag::open)
     InitGreen();
 #endif
@@ -67,6 +69,13 @@ BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
     std::stringstream msg;
     msg << "### FATAL ERROR in BlockFFTGravity constructor" << std::endl
         << "open BC gravity is not compatible with shearing box" << std::endl;
+    ATHENA_ERROR(msg);
+  }
+
+  if (std::strcmp(COORDINATE_SYSTEM, "cartesian") != 0) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in BlockFFTGravity constructor" << std::endl
+        << "BlockFFTGravity only compatible with cartesian coord" << std::endl;
     ATHENA_ERROR(msg);
   }
 }
