@@ -761,7 +761,10 @@ GreenFuncFlag GetGreenFuncFlag(const std::string& input_string) {
   }
 }
 
-//! \fn indefinite integral for the cell-averaged Green's function
+//----------------------------------------------------------------------------------------
+//! \fn Real _GetIGF(Real x, Real y, Real z)
+//! \brief indefinite integral for the cell-averaged Green's function
+
 Real _GetIGF(Real x, Real y, Real z) {
   Real r = std::sqrt(SQR(x) + SQR(y) + SQR(z));
   return y*z*std::log(x+r) + z*x*std::log(y+r) + x*y*std::log(z+r)
