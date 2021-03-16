@@ -24,9 +24,17 @@
 
 //! identifiers for gravity boundary conditions
 enum class GravityBoundaryFlag {periodic, disk, open};
+
+//! flag for the Green's function choice
+enum class GreenFuncFlag {point_mass, cell_averaged};
+
 //! free functions to return boundary flag given input string
 GravityBoundaryFlag GetGravityBoundaryFlag(const std::string& input_string);
-//! indefinite integral for the integrated Green's function
+
+//! free functions to return Green's function flag given input string
+GreenFuncFlag GetGreenFuncFlag(const std::string& input_string);
+
+//! indefinite integral for the cell-averaged Green's function
 Real _GetIGF(Real x, Real y, Real z);
 
 //! \class BlockFFTGravity
@@ -40,6 +48,7 @@ class BlockFFTGravity : public BlockFFT {
   // data
   bool SHEAR_PERIODIC; // flag for shear periodic boundary (true w/ , false w/o)
   GravityBoundaryFlag gbflag; // flag for the gravity boundary condition
+  GreenFuncFlag grfflag; // flag for the Green's function
 
   // functions
   void ExecuteForward() final;

@@ -61,6 +61,7 @@ shboxcoord   = 1       # 1=xy (default); 2=xz
 <self_gravity>
 four_pi_G       = 12.5663706144
 grav_bc         = periodic
+green_function  = cell_averaged
 
 <problem>
 iprob           = 1 # problem choice

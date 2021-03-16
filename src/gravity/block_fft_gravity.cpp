@@ -19,8 +19,6 @@
 #include "../coordinates/coordinates.hpp"
 #include "block_fft_gravity.hpp"
 
-#define INTEGRATED_GREEN 1
-
 //----------------------------------------------------------------------------------------
 //! \fn BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
 //! \brief BlockFFTGravity constructor
@@ -40,6 +38,8 @@ BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
       I_(0.0,1.0) {
   gtlist_ = new FFTGravitySolverTaskList(pin, pmb->pmy_mesh);
   gbflag = GetGravityBoundaryFlag(pin->GetString("self_gravity", "grav_bc"));
+  grfflag = GetGreenFuncFlag(pin->GetOrAddString("self_gravity", "green_function",
+                                                 "cell_averaged"));
   Omega_0_ = pin->GetReal("orbital_advection","Omega0");
   qshear_  = pin->GetReal("orbital_advection","qshear");
   in2_ = new std::complex<Real>[nx1*nx2*nx3];
@@ -333,46 +333,54 @@ void BlockFFTGravity::ApplyKernel() {
           kxy = std::sqrt((2.-2.*std::cos(kxt))/dx1sq_ +
                           (2.-2.*std::cos(ky ))/dx2sq_);
 
-          if (INTEGRATED_GREEN) {
+          if (grfflag==GreenFuncFlag::cell_averaged) {
+            Real cos_e = std::cos(kz);
+            Real cos_o = std::cos(kz + PI/Nx3);
+            Real exp_kxydz = std::exp(-0.5*kxy*dx3_);
+            Real exp_kxydz1 = SQR(exp_kxydz); // for std::exp(-kxy*dx3_)
+            Real exp_kxydz2 = SQR(exp_kxydz1); // for std::exp(-2*kxy*dx3_)
+            Real exp_kxydz3 = exp_kxydz1*exp_kxydz2; // for std::exp(-3*kxy*dx3_)
+            Real exp_kxyLz = std::exp(-kxy*Lx3_);
+            Real exp_kxyLz1 = std::exp(-kxy*(Lx3_-0.5*dx3_));
+
             if ((slow_ilo+i==0)&&(slow_jlo+j==0)) {
               kernel_e = k==0 ? 0.5*four_pi_G*dx3_*(SQR(Nx3) + 0.25)
                               : 0.125*four_pi_G*dx3_;
-              kernel_o = -four_pi_G*dx3_ / (1. - std::cos(kz+PI/Nx3))
-                         + 0.125*four_pi_G*dx3_;
+              kernel_o = -four_pi_G*dx3_ / (1. - cos_o) + 0.125*four_pi_G*dx3_;
             } else {
-              kernel_e = -0.5*four_pi_G/SQR(kxy)/dx3_*(
-                  2*(1. - std::exp(-0.5*kxy*dx3_))
-                  + (2*std::exp(-0.5*kxy*dx3_)*(1. - std::exp(-kxy*dx3_))*(std::cos(kz)
-                     - std::exp(-kxy*dx3_)))
-                     / (1. + std::exp(-2.*kxy*dx3_) - 2.*std::exp(-kxy*dx3_)*std::cos(kz))
-                  - std::exp(-kxy*(Lx3_-0.5*dx3_))*(1. - std::exp(-kxy*dx3_)
-                    - std::exp(-2.*kxy*dx3_) + std::exp(-3.*kxy*dx3_))
-                    / (1. + std::exp(-2.*kxy*dx3_) - 2.*std::exp(-kxy*dx3_)*std::cos(kz))
-                  );
-              kernel_o = -0.5*four_pi_G/SQR(kxy)/dx3_*(
-                  2*(1. - std::exp(-0.5*kxy*dx3_))
-                  + (2*std::exp(-0.5*kxy*dx3_)*(1. - std::exp(-kxy*dx3_))
-                     * (std::cos(kz + PI/Nx3) - std::exp(-kxy*dx3_)))
-                     / (1. + std::exp(-2.*kxy*dx3_)
-                        - 2.*std::exp(-kxy*dx3_)*std::cos(kz + PI/Nx3))
-                  + std::exp(-kxy*(Lx3_-0.5*dx3_))*(1. - std::exp(-kxy*dx3_)
-                    - std::exp(-2.*kxy*dx3_) + std::exp(-3.*kxy*dx3_))
-                    / (1. + std::exp(-2.*kxy*dx3_)
-                       - 2.*std::exp(-kxy*dx3_)*std::cos(kz + PI/Nx3))
-                  );
+              kernel_e = -0.5*four_pi_G/SQR(kxy)/dx3_*(2*(1. - exp_kxydz)
+                  + (2*exp_kxydz*(1. - exp_kxydz1)*(cos_e - exp_kxydz1))
+                      / (1. + exp_kxydz2 - 2.*exp_kxydz1*cos_e)
+                  - exp_kxyLz1*(1. - exp_kxydz1 - exp_kxydz2 + exp_kxydz3)
+                      / (1. + exp_kxydz2 - 2.*exp_kxydz1*cos_e));
+              kernel_o = -0.5*four_pi_G/SQR(kxy)/dx3_*(2*(1. - exp_kxydz)
+                  + (2*exp_kxydz*(1. - exp_kxydz1)*(cos_o - exp_kxydz1))
+                      / (1. + exp_kxydz2 - 2.*exp_kxydz1*cos_o)
+                  + exp_kxyLz1*(1. - exp_kxydz1 - exp_kxydz2 + exp_kxydz3)
+                      / (1. + exp_kxydz2 - 2.*exp_kxydz1*cos_o));
             }
-          } else {
+          } else if (grfflag==GreenFuncFlag::point_mass) {
+            Real cos_e = std::cos(kz);
+            Real cos_o = std::cos(kz + PI/Nx3);
+            Real exp_kxyLz = std::exp(-kxy*Lx3_);
+            Real exp_kxydz = std::exp(-0.5*kxy*dx3_);
+            Real exp_kxydz1 = SQR(exp_kxydz); // for std::exp(-kxy*dx3_)
+            Real exp_kxydz2 = SQR(exp_kxydz1); // for std::exp(-2*kxy*dx3_)
             if ((slow_ilo+i==0)&&(slow_jlo+j==0)) {
               kernel_e = k==0 ? 0.5*four_pi_G*dx3_*SQR(Nx3) : 0;
-              kernel_o = -four_pi_G*dx3_ / (1. - std::cos(kz+PI/Nx3));
+              kernel_o = -four_pi_G*dx3_ / (1. - cos_o);
             } else {
-              kernel_e = -0.5*four_pi_G/kxy*(1. - std::exp(-kxy*Lx3_))
-                * (1. - std::exp(-2.*kxy*dx3_)) / (1. + std::exp(-2.*kxy*dx3_)
-                    - 2.*std::exp(-kxy*dx3_)*std::cos(kz));
-              kernel_o = -0.5*four_pi_G/kxy*(1. + std::exp(-kxy*Lx3_))
-                * (1. - std::exp(-2.*kxy*dx3_)) / (1. + std::exp(-2.*kxy*dx3_)
-                    - 2.*std::exp(-kxy*dx3_)*std::cos(kz + PI/Nx3));
+              kernel_e = -0.5*four_pi_G/kxy*(1. - exp_kxyLz)*(1. - exp_kxydz2)
+                  / (1. + exp_kxydz2 - 2.*exp_kxydz1*cos_e);
+              kernel_o = -0.5*four_pi_G/kxy*(1. + exp_kxyLz)*(1. - exp_kxydz2)
+                  / (1. + exp_kxydz2 - 2.*exp_kxydz1*cos_o);
             }
+          } else {
+            std::stringstream msg;
+            msg << "### FATAL ERROR in BlockFFTGravity::ApplyKernel" << std::endl
+                << "invalid Green's function" << std::endl;
+            ATHENA_ERROR(msg);
+            return;
           }
           in_e_[idx] *= kernel_e;
           in_o_[idx] *= kernel_o;
@@ -509,8 +517,8 @@ void BlockFFTGravity::InitGreen() {
         gj = (gj+Nx2)%(2*Nx2) - Nx2;
         gk = (gk+Nx3)%(2*Nx3) - Nx3;
         int idx = i + (2*nx1)*(j + (2*nx2)*k);
-        if (INTEGRATED_GREEN) {
-          // cell-integrated Green's function
+        if (grfflag==GreenFuncFlag::cell_averaged) {
+          // cell-averaged Green's function
           grf_[idx]  = _GetIGF((-gi+0.5)*dx1_, (-gj+0.5)*dx2_, (-gk+0.5)*dx3_);
           grf_[idx] -= _GetIGF((-gi+0.5)*dx1_, (-gj+0.5)*dx2_, (-gk-0.5)*dx3_);
           grf_[idx] -= _GetIGF((-gi+0.5)*dx1_, (-gj-0.5)*dx2_, (-gk+0.5)*dx3_);
@@ -519,7 +527,7 @@ void BlockFFTGravity::InitGreen() {
           grf_[idx] += _GetIGF((-gi-0.5)*dx1_, (-gj+0.5)*dx2_, (-gk-0.5)*dx3_);
           grf_[idx] += _GetIGF((-gi-0.5)*dx1_, (-gj-0.5)*dx2_, (-gk+0.5)*dx3_);
           grf_[idx] -= _GetIGF((-gi-0.5)*dx1_, (-gj-0.5)*dx2_, (-gk-0.5)*dx3_);
-        } else {
+        } else if (grfflag==GreenFuncFlag::point_mass) {
           // point-mass Green's function
           if ((gi==0)&&(gj==0)&&(gk==0)) {
             // avoid singularity at r=0
@@ -527,6 +535,12 @@ void BlockFFTGravity::InitGreen() {
           } else {
             grf_[idx] = 1./std::sqrt(SQR(gi*dx1_) + SQR(gj*dx2_) + SQR(gk*dx3_))*dvol;
           }
+        } else {
+          std::stringstream msg;
+          msg << "### FATAL ERROR in BlockFFTGravity::InitGreen" << std::endl
+              << "invalid Green's function" << std::endl;
+          ATHENA_ERROR(msg);
+          return;
         }
         grf_[idx] *= -gconst;
       }
@@ -728,7 +742,26 @@ GravityBoundaryFlag GetGravityBoundaryFlag(const std::string& input_string) {
   }
 }
 
-//! \fn indefinite integral for the integrated Green's function
+//----------------------------------------------------------------------------------------
+//! \fn GetGreenFuncFlag(std::string input_string)
+//! \brief Parses input string to return scoped enumerator flag specifying Green's
+//! function. Typically called in BlockFFTGravity() ctor.
+
+GreenFuncFlag GetGreenFuncFlag(const std::string& input_string) {
+  if (input_string == "point_mass") {
+    return GreenFuncFlag::point_mass;
+  } else if (input_string == "cell_averaged") {
+    return GreenFuncFlag::cell_averaged;
+  } else {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in GetGreenFuncFlag" << std::endl
+        << "Input string=" << input_string << "\n"
+        << "is an invalid Green's function type" << std::endl;
+    ATHENA_ERROR(msg);
+  }
+}
+
+//! \fn indefinite integral for the cell-averaged Green's function
 Real _GetIGF(Real x, Real y, Real z) {
   Real r = std::sqrt(SQR(x) + SQR(y) + SQR(z));
   return y*z*std::log(x+r) + z*x*std::log(y+r) + x*y*std::log(z+r)
