@@ -57,7 +57,7 @@ int ParticleMesh::AddMeshAux() {
 //! \brief constructs a new ParticleMesh instance.
 
 ParticleMesh::ParticleMesh(Particles *ppar) : nmeshaux(0), iweight(-1),
-  imom1(-1), imom2(-1), imom3(-1) {
+  imom1(-1), imom2(-1), imom3(-1), imass(-1) {
   // Add weight in meshaux.
   iweight = AddMeshAux();
   // Add momentum in meshaux
@@ -72,6 +72,8 @@ ParticleMesh::ParticleMesh(Particles *ppar) : nmeshaux(0), iweight(-1),
   pmb_ = ppar->pmy_block;
   pmesh_ = pmb_->pmy_mesh;
   pbval_ = pmb_->pbval;
+
+  if (ppar_->imass != -1) imass = AddMeshAux();
 
   // Determine active dimensions.
   RegionSize& block_size = pmb_->block_size;
@@ -100,6 +102,7 @@ ParticleMesh::ParticleMesh(Particles *ppar) : nmeshaux(0), iweight(-1),
 
   // Get a shorthand to weights.
   weight.InitWithShallowSlice(meshaux, 4, iweight, 1);
+  if (ppar_->imass != -1) density.InitWithShallowSlice(meshaux, 4, imass, 1);
 
   // Determine the dimensions of each particle cloud.
   npc1_ = active1_ ? NPC : 1;

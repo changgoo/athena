@@ -355,6 +355,24 @@ void BlockFFTGravity::ApplyKernel() {
 void BlockFFTGravity::Solve(int stage) {
 #ifdef FFT
 #ifdef MPI_PARALLEL
+  // Compute mass density of particles.
+  AthenaArray<Real> rho, rhosum;
+  rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
+
+  // BlockFFT assume nblocal = 1 so that no need to loop over meshblocks
+  bool is_particle_gravity = pmy_block_->pmy_mesh->particle_gravity;
+  if (is_particle_gravity) {
+    rhosum.NewAthenaArray(pmy_block_->ncells3, pmy_block_->ncells2, pmy_block_->ncells1);
+    Particles::FindDensityOnMesh(pmy_block_->pmy_mesh, false, true);
+    for (Particles *ppar : pmy_block_->ppar_grav) {
+      AthenaArray<Real> rhop(ppar->GetMassDensity());
+      for (int k = pmy_block_->ks; k <= pmy_block_->ke; ++k)
+        for (int j = pmy_block_->js; j <= pmy_block_->je; ++j)
+          for (int i = pmy_block_->is; i <= pmy_block_->ie; ++i)
+            rhosum(k,j,i) = rho(k,j,i) + rhop(k,j,i);
+    }
+  }
+
   if (SHEAR_PERIODIC) {
     // For shearing-periodic BC, we use a 'phase shift' method, instead of
     // a roll-unroll method in old Athena. It was found that the phase shift
@@ -365,15 +383,18 @@ void BlockFFTGravity::Solve(int stage) {
     // solution in time.
     Real time = pmy_block_->pmy_mesh->time;
     Real qomt = qshear_*Omega_0_*time;
-    AthenaArray<Real> rho;
+
     Real p,eps;
 
     // left integer time
     p = std::floor(qomt*Lx1_/Lx2_*(Real)Nx2);
     eps = qomt*Lx1_/Lx2_*(Real)Nx2 - p;
     rshear_ = p/(Real)Nx2;
-    rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
-    LoadSource(rho);
+
+    if (is_particle_gravity)
+      LoadSource(rhosum);
+    else
+      LoadSource(rho);
     ExecuteForward();
     ApplyKernel();
     ExecuteBackward();
@@ -382,8 +403,11 @@ void BlockFFTGravity::Solve(int stage) {
     // right integer time
     p = std::floor(qomt*Lx1_/Lx2_*(Real)Nx2) + 1.;
     rshear_ = p/(Real)Nx2;
-    rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
-    LoadSource(rho);
+
+    if (is_particle_gravity)
+      LoadSource(rhosum);
+    else
+      LoadSource(rho);
     ExecuteForward();
     ApplyKernel();
     ExecuteBackward();
@@ -400,13 +424,14 @@ void BlockFFTGravity::Solve(int stage) {
     // 8x-extended domain is assumed. Instead of zero-padding the density, we
     // multiply the appropriate phase shift to each parity and then combine them
     // to compute the full 8x-extended convolution.
-    AthenaArray<Real> rho;
-    rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
     pmy_block_->pgrav->phi.ZeroClear();
     for (int pz=0; pz<=1; ++pz) {
       for (int py=0; py<=1; ++py) {
         for (int px=0; px<=1; ++px) {
-          LoadOBCSource(rho,px,py,pz);
+          if (is_particle_gravity)
+            LoadOBCSource(rhosum,px,py,pz);
+          else
+            LoadOBCSource(rho,px,py,pz);
           ExecuteForward();
           MultiplyGreen(px,py,pz);
           ExecuteBackward();
@@ -416,9 +441,10 @@ void BlockFFTGravity::Solve(int stage) {
     }
   } else {
     // Periodic or disk BC without shearing box
-    AthenaArray<Real> rho;
-    rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
-    LoadSource(rho);
+    if (is_particle_gravity)
+      LoadSource(rhosum);
+    else
+      LoadSource(rho);
     ExecuteForward();
     ApplyKernel();
     ExecuteBackward();

@@ -20,6 +20,7 @@
 #include "../parameter_input.hpp"
 #include "particle_buffer.hpp"
 #include "particle-mesh.hpp"
+#include "particle_gravity.hpp"
 
 // MPI header
 #ifdef MPI_PARALLEL
@@ -89,7 +90,7 @@ friend class ParticleMesh;
 
   // Accessor
   Real GetMaximumWeight() const;
-  AthenaArray<Real> GetMassDensity() const { return ppm->weight; }
+  virtual AthenaArray<Real> GetMassDensity() const;
   AthenaArray<Real> GetVelocityField() const;
   bool IsGravity() { return isgravity_; }
 
@@ -145,6 +146,7 @@ friend class ParticleMesh;
 
   int imom1, imom2, imom3;  // indices for momentum components on mesh
 
+  int imass;
   int igx, igy, igz; // indices for gravity force
 
   // Instance methods
@@ -153,7 +155,8 @@ friend class ParticleMesh;
                                     //!> Be sure to call back when derived.
   virtual void AllocateMemory();    //!> Needs to be called in the derived class init
   void UpdateCapacity(int new_nparmax);  //!> Change the capacity of particle arrays
-  void FindLocalDensityOnMesh(bool include_momentum);
+
+  virtual void FindLocalDensityOnMesh(bool include_momentum);
   void ConvertToDensity(bool include_momentum);
   void SaveStatus();
 
@@ -175,7 +178,7 @@ friend class ParticleMesh;
   AthenaArray<Real> work;      //!>   working arrays (not communicated)
 
   ParticleMesh *ppm;  //!> ptr to particle-mesh
-
+  ParticleGravity *ppgrav; //!> ptr to particle-gravity
                                        // Shorthands:
   AthenaArray<int> pid;                //!>   particle ID
   AthenaArray<Real> xp, yp, zp;        //   position
@@ -240,6 +243,14 @@ inline Real Particles::GetMaximumWeight() const {
 }
 
 //--------------------------------------------------------------------------------------
+//! \fn Real Particles::GetMaximumWeight()
+//! \brief returns the maximum weight on the mesh.
+
+inline AthenaArray<Real> Particles::GetMassDensity() const {
+  return ppm->weight;
+}
+
+//--------------------------------------------------------------------------------------
 //! \class DustParticles
 //! \brief defines the class for dust particles that interact with the gas via drag
 //!        force.
@@ -270,7 +281,6 @@ friend class MeshBlock;
   bool variable_taus;  //!> whether or not the stopping time is variable
 
   int iwx, iwy, iwz;         // indices for working arrays
-  int igx, igy, igz;         // indices for working arrays for gravity
   int idpx1, idpx2, idpx3;   // indices for momentum change
   int itaus;                 //!> index for stopping time
 
@@ -289,7 +299,6 @@ friend class MeshBlock;
   AthenaArray<Real> wx, wy, wz;        // shorthand for working arrays
   AthenaArray<Real> dpx1, dpx2, dpx3;  // shorthand for momentum change
   AthenaArray<Real> taus;              // shorthand for stopping time
-  ParticleGravity *ppgrav;
 };
 
 //--------------------------------------------------------------------------------------
@@ -339,21 +348,19 @@ friend class MeshBlock;
   // Destructor
   ~StarParticles();
 
-  // Instance method
-  void SetOneParticleMass(Real new_mass);
-  Real GetOneParticleMass() { return mass; }
-
   // override integrator
   void Integrate(int step);
   void Kick(Real t, Real dt, const AthenaArray<Real>& meshsrc);
   void Drift(Real t, Real dt);
   void Age(Real t, Real dt);
 
+  AthenaArray<Real> GetMassDensity() const override;
+
  private:
-  int imass, imetal, iage; // indices for additional Real properties
+  int imetal, iage; // indices for additional Real properties
   int igas;                // indices for additional Aux properties
-  int igx, igy, igz;       // indices for working arrays for gravity
   // Instance methods.
+  void FindLocalDensityOnMesh(bool include_momentum) override;
   void AssignShorthands() override;
   void SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
   void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
@@ -364,8 +371,14 @@ friend class MeshBlock;
   // Instance variables
   AthenaArray<Real> mp, mzp, tage;        // shorthand for real properties
   AthenaArray<Real> fgas;                     // shorthand for aux properties
-
-  ParticleGravity *ppgrav;
 };
+
+//--------------------------------------------------------------------------------------
+//! \fn Real Particles::GetMaximumWeight()
+//! \brief returns the maximum weight on the mesh.
+
+inline AthenaArray<Real> StarParticles::GetMassDensity() const {
+  return ppm->density;
+}
 
 #endif  // PARTICLES_PARTICLES_HPP_

@@ -41,8 +41,8 @@ Real DeltaRho(MeshBlock *pmb, int iout);
 //========================================================================================
 void Mesh::InitUserMeshData(ParameterInput *pin) {
   if (SELF_GRAVITY_ENABLED) {
-    Real four_pi_G = pin->GetReal("problem","four_pi_G");
-    Real eps = pin->GetOrAddReal("problem","grav_eps", 0.0);
+    Real four_pi_G = pin->GetReal("self_gravity","four_pi_G");
+    Real eps = pin->GetOrAddReal("self_gravity","grav_eps", 0.0);
     SetFourPiG(four_pi_G);
     SetGravityThreshold(eps);
   }
@@ -71,12 +71,25 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 //========================================================================================
 
 void MeshBlock::ProblemGenerator(ParameterInput *pin) {
-  Real d0 = pin->GetOrAddReal("problem", "d0", 1.0);
+  Real Mtot = pin->GetOrAddReal("problem", "Mtot", 1.0);
+  Real fgas = pin->GetOrAddReal("problem", "fgas", 0.5);
+  Real a = pin->GetOrAddReal("problem", "a", 1.0);
+  Real x0=0.0, y0=0.0, z0=0.0;
+  Real four_pi_G = pin->GetReal("self_gravity","four_pi_G");
+  Real gconst = four_pi_G / (4.0*PI);
 
   for (int k=ks; k<=ke; k++) {
     for (int j=js; j<=je; j++) {
       for (int i=is; i<=ie; i++) {
-        phydro->u(IDN,k,j,i) = d0;
+        Real x = pcoord->x1v(i);
+        Real y = pcoord->x2v(j);
+        Real z = pcoord->x3v(k);
+        Real r2 = SQR(x - x0)+SQR(y - y0)+SQR(z - z0);
+
+        Real da = 3.0*Mtot/(4*PI*a*a*a);
+        Real den = fgas*da*std::pow((1.0+r2/SQR(a)),-2.5);
+
+        phydro->u(IDN,k,j,i) = den;
 
         phydro->u(IM1,k,j,i) = 0.0;
         phydro->u(IM2,k,j,i) = 0.0;
@@ -104,10 +117,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     Real npartot = pin->GetOrAddReal(pp->input_block_name, "npartot",10000);
     Real Mtot = pin->GetOrAddReal("problem", "Mtot", 1);
     Real a = pin->GetOrAddReal("problem", "a", 1);
-    Real m0 = Mtot/npartot;
+    Real m0 = (1-fgas)*Mtot/npartot;
 
     // Determine number of particles in the block.
-    pp->UpdateCapacity(npartot);
+    pp->UpdateCapacity(npartot/Globals::nranks);
 
     // Assign the particles.
     // Ramdomizing position. Or velocity perturbation
@@ -139,9 +152,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         pp->mzp(ipid) = m0;
         pp->tage(ipid) = 0.0;
 
-        pp->xp(ipid) = x1;
-        pp->yp(ipid) = x2;
-        pp->zp(ipid) = x3;
+        pp->xp(ipid) = x1+x0;
+        pp->yp(ipid) = x2+y0;
+        pp->zp(ipid) = x3+z0;
 
         pp->vpx(ipid) = 0.0;
         pp->vpy(ipid) = 0.0;
@@ -151,6 +164,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       }
     }
     pp->npar = ipid;
+
+    std::cout << "npartot: " << npartot
+              << " nparmax: " << pp->nparmax << " npar: " << pp->npar << std::endl;
   }
 }
 

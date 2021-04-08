@@ -14,7 +14,6 @@
 #include "../coordinates/coordinates.hpp"
 #include "../gravity/gravity.hpp"
 #include "../hydro/hydro.hpp"
-#include "particle_gravity.hpp"
 #include "particles.hpp"
 
 //--------------------------------------------------------------------------------------
@@ -58,12 +57,6 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParame
   if (SELF_GRAVITY_ENABLED && backreaction) {
     isgravity_ = pp->gravity;
     pmy_mesh->particle_gravity = true;
-    // Add working arrays for gravity forces
-    igx = AddWorkingArray();
-    igy = AddWorkingArray();
-    igz = AddWorkingArray();
-    // Activate particle gravity.
-    ppgrav = new ParticleGravity(this);
   }
 
   Particles::AllocateMemory();
@@ -76,8 +69,8 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParame
 //! \brief destroys a DustParticles instance.
 
 DustParticles::~DustParticles() {
-  if (SELF_GRAVITY_ENABLED && backreaction)
-    delete ppgrav;
+  // nothing to do
+  return;
 }
 
 //--------------------------------------------------------------------------------------

@@ -14,7 +14,6 @@
 #include "../coordinates/coordinates.hpp"
 #include "../gravity/gravity.hpp"
 #include "../hydro/hydro.hpp"
-#include "particle_gravity.hpp"
 #include "particles.hpp"
 
 //--------------------------------------------------------------------------------------
@@ -22,8 +21,8 @@
 //! \brief constructs a StarParticles instance.
 
 StarParticles::StarParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp)
-  : Particles(pmb, pin, pp) {
-  // Add particle mass, metallicity
+  : Particles(pmb, pin, pp), imetal(-1), iage(-1), igas(-1) {
+  // Add particle mass, metal mass
   imass = AddRealProperty();
   imetal = AddRealProperty();
 
@@ -32,17 +31,6 @@ StarParticles::StarParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParame
 
   // Add gas fraction as aux peroperty
   igas = AddAuxProperty();
-
-  if (SELF_GRAVITY_ENABLED) {
-    isgravity_ = pp->gravity;
-    pmy_mesh->particle_gravity = true;
-    // Add working arrays for gravity forces
-    igx = AddWorkingArray();
-    igy = AddWorkingArray();
-    igz = AddWorkingArray();
-    // Activate particle gravity.
-    ppgrav = new ParticleGravity(this);
-  }
 
   // allocate memory
   Particles::AllocateMemory();
@@ -58,14 +46,6 @@ StarParticles::StarParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParame
 StarParticles::~StarParticles() {
   // nothing to do
   return;
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn void StarParticles::SetOneParticleMass(Real new_mass)
-//! \brief sets the mass of each particle.
-
-void StarParticles::SetOneParticleMass(Real new_mass) {
-  pinput->SetReal(input_block_name, "mass", mass = new_mass);
 }
 
 //--------------------------------------------------------------------------------------
@@ -167,6 +147,38 @@ void StarParticles::Kick(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
 void StarParticles::SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
   if (SELF_GRAVITY_ENABLED) ppgrav->ExertGravitationalForce(dt);
   return;
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void StarParticles::FindLocalDensityOnMesh(Mesh *pm, bool include_momentum)
+//! \brief finds the number/mass density of particles on the mesh.
+//!
+//!   If include_momentum is true, the momentum density field is also computed,
+//!   assuming mass of each particle is unity.
+//! \note
+//!   Postcondition: ppm->weight becomes the density in each cell, and
+//!   if include_momentum is true, ppm->meshaux(imom1:imom3,:,:,:)
+//!   becomes the momentum density.
+
+void StarParticles::FindLocalDensityOnMesh(bool include_momentum) {
+  Coordinates *pc(pmy_block->pcoord);
+
+  if (include_momentum) {
+    AthenaArray<Real> vp, vp1, vp2, vp3, mpar;
+    vp.NewAthenaArray(4, npar);
+    vp1.InitWithShallowSlice(vp, 2, 0, 1);
+    vp2.InitWithShallowSlice(vp, 2, 1, 1);
+    vp3.InitWithShallowSlice(vp, 2, 2, 1);
+    mpar.InitWithShallowSlice(vp, 2, 3, 1);
+    for (int k = 0; k < npar; ++k) {
+      pc->CartesianToMeshCoordsVector(xp(k), yp(k), zp(k),
+        mp(k)*vpx(k), mp(k)*vpy(k), mp(k)*vpz(k), vp1(k), vp2(k), vp3(k));
+      mpar(k) = mp(k);
+    }
+    ppm->AssignParticlesToMeshAux(vp, 0, ppm->imom1, 4);
+  } else {
+    ppm->AssignParticlesToMeshAux(mp, 0, ppm->imass, 1);
+  }
 }
 
 //--------------------------------------------------------------------------------------

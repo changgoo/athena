@@ -64,11 +64,12 @@ friend class OutputType;
   int nmeshaux;  //!> number of auxiliaries to the meshblock
   int iweight;   //!> index to weight in meshaux
   int imom1, imom2, imom3;   //!> index to momentum vector in meshaux
+  int imass; //!> index to mass density in meshaux
 
   // Instance variables
   AthenaArray<Real> meshaux;   //!> auxiliaries to the meshblock
   int is, ie, js, je, ks, ke;  // beginning and ending indices
-  AthenaArray<Real> weight;    //!> shorthand to weight in meshaux
+  AthenaArray<Real> weight, density;    //!> shorthand to weight in meshaux
 
   // Instance methods
   void InterpolateMeshToParticles(

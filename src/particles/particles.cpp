@@ -271,7 +271,7 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
   nint(0), nreal(0), naux(0), nwork(0),
   ipid(-1), ixp(-1), iyp(-1), izp(-1), ivpx(-1), ivpy(-1), ivpz(-1),
   ixp0(-1), iyp0(-1), izp0(-1), ivpx0(-1), ivpy0(-1), ivpz0(-1),
-  ixi1(-1), ixi2(-1), ixi3(-1), imom1(-1), imom2(-1), imom3(-1),
+  ixi1(-1), ixi2(-1), ixi3(-1), imom1(-1), imom2(-1), imom3(-1), imass(-1),
   igx(-1), igy(-1), igz(-1), my_ipar_(pp->ipar), isgravity_(false), mass(1.0) {
   // Add particle ID.
   ipid = AddIntProperty();
@@ -319,12 +319,10 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
   // Initiate ParticleMesh class.
   ParticleMesh::Initialize(pin);
 
-  // Allocate mesh auxiliaries.
-  ppm = new ParticleMesh(this);
-  imom1 = ppm->imom1;
-  imom2 = ppm->imom2;
-  imom3 = ppm->imom3;
-
+  if (SELF_GRAVITY_ENABLED) {
+    isgravity_ = pp->gravity;
+    pmy_mesh->particle_gravity = true;
+  }
   // Actual memory allocation and shorthand assignment will be done in the derived class
   // Initialization of ParticleBuffer, ParticleGravity
   // has moved to the derived class
@@ -352,6 +350,9 @@ Particles::~Particles() {
 
   // Delete mesh auxiliaries.
   delete ppm;
+
+  // Delete particle gravity.
+  if (isgravity_) delete ppgrav;
 }
 
 //--------------------------------------------------------------------------------------
@@ -360,6 +361,22 @@ Particles::~Particles() {
 void Particles::AllocateMemory() {
   // Initiate ParticleBuffer class.
   ParticleBuffer::SetNumberOfProperties(nint, nreal + naux);
+
+  // Allocate mesh auxiliaries.
+  ppm = new ParticleMesh(this);
+  imom1 = ppm->imom1;
+  imom2 = ppm->imom2;
+  imom3 = ppm->imom3;
+
+  // Allocate particle gravity
+  if (isgravity_) {
+    // Add working arrays for gravity forces
+    igx = AddWorkingArray();
+    igy = AddWorkingArray();
+    igz = AddWorkingArray();
+    // Activate particle gravity.
+    ppgrav = new ParticleGravity(this);
+  }
 
   // Allocate integer properties.
   intprop.NewAthenaArray(nint,nparmax);
@@ -372,6 +389,7 @@ void Particles::AllocateMemory() {
 
   // Allocate working arrays.
   if (nwork > 0) work.NewAthenaArray(nwork,nparmax);
+
 }
 
 //--------------------------------------------------------------------------------------
@@ -1259,12 +1277,15 @@ void Particles::ConvertToDensity(bool include_momentum) {
           ppm->meshaux(ppm->imom1,k,j,i) *= rhop;
           ppm->meshaux(ppm->imom2,k,j,i) *= rhop;
           ppm->meshaux(ppm->imom3,k,j,i) *= rhop;
+          if (ppm->imass != -1) ppm->density(k,j,i) *= rhop;
         }
   } else {
     for (int k = ks; k <= ke; ++k)
       for (int j = js; j <= je; ++j)
-        for (int i = is; i <= ie; ++i)
+        for (int i = is; i <= ie; ++i) {
           ppm->weight(k,j,i) *= mass/pc->GetCellVolume(k,j,i);
+          if (ppm->imass != -1) ppm->density(k,j,i) /= pc->GetCellVolume(k,j,i);
+        }
   }
 }
 
