@@ -10,6 +10,7 @@
 
 // C++ headers
 #include <ctime>      // clock(), CLOCKS_PER_SEC, clock_t
+#include <fstream>
 #include <iostream>
 #include <string>     // c_str()
 
@@ -51,29 +52,31 @@ void OutputLoopTime(const int ncycle, double dt_array[], std::string basename) {
   double time_per_step = dt_array[0] + dt_array[1] + dt_array[2]
                      + dt_array[3] + dt_array[4];
   if (Globals::my_rank == 0) {
-    FILE *fp = nullptr;
-    char fop{ 'a' };
+    std::ofstream os;
     std::string fname;
     fname.assign(basename);
     fname.append(".loop_time.txt");
     // open 'loop_time.txt' file
     if (newfile_) {
-      fop = 'w';
+      os.open(fname.c_str(), std::ofstream::out);
       newfile_ = false;
+    } else {
+      os.open(fname.c_str(), std::ofstream::app);
     }
 
-    if ((fp = std::fopen(fname.c_str(),&fop)) == nullptr) {
+    if (!os.is_open()) {
       std::cout << "### ERROR in function OutputLoopTime" << std::endl
                 << "Cannot open " << fname << std::endl;
       return;
     }
 
-    std::fprintf(fp,"ncycle=%d, time=%e,",ncycle, time_per_step);
-    std::fprintf(fp,"Before=%e,",dt_array[0]);
-    std::fprintf(fp,"TurbulenceDriver=%e,",dt_array[1]);
-    std::fprintf(fp,"TimeIntegratorTaskList=%e,",dt_array[2]);
-    std::fprintf(fp,"SelfGravity=%e,",dt_array[3]);
-    std::fprintf(fp,"After=%e\n",dt_array[4]);
-    std::fclose(fp);
+    os << "ncycle=" << ncycle << ", time=" << time_per_step;
+    os << ",Before=" << dt_array[0];
+    os << ",TurbulenceDriver=" << dt_array[1];
+    os << ",TimeIntegratorTaskList=" << dt_array[2];
+    os << ",SelfGravity=" << dt_array[3];
+    os << ",After=" << dt_array[4] << std::endl;
+
+    os.close();
   }
 }
