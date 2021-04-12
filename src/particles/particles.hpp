@@ -97,10 +97,11 @@ friend class ParticleMesh;
 
   // Instance methods
   void AddHistoryOutput(Real data_sum[], int pos);
-
+  void AddOneParticle(Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
+  bool CheckInMeshBlock(Real x1, Real x2, Real x3);
   void ClearBoundary();
   void ClearNeighbors();
-  void Integrate(int step);
+  virtual void Integrate(int step);
   void LinkNeighbors(MeshBlockTree &tree, int64_t nrbx1, int64_t nrbx2, int64_t nrbx3,
                      int root_level);
   void RemoveOneParticle(int k);
@@ -111,6 +112,8 @@ friend class ParticleMesh;
   bool ReceiveFromNeighbors();
   bool ReceiveParticleMesh(int step);
   Real NewBlockTimeStep();
+  void OutputParticles();
+  void OutputOneParticle(int k);
 
   std::size_t GetSizeInBytes();
   void UnpackParticlesForRestart(char *mbdata, std::size_t &os);
@@ -176,6 +179,8 @@ friend class ParticleMesh;
   AthenaArray<Real> auxprop;   //!>   auxiliary properties (communicated when
                                //!>     particles moving to another meshblock)
   AthenaArray<Real> work;      //!>   working arrays (not communicated)
+
+  std::vector<std::string> intfieldname,realfieldname;
 
   ParticleMesh *ppm;  //!> ptr to particle-mesh
   ParticleGravity *ppgrav; //!> ptr to particle-gravity
@@ -349,11 +354,12 @@ friend class MeshBlock;
   ~StarParticles();
 
   // override integrator
-  void Integrate(int step);
+  void Integrate(int step) override;
   void Kick(Real t, Real dt, const AthenaArray<Real>& meshsrc);
   void Drift(Real t, Real dt);
   void Age(Real t, Real dt);
 
+  void AddOneParticle(Real mass, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
   AthenaArray<Real> GetMassDensity() const override;
 
  private:

@@ -275,16 +275,23 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
   igx(-1), igy(-1), igz(-1), my_ipar_(pp->ipar), isgravity_(false), mass(1.0) {
   // Add particle ID.
   ipid = AddIntProperty();
+  intfieldname.push_back("pid");
 
   // Add particle position.
   ixp = AddRealProperty();
   iyp = AddRealProperty();
   izp = AddRealProperty();
+  realfieldname.push_back("x1");
+  realfieldname.push_back("x2");
+  realfieldname.push_back("x3");
 
   // Add particle velocity.
   ivpx = AddRealProperty();
   ivpy = AddRealProperty();
   ivpz = AddRealProperty();
+  realfieldname.push_back("v1");
+  realfieldname.push_back("v2");
+  realfieldname.push_back("v3");
 
   // Add old particle position.
   ixp0 = AddAuxProperty();
@@ -335,9 +342,11 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
 Particles::~Particles() {
   // Delete integer properties.
   intprop.DeleteAthenaArray();
+  intfieldname.clear();
 
   // Delete real properties.
   realprop.DeleteAthenaArray();
+  realfieldname.clear();
 
   // Delete auxiliary properties.
   if (naux > 0) auxprop.DeleteAthenaArray();
@@ -422,6 +431,39 @@ void Particles::AddHistoryOutput(Real data_sum[], int pos) {
   data_sum[pos] = static_cast<Real>(np);
   for (int i = 0; i < NSUM; ++i)
     data_sum[pos+i+1] = sum[i];
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void Particles::CheckInMeshBlock()
+//! \brief check whether given position is within the meshblock assuming Cartesian
+
+bool Particles::CheckInMeshBlock(Real x1, Real x2, Real x3) {
+  RegionSize& bsize = pmy_block->block_size;
+  if ((x1>=bsize.x1min) && (x1<bsize.x1max) &&
+      (x2>=bsize.x2min) && (x2<bsize.x2max) &&
+      (x3>=bsize.x3min) && (x3<bsize.x3max)) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void Particles::AddOneParticle()
+//! \brief add one particle if position is within the mesh block
+
+void Particles::AddOneParticle(Real x1, Real x2, Real x3,
+  Real v1, Real v2, Real v3) {
+  if (CheckInMeshBlock(x1,x2,x3)) {
+    if (npar == nparmax) UpdateCapacity(npar*2);
+    xp(npar) = x1;
+    yp(npar) = x2;
+    zp(npar) = x3;
+    vpx(npar) = v1;
+    vpy(npar) = v2;
+    vpz(npar) = v3;
+    npar++;
+  }
 }
 
 //--------------------------------------------------------------------------------------
@@ -1402,6 +1444,61 @@ void Particles::FormattedTableOutput(Mesh *pm, OutputParameters op) {
       }
     }
   }
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn Particles::OutputParticles()
+//! \brief outputs the particle data in tabulated format.
+void Particles::OutputParticles() {
+  for (int k = 0; k < npar; ++k) OutputOneParticle(k);
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn Particles::OutputParticle()
+//! \brief outputs the particle data in tabulated format.
+void Particles::OutputOneParticle(int k) {
+  std::stringstream fname, msg;
+  std::ofstream os;
+  std::string file_basename = pinput->GetString("job","problem_id");
+
+  // Create the filename.
+  fname << file_basename << ".par" << pid(k) << ".csv";
+
+  // Open the file for write.
+  if (pmy_mesh->ncycle == 0)
+    os.open(fname.str().data(), std::ofstream::out);
+  else
+    os.open(fname.str().data(), std::ofstream::app);
+
+  if (!os.is_open()) {
+    msg << "### FATAL ERROR in function [Particles::OutputParticle]"
+        << std::endl << "Output file '" << fname.str() << "' could not be opened"
+        << std::endl;
+    ATHENA_ERROR(msg);
+  }
+
+  if (pmy_mesh->ncycle == 0) {
+    os << "time";
+    for (int ip = 0; ip < nint; ++ip)
+      os << "," << intfieldname[ip];
+    for (int ip = 0; ip < nreal; ++ip)
+      os << "," << realfieldname[ip];
+    os << std::endl;
+  }
+
+  // Write the time.
+  os << std::scientific << std::showpoint << std::setprecision(18);
+  os << pmy_mesh->time;
+
+  // Write the particle data in the meshblock.
+  for (int ip = 0; ip < nint; ++ip)
+    os << "," << intprop(ip,k);
+  for (int ip = 0; ip < nreal; ++ip)
+    os << "," << realprop(ip,k);
+  os << std::endl;
+
+  // Close the file and get the next meshblock.
+  os.close();
 }
 
 //--------------------------------------------------------------------------------------

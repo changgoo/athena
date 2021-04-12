@@ -25,12 +25,16 @@ StarParticles::StarParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParame
   // Add particle mass, metal mass
   imass = AddRealProperty();
   imetal = AddRealProperty();
+  realfieldname.push_back("mass");
+  realfieldname.push_back("metal");
 
   // Add particle age
   iage = AddRealProperty();
+  realfieldname.push_back("age");
 
   // Add gas fraction as aux peroperty
   igas = AddAuxProperty();
+  realfieldname.push_back("fgas");
 
   // allocate memory
   Particles::AllocateMemory();
@@ -61,6 +65,30 @@ void StarParticles::AssignShorthands() {
   fgas.InitWithShallowSlice(auxprop, 2, igas, 1);
 }
 
+//--------------------------------------------------------------------------------------
+//! \fn void StarParticles::AddOneParticle()
+//! \brief add one particle if position is within the mesh block
+
+void StarParticles::AddOneParticle(Real mass, Real x1, Real x2, Real x3,
+  Real v1, Real v2, Real v3) {
+  if (Particles::CheckInMeshBlock(x1,x2,x3)) {
+    if (npar == nparmax) Particles::UpdateCapacity(npar*2);
+    mp(npar) = mass;
+    xp(npar) = x1;
+    yp(npar) = x2;
+    zp(npar) = x3;
+    vpx(npar) = v1;
+    vpy(npar) = v2;
+    vpz(npar) = v3;
+
+    // initialize other properties
+    mzp(npar) = mass;
+    tage(npar) = 0.0;
+    fgas(npar) = 0.0;
+
+    npar++;
+  }
+}
 
 //--------------------------------------------------------------------------------------
 //! \fn void StarParticles::Integrate(int step)
@@ -86,7 +114,7 @@ void StarParticles::Integrate(int stage) {
       ppgrav->InterpolateGravitationalForce();
     }
     // kick from t^n-1/2 to t^n
-    if (t>0) Kick(t,dt,pmy_block->phydro->w);
+    // if(t>0) Kick(t,0.5*dt,pmy_block->phydro->w);
     SaveStatus();
     // kick from t^n to t^n+1/2
     Kick(t,dt,pmy_block->phydro->w);
@@ -97,6 +125,8 @@ void StarParticles::Integrate(int stage) {
     dt = pmy_mesh->dt;
     // drift from t^n to t^n+1
     Drift(t,dt);
+    // kick from t^n+1/2 to t^n+1
+    Kick(t,0.5*dt,pmy_block->phydro->w);
     Age(t,dt);
     break;
   }
