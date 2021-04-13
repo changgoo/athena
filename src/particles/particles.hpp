@@ -112,8 +112,8 @@ friend class ParticleMesh;
   bool ReceiveFromNeighbors();
   bool ReceiveParticleMesh(int step);
   Real NewBlockTimeStep();
-  void OutputParticles();
-  void OutputOneParticle(int k);
+  void OutputParticles(bool header);
+  void OutputOneParticle(std::ostream &os, int k, bool header);
 
   std::size_t GetSizeInBytes();
   void UnpackParticlesForRestart(char *mbdata, std::size_t &os);
@@ -180,7 +180,7 @@ friend class ParticleMesh;
                                //!>     particles moving to another meshblock)
   AthenaArray<Real> work;      //!>   working arrays (not communicated)
 
-  std::vector<std::string> intfieldname,realfieldname;
+  std::vector<std::string> intfieldname, realfieldname, auxfieldname;
 
   ParticleMesh *ppm;  //!> ptr to particle-mesh
   ParticleGravity *ppgrav; //!> ptr to particle-gravity
@@ -195,6 +195,10 @@ friend class ParticleMesh;
   MeshBlock* pmy_block;  //!> MeshBlock pointer
   Mesh* pmy_mesh;        //!> Mesh pointer
 
+  // shearing box parameters
+  Real Omega_0_, qshear_;
+  int ShBoxCoord_;
+  bool orbital_advection_defined_;
  private:
   // Class method
   static void ProcessNewParticles(Mesh *pmesh, int ipar);
@@ -357,12 +361,15 @@ friend class MeshBlock;
   void Integrate(int step) override;
   void Kick(Real t, Real dt, const AthenaArray<Real>& meshsrc);
   void Drift(Real t, Real dt);
+  void BorisKick(Real t, Real dt);
+  void ExertTidalForce(Real t, Real dt);
   void Age(Real t, Real dt);
 
   void AddOneParticle(Real mass, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
   AthenaArray<Real> GetMassDensity() const override;
 
  private:
+  Real dt_old;
   int imetal, iage; // indices for additional Real properties
   int igas;                // indices for additional Aux properties
   // Instance methods.

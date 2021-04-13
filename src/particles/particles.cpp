@@ -181,6 +181,11 @@ void Particles::PostInitialize(Mesh *pm, ParameterInput *pin) {
   for (int b = 0; b < pm->nblocal; ++b)
     for (Particles *ppar : pm->my_blocks(b)->ppar)
       ppar->SetPositionIndices();
+
+  // Print particle csv
+  for (int b = 0; b < pm->nblocal; ++b)
+    for (Particles *ppar : pm->my_blocks(b)->ppar)
+      ppar->OutputParticles(true);
 }
 
 //--------------------------------------------------------------------------------------
@@ -297,11 +302,17 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
   ixp0 = AddAuxProperty();
   iyp0 = AddAuxProperty();
   izp0 = AddAuxProperty();
+  auxfieldname.push_back("x10");
+  auxfieldname.push_back("x20");
+  auxfieldname.push_back("x30");
 
   // Add old particle velocity.
   ivpx0 = AddAuxProperty();
   ivpy0 = AddAuxProperty();
   ivpz0 = AddAuxProperty();
+  auxfieldname.push_back("v10");
+  auxfieldname.push_back("v20");
+  auxfieldname.push_back("v30");
 
   // Add particle position indices.
   ixi1 = AddWorkingArray();
@@ -330,6 +341,30 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
     isgravity_ = pp->gravity;
     pmy_mesh->particle_gravity = true;
   }
+  
+  // read shearing box parameters from input block
+  bool orbital_advection_defined_
+         = (pin->GetOrAddInteger("orbital_advection","OAorder",0)!=0)?
+           true : false;
+  Omega_0_ = pin->GetOrAddReal("orbital_advection","Omega0",0.0);
+  qshear_  = pin->GetOrAddReal("orbital_advection","qshear",0.0);
+  ShBoxCoord_ = pin->GetOrAddInteger("orbital_advection","shboxcoord",1);
+  if (orbital_advection_defined_) { // orbital advection source terms
+    std::stringstream msg;
+    msg << "### FATAL ERROR in Particle constructor" << std::endl
+        << "OrbitalAdvection is not implemented for particles" << std::endl
+        << std::endl;
+    ATHENA_ERROR(msg);
+  }
+
+  if (ShBoxCoord_ != 1) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in Particle constructor" << std::endl
+        << "only orbital_advection/shboxcoord=1 is supported" << std::endl
+        << std::endl;
+    ATHENA_ERROR(msg);
+  }
+
   // Actual memory allocation and shorthand assignment will be done in the derived class
   // Initialization of ParticleBuffer, ParticleGravity
   // has moved to the derived class
@@ -349,7 +384,10 @@ Particles::~Particles() {
   realfieldname.clear();
 
   // Delete auxiliary properties.
-  if (naux > 0) auxprop.DeleteAthenaArray();
+  if (naux > 0) {
+    auxprop.DeleteAthenaArray();
+    auxfieldname.clear();
+  }
 
   // Delete working arrays.
   if (nwork > 0) work.DeleteAthenaArray();
@@ -1449,56 +1487,64 @@ void Particles::FormattedTableOutput(Mesh *pm, OutputParameters op) {
 //--------------------------------------------------------------------------------------
 //! \fn Particles::OutputParticles()
 //! \brief outputs the particle data in tabulated format.
-void Particles::OutputParticles() {
-  for (int k = 0; k < npar; ++k) OutputOneParticle(k);
+void Particles::OutputParticles(bool header) {
+  std::stringstream fname, msg;
+  std::ofstream os;
+  std::string file_basename = pinput->GetString("job","problem_id");
+
+  for (int k = 0; k < npar; ++k) {
+    // Create the filename.
+    fname << file_basename << ".par" << pid(k) << ".csv";
+
+    // Open the file for write.
+    if (header)
+      os.open(fname.str().data(), std::ofstream::out);
+    else
+      os.open(fname.str().data(), std::ofstream::app);
+
+    if (!os.is_open()) {
+      msg << "### FATAL ERROR in function [Particles::OutputParticles]"
+          << std::endl << "Output file '" << fname.str() << "' could not be opened"
+          << std::endl;
+      ATHENA_ERROR(msg);
+    }
+
+    OutputOneParticle(os, k, header);
+
+    // Close the file
+    os.close();
+    // clear filename
+    fname.str("");
+  }
 }
 
 //--------------------------------------------------------------------------------------
 //! \fn Particles::OutputParticle()
 //! \brief outputs the particle data in tabulated format.
-void Particles::OutputOneParticle(int k) {
-  std::stringstream fname, msg;
-  std::ofstream os;
-  std::string file_basename = pinput->GetString("job","problem_id");
-
-  // Create the filename.
-  fname << file_basename << ".par" << pid(k) << ".csv";
-
-  // Open the file for write.
-  if (pmy_mesh->ncycle == 0)
-    os.open(fname.str().data(), std::ofstream::out);
-  else
-    os.open(fname.str().data(), std::ofstream::app);
-
-  if (!os.is_open()) {
-    msg << "### FATAL ERROR in function [Particles::OutputParticle]"
-        << std::endl << "Output file '" << fname.str() << "' could not be opened"
-        << std::endl;
-    ATHENA_ERROR(msg);
-  }
-
-  if (pmy_mesh->ncycle == 0) {
-    os << "time";
+void Particles::OutputOneParticle(std::ostream &os, int k, bool header) {
+  if (header) {
+    os << "time,dt";
     for (int ip = 0; ip < nint; ++ip)
       os << "," << intfieldname[ip];
     for (int ip = 0; ip < nreal; ++ip)
       os << "," << realfieldname[ip];
+    for (int ip = 0; ip < naux; ++ip)
+      os << "," << auxfieldname[ip];
     os << std::endl;
   }
 
   // Write the time.
   os << std::scientific << std::showpoint << std::setprecision(18);
-  os << pmy_mesh->time;
+  os << pmy_mesh->time << "," << pmy_mesh->dt;
 
   // Write the particle data in the meshblock.
   for (int ip = 0; ip < nint; ++ip)
     os << "," << intprop(ip,k);
   for (int ip = 0; ip < nreal; ++ip)
     os << "," << realprop(ip,k);
+  for (int ip = 0; ip < naux; ++ip)
+    os << "," << auxprop(ip,k);
   os << std::endl;
-
-  // Close the file and get the next meshblock.
-  os.close();
 }
 
 //--------------------------------------------------------------------------------------

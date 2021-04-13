@@ -26,6 +26,7 @@
 #include "../globals.hpp"
 #include "../hydro/hydro.hpp"
 #include "../mesh/mesh.hpp"
+#include "../orbital_advection/orbital_advection.hpp"
 #include "../parameter_input.hpp"
 #include "../particles/particles.hpp"
 #include "../utils/utils.hpp"
@@ -75,18 +76,26 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   // uniform background gas initialization
   Real d0 = pin->GetOrAddReal("problem", "d0", 1.0);
-
+  // shearing box parameters
+  Real qshear = pin->GetReal("orbital_advection","qshear");
+  Real Omega0 = pin->GetReal("orbital_advection","Omega0");
   for (int k=ks; k<=ke; k++) {
     for (int j=js; j<=je; j++) {
       for (int i=is; i<=ie; i++) {
+        Real x1 = pcoord->x1v(i);
         phydro->u(IDN,k,j,i) = d0;
 
         phydro->u(IM1,k,j,i) = 0.0;
         phydro->u(IM2,k,j,i) = 0.0;
+        if(!porb->orbital_advection_defined)
+          phydro->u(IM2,k,j,i) -= d0*qshear*Omega0*x1;
         phydro->u(IM3,k,j,i) = 0.0;
 
         if (NON_BAROTROPIC_EOS) {
-          phydro->u(IEN,k,j,i) = 1.0;
+          phydro->u(IEN,k,j,i) = 0.1 + 0.5*(SQR(phydro->u(IM1,k,j,i)) +
+                                            SQR(phydro->u(IM2,k,j,i)) +
+                                            SQR(phydro->u(IM3,k,j,i))
+                                          ) / phydro->u(IDN,k,j,i);
         }
       }
     }
@@ -109,13 +118,24 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
     // Find the total number of particles in each direction.
     RegionSize& mesh_size = pmy_mesh->mesh_size;
-
-    pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1,0.0);
-    pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*1.2,0.0);
-    pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*0.8,0.0);
-    pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*0.6,0.0);
+    if (pmy_mesh->shear_periodic) {
+      pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1,0.0);
+      pp->AddOneParticle(m1,2*x1,0.0,0.0,0.0,2*v1,0.0);
+      pp->AddOneParticle(m1,0.5*x1,0.0,0.0,0.0,0.5*v1,0.0);
+      pp->AddOneParticle(m1,0.2*x1,0.0,0.0,0.0,0.2*v1,0.0);
+    } else {
+      pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1,0.0);
+      pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*1.2,0.0);
+      pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*0.8,0.0);
+      pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*0.6,0.0);
+    }
 
     std::cout << " nparmax: " << pp->nparmax << " npar: " << pp->npar << std::endl;
+    if (pp->npar>1) {
+      pp->OutputOneParticle(std::cout, 0, true);
+      for (int ip=1; ip<pp->npar; ++ip)
+        pp->OutputOneParticle(std::cout, ip, false);
+    }
   }
 }
 
@@ -129,30 +149,33 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
 }
 
 void Mesh::UserWorkInLoop() {
-  int np = Particles::num_particles;
   for (int b = 0; b < nblocal; ++b) {
     MeshBlock *pmb(my_blocks(b));
-    for (int i = 0; i < np; ++i) {
-      Particles *ppar = pmb->ppar[i];
-      ppar->OutputParticles();
-    }
+    for (Particles *ppar : pmb->ppar) ppar->OutputParticles(false);
   }
-
   return;
 }
+
+// void MeshBlock::UserWorkBeforeOutput(ParameterInput *pin) {
+//   int np = Particles::num_particles;
+//   for (int i = 0; i < np; ++i) ppar[i]->OutputParticles();
+//   return;
+// }
 
 void StarParticles::UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
   const Coordinates *pc = pmy_block->pcoord;
   for (int k = 0; k < npar; ++k) {
-    Real x1, x2, x3;
-    pc->CartesianToMeshCoords(xp(k), yp(k), zp(k), x1, x2, x3);
+    if (tage(k) > 0) { // first kick (from n-1/2 to n) is skipped for the new particles
+      Real x1, x2, x3;
+      pc->CartesianToMeshCoords(xp(k), yp(k), zp(k), x1, x2, x3);
 
-    Real r = std::sqrt(x1*x1 + x2*x2 + x3*x3); // m0 is at (0,0,0)
-    Real acc = -m0/(r*r); // G=1
-    Real ax = acc*x1/r, ay = acc*x2/r, az = acc*x3/r;
+      Real r = std::sqrt(x1*x1 + x2*x2 + x3*x3); // m0 is at (0,0,0)
+      Real acc = -m0/(r*r); // G=1
+      Real ax = acc*x1/r, ay = acc*x2/r, az = acc*x3/r;
 
-    vpx(k) = vpx(k) + dt*ax;
-    vpy(k) = vpy(k) + dt*ay;
-    vpz(k) = vpz(k) + dt*az;
+      vpx(k) = vpx(k) + dt*ax;
+      vpy(k) = vpy(k) + dt*ay;
+      vpz(k) = vpz(k) + dt*az;
+    }
   }
 }

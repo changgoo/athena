@@ -34,7 +34,7 @@ StarParticles::StarParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParame
 
   // Add gas fraction as aux peroperty
   igas = AddAuxProperty();
-  realfieldname.push_back("fgas");
+  auxfieldname.push_back("fgas");
 
   // allocate memory
   Particles::AllocateMemory();
@@ -100,39 +100,51 @@ void StarParticles::AddOneParticle(Real mass, Real x1, Real x2, Real x3,
 //! - temporary half time kick has to be done from n+1/2->n+1
 //!   for output (use ApplyUserWorkBeforeOutput or write an explicit function for it)
 void StarParticles::Integrate(int stage) {
-  Real t = 0, dt = 0;
+  Real t = 0, dt = 0, dth = 0;
 
   // Determine the integration cofficients.
   switch (stage) {
   case 1:
     t = pmy_mesh->time;
-    dt = 0.5*pmy_mesh->dt;
+    dt = pmy_mesh->dt; // t^(n+1)-t^n;
+    dth = 0.5*(dt + dt_old); // t^(n+1/2)-t^(n-1/2)
 
-    // Calculate force on particles
+    // Calculate force on particles at t = n
     if (SELF_GRAVITY_ENABLED) {
       ppgrav->FindGravitationalForce(pmy_block->pgrav->phi);
       ppgrav->InterpolateGravitationalForce();
     }
-    // kick from t^n-1/2 to t^n
-    // if(t>0) Kick(t,0.5*dt,pmy_block->phydro->w);
-    SaveStatus();
-    // kick from t^n to t^n+1/2
-    Kick(t,dt,pmy_block->phydro->w);
-    break;
 
-  case 2:
-    t = pmy_mesh->time + 0.5 * pmy_mesh->dt;
-    dt = pmy_mesh->dt;
+    // kick by 0.5*dth
+    // this kick has to be skipped for new particles
+    Kick(t,0.5*dth,pmy_block->phydro->w);
+    // x -> x0, v -> v0
+    SaveStatus();
+    // a temporary heck; later we will have flag for new particles
+    // aging first to distinguish new particle
+    Age(t,dt);
+    // Coriolis force
+    if (pmy_mesh->shear_periodic) BorisKick(t,dth);
+    // kick by another 0.5*dth
+    Kick(t,0.5*dth,pmy_block->phydro->w);
     // drift from t^n to t^n+1
     Drift(t,dt);
-    // kick from t^n+1/2 to t^n+1
-    Kick(t,0.5*dt,pmy_block->phydro->w);
-    Age(t,dt);
+
+    dt_old = dt; // save dt for the future use
+    break;
+  case 2:
+    // t = pmy_mesh->time + 0.5 * pmy_mesh->dt;
+    // dt = pmy_mesh->dt;
+    // // drift from t^n to t^n+1
+    // Drift(t,dt);
+    // // kick from t^n+1/2 to t^n+1
+    // dt_old = dt; // save dt for the future use
+    // // Kick(t,0.5*dt,pmy_block->phydro->w);
+    // Age(t,dt);
+    // this can be used for feedback
+    ReactToMeshAux(t, dt, pmy_block->phydro->w);
     break;
   }
-
-  // this can be used for feedback
-  ReactToMeshAux(t, dt, pmy_block->phydro->w);
 
   // Update the position index.
   SetPositionIndices();
@@ -163,6 +175,10 @@ void StarParticles::Drift(Real t, Real dt) {
 //--------------------------------------------------------------------------------------
 //! \fn void StarParticles::Kick(Real t, Real dt)
 //! \brief kick particles
+//!
+//! forces from self gravity, external gravity, and tidal potential
+//! Coriolis force is treated by BorisKick
+//! dt must be the half dt
 
 void StarParticles::Kick(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
   // Integrate the source terms (e.g., acceleration).
@@ -171,10 +187,46 @@ void StarParticles::Kick(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
 }
 
 //--------------------------------------------------------------------------------------
+//! \fn void StarParticles::BorisKick(Real t, Real dt)
+//! \brief Coriolis force with Boris algorithm
+//!
+//! symmetric force application using the Boris algorithm
+//! velocity must be updated to the midpoint before this call
+//! dt must be the full dt (t^n+1/2 - t^n-1/2)
+
+void StarParticles::BorisKick(Real t, Real dt) {
+  Real Omdt = Omega_0_*dt, hOmdt = 0.5*Omdt;
+  Real Omdt2 = SQR(Omdt), hOmdt2 = 0.25*Omdt2;
+  Real f1 = (1-Omdt2)/(1+Omdt2), f2 = 2*Omdt/(1+Omdt2);
+  Real hf1 = (1-hOmdt2)/(1+hOmdt2), hf2 = 2*hOmdt/(1+hOmdt2);
+  for (int k = 0; k < npar; ++k) {
+    Real vpxm = vpx(k), vpym = vpy(k);
+    if (tage(k) == 0) { // for the new particles
+      vpx(k) = hf1*vpxm + hf2*vpym;
+      vpy(k) = -hf2*vpxm + hf1*vpym;
+    } else {
+      vpx(k) = f1*vpxm + f2*vpym;
+      vpy(k) = -f2*vpxm + f1*vpym;
+    }
+  }
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void StarParticles::ExertTidalForce(Real t, Real dt)
+//! \brief force from tidal potential (qshear != 0)
+//! dt must be the half dt
+
+void StarParticles::ExertTidalForce(Real t, Real dt) {
+  Real ftidal = 2*qshear_*SQR(Omega_0_)*dt;
+  for (int k = 0; k < npar; ++k) vpx(k) += ftidal*xp(k);
+}
+
+//--------------------------------------------------------------------------------------
 //! \fn void StarParticles::SourceTerms()
 //! \brief adds acceleration to particles.
 
 void StarParticles::SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
+  if (pmy_mesh->shear_periodic) ExertTidalForce(t,dt);
   if (SELF_GRAVITY_ENABLED) ppgrav->ExertGravitationalForce(dt);
   return;
 }
