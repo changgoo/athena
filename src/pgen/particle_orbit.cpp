@@ -116,18 +116,34 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     Real m1 = pin->GetOrAddReal(pp->input_block_name, "m1", 1.0);
     Real v1 = pin->GetOrAddReal(pp->input_block_name, "v1", 1.0);
 
-    // Find the total number of particles in each direction.
-    RegionSize& mesh_size = pmy_mesh->mesh_size;
-    if (pmy_mesh->shear_periodic) {
+    if (pmy_mesh->particle_gravity) {
+      // self-gravitating two-body problem
+      // have to turn off gravity from gas (modify gravity/block_fft_gravity)
+      // and to gas (modify hydro/srcterms/hydro_srcterms)
+      Real mratio = pin->GetOrAddReal(pp->input_block_name, "mratio", 1.0);
+      Real m2 = mratio*m1;
+      Real mu = m1*m2/(m1+m2);
+      Real x2 = -x1/mratio;
+      Real vcirc = std::sqrt((m1+m2)/(x1-x2));
+      Real v1 = vcirc*m2/(m1+m2);
+      Real v2 = -v1/mratio;
       pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1,0.0);
-      pp->AddOneParticle(m1,2*x1,0.0,0.0,0.0,2*v1,0.0);
-      pp->AddOneParticle(m1,0.5*x1,0.0,0.0,0.0,0.5*v1,0.0);
-      pp->AddOneParticle(m1,0.2*x1,0.0,0.0,0.0,0.2*v1,0.0);
+      pp->AddOneParticle(m2,x2,0.0,0.0,0.0,v2,0.0);
     } else {
-      pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1,0.0);
-      pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*1.2,0.0);
-      pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*0.8,0.0);
-      pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*0.6,0.0);
+      // simple particle orbit tests
+      if (pmy_mesh->shear_periodic) {
+        // epicyclic motions
+        pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1,0.0);
+        pp->AddOneParticle(m1,2*x1,0.0,0.0,0.0,2*v1,0.0);
+        pp->AddOneParticle(m1,0.5*x1,0.0,0.0,0.0,0.5*v1,0.0);
+        pp->AddOneParticle(m1,0.2*x1,0.0,0.0,0.0,0.2*v1,0.0);
+      } else {
+        // kepler orbits
+        pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1,0.0);
+        pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*1.2,0.0);
+        pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*0.8,0.0);
+        pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*0.6,0.0);
+      }
     }
 
     std::cout << " nparmax: " << pp->nparmax << " npar: " << pp->npar << std::endl;
@@ -141,12 +157,17 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
 //========================================================================================
 //! \fn void Mesh::UserWorkAfterLoop(ParameterInput *pin)
-//  \brief
+//! \brief
 //========================================================================================
 
 void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
   return;
 }
+
+//========================================================================================
+//! \fn void Mesh::UserWorkInLoop(ParameterInput *pin)
+//! \brief Output particle history
+//========================================================================================
 
 void Mesh::UserWorkInLoop() {
   for (int b = 0; b < nblocal; ++b) {
@@ -156,11 +177,10 @@ void Mesh::UserWorkInLoop() {
   return;
 }
 
-// void MeshBlock::UserWorkBeforeOutput(ParameterInput *pin) {
-//   int np = Particles::num_particles;
-//   for (int i = 0; i < np; ++i) ppar[i]->OutputParticles();
-//   return;
-// }
+//========================================================================================
+//! \fn void StarParticles::UserSourceTerms(ParameterInput *pin)
+//! \brief point mass acceleration acting only on particles for orbit tests
+//========================================================================================
 
 void StarParticles::UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
   const Coordinates *pc = pmy_block->pcoord;

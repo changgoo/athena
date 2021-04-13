@@ -109,7 +109,7 @@ void StarParticles::Integrate(int stage) {
     dt = pmy_mesh->dt; // t^(n+1)-t^n;
     dth = 0.5*(dt + dt_old); // t^(n+1/2)-t^(n-1/2)
 
-    // Calculate force on particles at t = n
+    // Calculate force on particles at t = t^n
     if (SELF_GRAVITY_ENABLED) {
       ppgrav->FindGravitationalForce(pmy_block->pgrav->phi);
       ppgrav->InterpolateGravitationalForce();
@@ -120,10 +120,10 @@ void StarParticles::Integrate(int stage) {
     Kick(t,0.5*dth,pmy_block->phydro->w);
     // x -> x0, v -> v0
     SaveStatus();
-    // a temporary heck; later we will have flag for new particles
+    // a temporary heck; later we will have a flag for new particles
     // aging first to distinguish new particle
     Age(t,dt);
-    // Coriolis force
+    // Boris push for velocity dependent terms: Coriolis force
     if (pmy_mesh->shear_periodic) BorisKick(t,dth);
     // kick by another 0.5*dth
     Kick(t,0.5*dth,pmy_block->phydro->w);
@@ -133,15 +133,7 @@ void StarParticles::Integrate(int stage) {
     dt_old = dt; // save dt for the future use
     break;
   case 2:
-    // t = pmy_mesh->time + 0.5 * pmy_mesh->dt;
-    // dt = pmy_mesh->dt;
-    // // drift from t^n to t^n+1
-    // Drift(t,dt);
-    // // kick from t^n+1/2 to t^n+1
-    // dt_old = dt; // save dt for the future use
-    // // Kick(t,0.5*dt,pmy_block->phydro->w);
-    // Age(t,dt);
-    // this can be used for feedback
+    // force from particles besides gravity
     ReactToMeshAux(t, dt, pmy_block->phydro->w);
     break;
   }
@@ -214,18 +206,74 @@ void StarParticles::BorisKick(Real t, Real dt) {
 //--------------------------------------------------------------------------------------
 //! \fn void StarParticles::ExertTidalForce(Real t, Real dt)
 //! \brief force from tidal potential (qshear != 0)
-//! dt must be the half dt
+//!
+//! Phi_tidal = - q Omega^2 x^2
+//! acc = 2 q Omega^2 x xhat
+//! \note first kick (from n-1/2 to n) is skipped for the new particles
 
 void StarParticles::ExertTidalForce(Real t, Real dt) {
-  Real ftidal = 2*qshear_*SQR(Omega_0_)*dt;
-  for (int k = 0; k < npar; ++k) vpx(k) += ftidal*xp(k);
+  Real acc0 = 2*qshear_*SQR(Omega_0_);
+  for (int k = 0; k < npar; ++k) {
+    Real acc = tage(k) > 0 ? acc0*dt*xp(k) : 0.;
+    vpx(k) += acc;
+  }
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void StarParticles::PointMass(Real t, Real dt)
+//! \brief force from a point mass at origin
+//! \note first kick (from n-1/2 to n) is skipped for the new particles
+
+void StarParticles::PointMass(Real t, Real dt, Real gm) {
+  const Coordinates *pc = pmy_block->pcoord;
+  for (int k = 0; k < npar; ++k) {
+    if (tage(k) > 0) {
+      Real x1, x2, x3;
+      pc->CartesianToMeshCoords(xp(k), yp(k), zp(k), x1, x2, x3);
+
+      Real r = std::sqrt(x1*x1 + x2*x2 + x3*x3); // m0 is at (0,0,0)
+      Real acc = -gm/(r*r); // G=1
+      Real ax = acc*x1/r, ay = acc*x2/r, az = acc*x3/r;
+
+      vpx(k) += dt*ax;
+      vpy(k) += dt*ay;
+      vpz(k) += dt*az;
+    }
+  }
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void StarParticles::ConstantAcceleration(Real t, Real dt)
+//! \brief constant acceleration
+
+void StarParticles::ConstantAcceleration(Real t, Real dt, Real g1, Real g2, Real g3) {
+  for (int k = 0; k < npar; ++k) {
+    if (tage(k) > 0) { // first kick (from n-1/2 to n) is skipped for the new particles
+      vpx(k) += dt*g1;
+      vpy(k) += dt*g2;
+      vpz(k) += dt*g3;
+    }
+  }
 }
 
 //--------------------------------------------------------------------------------------
 //! \fn void StarParticles::SourceTerms()
 //! \brief adds acceleration to particles.
+//!
+//! star particles will feel all forces that gas feels
+//! \note first kick (from n-1/2 to n) is skipped for the new particles
 
 void StarParticles::SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
+  Hydro *ph = pmy_block->phydro;
+  // accleration due to point mass (MUST BE AT ORIGIN)
+  Real gm = ph->hsrc.GetGM();
+  if (gm != 0) PointMass(t,dt,gm);
+
+  // constant acceleration (e.g. for RT instability)
+  Real g1 = ph->hsrc.GetG1(), g2 = ph->hsrc.GetG2(), g3 = ph->hsrc.GetG3();
+  if (g1 != 0.0 || g2 != 0.0 || g3 != 0.0)
+    ConstantAcceleration(t,dt,g1,g2,g3);
+
   if (pmy_mesh->shear_periodic) ExertTidalForce(t,dt);
   if (SELF_GRAVITY_ENABLED) ppgrav->ExertGravitationalForce(dt);
   return;

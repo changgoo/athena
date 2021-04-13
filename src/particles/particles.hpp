@@ -88,12 +88,14 @@ friend class ParticleMesh;
   // Destructor
   virtual ~Particles();
 
+  // virtual classes to be override
+  virtual AthenaArray<Real> GetMassDensity() const;
+  virtual void Integrate(int step);
+
   // Accessor
   Real GetMaximumWeight() const;
-  virtual AthenaArray<Real> GetMassDensity() const;
   AthenaArray<Real> GetVelocityField() const;
   bool IsGravity() { return isgravity_; }
-
 
   // Instance methods
   void AddHistoryOutput(Real data_sum[], int pos);
@@ -101,7 +103,6 @@ friend class ParticleMesh;
   bool CheckInMeshBlock(Real x1, Real x2, Real x3);
   void ClearBoundary();
   void ClearNeighbors();
-  virtual void Integrate(int step);
   void LinkNeighbors(MeshBlockTree &tree, int64_t nrbx1, int64_t nrbx2, int64_t nrbx3,
                      int root_level);
   void RemoveOneParticle(int k);
@@ -157,11 +158,11 @@ friend class ParticleMesh;
                                     //!> intprop, realprop, & auxprop are resized
                                     //!> Be sure to call back when derived.
   virtual void AllocateMemory();    //!> Needs to be called in the derived class init
-  void UpdateCapacity(int new_nparmax);  //!> Change the capacity of particle arrays
-
   virtual void FindLocalDensityOnMesh(bool include_momentum);
+
+  void UpdateCapacity(int new_nparmax);  //!> Change the capacity of particle arrays
   void ConvertToDensity(bool include_momentum);
-  void SaveStatus();
+  void SaveStatus(); // x->x0, v->v0
 
   // Instance variables
   // std::uint64_t npar;     //!> number of particles
@@ -359,11 +360,6 @@ friend class MeshBlock;
 
   // override integrator
   void Integrate(int step) override;
-  void Kick(Real t, Real dt, const AthenaArray<Real>& meshsrc);
-  void Drift(Real t, Real dt);
-  void BorisKick(Real t, Real dt);
-  void ExertTidalForce(Real t, Real dt);
-  void Age(Real t, Real dt);
 
   void AddOneParticle(Real mass, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
   AthenaArray<Real> GetMassDensity() const override;
@@ -380,6 +376,15 @@ friend class MeshBlock;
   void ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
   void DepositToMesh(Real t, Real dt, const AthenaArray<Real>& meshsrc,
                      AthenaArray<Real>& meshdst) override;
+
+  void Kick(Real t, Real dt, const AthenaArray<Real>& meshsrc);
+  void Drift(Real t, Real dt);
+  void BorisKick(Real t, Real dt);
+  void Age(Real t, Real dt);
+
+  void ExertTidalForce(Real t, Real dt);
+  void PointMass(Real t, Real dt, Real gm);
+  void ConstantAcceleration(Real t, Real dt, Real g1, Real g2, Real g3);
 
   // Instance variables
   AthenaArray<Real> mp, mzp, tage;        // shorthand for real properties
