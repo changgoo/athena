@@ -16,7 +16,7 @@
 #include "../coordinates/coordinates.hpp"
 #include "../mesh/mesh.hpp"
 #include "particle_gravity.hpp"
-#include "particle-mesh.hpp"
+#include "particle_mesh.hpp"
 #include "particles.hpp"
 
 //--------------------------------------------------------------------------------------

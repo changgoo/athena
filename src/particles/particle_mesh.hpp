@@ -5,7 +5,7 @@
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //======================================================================================
-//! \file particle-mesh.hpp
+//! \file particle_mesh.hpp
 //! \brief defines ParticleMesh class used for communication between meshblocks needed
 //!        by particle-mesh methods.
 

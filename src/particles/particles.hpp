@@ -19,7 +19,7 @@
 #include "../outputs/outputs.hpp"
 #include "../parameter_input.hpp"
 #include "particle_buffer.hpp"
-#include "particle-mesh.hpp"
+#include "particle_mesh.hpp"
 #include "particle_gravity.hpp"
 
 // MPI header
@@ -116,7 +116,7 @@ friend class ParticleMesh;
   void OutputParticles(bool header);
   void OutputOneParticle(std::ostream &os, int k, bool header);
   void ToggleParHstOutFlag();
-  
+
   std::size_t GetSizeInBytes();
   void UnpackParticlesForRestart(char *mbdata, std::size_t &os);
   void PackParticlesForRestart(char *&pdata);

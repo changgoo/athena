@@ -14,7 +14,6 @@
 #include "../coordinates/coordinates.hpp"
 #include "../gravity/gravity.hpp"
 #include "../hydro/hydro.hpp"
-#include "particle_gravity.hpp"
 #include "particles.hpp"
 
 //--------------------------------------------------------------------------------------
@@ -34,7 +33,7 @@ TracerParticles::TracerParticles(MeshBlock *pmb, ParameterInput *pin,
 
   // allocate memory
   Particles::AllocateMemory();
-  
+
   // Assign shorthands (need to do this for every constructor of a derived class)
   AssignShorthands();
 }
