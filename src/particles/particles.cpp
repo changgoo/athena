@@ -185,7 +185,7 @@ void Particles::PostInitialize(Mesh *pm, ParameterInput *pin) {
   // Print particle csv
   for (int b = 0; b < pm->nblocal; ++b)
     for (Particles *ppar : pm->my_blocks(b)->ppar)
-      ppar->OutputParticles(true);
+      if (ppar->parhstout_) ppar->OutputParticles(true);
 }
 
 //--------------------------------------------------------------------------------------
@@ -277,7 +277,8 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
   ipid(-1), ixp(-1), iyp(-1), izp(-1), ivpx(-1), ivpy(-1), ivpz(-1),
   ixp0(-1), iyp0(-1), izp0(-1), ivpx0(-1), ivpy0(-1), ivpz0(-1),
   ixi1(-1), ixi2(-1), ixi3(-1), imom1(-1), imom2(-1), imom3(-1), imass(-1),
-  igx(-1), igy(-1), igz(-1), my_ipar_(pp->ipar), isgravity_(false), mass(1.0) {
+  igx(-1), igy(-1), igz(-1), my_ipar_(pp->ipar), isgravity_(false), parhstout_(false),
+  mass(1.0) {
   // Add particle ID.
   ipid = AddIntProperty();
   intfieldname.push_back("pid");
@@ -341,7 +342,7 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
     isgravity_ = pp->gravity;
     pmy_mesh->particle_gravity = true;
   }
-  
+
   // read shearing box parameters from input block
   bool orbital_advection_defined_
          = (pin->GetOrAddInteger("orbital_advection","OAorder",0)!=0)?
@@ -494,6 +495,7 @@ void Particles::AddOneParticle(Real x1, Real x2, Real x3,
   Real v1, Real v2, Real v3) {
   if (CheckInMeshBlock(x1,x2,x3)) {
     if (npar == nparmax) UpdateCapacity(npar*2);
+    pid(npar) = -1;
     xp(npar) = x1;
     yp(npar) = x2;
     zp(npar) = x3;
@@ -1547,6 +1549,18 @@ void Particles::OutputOneParticle(std::ostream &os, int k, bool header) {
   os << std::endl;
 }
 
+//--------------------------------------------------------------------------------------
+//! \fn Particles::ToggleParHstOutFlag()
+//! \brief turn on individual particle history outputs
+void Particles::ToggleParHstOutFlag() {
+  if (npar < 100) parhstout_ = true;
+  else {
+    std::cout << "Warning [Particles]: npar = " << npar << " is too large to output"
+      << "all individual particles' history automatically."
+      << " Particle history output is turned off." << std::endl;
+    parhstout_ = false;
+  }
+}
 //--------------------------------------------------------------------------------------
 //! \fn int CheckSide(int xi, nx, int xi1, int xi2)
 //! \brief returns -1 if xi < xi1, +1 if xi > xi2, or 0 otherwise.

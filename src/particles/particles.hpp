@@ -115,7 +115,8 @@ friend class ParticleMesh;
   Real NewBlockTimeStep();
   void OutputParticles(bool header);
   void OutputOneParticle(std::ostream &os, int k, bool header);
-
+  void ToggleParHstOutFlag();
+  
   std::size_t GetSizeInBytes();
   void UnpackParticlesForRestart(char *mbdata, std::size_t &os);
   void PackParticlesForRestart(char *&pdata);
@@ -171,6 +172,7 @@ friend class ParticleMesh;
   int nparmax;  //!> maximum number of particles per meshblock
   int my_ipar_;
   bool isgravity_; //!> flag for gravity
+  bool parhstout_; //!> flag for individual particle history output
   Real mass;   //!> mass of each particle
   Real cfl_par;  //!> CFL number for particles
 

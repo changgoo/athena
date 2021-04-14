@@ -152,6 +152,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       for (int ip=1; ip<pp->npar; ++ip)
         pp->OutputOneParticle(std::cout, ip, false);
     }
+    pp->ToggleParHstOutFlag();
   }
 }
 

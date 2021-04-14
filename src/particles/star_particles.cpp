@@ -73,6 +73,7 @@ void StarParticles::AddOneParticle(Real mass, Real x1, Real x2, Real x3,
   Real v1, Real v2, Real v3) {
   if (Particles::CheckInMeshBlock(x1,x2,x3)) {
     if (npar == nparmax) Particles::UpdateCapacity(npar*2);
+    pid(npar) = -1;
     mp(npar) = mass;
     xp(npar) = x1;
     yp(npar) = x2;
@@ -105,6 +106,8 @@ void StarParticles::Integrate(int stage) {
   // Determine the integration cofficients.
   switch (stage) {
   case 1:
+    break;
+  case 2:
     t = pmy_mesh->time;
     dt = pmy_mesh->dt; // t^(n+1)-t^n;
     dth = 0.5*(dt + dt_old); // t^(n+1/2)-t^(n-1/2)
@@ -131,8 +134,6 @@ void StarParticles::Integrate(int stage) {
     Drift(t,dt);
 
     dt_old = dt; // save dt for the future use
-    break;
-  case 2:
     // force from particles besides gravity
     ReactToMeshAux(t, dt, pmy_block->phydro->w);
     break;
