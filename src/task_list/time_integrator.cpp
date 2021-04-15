@@ -1097,7 +1097,10 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
     }
 
     // everything else
-    AddTask(PHY_BVAL,CONS2PRIM);
+    if (PARTICLES)
+      AddTask(PHY_BVAL,(CONS2PRIM|RECV_PAR));
+    else
+      AddTask(PHY_BVAL,CONS2PRIM);
     if (!STS_ENABLED || pm->sts_integrator == "rkl1") {
       AddTask(USERWORK,PHY_BVAL);
       AddTask(NEW_DT,USERWORK);
@@ -1541,8 +1544,7 @@ TaskStatus TimeIntegratorTaskList::ClearAllBoundary(MeshBlock *pmb, int stage) {
   if (stage_wghts[stage-1].main_stage) {
     pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::all,
                                     pmb->pbval->bvars_main_int);
-    for (int ipar = 0; ipar<Particles::num_particles; ++ipar)
-      pmb->ppar[ipar]->ClearBoundary();
+    for (Particles *ppar : pmb->ppar) ppar->ClearBoundary();
   } else {
     pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::orbital,
                                     pmb->pbval->bvars_main_int);

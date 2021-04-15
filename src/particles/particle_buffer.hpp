@@ -46,7 +46,7 @@ friend class Particles;
   int nparmax;  //!> maximum number of particles
   int npar;     //!> actual number of particles in the buffer
 #ifdef MPI_PARALLEL
-  MPI_Request reqi, reqr;  //!> MPI request handles
+  MPI_Request reqn, reqi, reqr;  //!> MPI request handles
   int flagn;               //!> Flag indicating if the incoming number is known
   int flagi, flagr;        //!> Flags indicating if the respective buffer is filled
   int tag;                 //!> MPI tag (allowing for from tag to tag + 2)

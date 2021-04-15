@@ -47,7 +47,7 @@ ParticleBuffer::ParticleBuffer() {
   rbuf = NULL;
   nparmax = npar = 0;
 #ifdef MPI_PARALLEL
-  reqi = reqr = MPI_REQUEST_NULL;
+  reqn = reqi = reqr = MPI_REQUEST_NULL;
   flagn = flagi = flagr = 0;
   tag = -1;
 #endif
@@ -77,7 +77,7 @@ ParticleBuffer::ParticleBuffer(int nparmax0) {
   rbuf = new Real[nreal * nparmax];
   npar = 0;
 #ifdef MPI_PARALLEL
-  reqi = reqr = MPI_REQUEST_NULL;
+  reqn = reqi = reqr = MPI_REQUEST_NULL;
   flagn = flagi = flagr = 0;
   tag = -1;
 #endif
@@ -91,6 +91,7 @@ ParticleBuffer::~ParticleBuffer() {
   if (ibuf != NULL) delete [] ibuf;
   if (rbuf != NULL) delete [] rbuf;
 #ifdef MPI_PARALLEL
+  if (reqn != MPI_REQUEST_NULL) MPI_Request_free(&reqn);
   if (reqi != MPI_REQUEST_NULL) MPI_Request_free(&reqi);
   if (reqr != MPI_REQUEST_NULL) MPI_Request_free(&reqr);
 #endif
@@ -117,7 +118,7 @@ void ParticleBuffer::Reallocate(int new_nparmax) {
     return;
   }
 #ifdef MPI_PARALLEL
-  if (reqi != MPI_REQUEST_NULL || reqr != MPI_REQUEST_NULL) {
+  if (reqn != MPI_REQUEST_NULL || reqi != MPI_REQUEST_NULL || reqr != MPI_REQUEST_NULL) {
     std::stringstream msg;
     msg << "### FATAL ERROR in function [ParticleBuffer::Reallocate]" << std::endl
         << "MPI requests are active. " << std::endl;

@@ -95,7 +95,7 @@ void StarParticles::AddOneParticle(Real mass, Real x1, Real x2, Real x3,
 //! \fn void StarParticles::Integrate(int step)
 //! \brief updates all particle positions and velocities from t to t + dt.
 //!
-//! KDK Leapflog algorithm; assuming integrator=vl2
+//! KDK Leapflog algorithm with Boris push; assuming integrator=vl2
 //! - kick from n-1/2->n+1/2 is done in stage 1
 //! - drift from n->n+1 is done in stage 2
 //! - temporary half time kick has to be done from n+1/2->n+1
@@ -106,8 +106,6 @@ void StarParticles::Integrate(int stage) {
   // Determine the integration cofficients.
   switch (stage) {
   case 1:
-    break;
-  case 2:
     t = pmy_mesh->time;
     dt = pmy_mesh->dt; // t^(n+1)-t^n;
     dth = 0.5*(dt + dt_old); // t^(n+1/2)-t^(n-1/2)
@@ -134,13 +132,14 @@ void StarParticles::Integrate(int stage) {
     Drift(t,dt);
 
     dt_old = dt; // save dt for the future use
-    // force from particles besides gravity
+    // Update the position index.
+    SetPositionIndices();
+    break;
+  case 2:
+    // particle --> mesh
     ReactToMeshAux(t, dt, pmy_block->phydro->w);
     break;
   }
-
-  // Update the position index.
-  SetPositionIndices();
 }
 
 //--------------------------------------------------------------------------------------

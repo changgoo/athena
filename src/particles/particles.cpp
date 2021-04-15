@@ -846,10 +846,10 @@ bool Particles::ReceiveFromNeighbors() {
       ParticleBuffer& recv = recv_[nb.bufid];
       if (!recv.flagn) {
         // Get the number of incoming particles.
-        if (recv.reqi == MPI_REQUEST_NULL)
-          MPI_Irecv(&recv.npar, 1, MPI_INT, nb_rank, recv.tag, my_comm, &recv.reqi);
+        if (recv.reqn == MPI_REQUEST_NULL)
+          MPI_Irecv(&recv.npar, 1, MPI_INT, nb_rank, recv.tag, my_comm, &recv.reqn);
         else
-          MPI_Test(&recv.reqi, &recv.flagn, MPI_STATUS_IGNORE);
+          MPI_Test(&recv.reqn, &recv.flagn, MPI_STATUS_IGNORE);
         if (recv.flagn) {
           if (recv.npar > 0) {
             // Check the buffer size.
