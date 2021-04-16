@@ -199,7 +199,7 @@ friend class ParticleMesh;
   Mesh* pmy_mesh;        //!> Mesh pointer
 
   // shearing box parameters
-  Real Omega_0_, qshear_;
+  Real Omega_0_, qshear_, qomL;
   int ShBoxCoord_;
   bool orbital_advection_defined_;
 

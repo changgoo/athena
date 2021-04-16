@@ -344,26 +344,31 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
   }
 
   // read shearing box parameters from input block
-  bool orbital_advection_defined_
-         = (pin->GetOrAddInteger("orbital_advection","OAorder",0)!=0)?
-           true : false;
-  Omega_0_ = pin->GetOrAddReal("orbital_advection","Omega0",0.0);
-  qshear_  = pin->GetOrAddReal("orbital_advection","qshear",0.0);
-  ShBoxCoord_ = pin->GetOrAddInteger("orbital_advection","shboxcoord",1);
-  if (orbital_advection_defined_) { // orbital advection source terms
-    std::stringstream msg;
-    msg << "### FATAL ERROR in Particle constructor" << std::endl
-        << "OrbitalAdvection is not implemented for particles" << std::endl
-        << std::endl;
-    ATHENA_ERROR(msg);
-  }
+  if (pmy_mesh->shear_periodic) {
+    bool orbital_advection_defined_
+           = (pin->GetOrAddInteger("orbital_advection","OAorder",0)!=0)?
+             true : false;
+    Omega_0_ = pin->GetOrAddReal("orbital_advection","Omega0",0.0);
+    qshear_  = pin->GetOrAddReal("orbital_advection","qshear",0.0);
+    ShBoxCoord_ = pin->GetOrAddInteger("orbital_advection","shboxcoord",1);
+    if (orbital_advection_defined_) { // orbital advection source terms
+      std::stringstream msg;
+      msg << "### FATAL ERROR in Particle constructor" << std::endl
+          << "OrbitalAdvection is not yet implemented for particles" << std::endl
+          << std::endl;
+      ATHENA_ERROR(msg);
+    }
 
-  if (ShBoxCoord_ != 1) {
-    std::stringstream msg;
-    msg << "### FATAL ERROR in Particle constructor" << std::endl
-        << "only orbital_advection/shboxcoord=1 is supported" << std::endl
-        << std::endl;
-    ATHENA_ERROR(msg);
+    if (ShBoxCoord_ != 1) {
+      // to relax this contrain, modify ApplyBoundaryConditions
+      std::stringstream msg;
+      msg << "### FATAL ERROR in Particle constructor" << std::endl
+          << "only orbital_advection/shboxcoord=1 is supported" << std::endl
+          << std::endl;
+      ATHENA_ERROR(msg);
+    }
+
+    qomL = qshear_*Omega_0_*pmy_mesh->mesh_size.x1len;
   }
 
   // Actual memory allocation and shorthand assignment will be done in the derived class
@@ -1007,11 +1012,27 @@ void Particles::ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3) {
     // Inner x1
     x1 += mesh_size.x1len;
     x10 += mesh_size.x1len;
+    if (pmy_mesh->shear_periodic) { // assuming ShBoxCoord_ = 1 (xy)
+      Real yshear = qomL*pmy_mesh->time;
+      Real deltay = std::fmod(yshear, mesh_size.x2len);
+      x2 -= deltay;
+      x20 -= deltay;
+      vp2 -= qomL;
+      vp20 -= qomL;
+    }
     flag = true;
   } else if (x1 >= mesh_size.x1max) {
     // Outer x1
     x1 -= mesh_size.x1len;
     x10 -= mesh_size.x1len;
+    if (pmy_mesh->shear_periodic) { // assuming ShBoxCoord_ = 1 (xy)
+      Real yshear = qomL*pmy_mesh->time;
+      Real deltay = std::fmod(yshear, mesh_size.x2len);
+      x2 += deltay;
+      x20 += deltay;
+      vp2 += qomL;
+      vp20 += qomL;
+    }
     flag = true;
   }
 

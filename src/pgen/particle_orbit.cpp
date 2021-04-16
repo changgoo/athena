@@ -133,10 +133,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       // simple particle orbit tests
       if (pmy_mesh->shear_periodic) {
         // epicyclic motions
+        Real x0 = -0.8;
         pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1,0.0);
-        pp->AddOneParticle(m1,2*x1,0.0,0.0,0.0,2*v1,0.0);
-        pp->AddOneParticle(m1,0.5*x1,0.0,0.0,0.0,0.5*v1,0.0);
-        pp->AddOneParticle(m1,0.2*x1,0.0,0.0,0.0,0.2*v1,0.0);
+        pp->AddOneParticle(m1,x0+x1,0.0,0.0,0.0,v1-x0,0.0);
       } else {
         // kepler orbits
         pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1,0.0);
