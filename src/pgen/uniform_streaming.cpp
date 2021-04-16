@@ -41,7 +41,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     ATHENA_ERROR(msg);
   }
 
-  if (!(ppar[0]->partype.compare("dust") == 0)){
+  if (!(ppar[0]->partype.compare("dust") == 0)) {
     std::stringstream msg;
     msg << "### FATAL ERROR in function [MeshBlock::ProblemGenerator]" << std::endl
         << "Only dust particle is allowed. " << std::endl;

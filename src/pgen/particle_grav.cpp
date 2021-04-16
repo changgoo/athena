@@ -103,7 +103,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   }
 
   if (PARTICLES) {
-    if (!(ppar[0]->partype.compare("star") == 0)){
+    if (!(ppar[0]->partype.compare("star") == 0)) {
       std::stringstream msg;
       msg << "### FATAL ERROR in function [MeshBlock::ProblemGenerator]" << std::endl
           << "Only star particle is allowed. " << std::endl;

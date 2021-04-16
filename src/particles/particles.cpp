@@ -437,7 +437,6 @@ void Particles::AllocateMemory() {
 
   // Allocate working arrays.
   if (nwork > 0) work.NewAthenaArray(nwork,nparmax);
-
 }
 
 //--------------------------------------------------------------------------------------
@@ -1553,8 +1552,9 @@ void Particles::OutputOneParticle(std::ostream &os, int k, bool header) {
 //! \fn Particles::ToggleParHstOutFlag()
 //! \brief turn on individual particle history outputs
 void Particles::ToggleParHstOutFlag() {
-  if (npar < 100) parhstout_ = true;
-  else {
+  if (npar < 100) {
+    parhstout_ = true;
+  } else {
     std::cout << "Warning [Particles]: npar = " << npar << " is too large to output"
       << "all individual particles' history automatically."
       << " Particle history output is turned off." << std::endl;

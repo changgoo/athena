@@ -19,8 +19,8 @@
 #include "../outputs/outputs.hpp"
 #include "../parameter_input.hpp"
 #include "particle_buffer.hpp"
-#include "particle_mesh.hpp"
 #include "particle_gravity.hpp"
+#include "particle_mesh.hpp"
 
 // MPI header
 #ifdef MPI_PARALLEL
@@ -202,6 +202,7 @@ friend class ParticleMesh;
   Real Omega_0_, qshear_;
   int ShBoxCoord_;
   bool orbital_advection_defined_;
+
  private:
   // Class method
   static void ProcessNewParticles(Mesh *pmesh, int ipar);
