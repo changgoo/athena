@@ -42,17 +42,6 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParame
   backreaction = pin->GetOrAddBoolean(input_block_name, "backreaction", false);
   if (taus0 == 0.0) backreaction = false;
 
-  if (backreaction) {
-    idpx1 = imom1;
-    idpx2 = imom2;
-    idpx3 = imom3;
-  }
-
-  if (backreaction) {
-    dpx1.InitWithShallowSlice(ppm->meshaux, 4, idpx1, 1);
-    dpx2.InitWithShallowSlice(ppm->meshaux, 4, idpx2, 1);
-    dpx3.InitWithShallowSlice(ppm->meshaux, 4, idpx3, 1);
-  }
 
   if (SELF_GRAVITY_ENABLED && backreaction) {
     isgravity_ = pp->gravity;
@@ -60,6 +49,16 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParame
   }
 
   Particles::AllocateMemory();
+
+  if (backreaction) {
+    idpx1 = imom1;
+    idpx2 = imom2;
+    idpx3 = imom3;
+
+    dpx1.InitWithShallowSlice(ppm->meshaux, 4, idpx1, 1);
+    dpx2.InitWithShallowSlice(ppm->meshaux, 4, idpx2, 1);
+    dpx3.InitWithShallowSlice(ppm->meshaux, 4, idpx3, 1);
+  }
 
   AssignShorthands();
 }
