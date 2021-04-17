@@ -36,6 +36,8 @@
 #endif
 
 Real m0;
+Real ParticleEnergy(MeshBlock *pmb, int iout);
+
 //========================================================================================
 //! \fn void Mesh::InitUserMeshData(ParameterInput *pin)
 //! \brief
@@ -65,9 +67,31 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 
   // set central mass
   m0 = pin->GetReal("problem","m0");
+
+  // Enroll user-defined functions
+  AllocateUserHistoryOutput(2);
+  EnrollUserHistoryOutput(0, ParticleEnergy, "Ep1");
+  EnrollUserHistoryOutput(1, ParticleEnergy, "Ep2");
   return;
 }
 
+//========================================================================================
+//! \fn void MeshBlock::InitUserMeshBlockData(ParameterInput *pin)
+//! \brief Function to initialize problem-specific data in MeshBlock class.  Can also be
+//! used to initialize variables which are global to other functions in this file.
+//! Called in MeshBlock constructor before ProblemGenerator.
+//========================================================================================
+void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
+  // Allocate storage for keeping track of cooling
+  AllocateRealUserMeshBlockDataField(1);
+  ruser_meshblock_data[0].NewAthenaArray(4);
+  ruser_meshblock_data[0](0) = 0.0; // p1
+  ruser_meshblock_data[0](1) = 0.0; // p2
+  ruser_meshblock_data[0](2) = 0.0; // p3
+  ruser_meshblock_data[0](3) = 0.0; // p4
+
+  return;
+}
 //========================================================================================
 //! \fn void MeshBlock::ProblemGenerator(ParameterInput *pin)
 //! \brief
@@ -92,7 +116,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         phydro->u(IM3,k,j,i) = 0.0;
 
         if (NON_BAROTROPIC_EOS) {
-          phydro->u(IEN,k,j,i) = 0.1 + 0.5*(SQR(phydro->u(IM1,k,j,i)) +
+          phydro->u(IEN,k,j,i) = 1.0 + 0.5*(SQR(phydro->u(IM1,k,j,i)) +
                                             SQR(phydro->u(IM2,k,j,i)) +
                                             SQR(phydro->u(IM3,k,j,i))
                                           ) / phydro->u(IDN,k,j,i);
@@ -133,7 +157,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       // simple particle orbit tests
       if (pmy_mesh->shear_periodic) {
         // epicyclic motions
-        Real x0 = -0.8;
+        Real x0 = 0.5;
         pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1,0.0);
         pp->AddOneParticle(m1,x0+x1,0.0,0.0,0.0,v1-x0,0.0);
       } else {
@@ -146,11 +170,11 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     }
 
     std::cout << " nparmax: " << pp->nparmax << " npar: " << pp->npar << std::endl;
-    if (pp->npar>1) {
-      pp->OutputOneParticle(std::cout, 0, true);
-      for (int ip=1; ip<pp->npar; ++ip)
-        pp->OutputOneParticle(std::cout, ip, false);
-    }
+    // if (pp->npar>1) {
+    //   pp->OutputOneParticle(std::cout, 0, true);
+    //   for (int ip=1; ip<pp->npar; ++ip)
+    //     pp->OutputOneParticle(std::cout, ip, false);
+    // }
     pp->ToggleParHstOutFlag();
   }
 }
@@ -175,6 +199,41 @@ void Mesh::UserWorkInLoop() {
     for (Particles *ppar : pmb->ppar) ppar->OutputParticles(false);
   }
   return;
+}
+
+//========================================================================================
+//! \fn void MeshBlock::UserWorkInLoop(ParameterInput *pin)
+//! \brief calculate and story particle's total energy
+//========================================================================================
+
+void MeshBlock::UserWorkInLoop() {
+  const Coordinates *pc = pcoord;
+  StarParticles *pp = dynamic_cast<StarParticles*>(ppar[0]);
+  for (int k=0; k<pp->npar; ++k) {
+    Real x1, x2, x3;
+    pc->CartesianToMeshCoords(pp->xp0(k), pp->yp0(k), pp->zp0(k), x1, x2, x3);
+    Real Ek = 0.5*pp->mp(k)*(SQR(pp->vpx0(k)) + SQR(pp->vpy0(k)) + SQR(pp->vpz0(k)));
+    Real phi;
+    if (pmy_mesh->shear_periodic) {
+      phi = -pp->qshear_*SQR(pp->Omega_0_*x1);
+    } else {
+      Real r = std::sqrt(x1*x1 + x2*x2 + x3*x3); // m0 is at (0,0,0)
+      phi = -m0/r; // G=1
+    }
+    Real Etot = Ek + phi;
+    ruser_meshblock_data[0](pp->pid(k)-1) = Etot;
+  }
+  return;
+}
+
+//========================================================================================
+//! \fn Real ParticleEnergy(MeshBlock *pmb, int iout)
+//! \brief Particle's total energy
+//========================================================================================
+Real ParticleEnergy(MeshBlock *pmb, int iout) {
+  Real Etot = pmb->ruser_meshblock_data[0](iout);
+  pmb->ruser_meshblock_data[0](iout) = 0;
+  return Etot;
 }
 
 //========================================================================================

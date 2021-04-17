@@ -44,7 +44,7 @@ struct Neighbor {
 
 //----------------------------------------------------------------------------------------
 //! \struct ParticleParameters
-//! \brief  container for parameters read from `<particle?>` block in the input file
+//! \brief container for parameters read from `<particle?>` block in the input file
 
 struct ParticleParameters {
   int block_number, ipar;
@@ -81,16 +81,16 @@ friend class ParticleMesh;
   // number of particle containers
   static int num_particles, num_particles_grav, num_particles_output;
 
-
   // Constructor
   Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp);
 
   // Destructor
   virtual ~Particles();
 
-  // virtual classes to be override
+  // virtual public methods that can be overriden
   virtual AthenaArray<Real> GetMassDensity() const;
   virtual void Integrate(int step);
+
 
   // Accessor
   Real GetMaximumWeight() const;
@@ -98,13 +98,13 @@ friend class ParticleMesh;
   bool IsGravity() { return isgravity_; }
 
   // Instance methods
-  void AddHistoryOutput(Real data_sum[], int pos);
-  void AddOneParticle(Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
   bool CheckInMeshBlock(Real x1, Real x2, Real x3);
+  void AddHistoryOutput(Real data_sum[], int pos);
   void ClearBoundary();
   void ClearNeighbors();
   void LinkNeighbors(MeshBlockTree &tree, int64_t nrbx1, int64_t nrbx2, int64_t nrbx3,
                      int root_level);
+  void AddOneParticle(Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
   void RemoveOneParticle(int k);
   void SendParticleMesh();
   void SendToNeighbors();
@@ -113,6 +113,8 @@ friend class ParticleMesh;
   bool ReceiveFromNeighbors();
   bool ReceiveParticleMesh(int step);
   Real NewBlockTimeStep();
+
+  // output individual particle history
   void OutputParticles(bool header);
   void OutputOneParticle(std::ostream &os, int k, bool header);
   void ToggleParHstOutFlag();
@@ -208,6 +210,7 @@ friend class ParticleMesh;
   static void ProcessNewParticles(Mesh *pmesh, int ipar);
 
   // Instance methods
+  // pure virtual methods
   virtual void SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc)=0;
   virtual void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc)=0;
   virtual void ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc)=0;
@@ -316,7 +319,7 @@ friend class MeshBlock;
 
 //--------------------------------------------------------------------------------------
 //! \class TracerParticles
-//! \brief defines the class for Tracer particles
+//! \brief defines the class for velocity Tracer particles
 
 class TracerParticles : public Particles {
 friend class MeshBlock;
@@ -349,7 +352,7 @@ friend class MeshBlock;
 
 //--------------------------------------------------------------------------------------
 //! \class StarParticles
-//! \brief defines the class for Star particles (currently just a copy of Tracer)
+//! \brief defines the class for Star particles
 
 class StarParticles : public Particles {
 friend class MeshBlock;
@@ -364,7 +367,8 @@ friend class MeshBlock;
   // override integrator
   void Integrate(int step) override;
 
-  void AddOneParticle(Real mass, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
+  void AddOneParticle(Real mass, Real x1, Real x2, Real x3,
+                      Real v1, Real v2, Real v3);
   AthenaArray<Real> GetMassDensity() const override;
 
  private:
