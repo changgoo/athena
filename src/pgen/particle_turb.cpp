@@ -243,7 +243,7 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
 
       // write errors
       std::fprintf(pfile,"%d  %d",mesh_size.nx1,mesh_size.nx2);
-      std::fprintf(pfile,"  %d  %d  %lld",mesh_size.nx3,ncycle,npartot);
+      std::fprintf(pfile,"  %d  %d  %ld",mesh_size.nx3,ncycle,npartot);
       std::fprintf(pfile,"  %e  %e",l1_err,max_err);
       std::fprintf(pfile,"\n");
       std::fclose(pfile);
