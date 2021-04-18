@@ -45,7 +45,7 @@ void Units::SetUnitsConstants() {
 
   EnergyDensity = Pressure = Density*Velocity*Velocity;
 
-  MagneticField = Pressure/Density;
+  MagneticField = std::sqrt(4.*PI*Pressure);
 
   Temperature = Pressure/Density*mu*Constants::mH/Constants::kB;
 
@@ -67,6 +67,8 @@ void Units::SetUnitsConstants() {
   aR_in_code = Constants::aR * erg/(cm*cm*cm*Kelvin*Kelvin*Kelvin*Kelvin);
   kB_in_code = Constants::kB * erg/Kelvin;
   c_in_code = Constants::c * cm/second;
+  e_in_code = Constants::e * std::sqrt(dyne*4*PI)*cm;
+  Bethe_in_code = 1.e51 * erg;
 }
 
 void Units::PrintCodeUnits() {
@@ -101,6 +103,7 @@ void Units::PrintConstantsInCodeUnits() {
   std::cout << "Myr in code = " << Myr_in_code << std::endl;
   std::cout << "kB in code = " << kB_in_code << std::endl;
   std::cout << "c in code = " << c_in_code << std::endl;
+  std::cout << "e in code = " << e_in_code << std::endl;
 
   std::cout << "P/kB conversion = " << Pressure/Constants::kB << std::endl;
   std::cout << "====================================" << std::endl;

@@ -108,27 +108,51 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           den = (4.0*SQR(a0)*r2-6.0*a0)*std::exp(-a0*r2);
           phia = four_pi_G*std::exp(-a0*r2);
         } else if (iprob == 4) {
-          Real h = pin->GetOrAddReal("problem","h",0.5);
-          Real q = pin->GetOrAddReal("problem","qshear",0);
-          Real omg = pin->GetOrAddReal("problem","Omega0",0);
+          Real a0 = pin->GetOrAddReal("problem","a0",1.0);
+          Real q = pin->GetOrAddReal("orbital_advection","qshear",0);
+          Real omg = pin->GetOrAddReal("orbital_advection","Omega0",0);
           Real t0 = pin->GetOrAddReal("time","start_time",0);
           Real qomt = q*omg*t0;
           Real ky0 = TWO_PI/x2size;
           Real ky = std::sqrt(1. + SQR(qomt))*ky0;
-          if (std::abs(z) < h) {
-            den = (2.0 + std::cos(ky0*(y+qomt*x)))/(2.*h);
-            phia = (SQR(z)+SQR(h))/(2.*h) - 1./(2.*h*SQR(ky))*
-              (1.-std::exp(-ky*h)*std::cosh(ky*z))*std::cos(ky0*(y+qomt*x));
+          if (std::abs(z) < a0) {
+            den = (2.0 + std::cos(ky0*(y+qomt*x)))/(2.*a0);
+            phia = (SQR(z)+SQR(a0))/(2.*a0) - 1./(2.*a0*SQR(ky))*
+              (1.-std::exp(-ky*a0)*std::cosh(ky*z))*std::cos(ky0*(y+qomt*x));
             // TODO(SMOON) 2D solution
-//            phia = -1.0/(2.*h*SQR(ky))*std::cos(ky0*(y+qomt*x));
+//            phia = -1.0/(2.*a0*SQR(ky))*std::cos(ky0*(y+qomt*x));
           } else {
             den = 0.0;
-            phia = std::abs(z) - std::exp(-ky*std::abs(z))/(2.*h*SQR(ky))*
-              std::sinh(ky*h)*std::cos(ky0*(y+qomt*x));
+            phia = std::abs(z) - std::exp(-ky*std::abs(z))/(2.*a0*SQR(ky))*
+              std::sinh(ky*a0)*std::cos(ky0*(y+qomt*x));
             // TODO(SMOON) 2D solution
 //            phia = 0;
           }
           phia *= four_pi_G;
+        } else if (iprob == 5) {
+          // n=1 polytrope in spherical geometry
+          Real a0 = pin->GetOrAddReal("problem","a0",1.0);
+          Real xi = PI*std::sqrt(r2)/a0;
+          if (xi < PI) {
+            den = sin(xi)/xi;
+            phia = (1.0 + std::sin(xi)/xi);
+          } else {
+            den = 0.0;
+            phia = PI/xi;
+          }
+          phia *= -four_pi_G*SQR(a0/PI);
+        } else if (iprob == 6) {
+          // n=1 polytrope in planar geometry (J.-G. Kim et al. 2012)
+          Real a0 = pin->GetOrAddReal("problem","a0",1.0);
+          Real xi = z/a0;
+          if (std::abs(xi) < 1) {
+            den = std::cos(0.5*PI*xi);
+            phia = 0.5*PI - std::cos(0.5*PI*xi);
+          } else {
+            den = 0.0;
+            phia = std::abs(0.5*PI*xi);
+          }
+          phia *= four_pi_G*SQR(a0/(0.5*PI));
         }
 
         if (nlim > 0) {
@@ -261,7 +285,7 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
       Real x1size = mesh_size.x1max - mesh_size.x1min;
       Real x2size = mesh_size.x2max - mesh_size.x2min;
       Real x3size = mesh_size.x3max - mesh_size.x3min;
-      Real four_pi_G = pin->GetReal("problem", "four_pi_G");
+      Real four_pi_G = pin->GetReal("self_gravity", "four_pi_G");
       Real phiamp = SQR(TWO_PI/x1size);
       phiamp += SQR(TWO_PI/x2size);
       phiamp += SQR(TWO_PI/x3size);

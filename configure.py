@@ -20,6 +20,7 @@
 #   -g                enable general relativity
 #   -t                enable interface frame transformations for GR
 #   -p                enable particles
+#   -cr               enable cosmic ray transport
 #   -debug            enable debug flags (-g -O0); override other compiler options
 #   -coverage         enable compiler-dependent code coverage flags
 #   -float            enable single precision (default is double)
@@ -147,6 +148,12 @@ parser.add_argument('-p',
                     action='store_true',
                     default=False,
                     help='enable particles')
+
+# -cr argument
+parser.add_argument('-cr',
+                    action='store_true',
+                    default=False,
+                    help='enable cosmic ray transport')
 
 # -debug argument
 parser.add_argument('-debug',
@@ -441,8 +448,16 @@ if args['g']:
     makefile_options['RSOLVER_FILE'] += '_rel'
     if not args['t']:
         makefile_options['RSOLVER_FILE'] += '_no_transform'
+
 # -p arguments
 definitions['PARTICLES'] = '1' if args['p'] else '0'
+
+# -cr argument
+if args['cr']:
+    definitions['CR_ENABLED'] = '1'
+else:
+    definitions['CR_ENABLED'] = '0'
+
 # --cxx=[name] argument
 if args['cxx'] == 'g++':
     # GCC is C++11 feature-complete since v4.8.1 (2013-05-31)
@@ -811,6 +826,7 @@ print('  Frame transformations:      ' + ('ON' if args['t'] else 'OFF'))
 print('  Particles:                  ' + ('ON' if args['p'] else 'OFF'))
 print('  Self-Gravity:               ' + self_grav_string)
 print('  Super-Time-Stepping:        ' + ('ON' if args['sts'] else 'OFF'))
+print('  Cosmic Ray Transport:       ' + ('ON' if args['cr'] else 'OFF'))
 print('  Debug flags:                ' + ('ON' if args['debug'] else 'OFF'))
 print('  Code coverage flags:        ' + ('ON' if args['coverage'] else 'OFF'))
 print('  Linker flags:               ' + makefile_options['LINKER_FLAGS'] + ' '

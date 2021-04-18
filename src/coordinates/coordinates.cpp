@@ -740,6 +740,20 @@ void Coordinates::AddCoordTermsDivergence(
 }
 
 //----------------------------------------------------------------------------------------
+// Coordinate (Geometric) source term function for CR
+void Coordinates::AddCoordTermsDivergence_CR(const AthenaArray<Real> &u_cr1,
+    AthenaArray<Real> &u_cr) {
+  return;
+}
+
+//----------------------------------------------------------------------------------------
+// subtract Coordinate (Geometric) source term to get Grad Pc
+void Coordinates::SubtractCoordTermsDivergence_CR(const AthenaArray<Real> &u_cr,
+    AthenaArray<Real> &grad_pc) {
+  return;
+}
+
+//----------------------------------------------------------------------------------------
 // Coordinate (Geometric) source term function for STS
 void Coordinates::AddCoordTermsDivergence_STS(
     const Real dt, int stage, const AthenaArray<Real> *flux,

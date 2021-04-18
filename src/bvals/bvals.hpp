@@ -189,13 +189,8 @@ class BoundaryValues : public BoundaryBase, //public BoundaryPhysics,
   std::int64_t loc_shear[2];  // x1 LogicalLocation of block(s) on inner/outer shear bndry
 
   // tomo-ono: 3x arrays and 4x arrays are required for int and fc, respectively
-  SimpleNeighborBlock shear_send_neighbor_[2][4], shear_recv_neighbor_[2][4];
-  int shear_send_count_[2][4], shear_recv_count_[2][4];
-  int jmin_send_[2][4], jmax_send_[2][4], jmin_recv_[2][4], jmax_recv_[2][4];
-  SimpleNeighborBlock shear_flux_send_neighbor_[2][3], shear_flux_recv_neighbor_[2][3];
-  int shear_flux_send_count_[2][3], shear_flux_recv_count_[2][3];
-  int jmin_flux_send_[2][3], jmax_flux_send_[2][3],
-      jmin_flux_recv_[2][3], jmax_flux_recv_[2][3];
+  ShearNeighborData<4> sb_data_[2];
+  ShearNeighborData<3> sb_flux_data_[2];
 
   // ProlongateBoundaries() wraps the following S/AMR-operations (within nneighbor loop):
   // (the next function is also called within 3x nested loops over nk,nj,ni)
@@ -210,7 +205,8 @@ class BoundaryValues : public BoundaryBase, //public BoundaryPhysics,
   void DispatchBoundaryFunctions(
       MeshBlock *pmb, Coordinates *pco, Real time, Real dt,
       int il, int iu, int jl, int ju, int kl, int ku, int ngh,
-      AthenaArray<Real> &prim, FaceField &b, BoundaryFace face,
+      AthenaArray<Real> &prim, FaceField &b, AthenaArray<Real> &bcc,
+      AthenaArray<Real> &u_cr, BoundaryFace face,
       std::vector<BoundaryVariable *> bvars_subset);
 
   void CheckPolarBoundaries();  // called in BoundaryValues() ctor

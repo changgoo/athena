@@ -21,6 +21,7 @@
 // Athena++ headers
 #include "../athena.hpp"
 #include "../athena_arrays.hpp"
+#include "../cr/cr.hpp"
 #include "../field/field.hpp"
 #include "../globals.hpp"
 #include "../hydro/hydro.hpp"
@@ -195,6 +196,10 @@ void RestartOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool force_wr
     if (PARTICLES) {
       for (Particles *ppar : pmb->ppar)
         ppar->PackParticlesForRestart(pdata);
+    }
+    if (CR_ENABLED) {
+      std::memcpy(pdata,pmb->pcr->u_cr.data(),pmb->pcr->u_cr.GetSizeInBytes());
+      pdata += pmb->pcr->u_cr.GetSizeInBytes();
     }
 
     // (conserved variable) Passive scalars:

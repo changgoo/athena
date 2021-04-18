@@ -27,6 +27,7 @@
 #include "../athena.hpp"
 #include "../athena_arrays.hpp"
 #include "../coordinates/coordinates.hpp"
+#include "../cr/cr.hpp"
 #include "../eos/eos.hpp"
 #include "../field/field.hpp"
 #include "../globals.hpp"
@@ -40,6 +41,7 @@
 #include "../scalars/scalars.hpp"
 #include "../utils/buffer_utils.hpp"
 #include "bvals.hpp"
+
 
 // MPI header
 #ifdef MPI_PARALLEL
@@ -58,12 +60,7 @@
 BoundaryValues::BoundaryValues(MeshBlock *pmb, BoundaryFlag *input_bcs,
                                ParameterInput *pin)
     : BoundaryBase(pmb->pmy_mesh, pmb->loc, pmb->block_size, input_bcs), pmy_block_(pmb),
-      shear_send_neighbor_{}, shear_recv_neighbor_{},
-      shear_send_count_{}, shear_recv_count_{},
-      jmin_send_{}, jmax_send_{}, jmin_recv_{}, jmax_recv_{},
-      shear_flux_send_neighbor_{}, shear_flux_recv_neighbor_{},
-      shear_flux_send_count_{}, shear_flux_recv_count_{},
-      jmin_flux_send_{}, jmax_flux_send_{}, jmin_flux_recv_{}, jmax_flux_recv_{} {
+      sb_data_{}, sb_flux_data_{} {
   // Check BC functions for each of the 6 boundaries in turn ---------------------
   for (int i=0; i<6; i++) {
     switch (block_bcs[i]) {
@@ -221,6 +218,13 @@ BoundaryValues::BoundaryValues(MeshBlock *pmb, BoundaryFlag *input_bcs,
     loc_shear[1] = pmy_mesh_->nrbx1*(1L << level) - 1;
 
     if (shearing_box == 1) {
+      if (NGHOST+xgh_ > pmb->block_size.nx2) {
+        std::stringstream msg;
+        msg << "### FATAL ERROR in BoundaryValues Class."<<std::endl
+            << "x2 block_size must be larger than NGHOST + "<< xgh_
+            << " = "<< NGHOST+xgh_ << "with shear_periodic boundary."<<std::endl;
+        ATHENA_ERROR(msg);
+      }
       int pnum = pmb->block_size.nx2+2*NGHOST+1;
       if (MAGNETIC_FIELDS_ENABLED) pnum++;
       pflux_.NewAthenaArray(pnum);
@@ -311,7 +315,9 @@ void BoundaryValues::SetupPersistentMPI() {
         }
       }
     }
-  } // end KGF: exclusive shearing box portion of SetupPersistentMPI()
+    qomL_ = pmb->porb->OrbitalVelocity(pmb->porb,pmy_mesh_->mesh_size.x1min,0,0)
+              - pmb->porb->OrbitalVelocity(pmb->porb,pmy_mesh_->mesh_size.x1max,0,0);
+  }
   return;
 }
 
@@ -331,6 +337,17 @@ void BoundaryValues::CheckUserBoundaries() {
             << "A user-defined boundary is specified but the actual boundary function "
             << "is not enrolled in direction " << i  << " (in [0,6])." << std::endl;
         ATHENA_ERROR(msg);
+      }
+
+      if(CR_ENABLED) {
+        if (pmy_mesh_->CRBoundaryFunc_[i] == nullptr) {
+          std::stringstream msg;
+          msg << "### FATAL ERROR in BoundaryValues::CheckBoundary" << std::endl
+              << "A user-defined boundary is specified but"
+              << "the actual CR_boundary function "
+              << "is not enrolled in direction " << i << " (in [0,6])." << std::endl;
+          ATHENA_ERROR(msg);
+        }
       }
     }
   }
@@ -479,12 +496,18 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
   if (NSCALARS > 0) {
     ps = pmb->pscalars;
   }
+  CosmicRay *pcr = nullptr;
+  CellCenteredBoundaryVariable *pcrbvar = nullptr;
+  if(CR_ENABLED) {
+    pcr = pmb->pcr;
+    pcrbvar = &(pcr->cr_bvar);
+  }
 
   // Apply boundary function on inner-x1 and update W,bcc (if not periodic)
   if (apply_bndry_fn_[BoundaryFace::inner_x1]) {
     DispatchBoundaryFunctions(pmb, pco, time, dt,
                               pmb->is, pmb->ie, bjs, bje, bks, bke, NGHOST,
-                              ph->w, pf->b, BoundaryFace::inner_x1,
+                              ph->w, pf->b, pf->bcc, pcr->u_cr, BoundaryFace::inner_x1,
                               bvars_subset);
     // KGF: COUPLING OF QUANTITIES (must be manually specified)
     if (MAGNETIC_FIELDS_ENABLED) {
@@ -504,7 +527,7 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
   if (apply_bndry_fn_[BoundaryFace::outer_x1]) {
     DispatchBoundaryFunctions(pmb, pco, time, dt,
                               pmb->is, pmb->ie, bjs, bje, bks, bke, NGHOST,
-                              ph->w, pf->b, BoundaryFace::outer_x1,
+                              ph->w, pf->b, pf->bcc, pcr->u_cr, BoundaryFace::outer_x1,
                               bvars_subset);
     // KGF: COUPLING OF QUANTITIES (must be manually specified)
     if (MAGNETIC_FIELDS_ENABLED) {
@@ -525,7 +548,7 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
     if (apply_bndry_fn_[BoundaryFace::inner_x2]) {
       DispatchBoundaryFunctions(pmb, pco, time, dt,
                                 bis, bie, pmb->js, pmb->je, bks, bke, NGHOST,
-                                ph->w, pf->b, BoundaryFace::inner_x2,
+                                ph->w, pf->b, pf->bcc, pcr->u_cr, BoundaryFace::inner_x2,
                                 bvars_subset);
       // KGF: COUPLING OF QUANTITIES (must be manually specified)
       if (MAGNETIC_FIELDS_ENABLED) {
@@ -545,7 +568,7 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
     if (apply_bndry_fn_[BoundaryFace::outer_x2]) {
       DispatchBoundaryFunctions(pmb, pco, time, dt,
                                 bis, bie, pmb->js, pmb->je, bks, bke, NGHOST,
-                                ph->w, pf->b, BoundaryFace::outer_x2,
+                                ph->w, pf->b, pf->bcc, pcr->u_cr, BoundaryFace::outer_x2,
                                 bvars_subset);
       // KGF: COUPLING OF QUANTITIES (must be manually specified)
       if (MAGNETIC_FIELDS_ENABLED) {
@@ -570,7 +593,7 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
     if (apply_bndry_fn_[BoundaryFace::inner_x3]) {
       DispatchBoundaryFunctions(pmb, pco, time, dt,
                                 bis, bie, bjs, bje, pmb->ks, pmb->ke, NGHOST,
-                                ph->w, pf->b, BoundaryFace::inner_x3,
+                                ph->w, pf->b, pf->bcc, pcr->u_cr, BoundaryFace::inner_x3,
                                 bvars_subset);
       // KGF: COUPLING OF QUANTITIES (must be manually specified)
       if (MAGNETIC_FIELDS_ENABLED) {
@@ -590,7 +613,7 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
     if (apply_bndry_fn_[BoundaryFace::outer_x3]) {
       DispatchBoundaryFunctions(pmb, pco, time, dt,
                                 bis, bie, bjs, bje, pmb->ks, pmb->ke, NGHOST,
-                                ph->w, pf->b, BoundaryFace::outer_x3,
+                                ph->w, pf->b, pf->bcc, pcr->u_cr, BoundaryFace::outer_x3,
                                 bvars_subset);
       // KGF: COUPLING OF QUANTITIES (must be manually specified)
       if (MAGNETIC_FIELDS_ENABLED) {
@@ -616,11 +639,17 @@ void BoundaryValues::ApplyPhysicalBoundaries(const Real time, const Real dt,
 void BoundaryValues::DispatchBoundaryFunctions(
     MeshBlock *pmb, Coordinates *pco, Real time, Real dt,
     int il, int iu, int jl, int ju, int kl, int ku, int ngh,
-    AthenaArray<Real> &prim, FaceField &b, BoundaryFace face,
+    AthenaArray<Real> &prim, FaceField &b, AthenaArray<Real> &bcc,
+    AthenaArray<Real> &u_cr, BoundaryFace face,
     std::vector<BoundaryVariable *> bvars_subset) {
   if (block_bcs[face] ==  BoundaryFlag::user) {  // user-enrolled BCs
     pmy_mesh_->BoundaryFunction_[face](pmb, pco, prim, b, time, dt,
                                        il, iu, jl, ju, kl, ku, NGHOST);
+
+    if(CR_ENABLED) {
+      pmy_mesh_->CRBoundaryFunc_[face](pmb,pco,pmb->pcr,prim, bcc, u_cr,time,dt,
+                                      il,iu,jl,ju,kl,ku,NGHOST);
+    }
   }
   // KGF: this is only to silence the compiler -Wswitch warnings about not handling the
   // "undef" case when considering all possible BoundaryFace enumerator values. If "undef"
@@ -728,17 +757,12 @@ void BoundaryValues::ComputeShear(const Real time_fc, const Real time_int) {
   MeshBlock *pmb = pmy_block_;
   Coordinates *pco = pmb->pcoord;
   Mesh *pmesh = pmb->pmy_mesh;
-  OrbitalAdvection *porb = pmb->porb;
-  qomL_ = porb->OrbitalVelocity(porb,pmy_mesh_->mesh_size.x1min,0,0)
-            - porb->OrbitalVelocity(porb,pmy_mesh_->mesh_size.x1max,0,0);
+
   if (shearing_box == 1) {
     int nx2 = pmb->block_size.nx2;
     int js = pmb->js; int je = pmb->je;
     int jl = js-NGHOST; int ju = je+NGHOST;
-
     int level = pmb->loc.level - pmesh->root_level;
-    // TODO(felker): share nblx2 with ctor?
-    std::int64_t nblx2 = pmesh->nrbx2*(1L << level);
 
     // Update the amount of shear:
     Real x2size = pmesh->mesh_size.x2max - pmesh->mesh_size.x2min;
@@ -754,19 +778,16 @@ void BoundaryValues::ComputeShear(const Real time_fc, const Real time_int) {
     joverlap_flux_   = joffset - Ngrids*nx2;
     eps_flux_ = (std::fmod(deltay, dx))/dx;
 
-    // shear_flux_send_neighbor_[][], shear_flux_recv_neighbor_[][]
-    // shear_flux_send_count_*_ / shear_flux_recv_count_*_
-    // jmin_flux_send_, jmax_flux_send_, jmin_flux_recv_, jmax_flux_recv_
     for (int upper=0; upper<2; upper++) {
       if (is_shear[upper]) {
-        int *counts1 = shear_flux_send_count_[upper];
-        int *counts2 = shear_flux_recv_count_[upper];
-        SimpleNeighborBlock *nb1 = shear_flux_send_neighbor_[upper];
-        SimpleNeighborBlock *nb2 = shear_flux_recv_neighbor_[upper];
-        int *jmin1 = jmin_flux_send_[upper];
-        int *jmax1 = jmax_flux_send_[upper];
-        int *jmin2 = jmin_flux_recv_[upper];
-        int *jmax2 = jmax_flux_recv_[upper];
+        int *counts1 = sb_flux_data_[upper].send_count;
+        int *counts2 = sb_flux_data_[upper].recv_count;
+        SimpleNeighborBlock *nb1 = sb_flux_data_[upper].send_neighbor;
+        SimpleNeighborBlock *nb2 = sb_flux_data_[upper].recv_neighbor;
+        int *jmin1 = sb_flux_data_[upper].jmin_send;
+        int *jmax1 = sb_flux_data_[upper].jmax_send;
+        int *jmin2 = sb_flux_data_[upper].jmin_recv;
+        int *jmax2 = sb_flux_data_[upper].jmax_recv;
         int jo     = (1-2*upper)*((1-upper)+joverlap_flux_);
         int Ng     = (1-2*upper)*Ngrids;
 
@@ -848,26 +869,23 @@ void BoundaryValues::ComputeShear(const Real time_fc, const Real time_int) {
       }
     } // end loop over inner, outer shearing boundaries
 
-    // integration
+    // after integration
     yshear = qomL_*time_int;
     deltay = std::fmod(yshear, x2size);
     joffset = static_cast<int>(deltay/dx); // assumes uniform grid in azimuth
     Ngrids  = static_cast<int>(joffset/nx2);
     joverlap_   = joffset - Ngrids*nx2;
     eps_ = (std::fmod(deltay, dx))/dx;
-    // shear_send_neighbor_[][], shear_recv_neighbor_[][]
-    // shear_send_count_*_ / shear_recv_count_*_
-    // jmin_send_, jmax_send_, jmin_recv_, jmax_recv_
     for (int upper=0; upper<2; upper++) {
       if (is_shear[upper]) {
-        int *counts1 = shear_send_count_[upper];
-        int *counts2 = shear_recv_count_[upper];
-        SimpleNeighborBlock *nb1 = shear_send_neighbor_[upper];
-        SimpleNeighborBlock *nb2 = shear_recv_neighbor_[upper];
-        int *jmin1 = jmin_send_[upper];
-        int *jmax1 = jmax_send_[upper];
-        int *jmin2 = jmin_recv_[upper];
-        int *jmax2 = jmax_recv_[upper];
+        int *counts1 = sb_data_[upper].send_count;
+        int *counts2 = sb_data_[upper].recv_count;
+        SimpleNeighborBlock *nb1 = sb_data_[upper].send_neighbor;
+        SimpleNeighborBlock *nb2 = sb_data_[upper].recv_neighbor;
+        int *jmin1 = sb_data_[upper].jmin_send;
+        int *jmax1 = sb_data_[upper].jmax_send;
+        int *jmin2 = sb_data_[upper].jmin_recv;
+        int *jmax2 = sb_data_[upper].jmax_recv;
         int jo     = (1-2*upper)*((1-upper)+joverlap_);
         int Ng     = (1-2*upper)*Ngrids;
 

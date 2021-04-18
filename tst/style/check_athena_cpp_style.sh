@@ -49,6 +49,9 @@ do
     grep -nri "cbrt(" "$file" | grep -v "std::cbrt(" | grep -v "//"
     if [ $? -ne 1 ]; then echo "ERROR: Use std::cbrt(), not cbrt()"; exit 1; fi
 
+    grep -nri "fabs(" "$file" | grep -v "std::fabs(" | grep -v "//"
+    if [ $? -ne 1 ]; then echo "ERROR: Use std::fabs(), not fabs()"; exit 1; fi
+
     # TYPE 3: purely stylistic inconsistencies.
     # These errors would not cause any changes to code behavior if they were ignored, but they may affect readability.
     # --------------------------

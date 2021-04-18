@@ -29,6 +29,7 @@ static const Real mH    = 1.6733e-24;
 static const Real aR    = 7.5646e-15;
 static const Real kB    = 1.380658e-16;
 static const Real c     = 2.99792458e+10;
+static const Real e     = 4.80320427e-10;
 } // namespace Constants
 
 //! \brief Class for units
@@ -62,5 +63,7 @@ class Units {
   Real aR_in_code;
   Real kB_in_code;
   Real c_in_code;
+  Real e_in_code;
+  Real Bethe_in_code;
 };
 #endif // UTILS_UNITS_HPP_

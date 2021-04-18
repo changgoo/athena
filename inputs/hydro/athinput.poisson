@@ -12,7 +12,7 @@ dt         = 0.01       # time increment between outputs
 
 <output1>
 file_type  = vtk        # Binary data dump
-variable   = prim       # variables to be output
+variable   = cons       # variables to be output
 dt         = 0.01       # time increment between outputs
 
 <time>
@@ -22,6 +22,7 @@ tlim       = 1.0        # time limit
 integrator  = vl2       # time integration algorithm
 xorder      = 2         # order of spatial reconstruction
 ncycle_out  = 1         # interval for stdout summary info
+start_time  = 0
 
 <mesh>
 nx1        = 64         # Number of zones in X1-direction
@@ -54,6 +55,17 @@ grav_bc         = periodic
 <hydro>
 gamma           = 1.666666666667 # gamma = C_p/C_v
 iso_sound_speed = 0.4082482905   # equavalent to sqrt(gamma*p/d) for p=0.1, d=1
+
+<orbital_advection>
+OAorder      = 0       # 0: w/o OA, 1: w/ OA (1st), 2: w/ OA (2nd)
+qshear       = 1.0     # shear rate
+Omega0       = 1.0   # angular velocity of the system
+shboxcoord   = 1       # 1=xy (default); 2=xz
+
+<self_gravity>
+four_pi_G       = 12.5663706144
+grav_bc         = periodic
+green_function  = cell_averaged
 
 <problem>
 iprob           = 1 # problem choice
