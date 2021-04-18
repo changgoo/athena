@@ -3,7 +3,7 @@
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
-//! \file spitzer_isosheet.cpp
+//! \file particle_isosheet.cpp
 //! \brief Problem generator for Spitzer Isothermal sheet for both star and gas
 //
 //========================================================================================
@@ -32,10 +32,16 @@
 #include <mpi.h>
 #endif
 
+namespace {
+Real z0, rho0_gas, rho0_star;
+}
+
+Real DeltaRho(MeshBlock *pmb, int iout);
 // Declarations
 void FixedBoundary(MeshBlock *pmb, Coordinates *pcoord, AthenaArray<Real> &prim,
                    FaceField &bb, Real time, Real dt,
                    int il, int iu, int jl, int ju, int kl, int ku, int ngh);
+
 //======================================================================================
 //! \fn void Mesh::InitUserMeshData(ParameterInput *pin)
 //  \brief Init the Mesh properties
@@ -55,6 +61,11 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   if (mesh_bcs[BoundaryFace::outer_x3] == GetBoundaryFlag("user")) {
     EnrollUserBoundaryFunction(BoundaryFace::outer_x3, FixedBoundary);
   }
+
+  // Enroll user-defined functions
+  AllocateUserHistoryOutput(2);
+  EnrollUserHistoryOutput(0, DeltaRho, "drhog");
+  EnrollUserHistoryOutput(1, DeltaRho, "drhop");
 }
 
 //========================================================================================
@@ -84,9 +95,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real fgas = pin->GetReal("problem","fgas");
 
   Real d0 = pin->GetOrAddReal("problem","rho0",1.0);
-  Real z0 = cs/std::sqrt(2.0*four_pi_G*d0);
-  Real rho0_gas = d0*fgas;
-  Real rho0_star = d0*(1-fgas);
+  z0 = cs/std::sqrt(2.0*four_pi_G*d0);
+  rho0_gas = d0*fgas;
+  rho0_star = d0*(1-fgas);
   for (int k=kl; k<=ku; ++k) {
     Real x3 = pcoord->x3v(k);
     for (int j=jl; j<=ju; ++j) {
@@ -139,6 +150,46 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     std::cout << " nparmax: " << pp->nparmax << " npar: " << pp->npar << std::endl;
   }
   return;
+}
+
+//========================================================================================
+//! \fn Real DeltaRho(MeshBlock *pmb, int iout)
+//! \brief Difference in gas and trace densities for history variable
+//========================================================================================
+Real DeltaRho(MeshBlock *pmb, int iout) {
+  Real l1_err{0};
+
+  if ((!PARTICLES || (rho0_star==0)) && (iout == 1)) return l1_err;
+
+  int is=pmb->is, ie=pmb->ie;
+  int js=pmb->js, je=pmb->je;
+  int ks=pmb->ks, ke=pmb->ke;
+  AthenaArray<Real> vol(pmb->ncells1);
+  AthenaArray<Real> rho;
+  rho.InitWithShallowSlice(pmb->phydro->u,4,IDN,1);
+  AthenaArray<Real> rhop(pmb->ppar[0]->GetMassDensity());
+  for (int k=ks; k<=ke; ++k) {
+    Real x3 = pmb->pcoord->x3v(k);
+    for (int j=js; j<=je; ++j) {
+      pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
+      for (int i=is; i<=ie; ++i) {
+        Real sech2 = 1/SQR(std::cosh(0.5*x3/z0));
+        Real drho;
+        if (iout == 0) { // drho_gas
+          drho = rho(k,j,i) - rho0_gas*sech2;
+        } else if (iout == 1) { //}
+          drho = rhop(k,j,i) - rho0_star*sech2;
+        } else {
+          std::stringstream msg;
+          msg << "### FATAL ERROR in function [DeltaRho]"
+              << std::endl << "iout: " << iout << "not allowed" <<std::endl;
+          ATHENA_ERROR(msg);
+        }
+        l1_err += std::abs(drho)*vol(i);
+      }
+    }
+  }
+  return l1_err;
 }
 
 //----------------------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 <comment>
 problem   = Self-gravitating isothermal sheet
 reference =
-configure = --prob=spitzer_isosheet -fft --grav=blockfft -mpi --eos=isothermal -hdf5 (-p)
+configure = --prob=particle_isosheet -fft --grav=blockfft -mpi --eos=isothermal -hdf5 (-p)
 
 
 <job>
@@ -26,27 +26,27 @@ dt          = -1       # time increment between outputs
 <time>
 cfl_number = 0.3        # The Courant, Friedrichs, & Lewy (CFL) Number
 nlim       = 100000     # cycle limit
-tlim       = 1.0        # time limit
+tlim       = 2.0        # time limit
 integrator  = vl2       # time integration algorithm
 xorder      = 2         # order of spatial reconstruction
 ncycle_out  = 1         # interval for stdout summary info
 
 <mesh>
 nx1        = 4         # Number of zones in X1-direction
-x1min      = -0.04       # minimum value of X1
-x1max      = 0.04        # maximum value of X1
+x1min      = -0.02       # minimum value of X1
+x1max      = 0.02        # maximum value of X1
 ix1_bc     = periodic   # inner-X1 boundary flag
 ox1_bc     = periodic   # outer-X1 boundary flag
 
 nx2        = 4         # Number of zones in X2-direction
-x2min      = -0.04       # minimum value of X2
-x2max      = 0.04        # maximum value of X2
+x2min      = -0.02       # minimum value of X2
+x2max      = 0.02        # maximum value of X2
 ix2_bc     = periodic   # inner-X2 boundary flag
 ox2_bc     = periodic   # outer-X2 boundary flag
 
 nx3        = 256         # Number of zones in X3-direction
-x3min      = -2.56       # minimum value of X3
-x3max      = 2.56        # maximum value of X3
+x3min      = -1.28       # minimum value of X3
+x3max      = 1.28        # maximum value of X3
 ix3_bc     = periodic   # inner-X3 boundary flag
 ox3_bc     = periodic   # outer-X3 boundary flag
 
@@ -70,9 +70,8 @@ type        = star
 npartot     = 10000
 gravity     = true
 output      = true
-cfl_par     = 0.9
 
 <problem>
 d0         = 1.0
-fgas       = 1.0
+fgas       = 0.5
 sigma_star = 1.0

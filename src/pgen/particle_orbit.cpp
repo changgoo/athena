@@ -180,16 +180,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 }
 
 //========================================================================================
-//! \fn void Mesh::UserWorkAfterLoop(ParameterInput *pin)
-//! \brief
-//========================================================================================
-
-void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
-  return;
-}
-
-//========================================================================================
-//! \fn void Mesh::UserWorkInLoop(ParameterInput *pin)
+//! \fn void Mesh::UserWorkInLoop()
 //! \brief Output particle history
 //========================================================================================
 
@@ -202,8 +193,8 @@ void Mesh::UserWorkInLoop() {
 }
 
 //========================================================================================
-//! \fn void MeshBlock::UserWorkInLoop(ParameterInput *pin)
-//! \brief calculate and story particle's total energy
+//! \fn void MeshBlock::UserWorkInLoop()
+//! \brief calculate and store particle's total energy
 //========================================================================================
 
 void MeshBlock::UserWorkInLoop() {
