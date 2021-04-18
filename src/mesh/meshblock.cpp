@@ -364,7 +364,7 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
     std::memcpy(pfield->b.x3f.data(), &(mbdata[os]), pfield->b.x3f.GetSizeInBytes());
     os += pfield->b.x3f.GetSizeInBytes();
   }
-      
+
   if (PARTICLES) {
     for (int ipar = 0; ipar < Particles::num_particles; ++ipar)
       ppar[ipar]->UnpackParticlesForRestart(mbdata, os);
