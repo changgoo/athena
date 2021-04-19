@@ -11,6 +11,7 @@
 
 // C++ headers
 #include <string> // string
+#include <fstream>
 //#include <vector> // formerly needed for vector of MeshBlock ptrs in DoTaskListOneStage
 
 // Athena++ headers
@@ -119,35 +120,37 @@ void TaskList::OutputAllTaskTime(const int ncycle, std::string basename) {
   MPI_Allreduce(MPI_IN_PLACE, &time_per_step, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 #endif
   if (Globals::my_rank == 0) {
-    FILE *fp = nullptr;
-    char fop{ 'a' };
+    std::ofstream os;
     std::string fname;
     fname.assign(basename);
     fname.append(".task_time.txt");
-
-    // open 'task_time.txt' file
+    // open 'loop_time.txt' file
     if (newfile_) {
-      fop = 'w';
+      os.open(fname.c_str(), std::ofstream::out);
       newfile_ = false;
+    } else {
+      os.open(fname.c_str(), std::ofstream::app);
     }
 
-    if ((fp = std::fopen(fname.c_str(),&fop)) == nullptr) {
-      std::cout << "### ERROR in function TaskList::OutputAllTaskTime" << std::endl
-                << "Cannot open task_time.txt" << std::endl;
+    if (!os.is_open()) {
+      std::cout << "### ERROR in function OutputAllTaskTime" << std::endl
+                << "Cannot open " << fname << std::endl;
       return;
     }
 
     int j = 0;
-    std::fprintf(fp,"# ncycle=%d, TaskList=%s, time=%g\n",
-      ncycle, task_list_name.c_str(), time_per_step);
+    os << "# ncycle=" << ncycle
+       << ", TaskList=" << task_list_name
+       << ", time=" << time_per_step << std::endl;
     for (int i=0; i<ntasks; i++) {
       Task &taski = task_list_[i];
       if (taski.lb_time) {
-        std::fprintf(fp,"  %20s, time=%g, fraction=%g\n",
-           taski.task_name.c_str(), all_task_time[j], all_task_time[j]/time_per_step);
+        os << "  " << taski.task_name
+           << ", time=" << all_task_time[j]
+           << ", fraction=" << all_task_time[j]/time_per_step << std::endl;
         j++;
       }
     }
-    std::fclose(fp);
+    os.close();
   }
 }

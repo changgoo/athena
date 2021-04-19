@@ -50,7 +50,7 @@ void OutputLoopTime(const int ncycle, double dt_array[], std::string basename) {
   MPI_Allreduce(MPI_IN_PLACE, dt_array, 5, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 #endif
   double time_per_step = dt_array[0] + dt_array[1] + dt_array[2]
-                     + dt_array[3] + dt_array[4];
+                       + dt_array[3] + dt_array[4];
   if (Globals::my_rank == 0) {
     std::ofstream os;
     std::string fname;
