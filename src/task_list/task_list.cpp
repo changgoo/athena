@@ -10,8 +10,8 @@
 // C headers
 
 // C++ headers
+#include <fstream> // ofstream
 #include <string> // string
-#include <fstream>
 //#include <vector> // formerly needed for vector of MeshBlock ptrs in DoTaskListOneStage
 
 // Athena++ headers
