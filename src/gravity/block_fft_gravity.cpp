@@ -35,7 +35,7 @@ BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
       Lx1_(pmb->pmy_mesh->mesh_size.x1max - pmb->pmy_mesh->mesh_size.x1min),
       Lx2_(pmb->pmy_mesh->mesh_size.x2max - pmb->pmy_mesh->mesh_size.x2min),
       Lx3_(pmb->pmy_mesh->mesh_size.x3max - pmb->pmy_mesh->mesh_size.x3min),
-      I_(0.0,1.0) {
+      I_(0.0,1.0), is_particle_gravity(pmb->pmy_mesh->particle_gravity) {
   gtlist_ = new FFTGravitySolverTaskList(pin, pmb->pmy_mesh);
   gbflag = GetGravityBoundaryFlag(pin->GetString("self_gravity", "grav_bc"));
   grfflag = GetGreenFuncFlag(pin->GetOrAddString("self_gravity", "green_function",
@@ -409,7 +409,6 @@ void BlockFFTGravity::Solve(int stage) {
   rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
 
   // BlockFFT assume nblocal = 1 so that no need to loop over meshblocks
-  bool is_particle_gravity = pmy_block_->pmy_mesh->particle_gravity;
   if (is_particle_gravity) {
     rhosum.NewAthenaArray(pmy_block_->ncells3, pmy_block_->ncells2, pmy_block_->ncells1);
     Particles::FindDensityOnMesh(pmy_block_->pmy_mesh, false, true);

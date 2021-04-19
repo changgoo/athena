@@ -102,6 +102,7 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
     sts_loc(TaskType::main_int),
     muj(), nuj(), muj_tilde(), gammaj_tilde(),
     nbnew(), nbdel(),
+    particle_gravity(false),
     step_since_lb(), gflag(), turb_flag(), amr_updated(multilevel),
     // private members:
     next_phys_id_(), num_mesh_threads_(pin->GetOrAddInteger("mesh", "num_threads", 1)),
