@@ -76,10 +76,10 @@ def analyze():
     logger.info("gas: %g %g", err[0], err[1])
     logger.info("star: %g %g", err[2], err[3])
 
-    if err[0] > 1.00E-5*np.sqrt(10):
+    if err[0] > 2.00E-5*np.sqrt(10):
         logger.warning("np=1e3: gas density error is too large %g", err[0])
         analyze_status = False
-    if err[1] > 1.00E-5:
+    if err[1] > 2.00E-5:
         logger.warning("np=1e4: gas density error is too large %g", err[1])
         analyze_status = False
     # if err[2] > 1.00E-5/np.sqrt(10):

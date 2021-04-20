@@ -125,8 +125,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     // Ramdomizing position. Or velocity perturbation
     std::random_device device;
     std::mt19937_64 rng_generator;
-    std::int64_t rseed = static_cast<std::int64_t>(device());
-    // std::int64_t rseed = gid;
+    // std::int64_t rseed = static_cast<std::int64_t>(device());
+    std::int64_t rseed = gid;
     std::uniform_real_distribution<Real> udist(0.0,1.0); // uniform in [0,1)
     std::normal_distribution<Real> ndist(0.0,sigz); // normal distribution
 
