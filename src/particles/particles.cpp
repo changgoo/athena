@@ -189,6 +189,9 @@ void Particles::PostInitialize(Mesh *pm, ParameterInput *pin) {
   for (int b = 0; b < pm->nblocal; ++b)
     for (Particles *ppar : pm->my_blocks(b)->ppar)
       if (ppar->parhstout_) ppar->OutputParticles(true);
+
+  // Calcuate particle density for the first time
+  Particles::FindDensityOnMesh(pm, true, false);
 }
 
 //--------------------------------------------------------------------------------------
