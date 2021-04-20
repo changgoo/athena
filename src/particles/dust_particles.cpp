@@ -42,11 +42,7 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParame
   backreaction = pin->GetOrAddBoolean(input_block_name, "backreaction", false);
   if (taus0 == 0.0) backreaction = false;
 
-
-  if (SELF_GRAVITY_ENABLED && backreaction) {
-    isgravity_ = pp->gravity;
-    pmy_mesh->particle_gravity = true;
-  }
+  if (!backreaction) isgravity_ = false;
 
   Particles::AllocateMemory();
 

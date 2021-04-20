@@ -147,6 +147,9 @@ void Particles::Initialize(Mesh *pm, ParameterInput *pin) {
     pib = pib->pnext;  // move to next input block name
   }
 
+  if (SELF_GRAVITY_ENABLED && (num_particles_grav > 0))
+    pm->particle_gravity = true;
+
   if (Globals::my_rank == 0) {
     std::cout << "Particles are initalized with "
               << "N containers = " << num_particles << std::endl;
@@ -338,10 +341,7 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
   // Initiate ParticleMesh class.
   ParticleMesh::Initialize(pin);
 
-  if (SELF_GRAVITY_ENABLED) {
-    isgravity_ = pp->gravity;
-    pmy_mesh->particle_gravity = true;
-  }
+  if (SELF_GRAVITY_ENABLED) isgravity_ = pp->gravity;
 
   // read shearing box parameters from input block
   if (pmy_mesh->shear_periodic) {

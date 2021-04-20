@@ -5,7 +5,6 @@
 //========================================================================================
 //! \file particle_isosheet.cpp
 //! \brief Problem generator for Spitzer Isothermal sheet for both star and gas
-//
 //========================================================================================
 
 // C headers
