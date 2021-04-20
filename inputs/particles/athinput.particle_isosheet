@@ -23,6 +23,10 @@ variable   = prim       # variables to be output
 data_format = %24.17e   # Optional data format string
 dt          = -1       # time increment between outputs
 
+<output4>
+file_type  = rst        # Restart data dump
+dt         = -1        # time increment between outputs
+
 <time>
 cfl_number = 0.3        # The Courant, Friedrichs, & Lewy (CFL) Number
 nlim       = 100000     # cycle limit

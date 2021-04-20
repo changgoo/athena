@@ -516,12 +516,10 @@ std::size_t MeshBlock::GetBlockSizeInBytes() {
     for (int ipar=0; ipar < Particles::num_particles; ++ipar)
       size += ppar[ipar]->GetSizeInBytes();
   }
-  if (SELF_GRAVITY_ENABLED)
-    size += pgrav->phi.GetSizeInBytes();
-  if (NSCALARS > 0)
-    size += pscalars->s.GetSizeInBytes();
   if (CR_ENABLED)
     size += pcr->u_cr.GetSizeInBytes();
+  if (NSCALARS > 0)
+    size += pscalars->s.GetSizeInBytes();
 
   // calculate user MeshBlock data size
   for (int n=0; n<nint_user_meshblock_data_; n++)

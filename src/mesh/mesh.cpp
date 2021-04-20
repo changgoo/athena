@@ -625,7 +625,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     ConductionCoeff_{}, FieldDiffusivity_{},
     OrbitalVelocity_{}, OrbitalVelocityDerivative_{nullptr, nullptr},
     MGGravityBoundaryFunction_{MGPeriodicInnerX1, MGPeriodicOuterX1, MGPeriodicInnerX2,
-                        MGPeriodicOuterX2, MGPeriodicInnerX3, MGPeriodicOuterX3} {
+                               MGPeriodicOuterX2, MGPeriodicInnerX3, MGPeriodicOuterX3} {
   std::stringstream msg;
   RegionSize block_size;
   BoundaryFlag block_bcs[6];

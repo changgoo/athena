@@ -61,6 +61,13 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     EnrollUserBoundaryFunction(BoundaryFace::outer_x3, FixedBoundary);
   }
 
+  Real cs = pin->GetReal("hydro","iso_sound_speed");
+  Real fgas = pin->GetReal("problem","fgas");
+  Real d0 = pin->GetOrAddReal("problem","rho0",1.0);
+  z0 = cs/std::sqrt(2.0*four_pi_G_*d0);
+  rho0_gas = d0*fgas;
+  rho0_star = d0*(1-fgas);
+
   // Enroll user-defined functions
   AllocateUserHistoryOutput(2);
   EnrollUserHistoryOutput(0, DeltaRho, "drhog");
@@ -89,14 +96,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     ku += NGHOST;
   }
 
-  Real four_pi_G = pmy_mesh->four_pi_G_;
-  Real cs = pin->GetReal("hydro","iso_sound_speed");
-  Real fgas = pin->GetReal("problem","fgas");
-
-  Real d0 = pin->GetOrAddReal("problem","rho0",1.0);
-  z0 = cs/std::sqrt(2.0*four_pi_G*d0);
-  rho0_gas = d0*fgas;
-  rho0_star = d0*(1-fgas);
   for (int k=kl; k<=ku; ++k) {
     Real x3 = pcoord->x3v(k);
     for (int j=jl; j<=ju; ++j) {

@@ -92,7 +92,7 @@ void Mesh::CalculateLoadBalance(double *clist, int *rlist, int *slist, int *nlis
     }
     mycost += clist[i];
     rlist[i] = j;
-    if (mycost >= targetcost && j>0) {
+    if (mycost >= (targetcost - lb_tolerance_) && j>0) {
       j--;
       totalcost -= mycost;
       mycost = 0.0;
