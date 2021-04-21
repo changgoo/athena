@@ -283,8 +283,9 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
   ipid(-1), ixp(-1), iyp(-1), izp(-1), ivpx(-1), ivpy(-1), ivpz(-1),
   ixp0(-1), iyp0(-1), izp0(-1), ivpx0(-1), ivpy0(-1), ivpz0(-1),
   ixi1(-1), ixi2(-1), ixi3(-1), imom1(-1), imom2(-1), imom3(-1), imass(-1),
-  igx(-1), igy(-1), igz(-1), my_ipar_(pp->ipar), isgravity_(false), parhstout_(false),
-  mass(1.0) {
+  igx(-1), igy(-1), igz(-1),
+  npar(0), nparmax(1),
+  my_ipar_(pp->ipar), isgravity_(false), parhstout_(false), mass(1.0) {
   // Add particle ID.
   ipid = AddIntProperty();
   intfieldname.push_back("pid");
@@ -330,8 +331,7 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
   pmy_block = pmb;
   pmy_mesh = pmb->pmy_mesh;
   pbval_ = pmb->pbval;
-  nparmax = pin->GetOrAddInteger(input_block_name, "nparmax", 1);
-  npar = 0;
+
 
   // Get the CFL number for particles.
   cfl_par = pin->GetOrAddReal(input_block_name, "cfl_par", 1);
@@ -970,7 +970,8 @@ void Particles::ProcessNewParticles(Mesh *pmesh, int ipar) {
   // Set particle IDs.
   for (int b = 0; b < nblocks; ++b) {
     const MeshBlock *pmb(pmesh->my_blocks(b));
-    pmb->ppar[ipar]->SetNewParticleID((pmb->gid > 0 ? nnewpar[pmb->gid - 1] : 0));
+    int newid_start = idmax[ipar] + (pmb->gid > 0 ? nnewpar[pmb->gid - 1] : 0);
+    pmb->ppar[ipar]->SetNewParticleID(newid_start);
   }
   idmax[ipar] += nnewpar[nbtotal - 1];
 }
