@@ -128,16 +128,17 @@ timeout --signal=TERM 60m time python -u ./run_tests.py hybrid --mpirun=srun \
 time python -u ./run_tests.py hydro --silent
 time python -u ./run_tests.py amr --silent
 time python -u ./run_tests.py outputs --silent
-time python -u ./run_tests.py sr --silent
 time python -u ./run_tests.py curvilinear --silent
 time python -u ./run_tests.py symmetry --silent
 time python -u ./run_tests.py eos --silent
 time python -u ./run_tests.py scalars/mignone_radial_1d --silent
 # Exclude gr/compile*.py regression tests from code coverage analysis (nothing is executed in these tests):
-time python -u ./run_tests.py gr/compile_kerr-schild gr/compile_minkowski gr/compile_schwarzschild --silent
-time python -u ./run_tests.py gr/mhd_shocks_hlld gr/mhd_shocks_hlle gr/mhd_shocks_llf --silent
-time python -u ./run_tests.py gr/hydro_shocks_hllc gr/hydro_shocks_hlle gr/hydro_shocks_llf --silent
-time python -u ./run_tests.py gr/hydro_shocks_hlle_no_transform gr/hydro_shocks_llf_no_transform --silent
+# (changgoo) suppress all gr/sr tests
+# time python -u ./run_tests.py sr --silent
+# time python -u ./run_tests.py gr/compile_kerr-schild gr/compile_minkowski gr/compile_schwarzschild --silent
+# time python -u ./run_tests.py gr/mhd_shocks_hlld gr/mhd_shocks_hlle gr/mhd_shocks_llf --silent
+# time python -u ./run_tests.py gr/hydro_shocks_hllc gr/hydro_shocks_hlle gr/hydro_shocks_llf --silent
+# time python -u ./run_tests.py gr/hydro_shocks_hlle_no_transform gr/hydro_shocks_llf_no_transform --silent
 #
 #time python -u ./run_tests.py mhd --coverage="${lcov_capture_cmd}" -r="time/nlim=10" --silent || true
 time python -u ./run_tests.py mhd --silent  # (mhd/mhd_linwave.py is currenlty the slowest regression test):
@@ -152,9 +153,12 @@ time python -u ./run_tests.py diffusion --silent
 #time python -u ./run_tests.py hydro4 --coverage="${lcov_capture_cmd}" -r="time/nlim=10" --silent || true
 time python -u ./run_tests.py hydro4 --silent
 
-# cooling regression
-# time python -u ./run_tests.py cooling --coverage="${lcov_capture_cmd}" -r="time/nlim=10" --silent || true
+# cooling regressiong
+#time python -u ./run_tests.py cooling --coverage="${lcov_capture_cmd}" -r="time/nlim=10" --silent || true
 time python -u ./run_tests.py cooling --silent
+
+# particle regression
+time python -u ./run_tests.py particles --silent
 
 # CR regression
 time python -u ./run_tests.py cr --silent
@@ -234,6 +238,7 @@ module list
 
 #time python -u ./run_tests.py pgen/pgen_compile --config=--cxx=icpc --config=--cflag="$(../ci/set_warning_cflag.sh icpc)"
 time python -u ./run_tests.py pgen/hdf5_reader_serial --silent
+# time python -u ./run_tests.py particles --config=--cxx=icpc --mpirun=srun --mpirun_opts=--job-name='ICC particles' --silent
 time python -u ./run_tests.py grav --config=--cxx=icpc --mpirun=srun --mpirun_opts=--job-name='ICC grav/jeans_3d' --silent
 time python -u ./run_tests.py turb --config=--cxx=icpc --mpirun=srun --mpirun_opts=--job-name='ICC turb/' --silent
 time python -u ./run_tests.py mpi --config=--cxx=icpc --mpirun=srun --mpirun_opts=--job-name='ICC mpi/mpi_linwave' --silent
@@ -244,8 +249,9 @@ time python -u ./run_tests.py hydro --config=--cxx=icpc --silent
 time python -u ./run_tests.py mhd --config=--cxx=icpc --silent
 time python -u ./run_tests.py amr --config=--cxx=icpc --silent
 time python -u ./run_tests.py outputs --config=--cxx=icpc --silent
-time python -u ./run_tests.py sr --config=--cxx=icpc --silent
-time python -u ./run_tests.py gr --config=--cxx=icpc --silent
+#(changgoo) suppress gr/sr tests
+# time python -u ./run_tests.py sr --config=--cxx=icpc --silent
+# time python -u ./run_tests.py gr --config=--cxx=icpc --silent
 time python -u ./run_tests.py curvilinear --config=--cxx=icpc --silent
 time python -u ./run_tests.py shearingbox --config=--cxx=icpc --silent
 # time python -u ./run_tests.py diffusion --config=--cxx=icpc --config=--cflag=-fp-model=strict --silent
@@ -258,6 +264,9 @@ time python -u ./run_tests.py hydro4 --config=--cxx=icpc --silent
 
 # cooling regression
 time python -u ./run_tests.py cooling --config=--cxx=icpc --silent
+
+# particle regression
+time python -u ./run_tests.py particles --config=--cxx=icpc --mpirun=srun --mpirun_opts=--job-name='ICC particles' --silent
 
 # CR regression
 time python -u ./run_tests.py cr --config=--cxx=icpc --silent
@@ -278,8 +287,9 @@ time python -u ./run_tests.py pgen/hdf5_reader_parallel --config=--cxx=icpc \
 time python -u ./run_tests.py pgen/pgen_compile --config=--cxx=icpc-debug --config=--cflag="$(../ci/set_warning_cflag.sh icpc)"
 time python -u ./run_tests.py hydro --config=--cxx=icpc-debug --silent
 time python -u ./run_tests.py mhd --config=--cxx=icpc-debug --silent
-time python -u ./run_tests.py sr --config=--cxx=icpc-debug --silent
-time python -u ./run_tests.py gr --config=--cxx=icpc-debug --silent
+#(changgoo) suppress sr/gr tests
+# time python -u ./run_tests.py sr --config=--cxx=icpc-debug --silent
+# time python -u ./run_tests.py gr --config=--cxx=icpc-debug --silent
 
 set +e
 # end regression tests

@@ -35,6 +35,7 @@
 #include "../hydro/hydro.hpp"
 #include "../orbital_advection/orbital_advection.hpp"
 #include "../parameter_input.hpp"
+#include "../particles/particles.hpp"
 #include "../reconstruct/reconstruction.hpp"
 #include "../scalars/scalars.hpp"
 #include "../utils/buffer_utils.hpp"
@@ -179,6 +180,20 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
   //! * Compare both private member variables via BoundaryValues::CheckCounterPhysID
 
   peos = new EquationOfState(this, pin);
+  if (PARTICLES) {
+    for (ParticleParameters pp : pm->particle_params) {
+      Particles *newppar;
+      if (pp.partype.compare("dust") == 0) {
+        newppar = new DustParticles(this, pin, &pp);
+      } else if (pp.partype.compare("tracer") == 0) {
+        newppar = new TracerParticles(this, pin, &pp);
+      } else if (pp.partype.compare("star") == 0) {
+        newppar = new StarParticles(this, pin, &pp);
+      }
+      ppar.push_back(newppar);
+      if (pp.gravity) ppar_grav.push_back(newppar);
+    }
+  }
 
   if (CR_ENABLED) {
     pcr = new CosmicRay(this, pin);
@@ -304,6 +319,20 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
   }
 
   peos = new EquationOfState(this, pin);
+  if (PARTICLES) {
+    for (ParticleParameters pp : pm->particle_params) {
+      Particles *newppar;
+      if (pp.partype.compare("dust") == 0) {
+        newppar = new DustParticles(this, pin, &pp);
+      } else if (pp.partype.compare("tracer") == 0) {
+        newppar = new TracerParticles(this, pin, &pp);
+      } else if (pp.partype.compare("star") == 0) {
+        newppar = new StarParticles(this, pin, &pp);
+      }
+      ppar.push_back(newppar);
+      if (pp.gravity) ppar_grav.push_back(newppar);
+    }
+  }
 
   if(CR_ENABLED) {
     pcr = new CosmicRay(this, pin);
@@ -334,6 +363,11 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
     os += pfield->b.x2f.GetSizeInBytes();
     std::memcpy(pfield->b.x3f.data(), &(mbdata[os]), pfield->b.x3f.GetSizeInBytes());
     os += pfield->b.x3f.GetSizeInBytes();
+  }
+
+  if (PARTICLES) {
+    for (int ipar = 0; ipar < Particles::num_particles; ++ipar)
+      ppar[ipar]->UnpackParticlesForRestart(mbdata, os);
   }
 
   if(CR_ENABLED) {
@@ -373,6 +407,10 @@ MeshBlock::~MeshBlock() {
   delete phydro;
   if (MAGNETIC_FIELDS_ENABLED) delete pfield;
   delete peos;
+
+  for (int ipar = 0; ipar < Particles::num_particles; ++ipar)
+    delete ppar[ipar];
+
   delete porb;
   if (SELF_GRAVITY_ENABLED) delete pgrav;
   if (SELF_GRAVITY_ENABLED == 3) delete pfft;
@@ -474,12 +512,14 @@ std::size_t MeshBlock::GetBlockSizeInBytes() {
   if (MAGNETIC_FIELDS_ENABLED)
     size += (pfield->b.x1f.GetSizeInBytes() + pfield->b.x2f.GetSizeInBytes()
              + pfield->b.x3f.GetSizeInBytes());
-  if (SELF_GRAVITY_ENABLED)
-    size += pgrav->phi.GetSizeInBytes();
-  if (NSCALARS > 0)
-    size += pscalars->s.GetSizeInBytes();
+  if (PARTICLES) {
+    for (int ipar=0; ipar < Particles::num_particles; ++ipar)
+      size += ppar[ipar]->GetSizeInBytes();
+  }
   if (CR_ENABLED)
     size += pcr->u_cr.GetSizeInBytes();
+  if (NSCALARS > 0)
+    size += pscalars->s.GetSizeInBytes();
 
   // calculate user MeshBlock data size
   for (int n=0; n<nint_user_meshblock_data_; n++)
@@ -506,7 +546,7 @@ void MeshBlock::SetCostForLoadBalancing(double cost) {
 //! \brief reset the MeshBlock cost for automatic load balancing
 
 void MeshBlock::ResetTimeMeasurement() {
-  if (pmy_mesh->lb_automatic_) cost_ = TINY_NUMBER;
+  cost_ = TINY_NUMBER;
 }
 
 //----------------------------------------------------------------------------------------
@@ -514,13 +554,15 @@ void MeshBlock::ResetTimeMeasurement() {
 //! \brief start time measurement for automatic load balancing
 
 void MeshBlock::StartTimeMeasurement() {
-  if (pmy_mesh->lb_automatic_) {
 #ifdef OPENMP_PARALLEL
-    lb_time_ = omp_get_wtime();
+  lb_time_ = omp_get_wtime();
 #else
-    lb_time_ = static_cast<double>(clock());
+#ifdef MPI_PARALLEL
+  lb_time_ = MPI_Wtime();
+#else
+  lb_time_ = static_cast<double> (clock())/static_cast<double> (CLOCKS_PER_SEC);
 #endif
-  }
+#endif
 }
 
 //----------------------------------------------------------------------------------------
@@ -528,14 +570,17 @@ void MeshBlock::StartTimeMeasurement() {
 //! \brief stop time measurement and accumulate it in the MeshBlock cost
 
 void MeshBlock::StopTimeMeasurement() {
-  if (pmy_mesh->lb_automatic_) {
 #ifdef OPENMP_PARALLEL
-    lb_time_ = omp_get_wtime() - lb_time_;
+  lb_time_ = omp_get_wtime() - lb_time_;
 #else
-    lb_time_ = static_cast<double>(clock()) - lb_time_;
+#ifdef MPI_PARALLEL
+  lb_time_ = MPI_Wtime() - lb_time_;
+#else
+  lb_time_ = static_cast<double> (clock())/static_cast<double> (CLOCKS_PER_SEC)
+           - lb_time_;
 #endif
-    cost_ += lb_time_;
-  }
+#endif
+  cost_ += lb_time_;
 }
 
 

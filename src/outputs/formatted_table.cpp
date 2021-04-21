@@ -23,6 +23,7 @@
 #include "../athena.hpp"
 #include "../coordinates/coordinates.hpp"
 #include "../mesh/mesh.hpp"
+#include "../particles/particles.hpp"
 #include "outputs.hpp"
 
 
@@ -140,6 +141,26 @@ void FormattedTableOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool f
     std::fclose(pfile);
     ClearOutputData(); // required when LoadOutputData() is used.
   }  // end loop over MeshBlocks
+
+  // increment counters
+  output_params.file_number++;
+  output_params.next_time += output_params.dt;
+  pin->SetInteger(output_params.block_name, "file_number", output_params.file_number);
+  pin->SetReal(output_params.block_name, "next_time", output_params.next_time);
+
+  return;
+}
+
+//----------------------------------------------------------------------------------------
+//! \fn void ParticleFormattedTableOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin,
+//!                                                bool flag)
+//! \brief writes OutputData to file in tabular format using C style std::fprintf
+//!        Writes one file per MeshBlock
+
+void ParticleFormattedTableOutput::WriteOutputFile(Mesh *pm,
+  ParameterInput *pin, bool flag) {
+  // Output particle data if any.
+  if (PARTICLES) Particles::FormattedTableOutput(pm, output_params);
 
   // increment counters
   output_params.file_number++;

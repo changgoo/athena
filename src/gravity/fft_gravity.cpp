@@ -23,6 +23,7 @@
 #include "../globals.hpp"
 #include "../hydro/hydro.hpp"
 #include "../mesh/mesh.hpp"
+#include "../particles/particles.hpp"
 #include "../task_list/fft_grav_task_list.hpp"
 #include "fft_gravity.hpp"
 #include "gravity.hpp"
@@ -69,10 +70,25 @@ void FFTGravityDriver::Solve(int stage, int mode) {
   // Load the source
   int nbs = nslist_[Globals::my_rank];
   int nbe = nbs+nblist_[Globals::my_rank]-1;
-  for (int igid=nbs; igid<=nbe; igid++) {
-    MeshBlock *pmb = pmy_mesh_->FindMeshBlock(igid);
-    if (pmb != nullptr) {
-      in.InitWithShallowSlice(pmb->phydro->u,4,IDN,1);
+
+  // Compute mass density of particles.
+  if (PARTICLES && pmy_mesh_->particle_gravity)
+    Particles::FindDensityOnMesh(pmy_mesh_, false, true);
+
+  for (int nb=0; nb<pmy_mesh_->nblocal; ++nb) {
+    MeshBlock *pmb = pmy_mesh_->my_blocks(nb);
+    in.InitWithShallowSlice(pmb->phydro->u,4,IDN,1);
+    if (PARTICLES && pmy_mesh_->particle_gravity) {
+      AthenaArray<Real> rhosum(in);
+      for (Particles *ppar : pmb->ppar_grav) {
+        AthenaArray<Real> rhop(ppar->GetMassDensity());
+        for (int k = pmb->ks; k <= pmb->ke; ++k)
+          for (int j = pmb->js; j <= pmb->je; ++j)
+            for (int i = pmb->is; i <= pmb->ie; ++i)
+              rhosum(k,j,i) += rhop(k,j,i);
+      }
+      pfb->LoadSource(rhosum, 0, NGHOST, pmb->loc, pmb->block_size);
+    } else {
       pfb->LoadSource(in, 0, NGHOST, pmb->loc, pmb->block_size);
     }
     //    else { // on another process

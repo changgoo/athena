@@ -62,11 +62,12 @@ class TaskID {  // POD but not aggregate (there is a user-provided ctor)
 //! \brief data and function pointer for an individual Task
 
 struct Task { // aggregate and POD
-  TaskID task_id;    //!> encodes task with bit positions in HydroIntegratorTaskNames
-  TaskID dependency; //!> encodes dependencies to other tasks using
-                     //!> HydroIntegratorTaskNames
-  TaskStatus (TaskList::*TaskFunc)(MeshBlock*, int);  //!> ptr to member function
-  bool lb_time; //!> flag for automatic load balancing based on timing
+  TaskID task_id;    // encodes task with bit positions in HydroIntegratorTaskNames
+  TaskID dependency; // encodes dependencies to other tasks using " " " "
+  TaskStatus (TaskList::*TaskFunc)(MeshBlock*, int);  // ptr to member function
+  bool lb_time; // flag for automatic load balancing based on timing
+  double task_time;
+  std::string task_name;
 };
 
 //---------------------------------------------------------------------------------------
@@ -97,9 +98,13 @@ class TaskList {
   int ntasks;     //!> number of tasks in this list
   int nstages;    //!> number of times the tasklist is repeated per each full timestep
 
+  // name
+  std::string task_list_name;
+
   // functions
   TaskListStatus DoAllAvailableTasks(MeshBlock *pmb, int stage, TaskStates &ts);
   void DoTaskListOneStage(Mesh *pmesh, int stage);
+  void OutputAllTaskTime(const int ncycle, std::string basename);
 
  protected:
   //! \todo (felker): rename to avoid confusion with class name
@@ -108,6 +113,7 @@ class TaskList {
  private:
   virtual void AddTask(const TaskID& id, const TaskID& dep) = 0;
   virtual void StartupTaskList(MeshBlock *pmb, int stage) = 0;
+  bool newfile_ = true;
 };
 
 //----------------------------------------------------------------------------------------
@@ -165,6 +171,12 @@ class TimeIntegratorTaskList : public TaskList {
 
   TaskStatus SetBoundariesHydro(MeshBlock *pmb, int stage);
   TaskStatus SetBoundariesField(MeshBlock *pmb, int stage);
+
+  TaskStatus ParticlesIntegrate(MeshBlock *pmb, int step);
+  TaskStatus ParticlesSend(MeshBlock *pmb, int step);
+  TaskStatus ParticlesReceive(MeshBlock *pmb, int step);
+  TaskStatus ParticleMeshSend(MeshBlock *pmb, int step);
+  TaskStatus ParticleMeshReceive(MeshBlock *pmb, int step);
 
   TaskStatus SendHydroShear(MeshBlock *pmb, int stage);
   TaskStatus ReceiveHydroShear(MeshBlock *pmb, int stage);
@@ -372,5 +384,10 @@ const TaskID RECV_CRSH(78);
 const TaskID SRCTERM_CR(79);
 const TaskID CR_OPACITY(80);
 
+const TaskID INT_PAR(81);
+const TaskID SEND_PAR(82);
+const TaskID RECV_PAR(83);
+const TaskID SEND_PM(84);
+const TaskID RECV_PM(85);
 }  // namespace HydroIntegratorTaskNames
 #endif  // TASK_LIST_TASK_LIST_HPP_

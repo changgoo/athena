@@ -25,6 +25,7 @@
 #include "../bvals/bvals.hpp"
 #include "../outputs/io_wrapper.hpp"
 #include "../parameter_input.hpp"
+#include "../particles/particles.hpp"
 #include "../task_list/task_list.hpp"
 #include "../utils/interp_table.hpp"
 #include "mesh_refinement.hpp"
@@ -44,6 +45,7 @@ class Coordinates;
 class Reconstruction;
 class Hydro;
 class Field;
+class Particles;
 class PassiveScalars;
 class CosmicRay;
 class Gravity;
@@ -70,6 +72,7 @@ class MeshBlock {
   friend class Mesh;
   friend class Hydro;
   friend class TaskList;
+  friend class TimeIntegratorTaskList;
 #ifdef HDF5OUTPUT
   friend class ATHDF5Output;
 #endif
@@ -116,12 +119,14 @@ class MeshBlock {
   Hydro *phydro;
   Field *pfield;
   Gravity *pgrav;
-  MGGravity* pmg;
+  MGGravity *pmg;
   PassiveScalars *pscalars;
   EquationOfState *peos;
   CosmicRay *pcr;
   OrbitalAdvection *porb;
   BlockFFTGravity *pfft;
+  // pointer to particle classes
+  std::vector<Particles *> ppar, ppar_grav;
 
   // functions
   std::size_t GetBlockSizeInBytes();
@@ -240,6 +245,8 @@ class Mesh {
   TaskType sts_loc;
   Real muj, nuj, muj_tilde, gammaj_tilde;
   int nbtotal, nblocal, nbnew, nbdel;
+  std::vector<ParticleParameters> particle_params;
+  bool particle_gravity;
 
   int step_since_lb;
   int gflag;

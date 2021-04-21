@@ -43,6 +43,7 @@
 #include "outputs/io_wrapper.hpp"
 #include "outputs/outputs.hpp"
 #include "parameter_input.hpp"
+#include "particles/particles.hpp"
 #include "utils/utils.hpp"
 
 // MPI/OpenMP headers
@@ -68,6 +69,7 @@ int main(int argc, char *argv[]) {
   int mesh_flag = 0;  // set to <nproc> if -m <nproc> argument is on cmdline
   int wtlim = 0;
   std::uint64_t mbcnt = 0;
+  std::uint64_t npcnt = 0;
 
   //--- Step 1. --------------------------------------------------------------------------
   // Initialize MPI environment, if necessary
@@ -430,6 +432,9 @@ int main(int argc, char *argv[]) {
 
   while ((pmesh->time < pmesh->tlim) &&
          (pmesh->nlim < 0 || pmesh->ncycle < pmesh->nlim)) {
+    double t0, t1, t2, t2_0, t2_1, t2_2, t3, t4;
+    double dt_before, dt_turb, dt_int = 0, dt_grav = 0, dt_after;
+    t0 = MarkTime();
     if (Globals::my_rank == 0)
       pmesh->OutputCycleDiagnostics();
 
@@ -455,10 +460,15 @@ int main(int argc, char *argv[]) {
       pmesh->sts_loc = TaskType::main_int;
     }
 
+    t1 = MarkTime();
     if (pmesh->turb_flag > 1) pmesh->ptrbd->Driving(); // driven turbulence
-
+    t2 = MarkTime();
+    dt_before = t1 - t0;
+    dt_turb = t2 - t1;
     for (int stage=1; stage<=ptlist->nstages; ++stage) {
+      t2_0 = MarkTime();
       ptlist->DoTaskListOneStage(pmesh, stage);
+      t2_1 = MarkTime();
       if (ptlist->CheckNextMainStage(stage)) {
         if (SELF_GRAVITY_ENABLED == 1) // fft (0: discrete kernel, 1: continuous kernel)
           pmesh->pfgrd->Solve(stage, 0);
@@ -467,20 +477,24 @@ int main(int argc, char *argv[]) {
         else if (SELF_GRAVITY_ENABLED == 3) // fft using BlockFFT
           pmesh->my_blocks(0)->pfft->Solve(stage);
       }
+      t2_2 = MarkTime();
+      dt_int += t2_1 - t2_0;
+      dt_grav += t2_2 - t2_1;
     }
-
+    t3 = MarkTime();
     if (STS_ENABLED && pmesh->sts_integrator == "rkl2") {
       pmesh->sts_loc = TaskType::op_split_after;
       // take super-timestep
       for (int stage=1; stage<=pststlist->nstages; ++stage)
         pststlist->DoTaskListOneStage(pmesh, stage);
     }
-
     pmesh->UserWorkInLoop();
-
     pmesh->ncycle++;
     pmesh->time += pmesh->dt;
     mbcnt += pmesh->nbtotal;
+    if (PARTICLES) {
+      npcnt += Particles::GetTotalNumber(pmesh);
+    }
     pmesh->step_since_lb++;
 
     pmesh->LoadBalancingAndAdaptiveMeshRefinement(pinput);
@@ -514,6 +528,15 @@ int main(int argc, char *argv[]) {
     // check for signals
     if (SignalHandler::CheckSignalFlags() != 0) {
       break;
+    }
+    t4 = MarkTime();
+    dt_after = t4-t3;
+
+    if (pinput->GetOrAddBoolean("job","output_timing",false)) {
+      // output timing result
+      double dt_array[5] = {dt_before, dt_turb, dt_int, dt_grav, dt_after};
+      ptlist->OutputAllTaskTime(pmesh->ncycle,pinput->GetString("job","problem_id"));
+      OutputLoopTime(pmesh->ncycle,dt_array,pinput->GetString("job","problem_id"));
     }
   } // END OF MAIN INTEGRATION LOOP ======================================================
   // Make final outputs, print diagnostics, clean up and terminate
@@ -582,11 +605,17 @@ int main(int argc, char *argv[]) {
                        1.0)/static_cast<double> (CLOCKS_PER_SEC);
     std::uint64_t zonecycles = mbcnt
       *static_cast<std::uint64_t> (pmesh->my_blocks(0)->GetNumberOfMeshBlockCells());
+
     double zc_cpus = static_cast<double> (zonecycles) / cpu_time;
 
     std::cout << std::endl << "zone-cycles = " << zonecycles << std::endl;
     std::cout << "cpu time used  = " << cpu_time << std::endl;
     std::cout << "zone-cycles/cpu_second = " << zc_cpus << std::endl;
+    if (PARTICLES) {
+      double npart_cpus = npcnt / cpu_time;
+      std::cout << "total particle cycles = " << npcnt << std::endl;
+      std::cout << "particles/cpu_second = " << npart_cpus << std::endl;
+    }
 #ifdef OPENMP_PARALLEL
     double zc_omps = static_cast<double> (zonecycles) / omp_time;
     std::cout << std::endl << "omp wtime used = " << omp_time << std::endl;

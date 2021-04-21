@@ -35,7 +35,7 @@ BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
       Lx1_(pmb->pmy_mesh->mesh_size.x1max - pmb->pmy_mesh->mesh_size.x1min),
       Lx2_(pmb->pmy_mesh->mesh_size.x2max - pmb->pmy_mesh->mesh_size.x2min),
       Lx3_(pmb->pmy_mesh->mesh_size.x3max - pmb->pmy_mesh->mesh_size.x3min),
-      I_(0.0,1.0) {
+      I_(0.0,1.0), is_particle_gravity(pmb->pmy_mesh->particle_gravity) {
   gtlist_ = new FFTGravitySolverTaskList(pin, pmb->pmy_mesh);
   gbflag = GetGravityBoundaryFlag(pin->GetString("self_gravity", "grav_bc"));
   grfflag = GetGreenFuncFlag(pin->GetOrAddString("self_gravity", "green_function",
@@ -57,7 +57,6 @@ BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
                   2*in_klo, 2*in_khi+1, 2*slow_ilo, 2*slow_ihi+1,
                   2*slow_jlo, 2*slow_jhi+1, 2*slow_klo, 2*slow_khi+1,
                   permute, fftsize, sendsize, recvsize);
-
   // initialize Green's function for open BC
   if (gbflag==GravityBoundaryFlag::open)
     InitGreen();
@@ -405,6 +404,23 @@ void BlockFFTGravity::ApplyKernel() {
 void BlockFFTGravity::Solve(int stage) {
 #ifdef FFT
 #ifdef MPI_PARALLEL
+  // Compute mass density of particles.
+  AthenaArray<Real> rho, rhosum;
+  rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
+
+  // BlockFFT assume nblocal = 1 so that no need to loop over meshblocks
+  if (is_particle_gravity) {
+    rhosum.NewAthenaArray(pmy_block_->ncells3, pmy_block_->ncells2, pmy_block_->ncells1);
+    Particles::FindDensityOnMesh(pmy_block_->pmy_mesh, false, true);
+    for (Particles *ppar : pmy_block_->ppar_grav) {
+      AthenaArray<Real> rhop(ppar->GetMassDensity());
+      for (int k = pmy_block_->ks; k <= pmy_block_->ke; ++k)
+        for (int j = pmy_block_->js; j <= pmy_block_->je; ++j)
+          for (int i = pmy_block_->is; i <= pmy_block_->ie; ++i)
+            rhosum(k,j,i) = rho(k,j,i) + rhop(k,j,i);
+    }
+  }
+
   if (SHEAR_PERIODIC) {
     // For shearing-periodic BC, we use a 'phase shift' method, instead of
     // a roll-unroll method in old Athena. It was found that the phase shift
@@ -415,15 +431,18 @@ void BlockFFTGravity::Solve(int stage) {
     // solution in time.
     Real time = pmy_block_->pmy_mesh->time;
     Real qomt = qshear_*Omega_0_*time;
-    AthenaArray<Real> rho;
+
     Real p,eps;
 
     // left integer time
     p = std::floor(qomt*Lx1_/Lx2_*(Real)Nx2);
     eps = qomt*Lx1_/Lx2_*(Real)Nx2 - p;
     rshear_ = p/(Real)Nx2;
-    rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
-    LoadSource(rho);
+
+    if (is_particle_gravity)
+      LoadSource(rhosum);
+    else
+      LoadSource(rho);
     ExecuteForward();
     ApplyKernel();
     ExecuteBackward();
@@ -432,8 +451,11 @@ void BlockFFTGravity::Solve(int stage) {
     // right integer time
     p = std::floor(qomt*Lx1_/Lx2_*(Real)Nx2) + 1.;
     rshear_ = p/(Real)Nx2;
-    rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
-    LoadSource(rho);
+
+    if (is_particle_gravity)
+      LoadSource(rhosum);
+    else
+      LoadSource(rho);
     ExecuteForward();
     ApplyKernel();
     ExecuteBackward();
@@ -450,13 +472,14 @@ void BlockFFTGravity::Solve(int stage) {
     // 8x-extended domain is assumed. Instead of zero-padding the density, we
     // multiply the appropriate phase shift to each parity and then combine them
     // to compute the full 8x-extended convolution.
-    AthenaArray<Real> rho;
-    rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
     pmy_block_->pgrav->phi.ZeroClear();
     for (int pz=0; pz<=1; ++pz) {
       for (int py=0; py<=1; ++py) {
         for (int px=0; px<=1; ++px) {
-          LoadOBCSource(rho,px,py,pz);
+          if (is_particle_gravity)
+            LoadOBCSource(rhosum,px,py,pz);
+          else
+            LoadOBCSource(rho,px,py,pz);
           ExecuteForward();
           MultiplyGreen(px,py,pz);
           ExecuteBackward();
@@ -466,9 +489,10 @@ void BlockFFTGravity::Solve(int stage) {
     }
   } else {
     // Periodic or disk BC without shearing box
-    AthenaArray<Real> rho;
-    rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
-    LoadSource(rho);
+    if (is_particle_gravity)
+      LoadSource(rhosum);
+    else
+      LoadSource(rho);
     ExecuteForward();
     ApplyKernel();
     ExecuteBackward();
@@ -516,6 +540,7 @@ void BlockFFTGravity::InitGreen() {
         gi = (gi+Nx1)%(2*Nx1) - Nx1;
         gj = (gj+Nx2)%(2*Nx2) - Nx2;
         gk = (gk+Nx3)%(2*Nx3) - Nx3;
+
         int idx = i + (2*nx1)*(j + (2*nx2)*k);
         if (grfflag==GreenFuncFlag::cell_averaged) {
           // cell-averaged Green's function

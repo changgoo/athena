@@ -75,6 +75,7 @@ class BlockFFTGravity : public BlockFFT {
   FFTMPI_NS::FFT3d *pf3dgrf_;
 #endif
 #endif
+  bool is_particle_gravity;
 };
 
 #endif // GRAVITY_BLOCK_FFT_GRAVITY_HPP_

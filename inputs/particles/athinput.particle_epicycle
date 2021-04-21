@@ -1,0 +1,86 @@
+<comment>
+problem   = two_body_problem
+reference =
+configure = --prob=particle_orbit -p
+
+
+<job>
+problem_id = par_epi    # problem ID: basename of output filenames
+
+<output1>
+file_type  = hst        # History data dump
+dt         = 0.001      # time increment between outputs
+
+<time>
+cfl_number = 0.3        # The Courant, Friedrichs, & Lewy (CFL) Number
+nlim       = 100000     # cycle limit
+tlim       = 20.0        # time limit
+integrator  = vl2       # time integration algorithm
+xorder      = 2         # order of spatial reconstruction
+ncycle_out  = 100        # interval for stdout summary info
+
+<mesh>
+nx1        = 40          # Number of zones in X1-direction
+x1min      = -1         # minimum value of X1
+x1max      = 1          # maximum value of X1
+ix1_bc     = shear_periodic   # inner-X1 boundary flag
+ox1_bc     = shear_periodic   # outer-X1 boundary flag
+
+nx2        = 40         # Number of zones in X2-direction
+x2min      = -1         # minimum value of X2
+x2max      = 1          # maximum value of X2
+ix2_bc     = periodic   # inner-X2 boundary flag
+ox2_bc     = periodic   # outer-X2 boundary flag
+
+nx3        = 4          # Number of zones in X3-direction
+x3min      = -0.1         # minimum value of X3
+x3max      = 0.1          # maximum value of X3
+ix3_bc     = periodic   # inner-X3 boundary flag
+ox3_bc     = periodic   # outer-X3 boundary flag
+
+refinement = none
+
+<meshblock>
+nx1        = 20
+nx2        = 20
+nx3        = 4
+
+<hydro>
+gamma           = 1.666666666667 # gamma = C_p/C_v
+iso_sound_speed = 1.00           # equavalent to sqrt(gamma*p/d) for p=0.1, d=1
+
+<self_gravity>
+four_pi_G       = 12.5663706144
+grav_bc         = open
+
+<orbital_advection>
+OAorder      = 0       # 0: w/o OA, 1: w/ OA (1st), 2: w/ OA (2nd)
+qshear       = 1.0     # shear rate
+Omega0       = 1.0     # angular velocity of the system
+shboxcoord   = 1       # 1=xy (default); 2=xz
+
+<particle1>
+type        = star
+x1          = 0.4
+v1          = -0.8
+m1          = 1.0
+mratio      = 5.0
+
+gravity     = true
+output      = true
+
+cfl_par     = 1
+
+<turbulence>
+dedt       = 10.0 # Energy injection rate (for driven) or Total energy (for decaying)
+nlow       = 1    # cut-off wavenumber at low-k
+nhigh      = 2    # cut-off wavenumber at high-k
+expo       = 2.0  # power-law exponent
+tcorr      = 0.1  # correlation time for OU process (both impulsive and continuous)
+dtdrive    = 0.1  # time interval between perturbation (impulsive)
+f_shear    = 0.5  # the ratio of the shear component
+rseed      = 1    # if non-negative, seed will be set by hand (slow PS generation)
+
+<problem>
+turb_flag  = 0    # 1 for decaying, 2 (impulsive) or 3 (continuous) for driven turbulence
+m0         = 0

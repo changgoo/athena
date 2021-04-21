@@ -20,6 +20,7 @@
 #include "../field/field.hpp"
 #include "../globals.hpp"
 #include "../hydro/hydro.hpp"
+#include "../particles/particles.hpp"
 #include "../utils/buffer_utils.hpp"
 #include "mesh.hpp"
 #include "mesh_refinement.hpp"
@@ -91,7 +92,7 @@ void Mesh::CalculateLoadBalance(double *clist, int *rlist, int *slist, int *nlis
     }
     mycost += clist[i];
     rlist[i] = j;
-    if (mycost >= targetcost && j>0) {
+    if (mycost >= (targetcost - lb_tolerance_) && j>0) {
       j--;
       totalcost -= mycost;
       mycost = 0.0;
@@ -572,12 +573,28 @@ void Mesh::RedistributeAndRefineMeshBlocks(ParameterInput *pin, int ntot) {
           // fine to coarse on the same MPI rank (different AMR level) - restriction
           MeshBlock* pob = FindMeshBlock(on+ll);
           FillSameRankFineToCoarseAMR(pob, newlist(n-nbs), loclist[on+ll]);
+          if (PARTICLES) {
+            for (int ipar=0; ipar < Particles::num_particles; ++ipar) {
+              MeshBlock* mbf = newlist(n-nbs);
+              Particles* pparc = pob->ppar[ipar];
+              Particles* pparf = mbf->ppar[ipar];
+              Particles::AMRFineToCoarse(pparc,pparf);
+            }
+          }
         }
       } else if ((loclist[on].level < newloc[n].level) && // coarse to fine (c2f)
                  (ranklist[on] == Globals::my_rank)) {
         // coarse to fine on the same MPI rank (different AMR level) - prolongation
         MeshBlock* pob = FindMeshBlock(on);
         FillSameRankCoarseToFineAMR(pob, newlist(n-nbs), newloc[n]);
+        if (PARTICLES) {
+          for (int ipar=0; ipar < Particles::num_particles; ++ipar) {
+            MeshBlock* mbf = newlist(n-nbs);
+            Particles* pparc = pob->ppar[ipar];
+            Particles* pparf = mbf->ppar[ipar];
+            Particles::AMRCoarseToFine(pparc,pparf,mbf);
+          }
+        }
       }
     }
   }
@@ -657,6 +674,15 @@ void Mesh::RedistributeAndRefineMeshBlocks(ParameterInput *pin, int ntot) {
   // re-initialize the MeshBlocks
   for (int i=0; i<nblocal; ++i)
     my_blocks(i)->pbval->SearchAndSetNeighbors(tree, ranklist, nslist);
+
+  if (PARTICLES) {
+    for (int i = 0; i < nblocal; ++i) {
+      for (Particles *ppar : my_blocks(i)->ppar) {
+        ppar->ClearNeighbors();
+        ppar->LinkNeighbors(tree, nrbx1, nrbx2, nrbx3, root_level);
+      }
+    }
+  }
   Initialize(2, pin);
 
   ResetLoadBalanceVariables();
