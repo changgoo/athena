@@ -29,4 +29,5 @@ for i in $(seq -f "%05g" 0 $((ntimes - 1))); do
 	fi
 done
 
-#find . -name '$BASE.block*.$OUTID.*.$PARID.tab'
+# clean up
+#find . -name '$BASE.block*.$OUTID.*.$PARID.tab' -delete
