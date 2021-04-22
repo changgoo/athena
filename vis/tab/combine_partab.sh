@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# SCRIPT: combine_partab.sh
+# AUTHOR: Chao-Chin Yang (adopted and revised by Chang-Goo Kim)
+# DATE:
+# PURPOSE: combine particle outputs from all blocks into one
+
+# USAGE: ./combine_partab.sh problem_id output_id particle_id
+# e.g. ./combine_partab.sh pTurb out3 par0
+# ========================================
+
 # Define the base name.
 BASE=$1
 OUTID=$2
