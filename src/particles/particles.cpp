@@ -641,8 +641,11 @@ void Particles::LinkNeighbors(MeshBlockTree &tree,
       pn->pmb = pmy_mesh->FindMeshBlock(snb.gid);
     } else {
 #ifdef MPI_PARALLEL
-      send_[nb.bufid].tag = (snb.gid<<8) | (nb.targetid<<2),
-      recv_[nb.bufid].tag = (pmy_block->gid<<8) | (nb.bufid<<2);
+      // assign unique tag
+      // tag = local id of destination (remaining bits) + bufid (6 bits)
+      // + particle container id (3 bits) + npar,intprop,realprop(2 bits)
+      send_[nb.bufid].tag = (snb.lid<<11) | (nb.targetid<<5) | (my_ipar_ << 2);
+      recv_[nb.bufid].tag = (pmy_block->lid<<11) | (nb.bufid<<5) | (my_ipar_ << 2);
 #endif
     }
   }
