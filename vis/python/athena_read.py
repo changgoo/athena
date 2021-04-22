@@ -216,14 +216,14 @@ def partab(filename, raw=False, time=None):
     import pandas as pd
 
     if raw:
-        return pd.read_csv(filename,sep='\s+',skiprows=2)
+        return pd.read_csv(filename, sep=r'\s+', skiprows=2)
     else:
-        with open(filename,'r') as fp:
-            l1 = fp.readline()
+        with open(filename, 'r') as fp:
             l2 = fp.readline()
-        time = eval(l1.split(' ')[-1])
+            l2 = fp.readline()
+        # time = eval(l1.split(' ')[-1])
         names = l2.split(' ')[1:-1:2]
-        return pd.read_csv(filename,names=names,sep='\s+',skiprows=2)
+        return pd.read_csv(filename, names=names, sep=r'\s+', skiprows=2)
 
 
 # ========================================================================================
@@ -1032,7 +1032,7 @@ def athdf_to_xarray(data):
 
     for var in data['VariableNames']:
         v = var.decode()
-        ds[v]=xr.DataArray(data.pop(v),coords=[z,y,x],dims=['z','y','x'])
+        ds[v] = xr.DataArray(data.pop(v), coords=[z, y, x], dims=['z', 'y', 'x'])
     ds.attrs = data
     ds = ds.assign_coords(time=data['Time'])
     return ds
