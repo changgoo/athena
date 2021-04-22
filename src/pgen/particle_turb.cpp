@@ -34,7 +34,6 @@
 #include <omp.h>
 #endif
 
-Real DeltaRho(MeshBlock *pmb, int iout);
 //========================================================================================
 //! \fn void Mesh::InitUserMeshData(ParameterInput *pin)
 //! \brief
@@ -61,10 +60,6 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     return;
 #endif
   }
-
-  // Enroll user-defined functions
-  AllocateUserHistoryOutput(1);
-  EnrollUserHistoryOutput(0, DeltaRho, "delta_rho");
 
   return;
 }
@@ -115,7 +110,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
            dx3 = mesh_size.x3len / npx3;
       if (DustParticles *pp = dynamic_cast<DustParticles*>(ppar[ipar])) {
         Real dtog = pin->GetOrAddReal(ppar[ipar]->input_block_name,"dtog",1);
-        pp->SetOneParticleMass(dtog * vol / (npx1 * npx2 * npx3));
+        pp->SetOneParticleMass(dtog * d0 * vol / (npx1 * npx2 * npx3));
       } else if (TracerParticles *pp = dynamic_cast<TracerParticles*>(ppar[ipar])) {
         pp->SetOneParticleMass(d0 * vol / (npx1 * npx2 * npx3));
       }
@@ -173,107 +168,4 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       }
     }
   }
-}
-
-
-//========================================================================================
-//! \fn void Mesh::UserWorkAfterLoop(ParameterInput *pin)
-//  \brief
-//========================================================================================
-
-void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
-  if (PARTICLES) {
-    if (!pin->GetOrAddBoolean("problem","compute_error",false)) return;
-
-    Real l1_err{0}, max_err{0.0};
-    // Particles::FindDensityOnMesh(this, false);
-    Particles::FindDensityOnMesh(this,false,false);
-    for (int b=0; b<nblocal; ++b) {
-      MeshBlock* pmb = my_blocks(b);
-      int is=pmb->is, ie=pmb->ie;
-      int js=pmb->js, je=pmb->je;
-      int ks=pmb->ks, ke=pmb->ke;
-      AthenaArray<Real> rho;
-      rho.InitWithShallowSlice(pmb->phydro->u,4,IDN,1);
-      AthenaArray<Real> rhop(pmb->ppar[0]->GetMassDensity());
-      for (int k=ks; k<=ke; ++k) {
-        for (int j=js; j<=je; ++j) {
-          for (int i=is; i<=ie; ++i) {
-            Real drho = std::abs(rho(k,j,i) - rhop(k,j,i));
-            l1_err += std::abs(drho);
-            max_err = std::max(drho, max_err);
-          }
-        }
-      }
-    }
-
-    l1_err /= static_cast<Real>(GetTotalCells());
-
-#ifdef MPI_PARALLEL
-    MPI_Allreduce(MPI_IN_PLACE,&l1_err,1,MPI_ATHENA_REAL,MPI_SUM,MPI_COMM_WORLD);
-    MPI_Allreduce(MPI_IN_PLACE,&max_err,1,MPI_ATHENA_REAL,MPI_MAX,MPI_COMM_WORLD);
-#endif
-    std::int64_t npartot = Particles::GetTotalNumber(this);
-
-  // only the root process outputs the data
-    if (Globals::my_rank == 0) {
-      // open output file and write out errors
-      std::string fname;
-      fname.assign("tracer-errors.dat");
-      std::stringstream msg;
-      FILE *pfile;
-
-      // The file exists -- reopen the file in append mode
-      if ((pfile = std::fopen(fname.c_str(),"r")) != nullptr) {
-        if ((pfile = std::freopen(fname.c_str(),"a",pfile)) == nullptr) {
-          msg << "### FATAL ERROR in function [Mesh::UserWorkAfterLoop]"
-              << std::endl << "Error output file could not be opened" <<std::endl;
-          ATHENA_ERROR(msg);
-        }
-      } else {
-        if ((pfile = std::fopen(fname.c_str(),"w")) == nullptr) {
-          msg << "### FATAL ERROR in function [Mesh::UserWorkAfterLoop]"
-              << std::endl << "Error output file could not be opened" <<std::endl;
-          ATHENA_ERROR(msg);
-        }
-        std::fprintf(pfile,"# Nx1  Nx2  Nx3  Ncycle  Np  ");
-        std::fprintf(pfile,"d_L1  d_max");
-        std::fprintf(pfile,"\n");
-      }
-
-      // write errors
-      std::fprintf(pfile,"%d  %d",mesh_size.nx1,mesh_size.nx2);
-      std::fprintf(pfile,"  %d  %d  %ld",mesh_size.nx3,ncycle,npartot);
-      std::fprintf(pfile,"  %e  %e",l1_err,max_err);
-      std::fprintf(pfile,"\n");
-      std::fclose(pfile);
-    }
-  }
-
-  return;
-}
-
-//========================================================================================
-//! \fn Real DeltaRho(MeshBlock *pmb, int iout)
-//! \brief Difference in gas and trace densities for history variable
-//========================================================================================
-Real DeltaRho(MeshBlock *pmb, int iout) {
-  Real l1_err{0};
-  int is=pmb->is, ie=pmb->ie;
-  int js=pmb->js, je=pmb->je;
-  int ks=pmb->ks, ke=pmb->ke;
-  AthenaArray<Real> vol(pmb->ncells1);
-  AthenaArray<Real> rho;
-  rho.InitWithShallowSlice(pmb->phydro->u,4,IDN,1);
-  AthenaArray<Real> rhop(pmb->ppar[0]->GetMassDensity());
-  for (int k=ks; k<=ke; ++k) {
-    for (int j=js; j<=je; ++j) {
-      pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
-      for (int i=is; i<=ie; ++i) {
-        Real drho = std::abs(rho(k,j,i) - rhop(k,j,i));
-        l1_err += std::abs(drho)*vol(i);
-      }
-    }
-  }
-  return l1_err;
 }
