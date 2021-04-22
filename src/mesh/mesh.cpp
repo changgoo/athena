@@ -1480,6 +1480,22 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
                                    pbval->bvars_main_int);
       }
 
+      // send conserved variables for shearing BC
+#pragma omp for private(pmb,pbval)
+      for (int i=0; i<nblocal; ++i) {
+        pmb = my_blocks(i); pbval = pmb->pbval;
+        pmb->phydro->hbvar.SendShearingBoxBoundaryBuffers();
+      }
+
+      // wait to receive conserved variables shearing BC
+#pragma omp for private(pmb,pbval)
+      for (int i=0; i<nblocal; ++i) {
+        pmb = my_blocks(i); pbval = pmb->pbval;
+        pmb->phydro->hbvar.ReceiveShearingBoxBoundaryBuffers();
+        pmb->phydro->hbvar.SetShearingBoxBoundaryBuffers();
+      }
+      // TODO(SMOON) need to communicate shearing BC also for scalar, field, cr, etc.
+
       // With AMR/SMR GR send primitives to enable cons->prim before prolongation
       if (GENERAL_RELATIVITY && multilevel) {
         // prepare to receive primitives
