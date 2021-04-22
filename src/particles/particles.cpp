@@ -1493,6 +1493,14 @@ void Particles::FormattedTableOutput(Mesh *pm, OutputParameters op) {
         os << std::scientific << std::showpoint << std::setprecision(18);
         os << "# Athena++ particle data at time = " << pm->time << std::endl;
 
+        // Write header.
+        os << "# ";
+        for (int ip = 0; ip < ppar->nint; ++ip)
+          os << ppar->intfieldname[ip] << "  ";
+        for (int ip = 0; ip < ppar->nreal; ++ip)
+          os << ppar->realfieldname[ip] << "  ";
+        os << std::endl;
+
         // Write the particle data in the meshblock.
         for (int k = 0; k < ppar->npar; ++k) {
           for (int ip = 0; ip < ppar->nint; ++ip)
