@@ -210,6 +210,24 @@ def tab(filename, raw=False, dimensions=None):
 
 # ========================================================================================
 
+def partab(filename, raw=False, time=None):
+    """Read par?.tab files and return dict or array.
+    """
+    import pandas as pd
+
+    if raw:
+        return pd.read_csv(filename, sep=r'\s+', skiprows=2)
+    else:
+        with open(filename, 'r') as fp:
+            l2 = fp.readline()
+            l2 = fp.readline()
+        # time = eval(l1.split(' ')[-1])
+        names = l2.split(' ')[1:-1:2]
+        return pd.read_csv(filename, names=names, sep=r'\s+', skiprows=2)
+
+
+# ========================================================================================
+
 def vtk(filename):
     """Read .vtk files and return dict of arrays of data."""
 
@@ -1001,6 +1019,23 @@ def restrict_like(vals, levels, vols=None):
             vals_level = np.repeat(vals_sum / vols_sum, stride, axis=0)
         vals_restricted = np.where(levels == level, vals_level, vals_restricted)
     return vals_restricted
+
+
+def athdf_to_xarray(data):
+    """Convert data in dict returned by athdf to xarray dataset."""
+    import xarray as xr
+
+    ds = xr.Dataset()
+    x = data.pop('x1v')
+    y = data.pop('x2v')
+    z = data.pop('x3v')
+
+    for var in data['VariableNames']:
+        v = var.decode()
+        ds[v] = xr.DataArray(data.pop(v), coords=[z, y, x], dims=['z', 'y', 'x'])
+    ds.attrs = data
+    ds = ds.assign_coords(time=data['Time'])
+    return ds
 
 
 # ========================================================================================

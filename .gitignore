@@ -68,3 +68,6 @@ doc/html
 
 # tag file produced by ctags
 tags
+
+# notebook checkpoints
+.ipynb_checkpoints/

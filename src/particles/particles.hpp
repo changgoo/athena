@@ -124,12 +124,6 @@ friend class ParticleMesh;
   void PackParticlesForRestart(char *&pdata);
 
  protected:
-  // Class methods
-  int AddIntProperty();
-  int AddRealProperty();
-  int AddAuxProperty();
-  int AddWorkingArray();
-
   // Class variables
   static bool initialized;  //!> whether or not the class is initialized
   static ParameterInput *pinput;
@@ -162,6 +156,11 @@ friend class ParticleMesh;
                                     //!> Be sure to call back when derived.
   virtual void AllocateMemory();    //!> Needs to be called in the derived class init
   virtual void FindLocalDensityOnMesh(bool include_momentum);
+
+  int AddIntProperty();
+  int AddRealProperty();
+  int AddAuxProperty();
+  int AddWorkingArray();
 
   void UpdateCapacity(int new_nparmax);  //!> Change the capacity of particle arrays
   void ConvertToDensity(bool include_momentum);

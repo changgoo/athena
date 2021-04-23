@@ -24,7 +24,7 @@
 # src/mesh/ @tomidakn @jmstone
 # src/multigrid/ @tomidakn @jmstone
 
-vis/ @c-white @jmstone
+# vis/ @c-white @jmstone
 
 # dir/* syntax will not match files in subfolders
 # src/eos/*gr* @c-white @jmstone

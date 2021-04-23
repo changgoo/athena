@@ -283,8 +283,9 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
   ipid(-1), ixp(-1), iyp(-1), izp(-1), ivpx(-1), ivpy(-1), ivpz(-1),
   ixp0(-1), iyp0(-1), izp0(-1), ivpx0(-1), ivpy0(-1), ivpz0(-1),
   ixi1(-1), ixi2(-1), ixi3(-1), imom1(-1), imom2(-1), imom3(-1), imass(-1),
-  igx(-1), igy(-1), igz(-1), my_ipar_(pp->ipar), isgravity_(false), parhstout_(false),
-  mass(1.0) {
+  igx(-1), igy(-1), igz(-1),
+  npar(0), nparmax(1),
+  my_ipar_(pp->ipar), isgravity_(false), parhstout_(false), mass(1.0) {
   // Add particle ID.
   ipid = AddIntProperty();
   intfieldname.push_back("pid");
@@ -330,8 +331,7 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
   pmy_block = pmb;
   pmy_mesh = pmb->pmy_mesh;
   pbval_ = pmb->pbval;
-  nparmax = pin->GetOrAddInteger(input_block_name, "nparmax", 1);
-  npar = 0;
+
 
   // Get the CFL number for particles.
   cfl_par = pin->GetOrAddReal(input_block_name, "cfl_par", 1);
@@ -641,8 +641,11 @@ void Particles::LinkNeighbors(MeshBlockTree &tree,
       pn->pmb = pmy_mesh->FindMeshBlock(snb.gid);
     } else {
 #ifdef MPI_PARALLEL
-      send_[nb.bufid].tag = (snb.gid<<8) | (nb.targetid<<2),
-      recv_[nb.bufid].tag = (pmy_block->gid<<8) | (nb.bufid<<2);
+      // assign unique tag
+      // tag = local id of destination (remaining bits) + bufid (6 bits)
+      // + particle container id (3 bits) + npar,intprop,realprop(2 bits)
+      send_[nb.bufid].tag = (snb.lid<<11) | (nb.targetid<<5) | (my_ipar_ << 2);
+      recv_[nb.bufid].tag = (pmy_block->lid<<11) | (nb.bufid<<5) | (my_ipar_ << 2);
 #endif
     }
   }
@@ -970,7 +973,8 @@ void Particles::ProcessNewParticles(Mesh *pmesh, int ipar) {
   // Set particle IDs.
   for (int b = 0; b < nblocks; ++b) {
     const MeshBlock *pmb(pmesh->my_blocks(b));
-    pmb->ppar[ipar]->SetNewParticleID((pmb->gid > 0 ? nnewpar[pmb->gid - 1] : 0));
+    int newid_start = idmax[ipar] + (pmb->gid > 0 ? nnewpar[pmb->gid - 1] : 0);
+    pmb->ppar[ipar]->SetNewParticleID(newid_start);
   }
   idmax[ipar] += nnewpar[nbtotal - 1];
 }
@@ -1491,6 +1495,14 @@ void Particles::FormattedTableOutput(Mesh *pm, OutputParameters op) {
         // Write the time.
         os << std::scientific << std::showpoint << std::setprecision(18);
         os << "# Athena++ particle data at time = " << pm->time << std::endl;
+
+        // Write header.
+        os << "# ";
+        for (int ip = 0; ip < ppar->nint; ++ip)
+          os << ppar->intfieldname[ip] << "  ";
+        for (int ip = 0; ip < ppar->nreal; ++ip)
+          os << ppar->realfieldname[ip] << "  ";
+        os << std::endl;
 
         // Write the particle data in the meshblock.
         for (int k = 0; k < ppar->npar; ++k) {
