@@ -403,9 +403,10 @@ void BlockFFTGravity::ApplyKernel() {
 //! \brief Solves Poisson equation and calls FFTGravityTaskList
 
 void BlockFFTGravity::Solve(int stage) {
+  bool PHASE_SHIFT = true;
 #ifdef FFT
 #ifdef MPI_PARALLEL
-  if (SHEAR_PERIODIC) {
+  if (SHEAR_PERIODIC & PHASE_SHIFT) {
     // For shearing-periodic BC, we use a 'phase shift' method, instead of
     // a roll-unroll method in old Athena. It was found that the phase shift
     // method introduces spurious error when the sheared distance at the boundary
@@ -444,6 +445,14 @@ void BlockFFTGravity::Solve(int stage) {
     for (int i=0; i<2*nx1*nx2*nx3; ++i) {
       data[i] = (1.-eps)*data2[i] + eps*data[i];
     }
+    RetrieveResult(pmy_block_->pgrav->phi);
+  } else if (SHEAR_PERIODIC) {
+    std::cout << std::endl;
+    std::cout << "use roll-unroll method" << std::endl;
+    AthenaArray<Real> rho;
+    rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
+    RollDensity();
+    LoadSource(rho);
     RetrieveResult(pmy_block_->pgrav->phi);
   } else if (gbflag==GravityBoundaryFlag::open) {
     // For open boundary condition, we use a convolution method in which the
@@ -626,6 +635,14 @@ void BlockFFTGravity::MultiplyGreen(int px, int py, int pz) {
       }
     }
   }
+  return;
+}
+
+//----------------------------------------------------------------------------------------
+//! \fn BlockFFTGravity::RollDensity()
+//! \brief Transform to the shearing coordinates
+void BlockFFTGravity::RollDensity() {
+
   return;
 }
 

@@ -59,6 +59,7 @@ class BlockFFTGravity : public BlockFFT {
   void LoadOBCSource(const AthenaArray<Real> &src, int px, int py, int pz);
   void RetrieveOBCResult(AthenaArray<Real> &dst, int px, int py, int pz);
   void MultiplyGreen(int px, int py, int pz);
+  void RollDensity();
   void SetPhysicalBoundaries();
 
  private:
