@@ -75,7 +75,7 @@ class BlockFFTGravity : public BlockFFT {
 #ifdef FFT
   FFTMPI_NS::FFT3d *pf3dgrf_;
 #endif
-  AthenaArray<Real> send_buf, recv_buf, roll_var, roll_buf;
+  AthenaArray<Real> send_buf, recv_buf, roll_var, roll_buf, pflux;
 #endif
 };
 

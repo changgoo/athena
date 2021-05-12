@@ -17,6 +17,7 @@
 
 // Athena++ headers
 #include "../coordinates/coordinates.hpp"
+#include "../orbital_advection/orbital_advection.hpp"
 #include "block_fft_gravity.hpp"
 
 //----------------------------------------------------------------------------------------
@@ -66,6 +67,7 @@ BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
   recv_buf.NewAthenaArray(nx3, nx2);
   roll_var.NewAthenaArray(nx3+2*NGHOST, nx2+2*NGHOST, nx1+2*NGHOST);
   roll_buf.NewAthenaArray(nx3+2*NGHOST, nx2+2*NGHOST, nx1+2*NGHOST);
+  pflux.NewAthenaArray(nx2+1+2*NGHOST);
 #endif
 
   // Compatibility checks
@@ -660,10 +662,29 @@ void BlockFFTGravity::RollUnroll(const AthenaArray<Real> &in, AthenaArray<Real> 
   MeshBlockTree *proot = &(pmy_block_->pmy_mesh->tree), *pleaf=nullptr;
   MPI_Request rq;
 
+//  for (int k=ks; k<=ke; k++) {
+//    for (int i=is; i<=ie; i++) {
+//      yshear = -qshear_*Omega_0_*pc->x1v(i)*dt;
+//      joffset = yshear/dx2_;
+//      eps = std::fmod(yshear, dx2_)/dx2_;
+//      const int osgn = 1;
+//      const int shift0 = osgn*nx2 - joffset;
+//      pmy_block_->porb->RemapFluxPlm(pflux, in, eps, osgn, k, i, js, je+1, shift0);
+//      if ((k==ks)&(i==is+1)) {
+//        for (int j=js; j<=je+1; j++) {
+//          std::cout << "pflux(" << j << ") " << pflux(j) << std::endl;
+//        }
+//      }
+//      for (int j=js; j<=je; j++) {
+//        roll_buf(k,j,i) = in(k,j,i) + (pflux(j+1) - pflux(j));
+//      }
+//    }
+//  }
+
   for (int k=ks; k<=ke; k++) {
     for (int j=js; j<=je; j++) {
       for (int i=is; i<=ie; i++) {
-        roll_buf(k,j,i) = in(k,j,i); // + flux(j+1) - flux(j)
+        roll_buf(k,j,i) = in(k,j,i);
       }
     }
   }
