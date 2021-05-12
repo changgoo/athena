@@ -59,7 +59,7 @@ class BlockFFTGravity : public BlockFFT {
   void LoadOBCSource(const AthenaArray<Real> &src, int px, int py, int pz);
   void RetrieveOBCResult(AthenaArray<Real> &dst, int px, int py, int pz);
   void MultiplyGreen(int px, int py, int pz);
-  void RollDensity();
+  void RollUnroll(AthenaArray<Real> &dat, Real dt);
   void SetPhysicalBoundaries();
 
  private:
@@ -71,10 +71,11 @@ class BlockFFTGravity : public BlockFFT {
   const std::complex<Real> I_; // sqrt(-1)
   std::complex<Real> *in2_,*in_e_,*in_o_;
   std::complex<Real> *grf_; // Green's function for open BC
-#ifdef FFT
 #ifdef MPI_PARALLEL
+#ifdef FFT
   FFTMPI_NS::FFT3d *pf3dgrf_;
 #endif
+  AthenaArray<Real> send_buf, recv_buf, data_buf;
 #endif
 };
 

@@ -46,8 +46,8 @@ BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
   in_e_ = new std::complex<Real>[nx1*nx2*nx3];
   in_o_ = new std::complex<Real>[nx1*nx2*nx3];
   grf_ = new std::complex<Real>[8*fast_nx3*fast_nx2*fast_nx1];
-#ifdef FFT
 #ifdef MPI_PARALLEL
+#ifdef FFT
   // setup fft in the 8x extended domain for the Green's function
   int permute=2; // will make output array (slow,mid,fast) = (y,x,z) = (j,i,k)
   int fftsize, sendsize, recvsize;
@@ -62,6 +62,9 @@ BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
   if (gbflag==GravityBoundaryFlag::open)
     InitGreen();
 #endif
+  send_buf.NewAthenaArray(nx3, nx2);
+  recv_buf.NewAthenaArray(nx3, nx2);
+  data_buf.NewAthenaArray(nx3+2*NGHOST, nx2+2*NGHOST, nx1+2*NGHOST);
 #endif
 
   // Compatibility checks
@@ -407,13 +410,12 @@ void BlockFFTGravity::Solve(int stage) {
 #ifdef FFT
 #ifdef MPI_PARALLEL
   if (SHEAR_PERIODIC & PHASE_SHIFT) {
-    // For shearing-periodic BC, we use a 'phase shift' method, instead of
-    // a roll-unroll method in old Athena. It was found that the phase shift
-    // method introduces spurious error when the sheared distance at the boundary
-    // is not an integer multiple of the cell width. To cure this, we solve the
-    // Poisson equation at the nearest two 'integer times' when the sheared distance
-    // is an integer multiple of the cell width, and then linearly interpolate the
-    // solution in time.
+    // Use "phase shift" method for the shearing-periodic boundary condition.
+    // It was found that the phase shift method introduces spurious error when the
+    // sheared distance at the boundary is not an integer multiple of the cell width.
+    // To cure this, we solve the Poisson equation at the nearest two 'integer times'
+    // when the sheared distance is an integer multiple of the cell width, and then
+    // linearly interpolate the solution in time.
     Real time = pmy_block_->pmy_mesh->time;
     Real qomt = qshear_*Omega_0_*time;
     AthenaArray<Real> rho;
@@ -447,13 +449,15 @@ void BlockFFTGravity::Solve(int stage) {
     }
     RetrieveResult(pmy_block_->pgrav->phi);
   } else if (SHEAR_PERIODIC) {
-    std::cout << std::endl;
-    std::cout << "use roll-unroll method" << std::endl;
+    // Use roll-unroll method for the shearing-periodic boundary condition.
+    Real time = pmy_block_->pmy_mesh->time;
     AthenaArray<Real> rho;
     rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
-    RollDensity();
+    RollUnroll(rho, time); // Transform density to the shearing coordinates (Roll)
     LoadSource(rho);
+    // TODO Solve Poisson equation in the shearing coordinates
     RetrieveResult(pmy_block_->pgrav->phi);
+    // TODO Transform potential to the original coordinates (Unroll)
   } else if (gbflag==GravityBoundaryFlag::open) {
     // For open boundary condition, we use a convolution method in which the
     // 8x-extended domain is assumed. Instead of zero-padding the density, we
@@ -639,10 +643,228 @@ void BlockFFTGravity::MultiplyGreen(int px, int py, int pz) {
 }
 
 //----------------------------------------------------------------------------------------
-//! \fn BlockFFTGravity::RollDensity()
+//! \fn BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt)
 //! \brief Transform to the shearing coordinates
-void BlockFFTGravity::RollDensity() {
+void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
+#ifdef MPI_PARALLEL
+  int joffset,jremap;
+  int sendto_id,getfrom_id,cnt,ierr;
+  int remapvar_tag=1992; // TODO How should I set the tag?
+  Real yshear,eps;
+  Real joverlap,Ngrids;
+  LogicalLocation loc, &my_loc=pmy_block_->loc;
+  Coordinates *pc = pmy_block_->pcoord;
+  MeshBlockTree *proot = &(pmy_block_->pmy_mesh->tree), *pleaf=nullptr;
+  MPI_Request rq;
 
+  // Copy density into the buffer
+  for (int k=ks-NGHOST; k<=ke+NGHOST; k++) {
+    for (int j=js-NGHOST; j<=je+NGHOST; j++) {
+      for (int i=is-NGHOST; i<=ie+NGHOST; i++) {
+        data_buf(k,j,i) = dat(k,j,i);
+      }
+    }
+  }
+
+  for (int i=is; i<=ie; i++) {
+    yshear = -qshear_*Omega_0_*pc->x1v(i)*dt;
+    joffset = yshear/dx2_;
+    // Case A: shear in positive-y direction.
+    if (joffset >= 0) {
+      Ngrids = static_cast<int>(joffset/nx2);
+      joverlap = joffset - Ngrids*nx2;
+      // Step A.1: Send density at [je-(joverlap-1):je] to [js:js+(joverlap-1)] of
+      // the target MeshBlock. Skip this step if joverlap = 0.
+      if (joverlap != 0) {
+        // Find ids of procs that data in [je-(joverlap-1):je] is sent to, and data in
+        // [js:js+(joverlap-1)] is received from. Only execute if joverlap>0
+        loc = my_loc;
+        loc.lx2 += (Ngrids + 1);
+        pleaf = proot->FindMeshBlock(loc);
+        sendto_id = pleaf->GetGid();
+
+        loc = my_loc;
+        loc.lx2 -= (Ngrids + 1);
+        pleaf = proot->FindMeshBlock(loc);
+        getfrom_id = pleaf->GetGid();
+
+        // Post a non-blocking receive for the data to be sent
+        cnt = joverlap*nx3;
+        ierr = MPI_Irecv(recv_buf.data(), cnt, MPI_DOUBLE, getfrom_id,
+                         remapvar_tag, MPI_COMM_WORLD, &rq);
+
+        // Pack send buffer with the density in [je-(joverlap-1):je]
+        for (int k=ks; k<=ke; k++) {
+          for (int j=je-(joverlap-1); j<=je; j++) {
+            send_buf(k-ks,j-(je-(joverlap-1))) = data_buf(k,j,i);
+          }
+        }
+
+        // Send data
+        ierr = MPI_Send(send_buf.data(), cnt, MPI_DOUBLE, sendto_id,
+                      remapvar_tag, MPI_COMM_WORLD);
+
+        // Wait for the data to be received
+        ierr = MPI_Wait(&rq, MPI_STATUS_IGNORE);
+
+        // Unpack the data sent from remote [je-(joverlap-1):je] to the local
+        // [js:js+(joverlap-1)]
+        for (int k=ks; k<=ke; k++) {
+          for (int j=js; j<=js+(joverlap-1); j++) {
+            dat(k,j,i) = recv_buf(k-ks,j-js);
+          }
+        }
+      }
+      // Step A.2: Send density at [js:je-joverlap] to [js+joverlap:je] of
+      // the target MeshBlock.
+      if (Ngrids == 0) {
+        // If the target MeshBlock is of my own, do local copy instead of MPI calls.
+        for (int k=ks; k<=ke; k++) {
+          for (int j=js+joverlap; j<=je; j++) {
+            dat(k,j,i) = data_buf(k,j-joverlap,i);
+          }
+        }
+      } else {
+        // Find the id of the MeshBlock that data in [js:je-joverlap] is sent to, and data
+        // in [js+joverlap:je] is received from.
+        loc = my_loc;
+        loc.lx2 += Ngrids;
+        pleaf = proot->FindMeshBlock(loc);
+        sendto_id = pleaf->GetGid();
+
+        loc = my_loc;
+        loc.lx2 -= Ngrids;
+        pleaf = proot->FindMeshBlock(loc);
+        getfrom_id = pleaf->GetGid();
+
+        // Post a non-blocking receive for the data to be sent
+        cnt = (nx2-joverlap)*nx3;
+        ierr = MPI_Irecv(recv_buf.data(), cnt, MPI_DOUBLE, getfrom_id,
+                         remapvar_tag, MPI_COMM_WORLD, &rq);
+
+        // Pack send buffer with the density in [js:je-joverlap]
+        for (int k=ks; k<=ke; k++) {
+          for (int j=js; j<=je-joverlap; j++) {
+            send_buf(k-ks,j-js) = data_buf(k,j,i);
+          }
+        }
+
+        // Send data
+        ierr = MPI_Send(send_buf.data(), cnt, MPI_DOUBLE, sendto_id,
+                      remapvar_tag, MPI_COMM_WORLD);
+
+        // Wait for the data to be received
+        ierr = MPI_Wait(&rq, MPI_STATUS_IGNORE);
+
+        // Unpack the data sent from remote [js:je-joverlap] to the local
+        // [js+joverlap:je]
+        for (int k=ks; k<=ke; k++) {
+          for (int j=js+joverlap; j<=je; j++) {
+            dat(k,j,i) = recv_buf(k-ks,j-(js+joverlap));
+          }
+        }
+      }
+    } else { // end of joffset >= 0
+      // Case B: shear in negative-y direction.
+      // Here, the steps are identical to the case A, but with different array indices.
+      joffset = -joffset;
+      Ngrids = static_cast<int>(joffset/nx2);
+      joverlap = joffset - Ngrids*nx2;
+      // Step B.1: Send density at [js:js+(joverlap-1)] to [je-(joverlap-1):je] of
+      // the target MeshBlock. Skip this step if joverlap = 0.
+      if (joverlap != 0) {
+        // Find ids of procs that data in [js:js+(joverlap-1)] is sent to, and data in
+        // [je-(joverlap-1):je] is received from. Only execute if joverlap>0
+        loc = my_loc;
+        loc.lx2 -= (Ngrids + 1);
+        pleaf = proot->FindMeshBlock(loc);
+        sendto_id = pleaf->GetGid();
+
+        loc = my_loc;
+        loc.lx2 += (Ngrids + 1);
+        pleaf = proot->FindMeshBlock(loc);
+        getfrom_id = pleaf->GetGid();
+
+        // Post a non-blocking receive for the data to be sent
+        cnt = joverlap*nx3;
+        ierr = MPI_Irecv(recv_buf.data(), cnt, MPI_DOUBLE, getfrom_id,
+                         remapvar_tag, MPI_COMM_WORLD, &rq);
+
+        // Pack send buffer with the density in [je-(joverlap-1):je]
+        for (int k=ks; k<=ke; k++) {
+          for (int j=js; j<=js+(joverlap-1); j++) {
+            send_buf(k-ks,j-js) = data_buf(k,j,i);
+          }
+        }
+
+        // Send data
+        ierr = MPI_Send(send_buf.data(), cnt, MPI_DOUBLE, sendto_id,
+                      remapvar_tag, MPI_COMM_WORLD);
+
+        // Wait for the data to be received
+        ierr = MPI_Wait(&rq, MPI_STATUS_IGNORE);
+
+        // Unpack the data sent from remote [js:js+(joverlap-1)] to the local
+        // [je-(joverlap-1):je]
+        for (int k=ks; k<=ke; k++) {
+          for (int j=je-(joverlap-1); j<=je; j++) {
+            dat(k,j,i) = recv_buf(k-ks,j-(je-(joverlap-1)));
+          }
+        }
+      }
+      // Step B.2: Send density at [js+joverlap:je] to [js:je-joverlap] of
+      // the target MeshBlock.
+      if (Ngrids == 0) {
+        // If the target MeshBlock is of my own, do local copy instead of MPI calls.
+        for (int k=ks; k<=ke; k++) {
+          for (int j=js; j<=je-joverlap; j++) {
+            dat(k,j,i) = data_buf(k,j+joverlap,i);
+          }
+        }
+      } else {
+        // Find the id of the MeshBlock that data in [js+joverlap:je] is sent to, and data
+        // in [js:je-joverlap] is received from.
+        loc = my_loc;
+        loc.lx2 -= Ngrids;
+        pleaf = proot->FindMeshBlock(loc);
+        sendto_id = pleaf->GetGid();
+
+        loc = my_loc;
+        loc.lx2 += Ngrids;
+        pleaf = proot->FindMeshBlock(loc);
+        getfrom_id = pleaf->GetGid();
+
+        // Post a non-blocking receive for the data to be sent
+        cnt = (nx2-joverlap)*nx3;
+        ierr = MPI_Irecv(recv_buf.data(), cnt, MPI_DOUBLE, getfrom_id,
+                         remapvar_tag, MPI_COMM_WORLD, &rq);
+
+        // Pack send buffer with the density in [js+joverlap:je]
+        for (int k=ks; k<=ke; k++) {
+          for (int j=js+joverlap; j<=je; j++) {
+            send_buf(k-ks,j-(js+joverlap)) = data_buf(k,j,i);
+          }
+        }
+
+        // Send data
+        ierr = MPI_Send(send_buf.data(), cnt, MPI_DOUBLE, sendto_id,
+                      remapvar_tag, MPI_COMM_WORLD);
+
+        // Wait for the data to be received
+        ierr = MPI_Wait(&rq, MPI_STATUS_IGNORE);
+
+        // Unpack the data sent from remote [js+joverlap:je] to the local
+        // [js:je-joverlap]
+        for (int k=ks; k<=ke; k++) {
+          for (int j=js; j<=je-joverlap; j++) {
+            dat(k,j,i) = recv_buf(k-ks,j-js);
+          }
+        }
+      }
+    } // end of joffset < 0
+  } // end of i loop
+
+#endif
   return;
 }
 
