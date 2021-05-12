@@ -1422,14 +1422,6 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
         pmb->pgrav->gbvar.SetupPersistentMPI();
     }
 
-    // solve gravity for the first time
-    if (SELF_GRAVITY_ENABLED == 1)
-      pfgrd->Solve(1, 0);
-    else if (SELF_GRAVITY_ENABLED == 2)
-      pmgrd->Solve(1);
-    else if (SELF_GRAVITY_ENABLED == 3)
-      my_blocks(0)->pfft->Solve(1);
-
 #pragma omp parallel num_threads(nthreads)
     {
       MeshBlock *pmb;
@@ -1641,6 +1633,14 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
         }
       }
     } // omp parallel
+
+    // solve gravity for the first time
+    if (SELF_GRAVITY_ENABLED == 1)
+      pfgrd->Solve(1, 0);
+    else if (SELF_GRAVITY_ENABLED == 2)
+      pmgrd->Solve(1);
+    else if (SELF_GRAVITY_ENABLED == 3)
+      my_blocks(0)->pfft->Solve(1);
 
     if (!res_flag && adaptive) {
       iflag = false;
