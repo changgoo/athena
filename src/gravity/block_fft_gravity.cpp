@@ -453,8 +453,8 @@ void BlockFFTGravity::Solve(int stage) {
     Real time = pmy_block_->pmy_mesh->time;
     AthenaArray<Real> rho;
     rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
-    RollUnroll(rho, time); // Transform density to the shearing coordinates (Roll)
-    LoadSource(rho);
+    RollUnroll(rho, data_buf, time); // Transform density to the shearing coordinates (Roll)
+    LoadSource(data_buf);
     // TODO Solve Poisson equation in the shearing coordinates
     RetrieveResult(pmy_block_->pgrav->phi);
     // TODO Transform potential to the original coordinates (Unroll)
@@ -643,9 +643,11 @@ void BlockFFTGravity::MultiplyGreen(int px, int py, int pz) {
 }
 
 //----------------------------------------------------------------------------------------
-//! \fn BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt)
+//! \fn BlockFFTGravity::RollUnroll(const AthenaArray<Real> &in, AthenaArray<Real> &out,
+//                                  Real dt)
 //! \brief Transform to the shearing coordinates
-void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
+void BlockFFTGravity::RollUnroll(const AthenaArray<Real> &in, AthenaArray<Real> &out,
+                                 Real dt) {
 #ifdef MPI_PARALLEL
   int joffset,jremap;
   int sendto_id,getfrom_id,cnt,ierr;
@@ -657,14 +659,16 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
   MeshBlockTree *proot = &(pmy_block_->pmy_mesh->tree), *pleaf=nullptr;
   MPI_Request rq;
 
-  // Copy density into the buffer
-  for (int k=ks-NGHOST; k<=ke+NGHOST; k++) {
-    for (int j=js-NGHOST; j<=je+NGHOST; j++) {
-      for (int i=is-NGHOST; i<=ie+NGHOST; i++) {
-        data_buf(k,j,i) = dat(k,j,i);
-      }
-    }
-  }
+//  std::cout << std::endl;
+//  if ((my_loc.lx1 == 0)&(my_loc.lx2 == 0)) {
+//    std::cout << " Density at (k,j,i) = (0,0,0) is " << data_buf(ks,js,is) << std::endl;
+//    std::cout << " Density at (k,j,i) = (0,1,0) is " << data_buf(ks,js+1,is) << std::endl;
+//  }
+//  if ((my_loc.lx1 == 0)&(my_loc.lx2 == 3)) {
+//    std::cout << " Density at (k,j,i) = (0,Ny,0) is " << data_buf(ks,je+1,is) << std::endl;
+//    std::cout << " Density at (k,j,i) = (0,Ny+1,0) is " << data_buf(ks,je+2,is) << std::endl;
+//  }
+
 
   for (int i=is; i<=ie; i++) {
     yshear = -qshear_*Omega_0_*pc->x1v(i)*dt;
@@ -696,7 +700,7 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
         // Pack send buffer with the density in [je-(joverlap-1):je]
         for (int k=ks; k<=ke; k++) {
           for (int j=je-(joverlap-1); j<=je; j++) {
-            send_buf(k-ks,j-(je-(joverlap-1))) = data_buf(k,j,i);
+            send_buf(k-ks,j-(je-(joverlap-1))) = in(k,j,i);
           }
         }
 
@@ -711,7 +715,7 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
         // [js:js+(joverlap-1)]
         for (int k=ks; k<=ke; k++) {
           for (int j=js; j<=js+(joverlap-1); j++) {
-            dat(k,j,i) = recv_buf(k-ks,j-js);
+            out(k,j,i) = recv_buf(k-ks,j-js);
           }
         }
       }
@@ -721,7 +725,7 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
         // If the target MeshBlock is of my own, do local copy instead of MPI calls.
         for (int k=ks; k<=ke; k++) {
           for (int j=js+joverlap; j<=je; j++) {
-            dat(k,j,i) = data_buf(k,j-joverlap,i);
+            out(k,j,i) = in(k,j-joverlap,i);
           }
         }
       } else {
@@ -745,7 +749,7 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
         // Pack send buffer with the density in [js:je-joverlap]
         for (int k=ks; k<=ke; k++) {
           for (int j=js; j<=je-joverlap; j++) {
-            send_buf(k-ks,j-js) = data_buf(k,j,i);
+            send_buf(k-ks,j-js) = in(k,j,i);
           }
         }
 
@@ -760,7 +764,7 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
         // [js+joverlap:je]
         for (int k=ks; k<=ke; k++) {
           for (int j=js+joverlap; j<=je; j++) {
-            dat(k,j,i) = recv_buf(k-ks,j-(js+joverlap));
+            out(k,j,i) = recv_buf(k-ks,j-(js+joverlap));
           }
         }
       }
@@ -793,7 +797,7 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
         // Pack send buffer with the density in [je-(joverlap-1):je]
         for (int k=ks; k<=ke; k++) {
           for (int j=js; j<=js+(joverlap-1); j++) {
-            send_buf(k-ks,j-js) = data_buf(k,j,i);
+            send_buf(k-ks,j-js) = in(k,j,i);
           }
         }
 
@@ -808,7 +812,7 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
         // [je-(joverlap-1):je]
         for (int k=ks; k<=ke; k++) {
           for (int j=je-(joverlap-1); j<=je; j++) {
-            dat(k,j,i) = recv_buf(k-ks,j-(je-(joverlap-1)));
+            out(k,j,i) = recv_buf(k-ks,j-(je-(joverlap-1)));
           }
         }
       }
@@ -818,7 +822,7 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
         // If the target MeshBlock is of my own, do local copy instead of MPI calls.
         for (int k=ks; k<=ke; k++) {
           for (int j=js; j<=je-joverlap; j++) {
-            dat(k,j,i) = data_buf(k,j+joverlap,i);
+            out(k,j,i) = in(k,j+joverlap,i);
           }
         }
       } else {
@@ -842,7 +846,7 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
         // Pack send buffer with the density in [js+joverlap:je]
         for (int k=ks; k<=ke; k++) {
           for (int j=js+joverlap; j<=je; j++) {
-            send_buf(k-ks,j-(js+joverlap)) = data_buf(k,j,i);
+            send_buf(k-ks,j-(js+joverlap)) = in(k,j,i);
           }
         }
 
@@ -857,13 +861,12 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
         // [js:je-joverlap]
         for (int k=ks; k<=ke; k++) {
           for (int j=js; j<=je-joverlap; j++) {
-            dat(k,j,i) = recv_buf(k-ks,j-js);
+            out(k,j,i) = recv_buf(k-ks,j-js);
           }
         }
       }
     } // end of joffset < 0
   } // end of i loop
-
 #endif
   return;
 }
