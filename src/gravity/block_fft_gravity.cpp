@@ -64,7 +64,8 @@ BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
 #endif
   send_buf.NewAthenaArray(nx3, nx2);
   recv_buf.NewAthenaArray(nx3, nx2);
-  data_buf.NewAthenaArray(nx3+2*NGHOST, nx2+2*NGHOST, nx1+2*NGHOST);
+  roll_var.NewAthenaArray(nx3+2*NGHOST, nx2+2*NGHOST, nx1+2*NGHOST);
+  roll_buf.NewAthenaArray(nx3+2*NGHOST, nx2+2*NGHOST, nx1+2*NGHOST);
 #endif
 
   // Compatibility checks
@@ -406,7 +407,7 @@ void BlockFFTGravity::ApplyKernel() {
 //! \brief Solves Poisson equation and calls FFTGravityTaskList
 
 void BlockFFTGravity::Solve(int stage) {
-  bool PHASE_SHIFT = true;
+  bool PHASE_SHIFT = false;
 #ifdef FFT
 #ifdef MPI_PARALLEL
   if (SHEAR_PERIODIC & PHASE_SHIFT) {
@@ -453,8 +454,8 @@ void BlockFFTGravity::Solve(int stage) {
     Real time = pmy_block_->pmy_mesh->time;
     AthenaArray<Real> rho;
     rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
-    RollUnroll(rho, data_buf, time); // Transform density to the shearing coordinates (Roll)
-    LoadSource(data_buf);
+    RollUnroll(rho, roll_var, time); // Transform density to the shearing coordinates (Roll)
+    LoadSource(roll_var);
     // TODO Solve Poisson equation in the shearing coordinates
     RetrieveResult(pmy_block_->pgrav->phi);
     // TODO Transform potential to the original coordinates (Unroll)
@@ -659,16 +660,13 @@ void BlockFFTGravity::RollUnroll(const AthenaArray<Real> &in, AthenaArray<Real> 
   MeshBlockTree *proot = &(pmy_block_->pmy_mesh->tree), *pleaf=nullptr;
   MPI_Request rq;
 
-//  std::cout << std::endl;
-//  if ((my_loc.lx1 == 0)&(my_loc.lx2 == 0)) {
-//    std::cout << " Density at (k,j,i) = (0,0,0) is " << data_buf(ks,js,is) << std::endl;
-//    std::cout << " Density at (k,j,i) = (0,1,0) is " << data_buf(ks,js+1,is) << std::endl;
-//  }
-//  if ((my_loc.lx1 == 0)&(my_loc.lx2 == 3)) {
-//    std::cout << " Density at (k,j,i) = (0,Ny,0) is " << data_buf(ks,je+1,is) << std::endl;
-//    std::cout << " Density at (k,j,i) = (0,Ny+1,0) is " << data_buf(ks,je+2,is) << std::endl;
-//  }
-
+  for (int k=ks; k<=ke; k++) {
+    for (int j=js; j<=je; j++) {
+      for (int i=is; i<=ie; i++) {
+        roll_buf(k,j,i) = in(k,j,i); // + flux(j+1) - flux(j)
+      }
+    }
+  }
 
   for (int i=is; i<=ie; i++) {
     yshear = -qshear_*Omega_0_*pc->x1v(i)*dt;
@@ -700,7 +698,7 @@ void BlockFFTGravity::RollUnroll(const AthenaArray<Real> &in, AthenaArray<Real> 
         // Pack send buffer with the density in [je-(joverlap-1):je]
         for (int k=ks; k<=ke; k++) {
           for (int j=je-(joverlap-1); j<=je; j++) {
-            send_buf(k-ks,j-(je-(joverlap-1))) = in(k,j,i);
+            send_buf(k-ks,j-(je-(joverlap-1))) = roll_buf(k,j,i);
           }
         }
 
@@ -725,7 +723,7 @@ void BlockFFTGravity::RollUnroll(const AthenaArray<Real> &in, AthenaArray<Real> 
         // If the target MeshBlock is of my own, do local copy instead of MPI calls.
         for (int k=ks; k<=ke; k++) {
           for (int j=js+joverlap; j<=je; j++) {
-            out(k,j,i) = in(k,j-joverlap,i);
+            out(k,j,i) = roll_buf(k,j-joverlap,i);
           }
         }
       } else {
@@ -749,7 +747,7 @@ void BlockFFTGravity::RollUnroll(const AthenaArray<Real> &in, AthenaArray<Real> 
         // Pack send buffer with the density in [js:je-joverlap]
         for (int k=ks; k<=ke; k++) {
           for (int j=js; j<=je-joverlap; j++) {
-            send_buf(k-ks,j-js) = in(k,j,i);
+            send_buf(k-ks,j-js) = roll_buf(k,j,i);
           }
         }
 
@@ -797,7 +795,7 @@ void BlockFFTGravity::RollUnroll(const AthenaArray<Real> &in, AthenaArray<Real> 
         // Pack send buffer with the density in [je-(joverlap-1):je]
         for (int k=ks; k<=ke; k++) {
           for (int j=js; j<=js+(joverlap-1); j++) {
-            send_buf(k-ks,j-js) = in(k,j,i);
+            send_buf(k-ks,j-js) = roll_buf(k,j,i);
           }
         }
 
@@ -822,7 +820,7 @@ void BlockFFTGravity::RollUnroll(const AthenaArray<Real> &in, AthenaArray<Real> 
         // If the target MeshBlock is of my own, do local copy instead of MPI calls.
         for (int k=ks; k<=ke; k++) {
           for (int j=js; j<=je-joverlap; j++) {
-            out(k,j,i) = in(k,j+joverlap,i);
+            out(k,j,i) = roll_buf(k,j+joverlap,i);
           }
         }
       } else {
@@ -846,7 +844,7 @@ void BlockFFTGravity::RollUnroll(const AthenaArray<Real> &in, AthenaArray<Real> 
         // Pack send buffer with the density in [js+joverlap:je]
         for (int k=ks; k<=ke; k++) {
           for (int j=js+joverlap; j<=je; j++) {
-            send_buf(k-ks,j-(js+joverlap)) = in(k,j,i);
+            send_buf(k-ks,j-(js+joverlap)) = roll_buf(k,j,i);
           }
         }
 
