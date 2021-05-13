@@ -473,6 +473,8 @@ void BlockFFTGravity::Solve(int stage) {
     // the equation and therefore the kernel used in ApplyKernel.
     // TODO Consider block2mid with (i,k,j) -> (i,k,j), etc.
     Real time = pmy_block_->pmy_mesh->time;
+    Real qomL = qshear_*Omega_0_*Lx1_;
+    Real dt = time-(static_cast<int>(qomL*time/Lx2_))*Lx2_/qomL;
     AthenaArray<Real> rho;
     rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
 
@@ -487,7 +489,7 @@ void BlockFFTGravity::Solve(int stage) {
     }
 
     // Roll density: (x, y) -> (x, y + q*Omega_0*t*x),
-    RollUnroll(roll_var, -time);
+    RollUnroll(roll_var, -dt);
 
     // Fill FFT buffer to prepare forward transform
     for (int k=ks; k<=ke; k++) {
@@ -515,7 +517,7 @@ void BlockFFTGravity::Solve(int stage) {
     }
 
     // Unroll potential: (x, y + q*Omega_0*t*x) -> (x, y)
-    RollUnroll(roll_var, time);
+    RollUnroll(roll_var, dt);
 
     // Transpose potential from (k,i,j) to (k,j,i)
     for (int k=ks; k<=ke; k++) {
