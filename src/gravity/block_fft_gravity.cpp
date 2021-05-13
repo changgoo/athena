@@ -18,6 +18,7 @@
 // Athena++ headers
 #include "../coordinates/coordinates.hpp"
 #include "../orbital_advection/orbital_advection.hpp"
+#include "../reconstruct/reconstruction.hpp"
 #include "block_fft_gravity.hpp"
 
 //----------------------------------------------------------------------------------------
@@ -36,7 +37,11 @@ BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
       Lx1_(pmb->pmy_mesh->mesh_size.x1max - pmb->pmy_mesh->mesh_size.x1min),
       Lx2_(pmb->pmy_mesh->mesh_size.x2max - pmb->pmy_mesh->mesh_size.x2min),
       Lx3_(pmb->pmy_mesh->mesh_size.x3max - pmb->pmy_mesh->mesh_size.x3min),
-      I_(0.0,1.0) {
+      I_(0.0,1.0),
+      roll_var(nx3+2*NGHOST, nx1+2*NGHOST, nx2+2*NGHOST),
+      roll_buf(nx3+2*NGHOST, nx1+2*NGHOST, nx2+2*NGHOST),
+      send_buf(nx3, nx2), recv_buf(nx3, nx2), pflux(nx2+1+2*NGHOST),
+      send_gbuf(nx3, nx1, NGHOST), recv_gbuf(nx3, nx1, NGHOST) {
   gtlist_ = new FFTGravitySolverTaskList(pin, pmb->pmy_mesh);
   gbflag = GetGravityBoundaryFlag(pin->GetString("self_gravity", "grav_bc"));
   grfflag = GetGreenFuncFlag(pin->GetOrAddString("self_gravity", "green_function",
@@ -63,11 +68,6 @@ BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
   if (gbflag==GravityBoundaryFlag::open)
     InitGreen();
 #endif
-  send_buf.NewAthenaArray(nx3, nx2);
-  recv_buf.NewAthenaArray(nx3, nx2);
-  roll_var.NewAthenaArray(nx3+2*NGHOST, nx2+2*NGHOST, nx1+2*NGHOST);
-  roll_buf.NewAthenaArray(nx3+2*NGHOST, nx2+2*NGHOST, nx1+2*NGHOST);
-  pflux.NewAthenaArray(nx2+1+2*NGHOST);
 #endif
 
   // Compatibility checks
@@ -453,14 +453,58 @@ void BlockFFTGravity::Solve(int stage) {
     RetrieveResult(pmy_block_->pgrav->phi);
   } else if (SHEAR_PERIODIC) {
     // Use roll-unroll method for the shearing-periodic boundary condition.
+    // TODO Consider block2mid with (i,k,j) -> (i,k,j), etc.
     Real time = pmy_block_->pmy_mesh->time;
     AthenaArray<Real> rho;
     rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
-    RollUnroll(rho, roll_var, time); // Transform density to the shearing coordinates (Roll)
-    LoadSource(roll_var);
-    // TODO Solve Poisson equation in the shearing coordinates
-    RetrieveResult(pmy_block_->pgrav->phi);
-    // TODO Transform potential to the original coordinates (Unroll)
+
+    // Make y axis fast (required for RemapFluxPlm or RemapFluxPpm)
+    // TODO isn't (i,k,j) more efficient than (k,i,j)?
+    for (int k=ks; k<=ke; k++) {
+      for (int i=is; i<=ie; i++) {
+        for (int j=js-NGHOST; j<=je+NGHOST; j++) {
+          roll_var(k,i,j) = rho(k,j,i);
+        }
+      }
+    }
+
+    // Roll density
+    RollUnroll(roll_var, time);
+
+    // Fill FFT buffer to prepare forward transform
+    for (int k=ks; k<=ke; k++) {
+      for (int i=is; i<=ie; i++) {
+        for (int j=js; j<=je; j++) {
+          int idx = (i-is) + nx1*((j-js) + nx2*(k-ks));
+          in_[idx] = {roll_var(k,i,j), 0.0};
+        }
+      }
+    }
+//    // TODO Execute forward
+//    // TODO Apply Kernel
+//    // TODO Execute backward
+
+    // Retrieve potential from FFT buffer into roll_var
+    for (int k=ks; k<=ke; k++) {
+      for (int i=is; i<=ie; i++) {
+        for (int j=js; j<=je; j++) {
+          int idx = (i-is) + nx1*((j-js) + nx2*(k-ks));
+          roll_var(k,i,j) = in_[idx].real();
+        }
+      }
+    }
+
+    // Unroll potential
+    RollUnroll(roll_var, -time);
+
+    // Transpose potential from (k,i,j) to (k,j,i)
+    for (int k=ks; k<=ke; k++) {
+      for (int i=is; i<=ie; i++) {
+        for (int j=js; j<=je; j++) {
+          pmy_block_->pgrav->phi(k,j,i) = roll_var(k,i,j);
+        }
+      }
+    }
   } else if (gbflag==GravityBoundaryFlag::open) {
     // For open boundary condition, we use a convolution method in which the
     // 8x-extended domain is assumed. Instead of zero-padding the density, we
@@ -646,52 +690,123 @@ void BlockFFTGravity::MultiplyGreen(int px, int py, int pz) {
 }
 
 //----------------------------------------------------------------------------------------
-//! \fn BlockFFTGravity::RollUnroll(const AthenaArray<Real> &in, AthenaArray<Real> &out,
-//                                  Real dt)
+//! \fn BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt)
 //! \brief Transform to the shearing coordinates
-void BlockFFTGravity::RollUnroll(const AthenaArray<Real> &in, AthenaArray<Real> &out,
-                                 Real dt) {
+void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
 #ifdef MPI_PARALLEL
-  int joffset,jremap;
-  int sendto_id,getfrom_id,cnt,ierr;
-  int remapvar_tag=1992; // TODO How should I set the tag?
+  int joffset,joverlap,Ngrids;
   Real yshear,eps;
-  Real joverlap,Ngrids;
+  int sendto_id,getfrom_id,upper_id,lower_id,cnt,ierr;
+  int remapvar_tag=1992; // TODO How should I set the tag?
+  MPI_Request rq;
   LogicalLocation loc, &my_loc=pmy_block_->loc;
   Coordinates *pc = pmy_block_->pcoord;
   MeshBlockTree *proot = &(pmy_block_->pmy_mesh->tree), *pleaf=nullptr;
-  MPI_Request rq;
+  int xorder = pmy_block_->precon->xorder;
 
-//  for (int k=ks; k<=ke; k++) {
-//    for (int i=is; i<=ie; i++) {
-//      yshear = -qshear_*Omega_0_*pc->x1v(i)*dt;
-//      joffset = yshear/dx2_;
-//      eps = std::fmod(yshear, dx2_)/dx2_;
-//      const int osgn = 1;
-//      const int shift0 = osgn*nx2 - joffset;
-//      pmy_block_->porb->RemapFluxPlm(pflux, in, eps, osgn, k, i, js, je+1, shift0);
-//      if ((k==ks)&(i==is+1)) {
-//        for (int j=js; j<=je+1; j++) {
-//          std::cout << "pflux(" << j << ") " << pflux(j) << std::endl;
-//        }
-//      }
-//      for (int j=js; j<=je; j++) {
-//        roll_buf(k,j,i) = in(k,j,i) + (pflux(j+1) - pflux(j));
-//      }
-//    }
-//  }
+  // Fill ghost zones at the Meshblock boundaries along y directions.
+  // This is required because the fractional shift uses neighboring cell info.
+  // When rolling density, the ghost zones are already filled so we skip this
+  // step when dt > 0. This is only executed for unrolling potential (dt < 0).
 
+  // Find ids of upper and lower MeshBlocks
+  loc = my_loc;
+  loc.lx2 += 1;
+  pleaf = proot->FindMeshBlock(loc);
+  upper_id = pleaf->GetGid();
+
+  loc = my_loc;
+  loc.lx2 -= 1;
+  pleaf = proot->FindMeshBlock(loc);
+  lower_id = pleaf->GetGid();
+
+  // lower -> upper
+  // Post a non-blocking receive for the data to be sent
+  cnt = nx1*NGHOST*nx3;
+  ierr = MPI_Irecv(recv_gbuf.data(), cnt, MPI_DOUBLE, lower_id,
+                   remapvar_tag, MPI_COMM_WORLD, &rq);
+
+  // Pack send buffer with the density in the ghost cells
   for (int k=ks; k<=ke; k++) {
-    for (int j=js; j<=je; j++) {
-      for (int i=is; i<=ie; i++) {
-        roll_buf(k,j,i) = in(k,j,i);
+    for (int i=is; i<=ie; i++) {
+      for (int j=je-NGHOST+1; j<=je; j++) {
+        send_gbuf(k-ks,i-is,j-(je-NGHOST+1)) = dat(k,i,j);
       }
     }
   }
 
+  // Send data
+  ierr = MPI_Send(send_gbuf.data(), cnt, MPI_DOUBLE, upper_id,
+                  remapvar_tag, MPI_COMM_WORLD);
+
+  // Wait for the data to be received
+  ierr = MPI_Wait(&rq, MPI_STATUS_IGNORE);
+
+  // Unpack the data to the ghost cells
+  for (int k=ks; k<=ke; k++) {
+    for (int i=is; i<=ie; i++) {
+      for (int j=js-NGHOST; j<=js-1; j++) {
+        dat(k,i,j) = recv_gbuf(k-ks,i-is,j-(js-NGHOST));
+      }
+    }
+  }
+
+  // upper -> lower
+  // Post a non-blocking receive for the data to be sent
+  cnt = nx1*NGHOST*nx3;
+  ierr = MPI_Irecv(recv_gbuf.data(), cnt, MPI_DOUBLE, upper_id,
+                   remapvar_tag, MPI_COMM_WORLD, &rq);
+
+  // Pack send buffer with the density in the ghost cells
+  for (int k=ks; k<=ke; k++) {
+    for (int i=is; i<=ie; i++) {
+      for (int j=js; j<=js+NGHOST-1; j++) {
+        send_gbuf(k-ks,i-is,j-js) = dat(k,i,j);
+      }
+    }
+  }
+
+  // Send data
+  ierr = MPI_Send(send_gbuf.data(), cnt, MPI_DOUBLE, lower_id,
+                  remapvar_tag, MPI_COMM_WORLD);
+
+  // Wait for the data to be received
+  ierr = MPI_Wait(&rq, MPI_STATUS_IGNORE);
+
+  // Unpack the data to the ghost cells
+  for (int k=ks; k<=ke; k++) {
+    for (int i=is; i<=ie; i++) {
+      for (int j=je+1; j<=je+NGHOST; j++) {
+        dat(k,i,j) = recv_gbuf(k-ks,i-is,j-(je+1));
+      }
+    }
+  }
+
+  // Compute "fluxes" for the fractional shift
+  for (int k=ks; k<=ke; k++) {
+    for (int i=is; i<=ie; i++) {
+      yshear = -qshear_*Omega_0_*pc->x1v(i)*dt;
+      joffset = static_cast<int>(yshear/dx2_);
+      // Distinguish fractional upshift from fractional downshift
+      if (yshear > 0.0) joffset++;
+      eps = std::fmod(yshear, dx2_)/dx2_;
+      const int osgn = (joffset>0)?1:0;
+      const int shift0 = (joffset>0)?-1:0;
+      if (xorder <= 2) {
+        pmy_block_->porb->RemapFluxPlm(pflux, dat, eps, osgn, k, i, js, je+1, shift0);
+      } else {
+        pmy_block_->porb->RemapFluxPpm(pflux, dat, eps, osgn, k, i, js, je+1, shift0);
+      }
+      for (int j=js; j<=je; j++) {
+        roll_buf(k,i,j) = dat(k,i,j) - (pflux(j+1) - pflux(j));
+      }
+    }
+  }
+
+  // Send/receive for the integer shift
   for (int i=is; i<=ie; i++) {
     yshear = -qshear_*Omega_0_*pc->x1v(i)*dt;
-    joffset = yshear/dx2_;
+    joffset = static_cast<int>(yshear/dx2_);
     // Case A: shear in positive-y direction.
     if (joffset >= 0) {
       Ngrids = static_cast<int>(joffset/nx2);
@@ -719,7 +834,7 @@ void BlockFFTGravity::RollUnroll(const AthenaArray<Real> &in, AthenaArray<Real> 
         // Pack send buffer with the density in [je-(joverlap-1):je]
         for (int k=ks; k<=ke; k++) {
           for (int j=je-(joverlap-1); j<=je; j++) {
-            send_buf(k-ks,j-(je-(joverlap-1))) = roll_buf(k,j,i);
+            send_buf(k-ks,j-(je-(joverlap-1))) = roll_buf(k,i,j);
           }
         }
 
@@ -734,7 +849,7 @@ void BlockFFTGravity::RollUnroll(const AthenaArray<Real> &in, AthenaArray<Real> 
         // [js:js+(joverlap-1)]
         for (int k=ks; k<=ke; k++) {
           for (int j=js; j<=js+(joverlap-1); j++) {
-            out(k,j,i) = recv_buf(k-ks,j-js);
+            dat(k,i,j) = recv_buf(k-ks,j-js);
           }
         }
       }
@@ -744,7 +859,7 @@ void BlockFFTGravity::RollUnroll(const AthenaArray<Real> &in, AthenaArray<Real> 
         // If the target MeshBlock is of my own, do local copy instead of MPI calls.
         for (int k=ks; k<=ke; k++) {
           for (int j=js+joverlap; j<=je; j++) {
-            out(k,j,i) = roll_buf(k,j-joverlap,i);
+            dat(k,i,j) = roll_buf(k,i,j-joverlap);
           }
         }
       } else {
@@ -768,7 +883,7 @@ void BlockFFTGravity::RollUnroll(const AthenaArray<Real> &in, AthenaArray<Real> 
         // Pack send buffer with the density in [js:je-joverlap]
         for (int k=ks; k<=ke; k++) {
           for (int j=js; j<=je-joverlap; j++) {
-            send_buf(k-ks,j-js) = roll_buf(k,j,i);
+            send_buf(k-ks,j-js) = roll_buf(k,i,j);
           }
         }
 
@@ -783,7 +898,7 @@ void BlockFFTGravity::RollUnroll(const AthenaArray<Real> &in, AthenaArray<Real> 
         // [js+joverlap:je]
         for (int k=ks; k<=ke; k++) {
           for (int j=js+joverlap; j<=je; j++) {
-            out(k,j,i) = recv_buf(k-ks,j-(js+joverlap));
+            dat(k,i,j) = recv_buf(k-ks,j-(js+joverlap));
           }
         }
       }
@@ -816,7 +931,7 @@ void BlockFFTGravity::RollUnroll(const AthenaArray<Real> &in, AthenaArray<Real> 
         // Pack send buffer with the density in [je-(joverlap-1):je]
         for (int k=ks; k<=ke; k++) {
           for (int j=js; j<=js+(joverlap-1); j++) {
-            send_buf(k-ks,j-js) = roll_buf(k,j,i);
+            send_buf(k-ks,j-js) = roll_buf(k,i,j);
           }
         }
 
@@ -831,7 +946,7 @@ void BlockFFTGravity::RollUnroll(const AthenaArray<Real> &in, AthenaArray<Real> 
         // [je-(joverlap-1):je]
         for (int k=ks; k<=ke; k++) {
           for (int j=je-(joverlap-1); j<=je; j++) {
-            out(k,j,i) = recv_buf(k-ks,j-(je-(joverlap-1)));
+            dat(k,i,j) = recv_buf(k-ks,j-(je-(joverlap-1)));
           }
         }
       }
@@ -841,7 +956,7 @@ void BlockFFTGravity::RollUnroll(const AthenaArray<Real> &in, AthenaArray<Real> 
         // If the target MeshBlock is of my own, do local copy instead of MPI calls.
         for (int k=ks; k<=ke; k++) {
           for (int j=js; j<=je-joverlap; j++) {
-            out(k,j,i) = roll_buf(k,j+joverlap,i);
+            dat(k,i,j) = roll_buf(k,i,j+joverlap);
           }
         }
       } else {
@@ -865,7 +980,7 @@ void BlockFFTGravity::RollUnroll(const AthenaArray<Real> &in, AthenaArray<Real> 
         // Pack send buffer with the density in [js+joverlap:je]
         for (int k=ks; k<=ke; k++) {
           for (int j=js+joverlap; j<=je; j++) {
-            send_buf(k-ks,j-(js+joverlap)) = roll_buf(k,j,i);
+            send_buf(k-ks,j-(js+joverlap)) = roll_buf(k,i,j);
           }
         }
 
@@ -880,7 +995,7 @@ void BlockFFTGravity::RollUnroll(const AthenaArray<Real> &in, AthenaArray<Real> 
         // [js:je-joverlap]
         for (int k=ks; k<=ke; k++) {
           for (int j=js; j<=je-joverlap; j++) {
-            out(k,j,i) = recv_buf(k-ks,j-js);
+            dat(k,i,j) = recv_buf(k-ks,j-js);
           }
         }
       }

@@ -59,7 +59,7 @@ class BlockFFTGravity : public BlockFFT {
   void LoadOBCSource(const AthenaArray<Real> &src, int px, int py, int pz);
   void RetrieveOBCResult(AthenaArray<Real> &dst, int px, int py, int pz);
   void MultiplyGreen(int px, int py, int pz);
-  void RollUnroll(const AthenaArray<Real> &in, AthenaArray<Real> &out, Real dt);
+  void RollUnroll(AthenaArray<Real> &dat, Real dt);
   void SetPhysicalBoundaries();
 
  private:
@@ -75,8 +75,9 @@ class BlockFFTGravity : public BlockFFT {
 #ifdef FFT
   FFTMPI_NS::FFT3d *pf3dgrf_;
 #endif
-  AthenaArray<Real> send_buf, recv_buf, roll_var, roll_buf, pflux;
 #endif
+  AthenaArray<Real> send_buf, recv_buf, roll_var, roll_buf, pflux;
+  AthenaArray<Real> send_gbuf, recv_gbuf; // ghost zone buffers at y boundaries
 };
 
 #endif // GRAVITY_BLOCK_FFT_GRAVITY_HPP_
