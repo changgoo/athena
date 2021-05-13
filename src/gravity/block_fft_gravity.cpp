@@ -315,9 +315,10 @@ void BlockFFTGravity::ApplyKernel() {
           if (((slow_ilo+i) + (slow_jlo+j) + (slow_klo+k)) == 0) {
             kernel = 0.0;
           } else if (SHEAR_PERIODIC & !PHASE_SHIFT) {
-            kernel = -four_pi_G / ((2. - 2.*std::cos(kxt))/dx1sq_ +
-                                   (2. - 2.*std::cos(ky))/dx2sq_ +
-                                   (2. - 2.*std::cos(kz))/dx3sq_);
+            kernel = -four_pi_G / ((2. - 2.*std::cos(kx))/dx1sq_
+                                   + 2*qomt*std::sin(kx)*std::sin(ky)/dx1_/dx2_
+                                   + (SQR(qomt) + 1.)*(2. - 2.*std::cos(ky))/dx2sq_
+                                   + (2. - 2.*std::cos(kz))/dx3sq_);
           } else {
             kernel = -four_pi_G / ((2. - 2.*std::cos(kxt))/dx1sq_ +
                                    (2. - 2.*std::cos(ky ))/dx2sq_ +
