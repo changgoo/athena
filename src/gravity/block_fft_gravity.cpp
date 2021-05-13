@@ -28,6 +28,7 @@
 BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
     : BlockFFT(pmb),
       SHEAR_PERIODIC(pmb->pmy_mesh->shear_periodic),
+      PHASE_SHIFT(false),
       dx1_(pmb->pcoord->dx1v(NGHOST)),
       dx2_(pmb->pcoord->dx2v(NGHOST)),
       dx3_(pmb->pcoord->dx3v(NGHOST)),
@@ -111,7 +112,7 @@ void BlockFFTGravity::ExecuteForward() {
 #ifdef FFT
 #ifdef MPI_PARALLEL
   if (gbflag==GravityBoundaryFlag::periodic) {
-    if (SHEAR_PERIODIC) {
+    if (SHEAR_PERIODIC & PHASE_SHIFT) {
       FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR *>(in_);
       // block2mid
       pf3d->remap(data,data,pf3d->remap_premid);
@@ -144,7 +145,7 @@ void BlockFFTGravity::ExecuteForward() {
     pf3d->remap(data,data,pf3d->remap_premid);
     // mid_forward
     pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data),FFTW_FORWARD,pf3d->fft_mid);
-    if (SHEAR_PERIODIC) {
+    if (SHEAR_PERIODIC & PHASE_SHIFT) {
       // apply phase shift for shearing BC
       for (int i=0; i<mid_nx1; i++) {
         for (int k=0; k<mid_nx3; k++) {
@@ -198,7 +199,7 @@ void BlockFFTGravity::ExecuteBackward() {
 #ifdef FFT
 #ifdef MPI_PARALLEL
   if (gbflag==GravityBoundaryFlag::periodic) {
-    if (SHEAR_PERIODIC) {
+    if (SHEAR_PERIODIC & PHASE_SHIFT) {
       FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR *>(in_);
       // slow_backward
       pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data),FFTW_BACKWARD,pf3d->fft_slow);
@@ -247,7 +248,7 @@ void BlockFFTGravity::ExecuteBackward() {
     pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data),FFTW_BACKWARD,pf3d->fft_fast);
     // fast2mid
     pf3d->remap(data,data,pf3d->remap_fastmid);
-    if (SHEAR_PERIODIC) {
+    if (SHEAR_PERIODIC & PHASE_SHIFT) {
       // apply phase shift for shearing BC
       for (int i=0; i<mid_nx1; i++) {
         for (int k=0; k<mid_nx3; k++) {
@@ -293,6 +294,8 @@ void BlockFFTGravity::ApplyKernel() {
   // Remap to z-pencil, perform FFT in k  (j,i,k)
   // Apply Kernel                         (j,i,k)
   Real four_pi_G = pmy_block_->pgrav->four_pi_G;
+  Real time = pmy_block_->pmy_mesh->time;
+  Real qomt = qshear_*Omega_0_*time;
   if (gbflag==GravityBoundaryFlag::periodic) {
     Real kx,kxt,ky,kz;
     Real kernel;
@@ -311,6 +314,10 @@ void BlockFFTGravity::ApplyKernel() {
           }
           if (((slow_ilo+i) + (slow_jlo+j) + (slow_klo+k)) == 0) {
             kernel = 0.0;
+          } else if (SHEAR_PERIODIC & !PHASE_SHIFT) {
+            kernel = -four_pi_G / ((2. - 2.*std::cos(kxt))/dx1sq_ +
+                                   (2. - 2.*std::cos(ky))/dx2sq_ +
+                                   (2. - 2.*std::cos(kz))/dx3sq_);
           } else {
             kernel = -four_pi_G / ((2. - 2.*std::cos(kxt))/dx1sq_ +
                                    (2. - 2.*std::cos(ky ))/dx2sq_ +
@@ -336,8 +343,14 @@ void BlockFFTGravity::ApplyKernel() {
           } else {
             kxt = kx;
           }
-          kxy = std::sqrt((2.-2.*std::cos(kxt))/dx1sq_ +
-                          (2.-2.*std::cos(ky ))/dx2sq_);
+          if (SHEAR_PERIODIC & !PHASE_SHIFT) {
+            kxy = std::sqrt((2. - 2.*std::cos(kx))/dx1sq_
+                            + 2*qomt*std::sin(kx)*std::sin(ky)/dx1_/dx2_
+                            + (SQR(qomt) + 1.)*(2. - 2.*std::cos(ky))/dx2sq_);
+          } else {
+            kxy = std::sqrt((2. - 2.*std::cos(kxt))/dx1sq_ +
+                            (2. - 2.*std::cos(ky ))/dx2sq_);
+          }
 
           if (grfflag==GreenFuncFlag::cell_averaged) {
             Real cos_e = std::cos(kz);
@@ -409,7 +422,6 @@ void BlockFFTGravity::ApplyKernel() {
 //! \brief Solves Poisson equation and calls FFTGravityTaskList
 
 void BlockFFTGravity::Solve(int stage) {
-  bool PHASE_SHIFT = false;
 #ifdef FFT
 #ifdef MPI_PARALLEL
   if (SHEAR_PERIODIC & PHASE_SHIFT) {
@@ -480,9 +492,10 @@ void BlockFFTGravity::Solve(int stage) {
         }
       }
     }
-//    // TODO Execute forward
-//    // TODO Apply Kernel
-//    // TODO Execute backward
+
+    ExecuteForward();
+//    ApplyKernel(); // TODO
+    ExecuteBackward();
 
     // Retrieve potential from FFT buffer into roll_var
     for (int k=ks; k<=ke; k++) {
@@ -928,7 +941,7 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
         ierr = MPI_Irecv(recv_buf.data(), cnt, MPI_DOUBLE, getfrom_id,
                          remapvar_tag, MPI_COMM_WORLD, &rq);
 
-        // Pack send buffer with the density in [je-(joverlap-1):je]
+        // Pack send buffer with the density in [js:js+(joverlap-1)]
         for (int k=ks; k<=ke; k++) {
           for (int j=js; j<=js+(joverlap-1); j++) {
             send_buf(k-ks,j-js) = roll_buf(k,i,j);

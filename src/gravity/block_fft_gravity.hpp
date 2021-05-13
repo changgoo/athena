@@ -47,6 +47,7 @@ class BlockFFTGravity : public BlockFFT {
 
   // data
   bool SHEAR_PERIODIC; // flag for shear periodic boundary (true w/ , false w/o)
+  bool PHASE_SHIFT; // False if using roll-unroll method
   GravityBoundaryFlag gbflag; // flag for the gravity boundary condition
   GreenFuncFlag grfflag; // flag for the Green's function
 
