@@ -41,8 +41,8 @@ BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
       I_(0.0,1.0),
       roll_var(nx3+2*NGHOST, nx1+2*NGHOST, nx2+2*NGHOST),
       roll_buf(nx3+2*NGHOST, nx1+2*NGHOST, nx2+2*NGHOST),
-      send_buf(nx3, nx2), recv_buf(nx3, nx2), pflux(nx2+1+2*NGHOST),
-      send_gbuf(nx3, nx1, NGHOST), recv_gbuf(nx3, nx1, NGHOST) {
+      send_buf(nx3*nx2), recv_buf(nx3*nx2), pflux(nx2+1+2*NGHOST),
+      send_gbuf(nx3*nx1*NGHOST), recv_gbuf(nx3*nx1*NGHOST) {
   gtlist_ = new FFTGravitySolverTaskList(pin, pmb->pmy_mesh);
   gbflag = GetGravityBoundaryFlag(pin->GetString("self_gravity", "grav_bc"));
   grfflag = GetGreenFuncFlag(pin->GetOrAddString("self_gravity", "green_function",
@@ -465,6 +465,12 @@ void BlockFFTGravity::Solve(int stage) {
     RetrieveResult(pmy_block_->pgrav->phi);
   } else if (SHEAR_PERIODIC) {
     // Use roll-unroll method for the shearing-periodic boundary condition.
+    // We solve Poisson equation in the "shearing coordinates", given by
+    // (x', y') = (x, y + q*Omega_0*t*x).
+    // The shearing-periodic boundary condition is equivalent to the usual periodic
+    // BC, (x'+Lx, y') = (x', y'+Ly) = (x', y'), in this new coordinate system.
+    // Since Poisson equation is not covarient for this transform, we need to modify
+    // the equation and therefore the kernel used in ApplyKernel.
     // TODO Consider block2mid with (i,k,j) -> (i,k,j), etc.
     Real time = pmy_block_->pmy_mesh->time;
     AthenaArray<Real> rho;
@@ -480,8 +486,8 @@ void BlockFFTGravity::Solve(int stage) {
       }
     }
 
-    // Roll density
-    RollUnroll(roll_var, time);
+    // Roll density: (x, y) -> (x, y + q*Omega_0*t*x),
+    RollUnroll(roll_var, -time);
 
     // Fill FFT buffer to prepare forward transform
     for (int k=ks; k<=ke; k++) {
@@ -493,8 +499,9 @@ void BlockFFTGravity::Solve(int stage) {
       }
     }
 
+    // Solve Poisson equation in the shearing coordinates
     ExecuteForward();
-//    ApplyKernel(); // TODO
+    ApplyKernel();
     ExecuteBackward();
 
     // Retrieve potential from FFT buffer into roll_var
@@ -507,8 +514,8 @@ void BlockFFTGravity::Solve(int stage) {
       }
     }
 
-    // Unroll potential
-    RollUnroll(roll_var, -time);
+    // Unroll potential: (x, y + q*Omega_0*t*x) -> (x, y)
+    RollUnroll(roll_var, time);
 
     // Transpose potential from (k,i,j) to (k,j,i)
     for (int k=ks; k<=ke; k++) {
@@ -716,6 +723,7 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
   Coordinates *pc = pmy_block_->pcoord;
   MeshBlockTree *proot = &(pmy_block_->pmy_mesh->tree), *pleaf=nullptr;
   int xorder = pmy_block_->precon->xorder;
+  int counter;
 
   // Fill ghost zones at the Meshblock boundaries along y directions.
   // This is required because the fractional shift uses neighboring cell info.
@@ -740,10 +748,11 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
                    remapvar_tag, MPI_COMM_WORLD, &rq);
 
   // Pack send buffer with the density in the ghost cells
+  counter = 0;
   for (int k=ks; k<=ke; k++) {
     for (int i=is; i<=ie; i++) {
       for (int j=je-NGHOST+1; j<=je; j++) {
-        send_gbuf(k-ks,i-is,j-(je-NGHOST+1)) = dat(k,i,j);
+        send_gbuf(counter++) = dat(k,i,j);
       }
     }
   }
@@ -756,10 +765,11 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
   ierr = MPI_Wait(&rq, MPI_STATUS_IGNORE);
 
   // Unpack the data to the ghost cells
+  counter = 0;
   for (int k=ks; k<=ke; k++) {
     for (int i=is; i<=ie; i++) {
       for (int j=js-NGHOST; j<=js-1; j++) {
-        dat(k,i,j) = recv_gbuf(k-ks,i-is,j-(js-NGHOST));
+        dat(k,i,j) = recv_gbuf(counter++);
       }
     }
   }
@@ -771,10 +781,11 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
                    remapvar_tag, MPI_COMM_WORLD, &rq);
 
   // Pack send buffer with the density in the ghost cells
+  counter = 0;
   for (int k=ks; k<=ke; k++) {
     for (int i=is; i<=ie; i++) {
       for (int j=js; j<=js+NGHOST-1; j++) {
-        send_gbuf(k-ks,i-is,j-js) = dat(k,i,j);
+        send_gbuf(counter++) = dat(k,i,j);
       }
     }
   }
@@ -787,10 +798,11 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
   ierr = MPI_Wait(&rq, MPI_STATUS_IGNORE);
 
   // Unpack the data to the ghost cells
+  counter = 0;
   for (int k=ks; k<=ke; k++) {
     for (int i=is; i<=ie; i++) {
       for (int j=je+1; j<=je+NGHOST; j++) {
-        dat(k,i,j) = recv_gbuf(k-ks,i-is,j-(je+1));
+        dat(k,i,j) = recv_gbuf(counter++);
       }
     }
   }
@@ -845,9 +857,10 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
                          remapvar_tag, MPI_COMM_WORLD, &rq);
 
         // Pack send buffer with the density in [je-(joverlap-1):je]
+        counter = 0;
         for (int k=ks; k<=ke; k++) {
           for (int j=je-(joverlap-1); j<=je; j++) {
-            send_buf(k-ks,j-(je-(joverlap-1))) = roll_buf(k,i,j);
+            send_buf(counter++) = roll_buf(k,i,j);
           }
         }
 
@@ -860,9 +873,10 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
 
         // Unpack the data sent from remote [je-(joverlap-1):je] to the local
         // [js:js+(joverlap-1)]
+        counter = 0;
         for (int k=ks; k<=ke; k++) {
           for (int j=js; j<=js+(joverlap-1); j++) {
-            dat(k,i,j) = recv_buf(k-ks,j-js);
+            dat(k,i,j) = recv_buf(counter++);
           }
         }
       }
@@ -894,9 +908,10 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
                          remapvar_tag, MPI_COMM_WORLD, &rq);
 
         // Pack send buffer with the density in [js:je-joverlap]
+        counter = 0;
         for (int k=ks; k<=ke; k++) {
           for (int j=js; j<=je-joverlap; j++) {
-            send_buf(k-ks,j-js) = roll_buf(k,i,j);
+            send_buf(counter++) = roll_buf(k,i,j);
           }
         }
 
@@ -909,9 +924,10 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
 
         // Unpack the data sent from remote [js:je-joverlap] to the local
         // [js+joverlap:je]
+        counter = 0;
         for (int k=ks; k<=ke; k++) {
           for (int j=js+joverlap; j<=je; j++) {
-            dat(k,i,j) = recv_buf(k-ks,j-(js+joverlap));
+            dat(k,i,j) = recv_buf(counter++);
           }
         }
       }
@@ -942,9 +958,10 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
                          remapvar_tag, MPI_COMM_WORLD, &rq);
 
         // Pack send buffer with the density in [js:js+(joverlap-1)]
+        counter = 0;
         for (int k=ks; k<=ke; k++) {
           for (int j=js; j<=js+(joverlap-1); j++) {
-            send_buf(k-ks,j-js) = roll_buf(k,i,j);
+            send_buf(counter++) = roll_buf(k,i,j);
           }
         }
 
@@ -957,9 +974,10 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
 
         // Unpack the data sent from remote [js:js+(joverlap-1)] to the local
         // [je-(joverlap-1):je]
+        counter = 0;
         for (int k=ks; k<=ke; k++) {
           for (int j=je-(joverlap-1); j<=je; j++) {
-            dat(k,i,j) = recv_buf(k-ks,j-(je-(joverlap-1)));
+            dat(k,i,j) = recv_buf(counter++);
           }
         }
       }
@@ -991,9 +1009,10 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
                          remapvar_tag, MPI_COMM_WORLD, &rq);
 
         // Pack send buffer with the density in [js+joverlap:je]
+        counter = 0;
         for (int k=ks; k<=ke; k++) {
           for (int j=js+joverlap; j<=je; j++) {
-            send_buf(k-ks,j-(js+joverlap)) = roll_buf(k,i,j);
+            send_buf(counter++) = roll_buf(k,i,j);
           }
         }
 
@@ -1006,9 +1025,10 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
 
         // Unpack the data sent from remote [js+joverlap:je] to the local
         // [js:je-joverlap]
+        counter = 0;
         for (int k=ks; k<=ke; k++) {
           for (int j=js; j<=je-joverlap; j++) {
-            dat(k,i,j) = recv_buf(k-ks,j-js);
+            dat(k,i,j) = recv_buf(counter++);
           }
         }
       }
