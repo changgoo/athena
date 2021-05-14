@@ -42,10 +42,8 @@ def prepare(**kwargs):
     logger.debug('Running test ' + __name__)
     # Check that code compiles all pgen files in single or double precision
     for single_precision in [True, False]:
-        for pgen_set, args in zip([gr_probs, mhd_probs,
-                                   hydro_probs],
-                                  [gr_args, mhd_args,
-                                   hydro_args]):
+        for pgen_set, args in zip([mhd_probs, hydro_probs],
+                                  [mhd_args, hydro_args]):
             args_lcl = list(args)
             if single_precision:
                 args_lcl.extend(['float'])

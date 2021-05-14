@@ -1,0 +1,73 @@
+<comment>
+problem   = Jeans instability with particles
+reference =
+configure = ./configure.py --prob=particle_jeans -p -hdf5
+
+<job>
+problem_id  = PartJeans # problem ID: basename of output filenames
+
+#<output1>
+#file_type   = tab       # Tabular data dump
+#variable    = prim      # variables to be output
+#data_format = %24.17e   # Optional data format string
+#dt          = 0.1       # time increment between outputs
+#
+#<output2>
+#file_type   = hdf5      # HDF5 data dump
+#variable    = prim      # variables to be output
+#dt          = 0.01       # time increment between outputs
+#
+#<output3>
+#file_type   = hst       # History data dump
+#dt          = 0.001     # time increment between outputs
+
+<time>
+cfl_number  = 0.3       # The Courant, Friedrichs, & Lewy (CFL) Number
+nlim        = 500       # cycle limit
+tlim        = 5.0       # time limit
+integrator  = vl2       # time integration algorithm
+ncycle_out  = 10        # interval for writing summary info to stdout
+
+<mesh>
+nx1         = 32        # Number of zones in X1-direction
+x1min       = -0.5      # minimum value of X1
+x1max       = 0.5       # maximum value of X1
+ix1_bc      = periodic  # Inner-X1 boundary condition flag
+ox1_bc      = periodic  # Outer-X1 boundary condition flag
+
+nx2         = 32        # Number of zones in X2-direction
+x2min       = -0.5      # minimum value of X2
+x2max       = 0.5       # maximum value of X2
+ix2_bc      = periodic  # Inner-X2 boundary condition flag
+ox2_bc      = periodic  # Outer-X2 boundary condition flag
+
+nx3         = 32        # Number of zones in X3-direction
+x3min       = -0.5      # minimum value of X3
+x3max       = 0.5       # maximum value of X3
+ix3_bc      = periodic  # Inner-X3 boundary condition flag
+ox3_bc      = periodic  # Outer-X3 boundary condition flag
+
+<meshblock>
+nx1 = 8
+nx2 = 8
+nx3 = 8
+
+<hydro>
+gamma           = 1.4   # gamma = C_p/C_v
+iso_sound_speed = 1.0   # isothermal sound speed
+
+<particles>
+taus0 = -1          # drag stopping time
+backreaction = true # turn on/off the back reaction of the gas drag
+
+<problem>
+np_per_cell = 1      # number of particles in the X1 direction
+dtog = 1             # solid-to-gas density ratio
+ux0 = 0.0            # x-component of the gas velocity
+uy0 = 0.0            # y-component of the gas velocity
+uz0 = 0.0            # z-component of the gas velocity
+vpx0 = 0.0           # x-component of the particle velocity
+vpy0 = 0.0           # y-component of the particle velocity
+vpz0 = 0.0           # z-component of the particle velocity
+vamp = 0.5           # amplitude of velocity perturbation
+njeans = 0.5         # L/ljeans

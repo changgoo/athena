@@ -57,6 +57,9 @@
 // enable general relativity? default=0 (false)
 #define GENERAL_RELATIVITY @GENERAL_RELATIVITY@
 
+// include particles? default=0 (false)
+#define PARTICLES @PARTICLES@
+
 // enable GR frame transformations? default=0 (false)
 #define FRAME_TRANSFORMATIONS @FRAME_TRANSFORMATIONS@
 
@@ -101,6 +104,7 @@
 #define NWAVE @NWAVE_VALUE@
 #define NSCALARS @NUMBER_PASSIVE_SCALARS@
 #define NGHOST @NUMBER_GHOST_CELLS@
+#define NGRAV @NGRAV_VARIABLES@
 #define NCR 4            //cosmic ray transport module variable
 #define MAX_NSTAGE 6     // maximum number of stages per cycle for time-integrator
 #define MAX_NREGISTER 3  // maximum number of (u, b) register pairs for time-integrator

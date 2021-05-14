@@ -16,6 +16,7 @@
 
 // C++ headers
 #include <iostream>
+#include <sstream>
 
 // Athena++ headers
 #include "../athena.hpp"
@@ -142,6 +143,21 @@ class Coordinates {
   // ...to determine if index is a pole
   bool IsPole(int j);
 
+  // ...to make coordinate transformations
+  virtual void CartesianToMeshCoords(
+      Real x, Real y, Real z, Real& x1, Real& x2, Real& x3) const;
+  virtual void MeshCoordsToCartesian(
+      Real x1, Real x2, Real x3, Real& x, Real& y, Real& z) const;
+  virtual void MeshCoordsToIndices(
+      Real x1, Real x2, Real x3, Real& xi1, Real& xi2, Real& xi3) const;
+  virtual void IndicesToMeshCoords(
+      Real xi1, Real xi2, Real xi3, Real& x1, Real& x2, Real& x3) const;
+  virtual void CartesianToMeshCoordsVector(
+      Real x, Real y, Real z, Real vx, Real vy, Real vz,
+      Real& vx1, Real& vx2, Real& vx3) const;
+  virtual void MeshCoordsToCartesianVector(
+      Real x1, Real x2, Real x3, Real vx1, Real vx2, Real vx3,
+      Real& vx, Real& vy, Real& vz) const;
 
   // In GR, functions...
   // ...to return private variables
@@ -300,6 +316,16 @@ class Cartesian : public Coordinates {
 
  public:
   Cartesian(MeshBlock *pmb, ParameterInput *pin, bool flag);
+
+  // functions to make coordinate transformations.
+  void CartesianToMeshCoords(Real x, Real y, Real z, Real& x1, Real& x2, Real& x3) const;
+  void MeshCoordsToCartesian(Real x1, Real x2, Real x3, Real& x, Real& y, Real& z) const;
+  void CartesianToMeshCoordsVector(
+      Real x, Real y, Real z, Real vx, Real vy, Real vz,
+      Real& vx1, Real& vx2, Real& vx3) const;
+  void MeshCoordsToCartesianVector(
+      Real x1, Real x2, Real x3, Real vx1, Real vx2, Real vx3,
+      Real& vx, Real& vy, Real& vz) const;
 };
 
 //----------------------------------------------------------------------------------------
@@ -348,14 +374,26 @@ class Cylindrical : public Coordinates {
                      AthenaArray<Real> &u) final;
   void AddCoordTermsDivergence_STS(const Real dt, int stage,
                      const AthenaArray<Real> *flux,
-                     AthenaArray<Real> &u,
-                     AthenaArray<Real> &flux_div) final;
+                     AthenaArray<Real> &u, AthenaArray<Real> &flux_div) final;
   // coordinate source term for cosmic rays
   void AddCoordTermsDivergence_CR(const AthenaArray<Real> &u_cr,
                                AthenaArray<Real> &coord_src) final;
   // subtract coordinate source term for grad_pc
   void SubtractCoordTermsDivergence_CR(const AthenaArray<Real> &u_cr,
                                 AthenaArray<Real> &grad_pc) final;
+
+  // functions to make coordinate transformations.
+  void CartesianToMeshCoords(Real x, Real y, Real z, Real& x1, Real& x2, Real& x3) const;
+  void MeshCoordsToCartesian(Real x1, Real x2, Real x3, Real& x, Real& y, Real& z) const;
+  void CartesianToMeshCoordsVector(
+      Real x, Real y, Real z, Real vx, Real vy, Real vz,
+      Real& vx1, Real& vx2, Real& vx3) const;
+  void MeshCoordsToCartesianVector(
+      Real x1, Real x2, Real x3, Real vx1, Real vx2, Real vx3,
+      Real& vx, Real& vy, Real& vz) const;
+
+ private:
+  Real x2ref;
 };
 
 //----------------------------------------------------------------------------------------
@@ -423,6 +461,19 @@ class SphericalPolar : public Coordinates {
   // subtract coordinate source term for grad_pc
   void SubtractCoordTermsDivergence_CR(const AthenaArray<Real> &u_cr,
                               AthenaArray<Real> &grad_pc) final;
+
+  // functions to make coordinate transformations.
+  void CartesianToMeshCoords(Real x, Real y, Real z, Real& x1, Real& x2, Real& x3) const;
+  void MeshCoordsToCartesian(Real x1, Real x2, Real x3, Real& x, Real& y, Real& z) const;
+  void CartesianToMeshCoordsVector(
+      Real x, Real y, Real z, Real vx, Real vy, Real vz,
+      Real& vx1, Real& vx2, Real& vx3) const;
+  void MeshCoordsToCartesianVector(
+      Real x1, Real x2, Real x3, Real vx1, Real vx2, Real vx3,
+      Real& vx, Real& vy, Real& vz) const;
+
+ private:
+  Real x3ref;
 };
 
 //----------------------------------------------------------------------------------------

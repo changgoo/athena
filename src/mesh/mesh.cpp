@@ -47,6 +47,7 @@
 #include "../orbital_advection/orbital_advection.hpp"
 #include "../outputs/io_wrapper.hpp"
 #include "../parameter_input.hpp"
+#include "../particles/particles.hpp"
 #include "../reconstruct/reconstruction.hpp"
 #include "../scalars/scalars.hpp"
 #include "../utils/buffer_utils.hpp"
@@ -101,6 +102,7 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
     sts_loc(TaskType::main_int),
     muj(), nuj(), muj_tilde(), gammaj_tilde(),
     nbnew(), nbdel(),
+    particle_gravity(false),
     step_since_lb(), gflag(), turb_flag(), amr_updated(multilevel),
     // private members:
     next_phys_id_(), num_mesh_threads_(pin->GetOrAddInteger("mesh", "num_threads", 1)),
@@ -319,6 +321,9 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
   } else {
     max_level = 63;
   }
+
+  // Initialize Particles class.
+  if (PARTICLES) Particles::Initialize(this, pin);
 
   if (EOS_TABLE_ENABLED) peos_table = new EosTable(pin);
   InitUserMeshData(pin);
@@ -547,6 +552,13 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
     my_blocks(i-gids_)->pbval->SearchAndSetNeighbors(tree, ranklist, nslist);
   }
 
+  // Initialize neighbor lists in Particle class.
+  if (PARTICLES) {
+    for (int i = gids_; i <= gide_; i++)
+      for (Particles *ppar : my_blocks(i-gids_)->ppar)
+        ppar->LinkNeighbors(tree, nrbx1, nrbx2, nrbx3, root_level);
+  }
+
   ResetLoadBalanceVariables();
 
   if (turb_flag > 0) // TurbulenceDriver depends on the MeshBlock ctor
@@ -596,6 +608,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     sts_loc(TaskType::main_int),
     muj(), nuj(), muj_tilde(), gammaj_tilde(),
     nbnew(), nbdel(),
+    particle_gravity(false),
     step_since_lb(), gflag(), turb_flag(), amr_updated(multilevel),
     // private members:
     next_phys_id_(), num_mesh_threads_(pin->GetOrAddInteger("mesh", "num_threads", 1)),
@@ -612,13 +625,13 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     ConductionCoeff_{}, FieldDiffusivity_{},
     OrbitalVelocity_{}, OrbitalVelocityDerivative_{nullptr, nullptr},
     MGGravityBoundaryFunction_{MGPeriodicInnerX1, MGPeriodicOuterX1, MGPeriodicInnerX2,
-                        MGPeriodicOuterX2, MGPeriodicInnerX3, MGPeriodicOuterX3} {
+                               MGPeriodicOuterX2, MGPeriodicInnerX3, MGPeriodicOuterX3} {
   std::stringstream msg;
   RegionSize block_size;
   BoundaryFlag block_bcs[6];
   MeshBlock *pfirst{};
   IOWrapperSizeT *offset{};
-  IOWrapperSizeT datasize, listsize, headeroffset;
+  IOWrapperSizeT listsize, headeroffset;
 
   // mesh test
   if (mesh_test > 0) Globals::nranks = mesh_test;
@@ -641,8 +654,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
   headeroffset = resfile.GetPosition();
   // read the restart file
   // the file is already open and the pointer is set to after <par_end>
-  IOWrapperSizeT headersize = sizeof(int)*3+sizeof(Real)*2
-                              + sizeof(RegionSize)+sizeof(IOWrapperSizeT);
+  IOWrapperSizeT headersize = 3*sizeof(int) + 2*sizeof(Real) + sizeof(RegionSize);
   char *headerdata = new char[headersize];
   if (Globals::my_rank == 0) { // the master process reads the header data
     if (resfile.Read(headerdata, 1, headersize) != headersize) {
@@ -669,8 +681,6 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
   hdos += sizeof(Real);
   std::memcpy(&ncycle, &(headerdata[hdos]), sizeof(int));
   hdos += sizeof(int);
-  std::memcpy(&datasize, &(headerdata[hdos]), sizeof(IOWrapperSizeT));
-  hdos += sizeof(IOWrapperSizeT);   // (this updated value is never used)
 
   delete [] headerdata;
 
@@ -728,6 +738,9 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     max_level = 63;
   }
 
+  // Initialize Particles class.
+  if (PARTICLES) Particles::Initialize(this, pin);
+
   if (EOS_TABLE_ENABLED) peos_table = new EosTable(pin);
   InitUserMeshData(pin);
 
@@ -739,7 +752,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     udsize += ruser_mesh_data[n].GetSizeInBytes();
   if (udsize != 0) {
     char *userdata = new char[udsize];
-    if (Globals::my_rank == 0) { // only the master process reads the ID list
+    if (Globals::my_rank == 0) { // only the master process reads the user data
       if (resfile.Read(userdata, 1, udsize) != udsize) {
         msg << "### FATAL ERROR in Mesh constructor" << std::endl
             << "The restart file is broken." << std::endl;
@@ -747,7 +760,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
       }
     }
 #ifdef MPI_PARALLEL
-    // then broadcast the ID list
+    // then broadcast the user data
     MPI_Bcast(userdata, udsize, MPI_BYTE, 0, MPI_COMM_WORLD);
 #endif
 
@@ -766,7 +779,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
   }
 
   // read the ID list
-  listsize = sizeof(LogicalLocation)+sizeof(Real);
+  listsize = sizeof(LogicalLocation)+sizeof(double)+sizeof(IOWrapperSizeT);
   //allocate the idlist buffer
   char *idlist = new char[listsize*nbtotal];
   if (Globals::my_rank == 0) { // only the master process reads the ID list
@@ -787,6 +800,8 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     os += sizeof(LogicalLocation);
     std::memcpy(&(costlist[i]), &(idlist[os]), sizeof(double));
     os += sizeof(double);
+    std::memcpy(&(offset[i]), &(idlist[os]), sizeof(IOWrapperSizeT));
+    os += sizeof(IOWrapperSizeT);
     if (loclist[i].level > current_level) current_level = loclist[i].level;
   }
   delete [] idlist;
@@ -865,34 +880,39 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
   nblocal = nblist[Globals::my_rank];
   gids_ = nslist[Globals::my_rank];
   gide_ = gids_ + nblocal - 1;
-  char *mbdata = new char[datasize*nblocal];
+  IOWrapperSizeT mysize = 0, myoffset = headeroffset;
+  for (int n = 0; n < gids_; n++)
+    myoffset += offset[n];
+  for (int n = gids_; n <= gide_; n++)
+    mysize += offset[n];
+  char *mbdata = new char[mysize];
   my_blocks.NewAthenaArray(nblocal);
+
   // load MeshBlocks (parallel)
-  if (resfile.Read_at_all(mbdata, datasize, nblocal, headeroffset+gids_*datasize) !=
-      static_cast<unsigned int>(nblocal)) {
+  if (resfile.Read_at_all(mbdata, mysize, 1, myoffset) != 1) {
     msg << "### FATAL ERROR in Mesh constructor" << std::endl
         << "The restart file is broken or input parameters are inconsistent."
         << std::endl;
     ATHENA_ERROR(msg);
   }
-  for (int i=gids_; i<=gide_; i++) {
-    // Match fixed-width integer precision of IOWrapperSizeT datasize
-    std::uint64_t buff_os = datasize * (i-gids_);
+  std::uint64_t buff_os = 0;
+  for (int i = gids_; i <= gide_; i++) {
     SetBlockSizeAndBoundaries(loclist[i], block_size, block_bcs);
     my_blocks(i-gids_) = new MeshBlock(i, i-gids_, this, pin, loclist[i], block_size,
                                        block_bcs, costlist[i], mbdata+buff_os, gflag);
     my_blocks(i-gids_)->pbval->SearchAndSetNeighbors(tree, ranklist, nslist);
+    buff_os += offset[i];
   }
   delete [] mbdata;
-  // check consistency
-  if (datasize != my_blocks(0)->GetBlockSizeInBytes()) {
-    msg << "### FATAL ERROR in Mesh constructor" << std::endl
-        << "The restart file is broken or input parameters are inconsistent."
-        << std::endl;
-    ATHENA_ERROR(msg);
-  }
 
   ResetLoadBalanceVariables();
+
+  // Initialize neighbor lists in Particle class.
+  if (PARTICLES) {
+    for (int i = 0; i < nblocal; ++i)
+      for (Particles *ppar : my_blocks(i)->ppar)
+        ppar->LinkNeighbors(tree, nrbx1, nrbx2, nrbx3, root_level);
+  }
 
   // clean up
   delete [] offset;
@@ -1407,6 +1427,9 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
       }
     }
 
+    // Preprocess the Particles class.
+    if (PARTICLES) Particles::PostInitialize(this, pin);
+
     // add initial perturbation for decaying or impulsive turbulence
     if (((turb_flag == 1) || (turb_flag == 2)) && (res_flag == 0))
       ptrbd->Driving();
@@ -1713,6 +1736,7 @@ void Mesh::SetBlockSizeAndBoundaries(LogicalLocation loc, RegionSize &block_size
     block_size.x1max = MeshGenerator_[X1DIR](rx, mesh_size);
     block_bcs[BoundaryFace::outer_x1] = BoundaryFlag::block;
   }
+  block_size.x1len = block_size.x1max - block_size.x1min;
 
   // calculate physical block size, x2
   if (mesh_size.nx2 == 1) {
@@ -1740,6 +1764,7 @@ void Mesh::SetBlockSizeAndBoundaries(LogicalLocation loc, RegionSize &block_size
       block_bcs[BoundaryFace::outer_x2] = BoundaryFlag::block;
     }
   }
+  block_size.x2len = block_size.x2max - block_size.x2min;
 
   // calculate physical block size, x3
   if (mesh_size.nx3 == 1) {
@@ -1767,6 +1792,7 @@ void Mesh::SetBlockSizeAndBoundaries(LogicalLocation loc, RegionSize &block_size
       block_bcs[BoundaryFace::outer_x3] = BoundaryFlag::block;
     }
   }
+  block_size.x3len = block_size.x3max - block_size.x3min;
 
   block_size.x1rat = mesh_size.x1rat;
   block_size.x2rat = mesh_size.x2rat;

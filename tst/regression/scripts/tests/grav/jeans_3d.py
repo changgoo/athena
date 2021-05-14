@@ -133,7 +133,7 @@ def analyze():
         analyze_status = False
     if data[8][4] > 1.e-7:
         logger.warning("Linear wave error is too large for BlockFFT gravity %g",
-                       data[1][4])
+                       data[8][4])
         analyze_status = False
     if data[1][4] != data[5][4]:
         logger.warning(

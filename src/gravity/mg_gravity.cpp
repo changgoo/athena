@@ -24,6 +24,7 @@
 #include "../mesh/mesh.hpp"
 #include "../multigrid/multigrid.hpp"
 #include "../parameter_input.hpp"
+#include "../particles/particles.hpp"
 #include "gravity.hpp"
 #include "mg_gravity.hpp"
 
@@ -105,10 +106,28 @@ void MGGravityDriver::Solve(int stage) {
   for (int i=0; i<pmy_mesh_->nblocal; ++i)
     vmg_.push_back(pmy_mesh_->my_blocks(i)->pmg);
 
+  if (PARTICLES && pmy_mesh_->particle_gravity)
+    Particles::FindDensityOnMesh(pmy_mesh_, false, true);
+
   // load the source
   for (Multigrid* pmg : vmg_) {
     // assume all the data are located on the same node
-    pmg->LoadSource(pmg->pmy_block_->phydro->u, IDN, NGHOST, four_pi_G_);
+    AthenaArray<Real> rho;
+    rho.InitWithShallowSlice(pmg->pmy_block_->phydro->u,4,IDN,1);
+
+    if (PARTICLES && pmy_mesh_->particle_gravity) {
+      AthenaArray<Real> rhosum(rho);
+      for (Particles *ppar : pmg->pmy_block_->ppar_grav) {
+        AthenaArray<Real> rhop(ppar->GetMassDensity());
+        for (int k = pmg->pmy_block_->ks; k <= pmg->pmy_block_->ke; ++k)
+          for (int j = pmg->pmy_block_->js; j <= pmg->pmy_block_->je; ++j)
+            for (int i = pmg->pmy_block_->is; i <= pmg->pmy_block_->ie; ++i)
+              rhosum(k,j,i) += rhop(k,j,i);
+      }
+      pmg->LoadSource(rhosum, 0, NGHOST, four_pi_G_);
+    } else {
+      pmg->LoadSource(rho, 0, NGHOST, four_pi_G_);
+    }
     if (mode_ >= 2) // iterative mode - load initial guess
       pmg->LoadFinestData(pmg->pmy_block_->pgrav->phi, 0, NGHOST);
   }

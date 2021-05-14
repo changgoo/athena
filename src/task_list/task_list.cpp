@@ -10,6 +10,8 @@
 // C headers
 
 // C++ headers
+#include <fstream> // ofstream
+#include <string> // string
 //#include <vector> // formerly needed for vector of MeshBlock ptrs in DoTaskListOneStage
 
 // Athena++ headers
@@ -39,7 +41,10 @@ TaskListStatus TaskList::DoAllAvailableTasks(MeshBlock *pmb, int stage, TaskStat
       if (ts.finished_tasks.CheckDependencies(taski.dependency)) {
         if (taski.lb_time) pmb->StartTimeMeasurement();
         ret = (this->*task_list_[i].TaskFunc)(pmb, stage);
-        if (taski.lb_time) pmb->StopTimeMeasurement();
+        if (taski.lb_time) {
+          pmb->StopTimeMeasurement();
+          taski.task_time += pmb->lb_time_;
+        }
         if (ret != TaskStatus::fail) { // success
           ts.num_tasks_left--;
           ts.finished_tasks.SetFinished(taski.task_id);
@@ -88,4 +93,64 @@ void TaskList::DoTaskListOneStage(Mesh *pmesh, int stage) {
     }
   }
   return;
+}
+
+//----------------------------------------------------------------------------------------
+//! \fn void TaskList::OutputAllTaskTime()
+//! \brief print all task_time
+
+void TaskList::OutputAllTaskTime(const int ncycle, std::string basename) {
+  double time_per_step = 0.;
+  double all_task_time[128];
+  int ntask_time = 0;
+
+  for (int i=0; i<ntasks; i++) {
+    Task &taski = task_list_[i];
+    if (taski.lb_time) {
+      time_per_step += taski.task_time;
+      all_task_time[ntask_time] = taski.task_time;
+      taski.task_time = 0.; // reset task_time
+      ntask_time++;
+    }
+  }
+
+#ifdef MPI_PARALLEL
+  MPI_Allreduce(MPI_IN_PLACE, all_task_time, ntask_time, MPI_DOUBLE, MPI_SUM,
+    MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &time_per_step, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+#endif
+  if (Globals::my_rank == 0) {
+    std::ofstream os;
+    std::string fname;
+    fname.assign(basename);
+    fname.append(".task_time.txt");
+    // open 'loop_time.txt' file
+    if (newfile_) {
+      os.open(fname.c_str(), std::ofstream::out);
+      newfile_ = false;
+    } else {
+      os.open(fname.c_str(), std::ofstream::app);
+    }
+
+    if (!os.is_open()) {
+      std::cout << "### ERROR in function OutputAllTaskTime" << std::endl
+                << "Cannot open " << fname << std::endl;
+      return;
+    }
+
+    int j = 0;
+    os << "# ncycle=" << ncycle
+       << ", TaskList=" << task_list_name
+       << ", time=" << time_per_step << std::endl;
+    for (int i=0; i<ntasks; i++) {
+      Task &taski = task_list_[i];
+      if (taski.lb_time) {
+        os << "  " << taski.task_name
+           << ", time=" << all_task_time[j]
+           << ", fraction=" << all_task_time[j]/time_per_step << std::endl;
+        j++;
+      }
+    }
+    os.close();
+  }
 }

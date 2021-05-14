@@ -120,7 +120,7 @@ class OutputType {
 
 class HistoryOutput : public OutputType {
  public:
-  explicit HistoryOutput(OutputParameters oparams) : OutputType(oparams) {}
+  explicit HistoryOutput(OutputParameters oparams);
   void WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) override;
 };
 
@@ -131,6 +131,16 @@ class HistoryOutput : public OutputType {
 class FormattedTableOutput : public OutputType {
  public:
   explicit FormattedTableOutput(OutputParameters oparams) : OutputType(oparams) {}
+  void WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) override;
+};
+
+//----------------------------------------------------------------------------------------
+//! \class ParticleFormattedTableOutput
+//! \brief derived OutputType class for formatted table (tabular) data
+
+class ParticleFormattedTableOutput : public OutputType {
+ public:
+  explicit ParticleFormattedTableOutput(OutputParameters oparams) : OutputType(oparams) {}
   void WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) override;
 };
 
