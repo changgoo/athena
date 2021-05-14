@@ -295,7 +295,9 @@ void BlockFFTGravity::ApplyKernel() {
   // Apply Kernel                         (j,i,k)
   Real four_pi_G = pmy_block_->pgrav->four_pi_G;
   Real time = pmy_block_->pmy_mesh->time;
-  Real qomt = qshear_*Omega_0_*time;
+  Real qomL = qshear_*Omega_0_*Lx1_;
+  Real dt = time-(static_cast<int>(qomL*time/Lx2_))*Lx2_/qomL;
+  Real qomt = qshear_*Omega_0_*dt;
   if (gbflag==GravityBoundaryFlag::periodic) {
     Real kx,kxt,ky,kz;
     Real kernel;
