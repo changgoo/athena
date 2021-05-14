@@ -74,10 +74,11 @@ class BlockFFTGravity : public BlockFFT {
   std::complex<Real> *grf_; // Green's function for open BC
 #ifdef MPI_PARALLEL
 #ifdef FFT
-  FFTMPI_NS::FFT3d *pf3dgrf_;
+  FFTMPI_NS::FFT3d *pf3dgrf_; // FFT3d instance for FFT'ing open BC Green's func.
 #endif
 #endif
-  AthenaArray<Real> send_buf, recv_buf, roll_var, roll_buf, pflux;
+  // buffers for roll-unroll method
+  AthenaArray<Real> roll_var, roll_buf, send_buf, recv_buf, pflux;
   AthenaArray<Real> send_gbuf, recv_gbuf; // ghost zone buffers at y boundaries
 };
 

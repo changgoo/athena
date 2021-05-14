@@ -423,10 +423,19 @@ void BlockFFTGravity::ApplyKernel() {
 //----------------------------------------------------------------------------------------
 //! \fn void BlockFFTGravity::Solve(int stage)
 //! \brief Solves Poisson equation and calls FFTGravityTaskList
+//! The steps are different for different gravity boundary conditions. This function
+//! is an umbrella function that executes required steps depending on the boundary
+//! conditions.
 
 void BlockFFTGravity::Solve(int stage) {
 #ifdef FFT
 #ifdef MPI_PARALLEL
+  // =====================================================================================
+  // Case 1:
+  // x: shear_periodic
+  // y: periodic
+  // z: periodic or open
+  // =====================================================================================
   if (SHEAR_PERIODIC & PHASE_SHIFT) {
     // Use "phase shift" method for the shearing-periodic boundary condition.
     // It was found that the phase shift method introduces spurious error when the
@@ -476,7 +485,7 @@ void BlockFFTGravity::Solve(int stage) {
     // BC, (x'+Lx, y') = (x', y'+Ly) = (x', y'), in this new coordinate system.
     // Since Poisson equation is not covarient for this transform, we need to modify
     // the equation and therefore the kernel used in ApplyKernel.
-    // TODO Consider block2mid with (i,k,j) -> (i,k,j), etc.
+    // TODO(SMOON) Consider block2mid with (i,k,j) -> (i,k,j), etc.
     Real time = pmy_block_->pmy_mesh->time;
     Real qomL = qshear_*Omega_0_*Lx1_;
     Real dt = time-(static_cast<int>(qomL*time/Lx2_))*Lx2_/qomL;
@@ -484,7 +493,7 @@ void BlockFFTGravity::Solve(int stage) {
     rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
 
     // Make y axis fast (required for RemapFluxPlm or RemapFluxPpm)
-    // TODO isn't (i,k,j) more efficient than (k,i,j)?
+    // TODO(SMOON) isn't (i,k,j) more efficient than (k,i,j)?
     for (int k=ks; k<=ke; k++) {
       for (int i=is; i<=ie; i++) {
         for (int j=js-NGHOST; j<=je+NGHOST; j++) {
@@ -532,6 +541,12 @@ void BlockFFTGravity::Solve(int stage) {
         }
       }
     }
+  // =====================================================================================
+  // Case 2:
+  // x: open
+  // y: open
+  // z: open
+  // =====================================================================================
   } else if (gbflag==GravityBoundaryFlag::open) {
     // For open boundary condition, we use a convolution method in which the
     // 8x-extended domain is assumed. Instead of zero-padding the density, we
@@ -539,6 +554,8 @@ void BlockFFTGravity::Solve(int stage) {
     // to compute the full 8x-extended convolution.
     AthenaArray<Real> rho;
     rho.InitWithShallowSlice(pmy_block_->phydro->u,4,IDN,1);
+    // ZeroClear is necessary because we "add" each parity contributions
+    // to pgrav->phi.
     pmy_block_->pgrav->phi.ZeroClear();
     for (int pz=0; pz<=1; ++pz) {
       for (int py=0; py<=1; ++py) {
@@ -551,6 +568,12 @@ void BlockFFTGravity::Solve(int stage) {
         }
       }
     }
+  // =====================================================================================
+  // Case 3:
+  // x: periodic
+  // y: periodic
+  // z: periodic or open
+  // =====================================================================================
   } else {
     // Periodic or disk BC without shearing box
     AthenaArray<Real> rho;
@@ -724,7 +747,8 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
   int joffset,joverlap,Ngrids;
   Real yshear,eps;
   int sendto_id,getfrom_id,upper_id,lower_id,cnt,ierr;
-  int remapvar_tag=1992; // TODO How should I set the tag?
+  // SMOON: currently, messages are received one at a time, so there is no confusion
+  int remapvar_tag=0;
   MPI_Request rq;
   LogicalLocation loc, &my_loc=pmy_block_->loc;
   Coordinates *pc = pmy_block_->pcoord;
