@@ -435,7 +435,9 @@ void BlockFFTGravity::Solve(int stage) {
     // when the sheared distance is an integer multiple of the cell width, and then
     // linearly interpolate the solution in time.
     Real time = pmy_block_->pmy_mesh->time;
-    Real qomt = qshear_*Omega_0_*time;
+    Real qomL = qshear_*Omega_0_*Lx1_;
+    Real dt = time-(static_cast<int>(qomL*time/Lx2_))*Lx2_/qomL;
+    Real qomt = qshear_*Omega_0_*dt;
     AthenaArray<Real> rho;
     Real p,eps;
 
