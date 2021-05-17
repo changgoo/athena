@@ -214,6 +214,7 @@ class Mesh {
   friend class HydroDiffusion;
   friend class FieldDiffusion;
   friend class OrbitalAdvection;
+  friend class BlockFFTGravity;
 #ifdef HDF5OUTPUT
   friend class ATHDF5Output;
 #endif

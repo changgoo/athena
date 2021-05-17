@@ -47,6 +47,7 @@ class BlockFFTGravity : public BlockFFT {
 
   // data
   bool SHEAR_PERIODIC; // flag for shear periodic boundary (true w/ , false w/o)
+  bool PHASE_SHIFT; // False if using roll-unroll method
   GravityBoundaryFlag gbflag; // flag for the gravity boundary condition
   GreenFuncFlag grfflag; // flag for the Green's function
 
@@ -59,6 +60,7 @@ class BlockFFTGravity : public BlockFFT {
   void LoadOBCSource(const AthenaArray<Real> &src, int px, int py, int pz);
   void RetrieveOBCResult(AthenaArray<Real> &dst, int px, int py, int pz);
   void MultiplyGreen(int px, int py, int pz);
+  void RollUnroll(AthenaArray<Real> &dat, Real dt);
   void SetPhysicalBoundaries();
 
  private:
@@ -70,12 +72,15 @@ class BlockFFTGravity : public BlockFFT {
   const std::complex<Real> I_; // sqrt(-1)
   std::complex<Real> *in2_,*in_e_,*in_o_;
   std::complex<Real> *grf_; // Green's function for open BC
-#ifdef FFT
 #ifdef MPI_PARALLEL
-  FFTMPI_NS::FFT3d *pf3dgrf_;
+#ifdef FFT
+  FFTMPI_NS::FFT3d *pf3dgrf_; // FFT3d instance for FFT'ing open BC Green's func.
 #endif
 #endif
   bool is_particle_gravity;
+  // buffers for roll-unroll method
+  AthenaArray<Real> roll_var, roll_buf, send_buf, recv_buf, pflux;
+  AthenaArray<Real> send_gbuf, recv_gbuf; // ghost zone buffers at y boundaries
 };
 
 #endif // GRAVITY_BLOCK_FFT_GRAVITY_HPP_
