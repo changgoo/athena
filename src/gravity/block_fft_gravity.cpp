@@ -466,8 +466,6 @@ void BlockFFTGravity::Solve(int stage) {
     Real qomt = qshear_*Omega_0_*dt;
     Real p,eps;
 
-  
-
     // left integer time
     p = std::floor(qomt*Lx1_/Lx2_*(Real)Nx2);
     eps = qomt*Lx1_/Lx2_*(Real)Nx2 - p;
@@ -520,7 +518,8 @@ void BlockFFTGravity::Solve(int stage) {
       for (int i=is; i<=ie; i++) {
         for (int j=js-NGHOST; j<=je+NGHOST; j++) {
           if (is_particle_gravity) roll_var(k,i,j) = rhosum(k,j,i);
-          else roll_var(k,i,j) = rho(k,j,i);
+          else
+            roll_var(k,i,j) = rho(k,j,i);
         }
       }
     }
