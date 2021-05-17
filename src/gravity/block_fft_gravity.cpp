@@ -39,9 +39,9 @@ BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
       Lx2_(pmb->pmy_mesh->mesh_size.x2max - pmb->pmy_mesh->mesh_size.x2min),
       Lx3_(pmb->pmy_mesh->mesh_size.x3max - pmb->pmy_mesh->mesh_size.x3min),
       I_(0.0,1.0), is_particle_gravity(pmb->pmy_mesh->particle_gravity),
-      roll_var(nx3+2*NGHOST, nx1+2*NGHOST, nx2+2*NGHOST),
-      roll_buf(nx3+2*NGHOST, nx1+2*NGHOST, nx2+2*NGHOST),
-      send_buf(nx3*nx2), recv_buf(nx3*nx2), pflux(nx2+1+2*NGHOST),
+      roll_var(pmb->ncells3, pmb->ncells1, pmb->ncells2),
+      roll_buf(pmb->ncells3, pmb->ncells1, pmb->ncells2),
+      send_buf(nx3*nx2), recv_buf(nx3*nx2), pflux(pmb->ncells2+1),
       send_gbuf(nx3*nx1*NGHOST), recv_gbuf(nx3*nx1*NGHOST) {
   gtlist_ = new FFTGravitySolverTaskList(pin, pmb->pmy_mesh);
   gbflag = GetGravityBoundaryFlag(pin->GetString("self_gravity", "grav_bc"));
