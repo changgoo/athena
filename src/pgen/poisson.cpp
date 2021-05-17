@@ -155,8 +155,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           phia *= four_pi_G*SQR(a0/(0.5*PI));
         } else if (iprob == 7) {
           // for roll-unroll test
-          int gi = loc.lx1*block_size.nx1 + (i-is);
-          int gj = loc.lx2*block_size.nx2 + (j-js);
+          int gi = static_cast<int>(loc.lx1)*block_size.nx1 + (i-is);
+          int gj = static_cast<int>(loc.lx2)*block_size.nx2 + (j-js);
           if ((gj>=5)&(gj<9)) {
             den = 1.0;
           } else if (gj==15) {
