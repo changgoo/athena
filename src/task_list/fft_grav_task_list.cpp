@@ -146,11 +146,7 @@ void FFTGravitySolverTaskList::StartupTaskList(MeshBlock *pmb, int stage) {
     Real dt_fc   = pmb->pmy_mesh->dt*sbeta[stage-1];
     Real dt_int  = pmb->pmy_mesh->dt*ebeta[stage-1];
     Real time = pmb->pmy_mesh->time;
-    if (pmb->pmy_mesh->ncycle == 0) {
-      pmb->pbval->ComputeShear(time, time);
-    } else {
-      pmb->pbval->ComputeShear(time+dt_fc, time+dt_int);
-    }
+    pmb->pbval->ComputeShear(time+dt_fc, time+dt_int);
   }
   pmb->pbval->StartReceivingSubset(BoundaryCommSubset::poisson,
                                    pmb->pbval->bvars_fft_grav);
