@@ -126,7 +126,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   }
 
   // initialize particle
-  if (PARTICLES) {
+  if (pmy_mesh->particle) {
     if (!(ppar[0]->partype.compare("star") == 0)) {
       std::stringstream msg;
       msg << "### FATAL ERROR in function [MeshBlock::ProblemGenerator]" << std::endl

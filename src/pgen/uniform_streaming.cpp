@@ -26,7 +26,7 @@
 
 void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   // Sanity check.
-  if (!PARTICLES) {
+  if (!pmy_mesh->particle) {
     std::stringstream msg;
     msg << "### FATAL ERROR in function [MeshBlock::ProblemGenerator]" << std::endl
         << "Dust particles were not enabled at configuration. " << std::endl;

@@ -193,10 +193,11 @@ void RestartOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool force_wr
       pdata += pmb->pfield->b.x3f.GetSizeInBytes();
     }
 
-    if (PARTICLES) {
-      for (Particles *ppar : pmb->ppar)
-        ppar->PackParticlesForRestart(pdata);
-    }
+    // particles:
+    for (Particles *ppar : pmb->ppar)
+      ppar->PackParticlesForRestart(pdata);
+
+    // CR variables:
     if (CR_ENABLED) {
       std::memcpy(pdata,pmb->pcr->u_cr.data(),pmb->pcr->u_cr.GetSizeInBytes());
       pdata += pmb->pcr->u_cr.GetSizeInBytes();

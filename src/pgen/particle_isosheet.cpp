@@ -109,7 +109,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     }
   }
 
-  if (PARTICLES && (rho0_star > 0.0)) {
+  if (pmy_mesh->particle && (rho0_star > 0.0)) {
     Real sigz = pin->GetReal("problem","sigma_star");
 
     StarParticles *pp = dynamic_cast<StarParticles*>(ppar[0]);
@@ -157,7 +157,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 Real DeltaRho(MeshBlock *pmb, int iout) {
   Real l1_err{0};
 
-  if ((!PARTICLES || (rho0_star==0)) && (iout == 1)) return l1_err;
+  if ((!pmb->pmy_mesh->particle || (rho0_star==0)) && (iout == 1)) return l1_err;
 
   int is=pmb->is, ie=pmb->ie;
   int js=pmb->js, je=pmb->je;

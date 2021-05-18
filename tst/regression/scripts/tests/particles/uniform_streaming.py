@@ -12,7 +12,7 @@ import athena_read                             # utilities for reading Athena++ 
 def prepare(**kwargs):
     """Configure and make the executable. """
 
-    athena.configure('p', 'mpi', prob='uniform_streaming', **kwargs)
+    athena.configure('mpi', prob='uniform_streaming', **kwargs)
     athena.make()
 
 

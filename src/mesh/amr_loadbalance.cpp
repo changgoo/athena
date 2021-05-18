@@ -573,7 +573,7 @@ void Mesh::RedistributeAndRefineMeshBlocks(ParameterInput *pin, int ntot) {
           // fine to coarse on the same MPI rank (different AMR level) - restriction
           MeshBlock* pob = FindMeshBlock(on+ll);
           FillSameRankFineToCoarseAMR(pob, newlist(n-nbs), loclist[on+ll]);
-          if (PARTICLES) {
+          if (particle) {
             for (int ipar=0; ipar < Particles::num_particles; ++ipar) {
               MeshBlock* mbf = newlist(n-nbs);
               Particles* pparc = pob->ppar[ipar];
@@ -587,7 +587,7 @@ void Mesh::RedistributeAndRefineMeshBlocks(ParameterInput *pin, int ntot) {
         // coarse to fine on the same MPI rank (different AMR level) - prolongation
         MeshBlock* pob = FindMeshBlock(on);
         FillSameRankCoarseToFineAMR(pob, newlist(n-nbs), newloc[n]);
-        if (PARTICLES) {
+        if (particle) {
           for (int ipar=0; ipar < Particles::num_particles; ++ipar) {
             MeshBlock* mbf = newlist(n-nbs);
             Particles* pparc = pob->ppar[ipar];
@@ -675,7 +675,7 @@ void Mesh::RedistributeAndRefineMeshBlocks(ParameterInput *pin, int ntot) {
   for (int i=0; i<nblocal; ++i)
     my_blocks(i)->pbval->SearchAndSetNeighbors(tree, ranklist, nslist);
 
-  if (PARTICLES) {
+  if (particle) {
     for (int i = 0; i < nblocal; ++i) {
       for (Particles *ppar : my_blocks(i)->ppar) {
         ppar->ClearNeighbors();

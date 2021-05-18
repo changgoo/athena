@@ -492,9 +492,7 @@ int main(int argc, char *argv[]) {
     pmesh->ncycle++;
     pmesh->time += pmesh->dt;
     mbcnt += pmesh->nbtotal;
-    if (PARTICLES) {
-      npcnt += Particles::GetTotalNumber(pmesh);
-    }
+    if (pmesh->particle) npcnt += Particles::GetTotalNumber(pmesh);
     pmesh->step_since_lb++;
 
     pmesh->LoadBalancingAndAdaptiveMeshRefinement(pinput);
@@ -611,7 +609,7 @@ int main(int argc, char *argv[]) {
     std::cout << std::endl << "zone-cycles = " << zonecycles << std::endl;
     std::cout << "cpu time used  = " << cpu_time << std::endl;
     std::cout << "zone-cycles/cpu_second = " << zc_cpus << std::endl;
-    if (PARTICLES) {
+    if (pmesh->particle) {
       double npart_cpus = npcnt / cpu_time;
       std::cout << "total particle cycles = " << npcnt << std::endl;
       std::cout << "particles/cpu_second = " << npart_cpus << std::endl;

@@ -247,7 +247,7 @@ class Mesh {
   Real muj, nuj, muj_tilde, gammaj_tilde;
   int nbtotal, nblocal, nbnew, nbdel;
   std::vector<ParticleParameters> particle_params;
-  bool particle_gravity;
+  bool particle, particle_gravity;
 
   int step_since_lb;
   int gflag;

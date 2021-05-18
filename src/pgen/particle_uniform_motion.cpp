@@ -95,7 +95,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     }
   }
 
-  if (PARTICLES) {
+  if (pmy_mesh->particle) {
     for (int ipar = 0; ipar < Particles::num_particles; ++ipar) {
       // Assign particles in each container to different regions
       Real xp1min = pin->GetReal(ppar[ipar]->input_block_name,"x1min");

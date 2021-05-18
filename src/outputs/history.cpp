@@ -45,7 +45,7 @@ HistoryOutput::HistoryOutput(OutputParameters oparams)
   // NEW_OUTPUT_TYPES:
   // "3" for 1-KE, 2-KE, 3-KE additional columns (come before tot-E)
   num_vars_ = (NHYDRO) + (NGRAV) + (NFIELD) + 3 + (NSCALARS);
-  if (PARTICLES) num_vars_ += Particles::NHISTORY*Particles::num_particles;
+  num_vars_ += Particles::NHISTORY*Particles::num_particles;
   if (CR_ENABLED) num_vars_ += 4;
 }
 
@@ -221,15 +221,13 @@ void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
   }  // end loop over MeshBlocks
 
   // Get history output from Particles class.
-  if (PARTICLES) {
-    for (int ipar=0; ipar<Particles::num_particles; ++ipar) {
-      int prev_out = (NHYDRO) + 3 + (NGRAV) + (NFIELD) + (NSCALARS) +
-                     (Particles::NHISTORY)*ipar;
-      for (int b=0; b<pm->nblocal; ++b) {
-        pmb = pm->my_blocks(b);
-        Particles *ppar(pmb->ppar[ipar]);
-        ppar->AddHistoryOutput(hst_data.get(),prev_out);
-      }
+  for (int ipar=0; ipar<Particles::num_particles; ++ipar) {
+    int prev_out = (NHYDRO) + 3 + (NGRAV) + (NFIELD) + (NSCALARS) +
+                    (Particles::NHISTORY)*ipar;
+    for (int b=0; b<pm->nblocal; ++b) {
+      pmb = pm->my_blocks(b);
+      Particles *ppar(pmb->ppar[ipar]);
+      ppar->AddHistoryOutput(hst_data.get(),prev_out);
     }
   }
 
@@ -308,13 +306,11 @@ void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
       for (int n=0; n<NSCALARS; n++) {
         std::fprintf(pfile,"[%d]=%d-scalar    ", iout++, n);
       }
-      if (PARTICLES) {
-        std::string output_names[Particles::NHISTORY];
-        for (int ipar = 0; ipar<Particles::num_particles; ++ipar) {
-          Particles::GetHistoryOutputNames(output_names, ipar);
-          for (int i = 0; i < Particles::NHISTORY; ++i)
-            std::fprintf(pfile, "[%d]=%-8s", iout++, output_names[i].data());
-        }
+      for (int ipar = 0; ipar<Particles::num_particles; ++ipar) {
+        std::string parhst_output_names[Particles::NHISTORY];
+        Particles::GetHistoryOutputNames(parhst_output_names, ipar);
+        for (int i = 0; i < Particles::NHISTORY; ++i)
+          std::fprintf(pfile, "[%d]=%-8s", iout++, parhst_output_names[i].data());
       }
       if (CR_ENABLED) {
         std::fprintf(pfile,"[%d]=Ec    ", iout++);
