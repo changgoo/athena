@@ -147,26 +147,30 @@ void Particles::Initialize(Mesh *pm, ParameterInput *pin) {
     pib = pib->pnext;  // move to next input block name
   }
 
-  if (SELF_GRAVITY_ENABLED && (num_particles_grav > 0))
-    pm->particle_gravity = true;
+  if (num_particles > 0) {
+    pm->particle = true;
 
-  if (Globals::my_rank == 0) {
-    std::cout << "Particles are initalized with "
-              << "N containers = " << num_particles << std::endl;
-    for (ParticleParameters ppnew : pm->particle_params)
-      std::cout << "  ipar = " << ppnew.ipar
-                << "  partype = " << ppnew.partype
-                << "  output = " << ppnew.table_output
-                << "  block_name = " << ppnew.block_name
-                << std::endl;
-  }
-  // Remember the pointer to input parameters.
-  pinput = pin;
+    if (SELF_GRAVITY_ENABLED && (num_particles_grav > 0))
+      pm->particle_gravity = true;
+
+    if (Globals::my_rank == 0) {
+      std::cout << "Particles are initalized with "
+                << "N containers = " << num_particles << std::endl;
+      for (ParticleParameters ppnew : pm->particle_params)
+        std::cout << "  ipar = " << ppnew.ipar
+                  << "  partype = " << ppnew.partype
+                  << "  output = " << ppnew.table_output
+                  << "  block_name = " << ppnew.block_name
+                  << std::endl;
+    }
+    // Remember the pointer to input parameters.
+    pinput = pin;
 
 #ifdef MPI_PARALLEL
-  // Get my MPI communicator.
-  MPI_Comm_dup(MPI_COMM_WORLD, &my_comm);
+    // Get my MPI communicator.
+    MPI_Comm_dup(MPI_COMM_WORLD, &my_comm);
 #endif
+  }
 
   initialized = true;
 }

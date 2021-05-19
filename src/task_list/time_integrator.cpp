@@ -86,6 +86,9 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
   // Read a flag for shear periodic
   SHEAR_PERIODIC = pm->shear_periodic;
 
+  // Read a flag for particles
+  PARTICLES = pm->particle;
+
   if (integrator == "rk4" || integrator == "ssprk5_4") {
     // shear periodic not work with rk4 or ssprk5_4
     if (SHEAR_PERIODIC) {

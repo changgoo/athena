@@ -180,7 +180,7 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
   //! * Compare both private member variables via BoundaryValues::CheckCounterPhysID
 
   peos = new EquationOfState(this, pin);
-  if (PARTICLES) {
+  if (pm->particle) {
     for (ParticleParameters pp : pm->particle_params) {
       Particles *newppar;
       if (pp.partype.compare("dust") == 0) {
@@ -319,7 +319,7 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
   }
 
   peos = new EquationOfState(this, pin);
-  if (PARTICLES) {
+  if (pm->particle) {
     for (ParticleParameters pp : pm->particle_params) {
       Particles *newppar;
       if (pp.partype.compare("dust") == 0) {
@@ -365,10 +365,8 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
     os += pfield->b.x3f.GetSizeInBytes();
   }
 
-  if (PARTICLES) {
-    for (int ipar = 0; ipar < Particles::num_particles; ++ipar)
-      ppar[ipar]->UnpackParticlesForRestart(mbdata, os);
-  }
+  for (int ipar = 0; ipar < Particles::num_particles; ++ipar)
+    ppar[ipar]->UnpackParticlesForRestart(mbdata, os);
 
   if(CR_ENABLED) {
     std::memcpy(pcr->u_cr.data(), &(mbdata[os]), pcr->u_cr.GetSizeInBytes());
@@ -512,10 +510,8 @@ std::size_t MeshBlock::GetBlockSizeInBytes() {
   if (MAGNETIC_FIELDS_ENABLED)
     size += (pfield->b.x1f.GetSizeInBytes() + pfield->b.x2f.GetSizeInBytes()
              + pfield->b.x3f.GetSizeInBytes());
-  if (PARTICLES) {
-    for (int ipar=0; ipar < Particles::num_particles; ++ipar)
-      size += ppar[ipar]->GetSizeInBytes();
-  }
+  for (int ipar=0; ipar < Particles::num_particles; ++ipar)
+    size += ppar[ipar]->GetSizeInBytes();
   if (CR_ENABLED)
     size += pcr->u_cr.GetSizeInBytes();
   if (NSCALARS > 0)

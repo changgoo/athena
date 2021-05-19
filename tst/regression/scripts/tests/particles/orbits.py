@@ -14,7 +14,7 @@ logger = logging.getLogger('athena' + __name__[7:])  # set logger name based on 
 def prepare(**kwargs):
     """Configure and make the executable. """
     logger.debug('Running test ' + __name__)
-    athena.configure('p', 'mpi', prob='particle_orbit', **kwargs)
+    athena.configure('mpi', prob='particle_orbit', **kwargs)
     athena.make()
 
 

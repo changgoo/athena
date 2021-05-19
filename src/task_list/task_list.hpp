@@ -233,6 +233,7 @@ class TimeIntegratorTaskList : public TaskList {
  private:
   bool ORBITAL_ADVECTION; // flag for orbital advection (true w/ , false w/o)
   bool SHEAR_PERIODIC; // flag for shear periodic boundary (true w/ , false w/o)
+  bool PARTICLES; // flag for particles (true w/ , false w/o)
   IntegratorWeight stage_wghts[MAX_NSTAGE];
 
   void AddTask(const TaskID& id, const TaskID& dep) override;

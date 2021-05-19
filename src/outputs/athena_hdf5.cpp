@@ -130,7 +130,7 @@ void ATHDF5Output::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
     if (output_params.cartesian_vector)
       num_variables[n_dataset] += 3;
     // Particles on mesh:
-    if (PARTICLES && variable.compare("prim") == 0)
+    if (variable.compare("prim") == 0)
       num_variables[n_dataset] += 4*Particles::num_particles;
     // Graviatational potential:
     if (SELF_GRAVITY_ENABLED)

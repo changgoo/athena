@@ -106,7 +106,7 @@ void MGGravityDriver::Solve(int stage) {
   for (int i=0; i<pmy_mesh_->nblocal; ++i)
     vmg_.push_back(pmy_mesh_->my_blocks(i)->pmg);
 
-  if (PARTICLES && pmy_mesh_->particle_gravity)
+  if (pmy_mesh_->particle_gravity)
     Particles::FindDensityOnMesh(pmy_mesh_, false, true);
 
   // load the source
@@ -115,7 +115,7 @@ void MGGravityDriver::Solve(int stage) {
     AthenaArray<Real> rho;
     rho.InitWithShallowSlice(pmg->pmy_block_->phydro->u,4,IDN,1);
 
-    if (PARTICLES && pmy_mesh_->particle_gravity) {
+    if (pmy_mesh_->particle_gravity) {
       AthenaArray<Real> rhosum(rho);
       for (Particles *ppar : pmg->pmy_block_->ppar_grav) {
         AthenaArray<Real> rhop(ppar->GetMassDensity());

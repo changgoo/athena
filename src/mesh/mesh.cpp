@@ -102,7 +102,7 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
     sts_loc(TaskType::main_int),
     muj(), nuj(), muj_tilde(), gammaj_tilde(),
     nbnew(), nbdel(),
-    particle_gravity(false),
+    particle(false), particle_gravity(false),
     step_since_lb(), gflag(), turb_flag(), amr_updated(multilevel),
     // private members:
     next_phys_id_(), num_mesh_threads_(pin->GetOrAddInteger("mesh", "num_threads", 1)),
@@ -323,7 +323,7 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
   }
 
   // Initialize Particles class.
-  if (PARTICLES) Particles::Initialize(this, pin);
+  Particles::Initialize(this, pin);
 
   if (EOS_TABLE_ENABLED) peos_table = new EosTable(pin);
   InitUserMeshData(pin);
@@ -553,7 +553,7 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
   }
 
   // Initialize neighbor lists in Particle class.
-  if (PARTICLES) {
+  if (particle) {
     for (int i = gids_; i <= gide_; i++)
       for (Particles *ppar : my_blocks(i-gids_)->ppar)
         ppar->LinkNeighbors(tree, nrbx1, nrbx2, nrbx3, root_level);
@@ -608,7 +608,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     sts_loc(TaskType::main_int),
     muj(), nuj(), muj_tilde(), gammaj_tilde(),
     nbnew(), nbdel(),
-    particle_gravity(false),
+    particle(false), particle_gravity(false),
     step_since_lb(), gflag(), turb_flag(), amr_updated(multilevel),
     // private members:
     next_phys_id_(), num_mesh_threads_(pin->GetOrAddInteger("mesh", "num_threads", 1)),
@@ -739,7 +739,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
   }
 
   // Initialize Particles class.
-  if (PARTICLES) Particles::Initialize(this, pin);
+  Particles::Initialize(this, pin);
 
   if (EOS_TABLE_ENABLED) peos_table = new EosTable(pin);
   InitUserMeshData(pin);
@@ -908,7 +908,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
   ResetLoadBalanceVariables();
 
   // Initialize neighbor lists in Particle class.
-  if (PARTICLES) {
+  if (particle) {
     for (int i = 0; i < nblocal; ++i)
       for (Particles *ppar : my_blocks(i)->ppar)
         ppar->LinkNeighbors(tree, nrbx1, nrbx2, nrbx3, root_level);
@@ -1428,7 +1428,7 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
     }
 
     // Preprocess the Particles class.
-    if (PARTICLES) Particles::PostInitialize(this, pin);
+    if (particle) Particles::PostInitialize(this, pin);
 
     // add initial perturbation for decaying or impulsive turbulence
     if (((turb_flag == 1) || (turb_flag == 2)) && (res_flag == 0))

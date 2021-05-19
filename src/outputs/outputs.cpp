@@ -755,46 +755,44 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
     }
   } // endif (MAGNETIC_FIELDS_ENABLED)
 
-  if (PARTICLES) {
-    // particle number density
-    if (output_params.variable.compare("np") == 0) {
-      for (int ipar = 0; ipar<Particles::num_particles; ++ipar) {
-        pod = new OutputData;
-        pod->type = "SCALARS";
-        pod->name = "np";
-        pod->name += std::to_string(ipar);
-        pod->data.InitWithShallowSlice(pmb->ppar[ipar]->ppm->weight, 4, 0, 1);
-        AppendOutputDataNode(pod);
-        num_vars_++;
-      }
+  // particle number density
+  if (output_params.variable.compare("np") == 0) {
+    for (int ipar = 0; ipar<Particles::num_particles; ++ipar) {
+      pod = new OutputData;
+      pod->type = "SCALARS";
+      pod->name = "np";
+      pod->name += std::to_string(ipar);
+      pod->data.InitWithShallowSlice(pmb->ppar[ipar]->ppm->weight, 4, 0, 1);
+      AppendOutputDataNode(pod);
+      num_vars_++;
     }
+  }
 
-    // particle velocity field
-    if (output_params.variable.compare("vp") == 0 ||
-        output_params.variable.compare("prim") == 0) {
-      for (int ipar = 0; ipar<Particles::num_particles; ++ipar) {
-        pod = new OutputData;
-        pod->type = "VECTORS";
-        pod->name = "vp";
-        pod->name += std::to_string(ipar);
-        pod->data = pmb->ppar[ipar]->GetVelocityField();
-        AppendOutputDataNode(pod);
-        num_vars_ += 3;
-      }
+  // particle velocity field
+  if (output_params.variable.compare("vp") == 0 ||
+      output_params.variable.compare("prim") == 0) {
+    for (int ipar = 0; ipar<Particles::num_particles; ++ipar) {
+      pod = new OutputData;
+      pod->type = "VECTORS";
+      pod->name = "vp";
+      pod->name += std::to_string(ipar);
+      pod->data = pmb->ppar[ipar]->GetVelocityField();
+      AppendOutputDataNode(pod);
+      num_vars_ += 3;
     }
+  }
 
-    // particle mass density
-    if (output_params.variable.compare("rhop") == 0 ||
-        output_params.variable.compare("prim") == 0) {
-      for (int ipar = 0; ipar<Particles::num_particles; ++ipar) {
-        pod = new OutputData;
-        pod->type = "SCALARS";
-        pod->name = "rhop";
-        pod->name += std::to_string(ipar);
-        pod->data = pmb->ppar[ipar]->GetMassDensity();
-        AppendOutputDataNode(pod);
-        num_vars_++;
-      }
+  // particle mass density
+  if (output_params.variable.compare("rhop") == 0 ||
+      output_params.variable.compare("prim") == 0) {
+    for (int ipar = 0; ipar<Particles::num_particles; ++ipar) {
+      pod = new OutputData;
+      pod->type = "SCALARS";
+      pod->name = "rhop";
+      pod->name += std::to_string(ipar);
+      pod->data = pmb->ppar[ipar]->GetMassDensity();
+      AppendOutputDataNode(pod);
+      num_vars_++;
     }
   }
 
@@ -920,7 +918,7 @@ void Outputs::MakeOutputs(Mesh *pm, ParameterInput *pin, bool wtflag) {
         (wtflag && ptype->output_params.file_type == "rst")) {
       if (first && ptype->output_params.file_type != "hst") {
         pm->ApplyUserWorkBeforeOutput(pin);
-        if (PARTICLES) Particles::FindDensityOnMesh(pm, true, false);
+        if (pm->particle) Particles::FindDensityOnMesh(pm, true, false);
         first = false;
       }
       ptype->WriteOutputFile(pm, pin, wtflag);

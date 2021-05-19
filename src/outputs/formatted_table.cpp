@@ -160,7 +160,7 @@ void FormattedTableOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool f
 void ParticleFormattedTableOutput::WriteOutputFile(Mesh *pm,
   ParameterInput *pin, bool flag) {
   // Output particle data if any.
-  if (PARTICLES) Particles::FormattedTableOutput(pm, output_params);
+  if (pm->particle) Particles::FormattedTableOutput(pm, output_params);
 
   // increment counters
   output_params.file_number++;
