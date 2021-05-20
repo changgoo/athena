@@ -80,9 +80,9 @@ class CellCenteredBoundaryVariable : public BoundaryVariable {
 
   //!@{
   //! Shearing box
-  void SendShearingBoxBoundaryBuffers();
+  virtual void SendShearingBoxBoundaryBuffers();
   bool ReceiveShearingBoxBoundaryBuffers();
-  void SetShearingBoxBoundaryBuffers();
+  virtual void SetShearingBoxBoundaryBuffers();
   void SendFluxShearingBoxBoundaryBuffers();
   bool ReceiveFluxShearingBoxBoundaryBuffers();
   void SetFluxShearingBoxBoundaryBuffers();
@@ -180,6 +180,8 @@ class CellCenteredBoundaryVariable : public BoundaryVariable {
                                             Real *buf, int nb);
   void SetFluxShearingBoxBoundarySameLevel(AthenaArray<Real> &src,
                                            Real *buf, const int nb);
+
+  friend class ParticleMeshBoundaryVariable;
 };
 
 #endif // BVALS_CC_BVALS_CC_HPP_

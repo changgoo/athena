@@ -1026,6 +1026,9 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
       AddTask(INT_PAR, NONE);
       AddTask(SEND_PAR, INT_PAR);
       AddTask(RECV_PAR, NONE);
+      AddTask(SEND_PM, (RECV_PAR|SEND_PAR));
+      AddTask(RECV_PM, NONE);
+      AddTask(SETB_PM, RECV_PM);
     }
 
     if (MAGNETIC_FIELDS_ENABLED) { // MHD
@@ -1146,7 +1149,7 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
       before_bval = (before_bval|SETB_CR|SEND_CR);
       before_userwork = (before_userwork|CR_OPACITY);
     }
-    if (PARTICLES) before_bval = (before_bval|RECV_PAR);
+    if (PARTICLES) before_bval = (before_bval|RECV_PAR|RECV_PM);
 
     AddTask(PHY_BVAL,before_bval);
     if (CR_ENABLED)
@@ -1481,6 +1484,12 @@ void TimeIntegratorTaskList::AddTask(const TaskID& id, const TaskID& dep) {
         (&TimeIntegratorTaskList::ReceiveParticleMesh);
     task_list_[ntasks].lb_time = false;
     task_list_[ntasks].task_name.append("ReceiveParticleMesh");
+  } else if (id == SETB_PM) {
+    task_list_[ntasks].TaskFunc=
+        static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
+        (&TimeIntegratorTaskList::SetBoundariesParticleMesh);
+    task_list_[ntasks].lb_time = false;
+    task_list_[ntasks].task_name.append("SetBoundariesParticleMesh");
   } else if (id == CALC_CRFLX) {
     task_list_[ntasks].TaskFunc=
         static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
@@ -2180,7 +2189,7 @@ TaskStatus TimeIntegratorTaskList::ReceiveEMFShear(MeshBlock *pmb, int stage) {
 //--------------------------------------------------------------------------------------
 // Functions to manage particles
 
-enum TaskStatus TimeIntegratorTaskList::IntegrateParticles(MeshBlock *pmb, int stage) {
+TaskStatus TimeIntegratorTaskList::IntegrateParticles(MeshBlock *pmb, int stage) {
   if (integrator == "vl2") {
     for (Particles *ppar : pmb->ppar)
       ppar->Integrate(stage);
@@ -2189,16 +2198,17 @@ enum TaskStatus TimeIntegratorTaskList::IntegrateParticles(MeshBlock *pmb, int s
   return TaskStatus::fail;
 }
 
-enum TaskStatus TimeIntegratorTaskList::SendParticles(MeshBlock *pmb, int stage) {
+TaskStatus TimeIntegratorTaskList::SendParticles(MeshBlock *pmb, int stage) {
   for (Particles *ppar : pmb->ppar)
     ppar->SendToNeighbors();
   return TaskStatus::success;
 }
 
-enum TaskStatus TimeIntegratorTaskList::ReceiveParticles(MeshBlock *pmb, int stage) {
+TaskStatus TimeIntegratorTaskList::ReceiveParticles(MeshBlock *pmb, int stage) {
   bool ret_all(true), ret(false);
   for (Particles *ppar : pmb->ppar) {
     ret = ppar->ReceiveFromNeighbors();
+    if (ret) ppar->FindLocalDensityOnMesh(false);
     ret_all = (ret_all && ret);
   }
   if (ret_all)
@@ -2207,11 +2217,25 @@ enum TaskStatus TimeIntegratorTaskList::ReceiveParticles(MeshBlock *pmb, int sta
     return TaskStatus::fail;
 }
 
-enum TaskStatus TimeIntegratorTaskList::SendParticleMesh(MeshBlock *pmb, int stage) {
+TaskStatus TimeIntegratorTaskList::SendParticleMesh(MeshBlock *pmb, int stage) {
+  for (Particles *ppar : pmb->ppar) ppar->SendParticleMesh();
   return TaskStatus::success;
 }
 
-enum TaskStatus TimeIntegratorTaskList::ReceiveParticleMesh(MeshBlock *pmb, int stage) {
+TaskStatus TimeIntegratorTaskList::ReceiveParticleMesh(MeshBlock *pmb, int stage) {
+  bool ret_all(true), ret(false);
+  for (Particles *ppar : pmb->ppar) {
+    ret = ppar->ReceiveParticleMesh();
+    ret_all = (ret_all & ret);
+  }
+  if (ret_all)
+    return TaskStatus::success;
+  else
+    return TaskStatus::fail;
+}
+
+TaskStatus TimeIntegratorTaskList::SetBoundariesParticleMesh(MeshBlock *pmb, int stage) {
+  for (Particles *ppar : pmb->ppar) ppar->AddBoundaryParticleMesh();
   return TaskStatus::success;
 }
 

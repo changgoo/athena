@@ -71,10 +71,6 @@ void FFTGravityDriver::Solve(int stage, int mode) {
   int nbs = nslist_[Globals::my_rank];
   int nbe = nbs+nblist_[Globals::my_rank]-1;
 
-  // Compute mass density of particles.
-  if (pmy_mesh_->particle_gravity)
-    Particles::FindDensityOnMesh(pmy_mesh_, false, true);
-
   for (int nb=0; nb<pmy_mesh_->nblocal; ++nb) {
     MeshBlock *pmb = pmy_mesh_->my_blocks(nb);
     in.InitWithShallowSlice(pmb->phydro->u,4,IDN,1);

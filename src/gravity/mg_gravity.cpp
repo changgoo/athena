@@ -106,9 +106,6 @@ void MGGravityDriver::Solve(int stage) {
   for (int i=0; i<pmy_mesh_->nblocal; ++i)
     vmg_.push_back(pmy_mesh_->my_blocks(i)->pmg);
 
-  if (pmy_mesh_->particle_gravity)
-    Particles::FindDensityOnMesh(pmy_mesh_, false, true);
-
   // load the source
   for (Multigrid* pmg : vmg_) {
     // assume all the data are located on the same node

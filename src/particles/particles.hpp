@@ -109,7 +109,12 @@ friend class ParticleMesh;
   void SendToNeighbors();
   void SetPositionIndices();
   bool ReceiveFromNeighbors();
+  void SendParticleMesh();
+  bool ReceiveParticleMesh();
+  void ReceiveAndSetBoundariesWithWait();
+  void AddBoundaryParticleMesh();
   Real NewBlockTimeStep();
+  virtual void FindLocalDensityOnMesh(bool include_momentum);
 
   // output individual particle history
   void OutputParticles(bool header);
@@ -152,7 +157,6 @@ friend class ParticleMesh;
                                     //!> intprop, realprop, & auxprop are resized
                                     //!> Be sure to call back when derived.
   virtual void AllocateMemory();    //!> Needs to be called in the derived class init
-  virtual void FindLocalDensityOnMesh(bool include_momentum);
 
   int AddIntProperty();
   int AddRealProperty();
@@ -366,13 +370,13 @@ friend class MeshBlock;
   void AddOneParticle(Real mass, Real x1, Real x2, Real x3,
                       Real v1, Real v2, Real v3);
   AthenaArray<Real> GetMassDensity() const override;
+  void FindLocalDensityOnMesh(bool include_momentum) override;
 
  private:
   Real dt_old;
   int imetal, iage; // indices for additional Real properties
   int igas;                // indices for additional Aux properties
   // Instance methods.
-  void FindLocalDensityOnMesh(bool include_momentum) override;
   void AssignShorthands() override;
   void SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
   void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;

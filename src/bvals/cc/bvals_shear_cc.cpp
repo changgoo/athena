@@ -230,7 +230,7 @@ void CellCenteredBoundaryVariable::SetShearingBoxBoundaryBuffers() {
 
   for (int upper=0; upper<2; upper++) {
     if (pbval_->is_shear[upper]) { // check inner boundaries
-      // step 1 -- (optionally) appy shear to shear_cc_ (does nothing by default)
+      // step 1 -- (optionally) apply shear to shear_cc_ (does nothing by default)
       if (!porb->orbital_advection_defined)
         ShearQuantities(shear_cc_[upper], upper);  // Hydro overrides this
       // step 2. -- calculating remapping flux and update var

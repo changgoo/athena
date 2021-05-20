@@ -1481,8 +1481,9 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
         // and (conserved variable) passive scalar masses:
         if (NSCALARS > 0)
           pmb->pscalars->sbvar.SendBoundaryBuffers();
-        if(CR_ENABLED)
+        if (CR_ENABLED)
           pmb->pcr->cr_bvar.SendBoundaryBuffers();
+        for (Particles *ppar : pmb->ppar) ppar->SendParticleMesh();
       }
 
       // wait to receive conserved variables
@@ -1494,8 +1495,9 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
           pmb->pfield->fbvar.ReceiveAndSetBoundariesWithWait();
         if (NSCALARS > 0)
           pmb->pscalars->sbvar.ReceiveAndSetBoundariesWithWait();
-        if(CR_ENABLED)
+        if (CR_ENABLED)
           pmb->pcr->cr_bvar.ReceiveAndSetBoundariesWithWait();
+        for (Particles *ppar : pmb->ppar) ppar->ReceiveAndSetBoundariesWithWait();
         if (shear_periodic && orbital_advection==0) {
           pmb->phydro->hbvar.AddHydroShearForInit();
         }

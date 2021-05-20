@@ -66,9 +66,9 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   // }
   return;
 }
-void Mesh::UserWorkInLoop() {
-  Particles::FindDensityOnMesh(this, false, false);
-}
+// void Mesh::UserWorkInLoop() {
+//   Particles::FindDensityOnMesh(this, false, false);
+// }
 
 //========================================================================================
 //! \fn void MeshBlock::ProblemGenerator(ParameterInput *pin)

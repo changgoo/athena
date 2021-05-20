@@ -220,15 +220,6 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum, bool for_grav
       ppar->FindLocalDensityOnMesh(include_momentum);
     }
   }
-
-  for (int b = 0; b < nblocks; ++b) {
-    MeshBlock *pmb(pm->my_blocks(b));
-    for (int i = 0; i < np; ++i) {
-      Particles *ppar = for_gravity ? pmb->ppar_grav[i] : pmb->ppar[i];
-      ParticleMesh *ppm(ppar->ppm);
-      ppar->ConvertToDensity(include_momentum);
-    }
-  }
 }
 
 //--------------------------------------------------------------------------------------
@@ -405,7 +396,7 @@ void Particles::AllocateMemory() {
   ParticleBuffer::SetNumberOfProperties(nint, nreal + naux);
 
   // Allocate mesh auxiliaries.
-  ppm = new ParticleMesh(this);
+  ppm = new ParticleMesh(this, pmy_block);
   imom1 = ppm->imom1;
   imom2 = ppm->imom2;
   imom3 = ppm->imom3;
@@ -880,6 +871,38 @@ bool Particles::ReceiveFromNeighbors() {
 }
 
 //--------------------------------------------------------------------------------------
+//! \fn void Particles::SendParticleMesh()
+//! \brief send boundary buffers of ParticleMesh (a protected member)
+
+void Particles::SendParticleMesh() {
+  ppm->pmbvar->SendBoundaryBuffers();
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn bool Particles::ReceiveParticleMesh()
+//! \brief receive boundary buffers of ParticleMesh and add it to matching active zones
+
+bool Particles::ReceiveParticleMesh() {
+  return ppm->pmbvar->ReceiveBoundaryBuffers();
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void Particles::ReceiveAndAddParticleMeshWithWait()
+//! \brief receive boundary buffers of ParticleMesh and add it to matching active zones
+
+void Particles::ReceiveAndSetBoundariesWithWait() {
+  return ppm->pmbvar->ReceiveAndSetBoundariesWithWait();
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void Particles::AddBoundaryParticleMesh()
+//! \brief receive boundary buffers of ParticleMesh and add it to matching active zones
+
+void Particles::AddBoundaryParticleMesh() {
+  return ppm->pmbvar->SetBoundaries();
+}
+
+//--------------------------------------------------------------------------------------
 //! \fn void Particles::ProcessNewParticles()
 //! \brief searches for and books new particles.
 
@@ -1287,6 +1310,7 @@ void Particles::FindLocalDensityOnMesh(bool include_momentum) {
   } else {
     ppm->AssignParticlesToMeshAux(realprop, 0, ppm->iweight, 0);
   }
+  ConvertToDensity(include_momentum);
 }
 //--------------------------------------------------------------------------------------
 //! \fn void Particles::ConvertToDensity(bool include_momentum)
@@ -1302,9 +1326,9 @@ void Particles::FindLocalDensityOnMesh(bool include_momentum) {
 void Particles::ConvertToDensity(bool include_momentum) {
   Coordinates *pc(pmy_block->pcoord);
   // Convert to densities.
-  int is = ppm->is, ie = ppm->ie;
-  int js = ppm->js, je = ppm->je;
-  int ks = ppm->ks, ke = ppm->ke;
+  int is = active1_ ? ppm->is-NGHOST: ppm->is, ie = active1_ ? ppm->ie+NGHOST: ppm->ie;
+  int js = active2_ ? ppm->js-NGHOST: ppm->js, je = active2_ ? ppm->je+NGHOST: ppm->je;
+  int ks = active3_ ? ppm->ks-NGHOST: ppm->ks, ke = active3_ ? ppm->ke+NGHOST: ppm->ke;
   if (include_momentum) {
     for (int k = ks; k <= ke; ++k)
       for (int j = js; j <= je; ++j)

@@ -119,6 +119,8 @@ class BoundaryValues : public BoundaryBase, //public BoundaryPhysics,
   std::vector<BoundaryVariable *> bvars_sts;
   //! subset of bvars that are exchanged in the FFTGravitySolverTaskList
   std::vector<BoundaryVariable *> bvars_fft_grav;
+  //! subset of bvars that are exchanged for particle mesh gravity and outputs
+  std::vector<BoundaryVariable *> bvars_pm, bvars_pm_grav, bvars_pm_out;
 
   // inherited functions (interface shared with BoundaryVariable objects):
   // ------
@@ -221,6 +223,7 @@ class BoundaryValues : public BoundaryBase, //public BoundaryPhysics,
   //! \todo (felker):
   //! - consider removing these friendship designations:
   friend class CellCenteredBoundaryVariable;
-  friend class HydroBoundaryVariable;  // needed for shearing box quantities
+  friend class HydroBoundaryVariable; // needed for shearing box quantities
+  friend class ParticleMeshBoundaryVariable; // needed for shearing box quantities
 };
 #endif // BVALS_BVALS_HPP_

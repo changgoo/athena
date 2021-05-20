@@ -15,6 +15,7 @@
 // Athena++ classes headers
 #include "../athena_arrays.hpp"
 #include "../bvals/bvals.hpp"
+#include "../bvals/cc/pm/bvals_pm.hpp"
 #include "../mesh/mesh.hpp"
 
 // MPI header
@@ -46,7 +47,7 @@ friend class OutputType;
 
  public:
   // Constructor and destructor
-  explicit ParticleMesh(Particles *ppar);
+  explicit ParticleMesh(Particles *ppar, MeshBlock *pmb);
   ~ParticleMesh();
 
   // Accessor
@@ -55,6 +56,7 @@ friend class OutputType;
   // methods
   int AddMeshAux();
 
+  ParticleMeshBoundaryVariable *pmbvar;
  protected:
   // Class variables
   int nmeshaux;  //!> number of auxiliaries to the meshblock
@@ -63,7 +65,7 @@ friend class OutputType;
   int imass; //!> index to mass density in meshaux
 
   // Instance variables
-  AthenaArray<Real> meshaux;   //!> auxiliaries to the meshblock
+  AthenaArray<Real> meshaux, coarse_meshaux_;   //!> auxiliaries to the meshblock
   int is, ie, js, je, ks, ke;  // beginning and ending indices
   AthenaArray<Real> weight, density;    //!> shorthand to weight in meshaux
 

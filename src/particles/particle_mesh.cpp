@@ -35,8 +35,17 @@ int ParticleMesh::AddMeshAux() {
 //! \fn ParticleMesh::ParticleMesh(Particles *ppar, int nmeshaux)
 //! \brief constructs a new ParticleMesh instance.
 
-ParticleMesh::ParticleMesh(Particles *ppar) : nmeshaux(0), iweight(-1),
-  imom1(-1), imom2(-1), imom3(-1), imass(-1) {
+ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : nmeshaux(0), iweight(-1),
+  imom1(-1), imom2(-1), imom3(-1), imass(-1),
+  active1_(ppar->active1_), active2_(ppar->active2_), active3_(ppar->active3_),
+  dxi1_(active1_ ? RINF : 0),
+  dxi2_(active2_ ? RINF : 0),
+  dxi3_(active3_ ? RINF : 0),
+  nx1_(pmb->ncells1), nx2_(pmb->ncells2), nx3_(pmb->ncells3),
+  ncells_(nx1_ * nx2_ * nx3_),
+  is(pmb->is), ie(pmb->ie), js(pmb->js), je(pmb->je), ks(pmb->ks), ke(pmb->ke),
+  npc1_(active1_ ? NPC : 1), npc2_(active2_ ? NPC : 1), npc3_(active3_ ? NPC : 1),
+  my_ipar_(ppar->my_ipar_), ppar_(ppar), pmb_(pmb), pmesh_(ppar->pmy_mesh) {
   // Add weight in meshaux.
   iweight = AddMeshAux();
   // Add momentum in meshaux
@@ -44,48 +53,26 @@ ParticleMesh::ParticleMesh(Particles *ppar) : nmeshaux(0), iweight(-1),
   imom2 = AddMeshAux();
   imom3 = AddMeshAux();
 
-  // Save some inputs.
-  ppar_ = ppar;
-  my_ipar_ = ppar->my_ipar_;
-
-  pmb_ = ppar->pmy_block;
-  pmesh_ = pmb_->pmy_mesh;
-
   if (ppar_->imass != -1) imass = AddMeshAux();
 
-  // Determine active dimensions.
-  RegionSize& block_size = pmb_->block_size;
-  active1_ = block_size.nx1 > 1;
-  active2_ = block_size.nx2 > 1;
-  active3_ = block_size.nx3 > 1;
-
-  // Determine the range of a particle cloud.
-  dxi1_ = active1_ ? RINF : 0;
-  dxi2_ = active2_ ? RINF : 0;
-  dxi3_ = active3_ ? RINF : 0;
-
-  // Establish the particle-mesh blocks.
-  nx1_ = active1_ ? block_size.nx1 + 2 * NGHOST : 1;
-  nx2_ = active2_ ? block_size.nx2 + 2 * NGHOST : 1;
-  nx3_ = active3_ ? block_size.nx3 + 2 * NGHOST : 1;
   meshaux.NewAthenaArray(nmeshaux, nx3_, nx2_, nx1_);
-  ncells_ = nx1_ * nx2_ * nx3_;
-
-  is = pmb_->is;
-  ie = pmb_->ie;
-  js = pmb_->js;
-  je = pmb_->je;
-  ks = pmb_->ks;
-  ke = pmb_->ke;
+  coarse_meshaux_.NewAthenaArray(nmeshaux, pmb->ncc3, pmb->ncc2, pmb->ncc1);
 
   // Get a shorthand to weights.
   weight.InitWithShallowSlice(meshaux, 4, iweight, 1);
   if (ppar_->imass != -1) density.InitWithShallowSlice(meshaux, 4, imass, 1);
 
-  // Determine the dimensions of each particle cloud.
-  npc1_ = active1_ ? NPC : 1;
-  npc2_ = active2_ ? NPC : 1;
-  npc3_ = active3_ ? NPC : 1;
+  // Enroll CellCenteredBoundaryVariable object
+  pmbvar = new ParticleMeshBoundaryVariable(pmb, &meshaux, &coarse_meshaux_);
+  pmbvar->bvar_index = pmb_->pbval->bvars.size();
+  pmb_->pbval->bvars.push_back(pmbvar);
+  // Add particle mesh boundary variable to the list for main integrator
+  // if that particle exert gravity. Otherwise, add it to the list for
+  // outputs.
+  pmb_->pbval->bvars_main_int.push_back(pmbvar);
+  pmb_->pbval->bvars_pm.push_back(pmbvar);
+  if (ppar_->isgravity_) pmb_->pbval->bvars_pm_grav.push_back(pmbvar);
+  else pmb_->pbval->bvars_pm_out.push_back(pmbvar);
 }
 
 //--------------------------------------------------------------------------------------
