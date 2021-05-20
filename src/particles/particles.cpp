@@ -871,38 +871,6 @@ bool Particles::ReceiveFromNeighbors() {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void Particles::SendParticleMesh()
-//! \brief send boundary buffers of ParticleMesh (a protected member)
-
-void Particles::SendParticleMesh() {
-  ppm->pmbvar->SendBoundaryBuffers();
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn bool Particles::ReceiveParticleMesh()
-//! \brief receive boundary buffers of ParticleMesh and add it to matching active zones
-
-bool Particles::ReceiveParticleMesh() {
-  return ppm->pmbvar->ReceiveBoundaryBuffers();
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn void Particles::ReceiveAndAddParticleMeshWithWait()
-//! \brief receive boundary buffers of ParticleMesh and add it to matching active zones
-
-void Particles::ReceiveAndSetBoundariesWithWait() {
-  return ppm->pmbvar->ReceiveAndSetBoundariesWithWait();
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn void Particles::AddBoundaryParticleMesh()
-//! \brief receive boundary buffers of ParticleMesh and add it to matching active zones
-
-void Particles::AddBoundaryParticleMesh() {
-  return ppm->pmbvar->SetBoundaries();
-}
-
-//--------------------------------------------------------------------------------------
 //! \fn void Particles::ProcessNewParticles()
 //! \brief searches for and books new particles.
 

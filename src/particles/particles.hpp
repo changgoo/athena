@@ -109,10 +109,6 @@ friend class ParticleMesh;
   void SendToNeighbors();
   void SetPositionIndices();
   bool ReceiveFromNeighbors();
-  void SendParticleMesh();
-  bool ReceiveParticleMesh();
-  void ReceiveAndSetBoundariesWithWait();
-  void AddBoundaryParticleMesh();
   Real NewBlockTimeStep();
   virtual void FindLocalDensityOnMesh(bool include_momentum);
 
@@ -124,6 +120,8 @@ friend class ParticleMesh;
   std::size_t GetSizeInBytes();
   void UnpackParticlesForRestart(char *mbdata, std::size_t &os);
   void PackParticlesForRestart(char *&pdata);
+
+  ParticleMesh *ppm;  //!> ptr to particle-mesh
 
  protected:
   // Class variables
@@ -187,7 +185,6 @@ friend class ParticleMesh;
 
   std::vector<std::string> intfieldname, realfieldname, auxfieldname;
 
-  ParticleMesh *ppm;  //!> ptr to particle-mesh
   ParticleGravity *ppgrav; //!> ptr to particle-gravity
                                        // Shorthands:
   AthenaArray<int> pid;                //!>   particle ID

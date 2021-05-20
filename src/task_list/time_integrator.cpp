@@ -2218,14 +2218,15 @@ TaskStatus TimeIntegratorTaskList::ReceiveParticles(MeshBlock *pmb, int stage) {
 }
 
 TaskStatus TimeIntegratorTaskList::SendParticleMesh(MeshBlock *pmb, int stage) {
-  for (Particles *ppar : pmb->ppar) ppar->SendParticleMesh();
+  for (Particles *ppar : pmb->ppar) ppar->ppm->pmbvar->SendBoundaryBuffers();
+
   return TaskStatus::success;
 }
 
 TaskStatus TimeIntegratorTaskList::ReceiveParticleMesh(MeshBlock *pmb, int stage) {
   bool ret_all(true), ret(false);
   for (Particles *ppar : pmb->ppar) {
-    ret = ppar->ReceiveParticleMesh();
+    ret = ppar->ppm->pmbvar->ReceiveBoundaryBuffers();
     ret_all = (ret_all & ret);
   }
   if (ret_all)
@@ -2235,7 +2236,7 @@ TaskStatus TimeIntegratorTaskList::ReceiveParticleMesh(MeshBlock *pmb, int stage
 }
 
 TaskStatus TimeIntegratorTaskList::SetBoundariesParticleMesh(MeshBlock *pmb, int stage) {
-  for (Particles *ppar : pmb->ppar) ppar->AddBoundaryParticleMesh();
+  for (Particles *ppar : pmb->ppar) ppar->ppm->pmbvar->SetBoundaries();
   return TaskStatus::success;
 }
 
