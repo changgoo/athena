@@ -26,6 +26,7 @@
 #include "../globals.hpp"
 #include "../hydro/hydro.hpp"
 #include "../mesh/mesh.hpp"
+#include "../orbital_advection/orbital_advection.hpp"
 #include "../parameter_input.hpp"
 #include "../particles/particles.hpp"
 #include "../utils/utils.hpp"
@@ -78,18 +79,27 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   // initial translational velocity
   Real vx0 = pin->GetReal("problem","vx0");
   Real vy0 = pin->GetReal("problem","vy0");
-
+  // shearing box parameters
+  Real qshear = pin->GetReal("orbital_advection","qshear");
+  Real Omega0 = pin->GetReal("orbital_advection","Omega0");
   for (int k=ks; k<=ke; k++) {
     for (int j=js; j<=je; j++) {
       for (int i=is; i<=ie; i++) {
+        Real x1 = pcoord->x1v(i);
+
         phydro->u(IDN,k,j,i) = d0;
 
-        phydro->u(IM1,k,j,i) = vx0;
-        phydro->u(IM2,k,j,i) = vy0;
+        phydro->u(IM1,k,j,i) = d0*vx0;
+        phydro->u(IM2,k,j,i) = d0*vy0;
         phydro->u(IM3,k,j,i) = 0.0;
+        if(!porb->orbital_advection_defined)
+          phydro->u(IM2,k,j,i) -= d0*qshear*Omega0*x1;
 
         if (NON_BAROTROPIC_EOS) {
           phydro->u(IEN,k,j,i) = 1.0*d0;
+          phydro->u(IEN,k,j,i) += (SQR(phydro->u(IM1,k,j,i))
+                                  +SQR(phydro->u(IM2,k,j,i))
+                                  +SQR(phydro->u(IM3,k,j,i)))/(2.0*d0);
         }
       }
     }

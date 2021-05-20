@@ -1,11 +1,11 @@
 <comment>
-problem   = Uniform motion with multi-tracers
+problem   = Uniform motion with ulti-tracers
 reference =
-configure = --prob=particle_uniform_motion -p -hdf5
+configure = --prob=particle_uniform_motion -hdf5
 
 
 <job>
-problem_id = pUniMotion    # problem ID: basename of output filenames
+problem_id = pAdvShear    # problem ID: basename of output filenames
 
 <output1>
 file_type  = hst        # History data dump
@@ -33,8 +33,8 @@ ncycle_out  = 1         # interval for stdout summary info
 nx1        = 32         # Number of zones in X1-direction
 x1min      = -0.5       # minimum value of X1
 x1max      = 0.5        # maximum value of X1
-ix1_bc     = periodic   # inner-X1 boundary flag
-ox1_bc     = periodic   # outer-X1 boundary flag
+ix1_bc     = shear_periodic   # inner-X1 boundary flag
+ox1_bc     = shear_periodic   # outer-X1 boundary flag
 
 nx2        = 32         # Number of zones in X2-direction
 x2min      = -0.5       # minimum value of X2
@@ -57,41 +57,20 @@ nx3        = 4
 gamma           = 1.666666666667 # gamma = C_p/C_v
 iso_sound_speed = 1.00           # equavalent to sqrt(gamma*p/d) for p=0.1, d=1
 
-<particle1>  # first quadrant
-type        = tracer
-output      = true
-gravity     = false
-x1min       = 0.0
-x1max       = 0.5
-x2min       = 0.0
-x2max       = 0.5
+<orbital_advection>
+OAorder      = 0       # 0: w/o OA, 1: w/ OA (1st), 2: w/ OA (2nd)
+qshear       = 1.0     # shear rate
+Omega0       = 1.0     # angular velocity of the system
+shboxcoord   = 1       # 1=xy (default); 2=xz
 
-<particle2>  # second quadrant
+<particle1>  # a strap
 type        = tracer
 output      = true
 gravity     = false
 x1min       = -0.5
-x1max       = 0.0
-x2min       = 0.0
-x2max       = 0.5
-
-<particle3>  # third quadrant
-type        = tracer
-output      = true
-gravity     = false
-x1min       = -0.5
-x1max       = 0.0
-x2min       = -0.5
-x2max       = 0.0
-
-<particle4>  # forth quadrant
-type        = tracer
-output      = true
-gravity     = false
-x1min       = 0.0
 x1max       = 0.5
-x2min       = -0.5
-x2max       = 0.0
+x2min       = -0.1
+x2max       = 0.1
 
 <problem>
 npartot     = 10000
