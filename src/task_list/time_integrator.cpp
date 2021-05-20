@@ -982,10 +982,7 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
       AddTask(RECV_HYD,NONE);
       AddTask(SETB_HYD,(RECV_HYD|CALC_HYDORB));
     } else {
-      if (PARTICLES)
-        AddTask(SEND_HYD,src_term|RECV_PM);
-      else
-        AddTask(SEND_HYD,src_term);
+      AddTask(SEND_HYD,src_term);
       AddTask(RECV_HYD,NONE);
       AddTask(SETB_HYD,(RECV_HYD|src_term));
     }
@@ -1029,8 +1026,6 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
       AddTask(INT_PAR, NONE);
       AddTask(SEND_PAR, INT_PAR);
       AddTask(RECV_PAR, NONE);
-      AddTask(SEND_PM, INT_PAR);
-      AddTask(RECV_PM, NONE);
     }
 
     if (MAGNETIC_FIELDS_ENABLED) { // MHD
@@ -1660,8 +1655,6 @@ void TimeIntegratorTaskList::StartupTaskList(MeshBlock *pmb, int stage) {
 
   if (stage_wghts[stage-1].main_stage) {
     pmb->pbval->StartReceivingSubset(BoundaryCommSubset::all, pmb->pbval->bvars_main_int);
-    for (int ipar = 0; ipar<Particles::num_particles; ++ipar)
-      pmb->ppar[ipar]->StartReceiving();
   } else {
     pmb->pbval->StartReceivingSubset(BoundaryCommSubset::orbital,
                                      pmb->pbval->bvars_main_int);
@@ -2215,21 +2208,11 @@ enum TaskStatus TimeIntegratorTaskList::ParticlesReceive(MeshBlock *pmb, int sta
 }
 
 enum TaskStatus TimeIntegratorTaskList::ParticleMeshSend(MeshBlock *pmb, int stage) {
-  for (Particles *ppar : pmb->ppar)
-    ppar->SendParticleMesh();
   return TaskStatus::success;
 }
 
 enum TaskStatus TimeIntegratorTaskList::ParticleMeshReceive(MeshBlock *pmb, int stage) {
-  bool ret_all(true), ret(false);
-  for (Particles *ppar : pmb->ppar) {
-    ret = ppar->ReceiveParticleMesh(stage);
-    ret_all = (ret_all && ret);
-  }
-  if (ret_all)
-    return TaskStatus::success;
-  else
-    return TaskStatus::fail;
+  return TaskStatus::success;
 }
 
 //--------------------------------------------------------------------------------------

@@ -217,31 +217,16 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum, bool for_grav
     MeshBlock *pmb(pm->my_blocks(b));
     for (int i = 0; i < np; ++i) {
       Particles *ppar = for_gravity ? pmb->ppar_grav[i] : pmb->ppar[i];
-      ppar->ppm->StartReceiving();
       ppar->FindLocalDensityOnMesh(include_momentum);
-      ppar->ppm->SendBoundary();
     }
   }
 
-  std::vector<bool> completed(nblocks*np, false);
-  bool pending = true;
-  while (pending) {
-    pending = false;
-    for (int b = 0; b < nblocks; ++b) {
-      MeshBlock *pmb(pm->my_blocks(b));
-      for (int i = 0; i < np; ++i) {
-        Particles *ppar = for_gravity ? pmb->ppar_grav[i] : pmb->ppar[i];
-        ParticleMesh *ppm(ppar->ppm);
-        if (!completed[i+b*np]) {
-        // Finalize boundary communications.
-          if ((completed[i+b*np] = ppm->ReceiveBoundary())) {
-            ppar->ConvertToDensity(include_momentum);
-            ppm->ClearBoundary();
-          } else {
-            pending = true;
-          }
-        }
-      }
+  for (int b = 0; b < nblocks; ++b) {
+    MeshBlock *pmb(pm->my_blocks(b));
+    for (int i = 0; i < np; ++i) {
+      Particles *ppar = for_gravity ? pmb->ppar_grav[i] : pmb->ppar[i];
+      ParticleMesh *ppm(ppar->ppm);
+      ppar->ConvertToDensity(include_momentum);
     }
   }
 }
@@ -344,9 +329,6 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
   active1_ = pmy_mesh->mesh_size.nx1 > 1;
   active2_ = pmy_mesh->mesh_size.nx2 > 1;
   active3_ = pmy_mesh->mesh_size.nx3 > 1;
-
-  // Initiate ParticleMesh class.
-  ParticleMesh::Initialize(pin);
 
   if (SELF_GRAVITY_ENABLED) isgravity_ = pp->gravity;
 
@@ -556,8 +538,6 @@ void Particles::ClearBoundary() {
     }
 #endif
   }
-
-  ppm->ClearBoundary();
 }
 
 //--------------------------------------------------------------------------------------
@@ -684,10 +664,6 @@ void Particles::LinkNeighbors(MeshBlockTree &tree,
     }
   }
 
-  // Initiate ParticleMesh boundary data.
-  ppm->SetBoundaryAttributes();
-  ppm->InitiateBoundaryData();
-
   // Initiate boundary values.
   ClearBoundary();
 }
@@ -708,15 +684,6 @@ void Particles::RemoveOneParticle(int k) {
     for (int j = 0; j < naux; ++j)
       auxprop(j,k) = auxprop(j,npar);
   }
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn void Particles::SendParticleMesh()
-//! \brief send ParticleMesh meshaux near boundaries to neighbors.
-
-void Particles::SendParticleMesh() {
-  if (ppm->nmeshaux > 0)
-    ppm->SendBoundary();
 }
 
 //--------------------------------------------------------------------------------------
@@ -834,14 +801,6 @@ void Particles::SetPositionIndices() {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void Particles::StartReceiving()
-//! \brief starts receiving ParticleMesh meshaux near boundary from neighbor processes.
-
-void Particles::StartReceiving() {
-  ppm->StartReceiving();
-}
-
-//--------------------------------------------------------------------------------------
 //! \fn bool Particles::ReceiveFromNeighbors()
 //! \brief receives particles from neighboring meshblocks and returns a flag indicating
 //!        if all receives are completed.
@@ -915,40 +874,6 @@ bool Particles::ReceiveFromNeighbors() {
         bstatus = BoundaryStatus::completed;
         break;
     }
-  }
-
-  return flag;
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn bool Particles::ReceiveParticleMesh(int step)
-//! \brief receives ParticleMesh meshaux near boundaries from neighbors and returns a
-//!        flag indicating if all receives are completed.
-
-bool Particles::ReceiveParticleMesh(int stage) {
-  if (ppm->nmeshaux <= 0) return true;
-
-  // Flush ParticleMesh receive buffers.
-  bool flag = ppm->ReceiveBoundary();
-
-  if (flag) {
-    // Deposit ParticleMesh meshaux to MeshBlock.
-    Hydro *phydro = pmy_block->phydro;
-    Real t = 0, dt = 0;
-
-    switch (stage) {
-    case 1:
-      t = pmy_mesh->time;
-      dt = 0.5 * pmy_mesh->dt;
-      break;
-
-    case 2:
-      t = pmy_mesh->time + 0.5 * pmy_mesh->dt;
-      dt = pmy_mesh->dt;
-      break;
-    }
-
-    DepositToMesh(t, dt, phydro->w, phydro->u);
   }
 
   return flag;

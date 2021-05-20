@@ -106,12 +106,9 @@ friend class ParticleMesh;
                      int root_level);
   void AddOneParticle(Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
   void RemoveOneParticle(int k);
-  void SendParticleMesh();
   void SendToNeighbors();
   void SetPositionIndices();
-  void StartReceiving();
   bool ReceiveFromNeighbors();
-  bool ReceiveParticleMesh(int step);
   Real NewBlockTimeStep();
 
   // output individual particle history
