@@ -172,11 +172,11 @@ class TimeIntegratorTaskList : public TaskList {
   TaskStatus SetBoundariesHydro(MeshBlock *pmb, int stage);
   TaskStatus SetBoundariesField(MeshBlock *pmb, int stage);
 
-  TaskStatus ParticlesIntegrate(MeshBlock *pmb, int step);
-  TaskStatus ParticlesSend(MeshBlock *pmb, int step);
-  TaskStatus ParticlesReceive(MeshBlock *pmb, int step);
-  TaskStatus ParticleMeshSend(MeshBlock *pmb, int step);
-  TaskStatus ParticleMeshReceive(MeshBlock *pmb, int step);
+  TaskStatus IntegrateParticles(MeshBlock *pmb, int step);
+  TaskStatus SendParticles(MeshBlock *pmb, int step);
+  TaskStatus ReceiveParticles(MeshBlock *pmb, int step);
+  TaskStatus SendParticleMesh(MeshBlock *pmb, int step);
+  TaskStatus ReceiveParticleMesh(MeshBlock *pmb, int step);
 
   TaskStatus SendHydroShear(MeshBlock *pmb, int stage);
   TaskStatus ReceiveHydroShear(MeshBlock *pmb, int stage);

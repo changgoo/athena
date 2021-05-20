@@ -1454,33 +1454,33 @@ void TimeIntegratorTaskList::AddTask(const TaskID& id, const TaskID& dep) {
   } else if (id == INT_PAR) {
     task_list_[ntasks].TaskFunc=
         static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
-        (&TimeIntegratorTaskList::ParticlesIntegrate);
+        (&TimeIntegratorTaskList::IntegrateParticles);
     task_list_[ntasks].lb_time = true;
-    task_list_[ntasks].task_name.append("ParticlesIntegrate");
+    task_list_[ntasks].task_name.append("IntegrateParticles");
   } else if (id == SEND_PAR) {
     task_list_[ntasks].TaskFunc=
         static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
-        (&TimeIntegratorTaskList::ParticlesSend);
+        (&TimeIntegratorTaskList::SendParticles);
     task_list_[ntasks].lb_time = true;
-    task_list_[ntasks].task_name.append("ParticlesSend");
+    task_list_[ntasks].task_name.append("SendParticles");
   } else if (id == RECV_PAR) {
     task_list_[ntasks].TaskFunc=
         static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
-        (&TimeIntegratorTaskList::ParticlesReceive);
+        (&TimeIntegratorTaskList::ReceiveParticles);
     task_list_[ntasks].lb_time = false;
-    task_list_[ntasks].task_name.append("ParticlesReceive");
+    task_list_[ntasks].task_name.append("ReceiveParticles");
   } else if (id == SEND_PM) {
     task_list_[ntasks].TaskFunc=
         static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
-        (&TimeIntegratorTaskList::ParticleMeshSend);
+        (&TimeIntegratorTaskList::SendParticleMesh);
     task_list_[ntasks].lb_time = true;
-    task_list_[ntasks].task_name.append("ParticleMeshSend");
+    task_list_[ntasks].task_name.append("SendParticleMesh");
   } else if (id == RECV_PM) {
     task_list_[ntasks].TaskFunc=
         static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
-        (&TimeIntegratorTaskList::ParticleMeshReceive);
+        (&TimeIntegratorTaskList::ReceiveParticleMesh);
     task_list_[ntasks].lb_time = false;
-    task_list_[ntasks].task_name.append("ParticleMeshReceive");
+    task_list_[ntasks].task_name.append("ReceiveParticleMesh");
   } else if (id == CALC_CRFLX) {
     task_list_[ntasks].TaskFunc=
         static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
@@ -2180,7 +2180,7 @@ TaskStatus TimeIntegratorTaskList::ReceiveEMFShear(MeshBlock *pmb, int stage) {
 //--------------------------------------------------------------------------------------
 // Functions to manage particles
 
-enum TaskStatus TimeIntegratorTaskList::ParticlesIntegrate(MeshBlock *pmb, int stage) {
+enum TaskStatus TimeIntegratorTaskList::IntegrateParticles(MeshBlock *pmb, int stage) {
   if (integrator == "vl2") {
     for (Particles *ppar : pmb->ppar)
       ppar->Integrate(stage);
@@ -2189,13 +2189,13 @@ enum TaskStatus TimeIntegratorTaskList::ParticlesIntegrate(MeshBlock *pmb, int s
   return TaskStatus::fail;
 }
 
-enum TaskStatus TimeIntegratorTaskList::ParticlesSend(MeshBlock *pmb, int stage) {
+enum TaskStatus TimeIntegratorTaskList::SendParticles(MeshBlock *pmb, int stage) {
   for (Particles *ppar : pmb->ppar)
     ppar->SendToNeighbors();
   return TaskStatus::success;
 }
 
-enum TaskStatus TimeIntegratorTaskList::ParticlesReceive(MeshBlock *pmb, int stage) {
+enum TaskStatus TimeIntegratorTaskList::ReceiveParticles(MeshBlock *pmb, int stage) {
   bool ret_all(true), ret(false);
   for (Particles *ppar : pmb->ppar) {
     ret = ppar->ReceiveFromNeighbors();
@@ -2207,11 +2207,11 @@ enum TaskStatus TimeIntegratorTaskList::ParticlesReceive(MeshBlock *pmb, int sta
     return TaskStatus::fail;
 }
 
-enum TaskStatus TimeIntegratorTaskList::ParticleMeshSend(MeshBlock *pmb, int stage) {
+enum TaskStatus TimeIntegratorTaskList::SendParticleMesh(MeshBlock *pmb, int stage) {
   return TaskStatus::success;
 }
 
-enum TaskStatus TimeIntegratorTaskList::ParticleMeshReceive(MeshBlock *pmb, int stage) {
+enum TaskStatus TimeIntegratorTaskList::ReceiveParticleMesh(MeshBlock *pmb, int stage) {
   return TaskStatus::success;
 }
 
