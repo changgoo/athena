@@ -191,7 +191,7 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
         newppar = new StarParticles(this, pin, &pp);
       }
       ppar.push_back(newppar);
-      if (pp.gravity) ppar_grav.push_back(newppar);
+      if (newppar->IsGravity()) ppar_grav.push_back(newppar);
       pbval->AdvanceCounterPhysID(CellCenteredBoundaryVariable::max_phys_id);
     }
   }
@@ -331,7 +331,7 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
         newppar = new StarParticles(this, pin, &pp);
       }
       ppar.push_back(newppar);
-      if (pp.gravity) ppar_grav.push_back(newppar);
+      if (newppar->IsGravity()) ppar_grav.push_back(newppar);
       pbval->AdvanceCounterPhysID(CellCenteredBoundaryVariable::max_phys_id);
     }
   }

@@ -63,7 +63,7 @@ ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : nmeshaux(0), iweig
   if (ppar_->imass != -1) density.InitWithShallowSlice(meshaux, 4, imass, 1);
 
   // Enroll CellCenteredBoundaryVariable object
-  pmbvar = new ParticleMeshBoundaryVariable(pmb, &meshaux, &coarse_meshaux_);
+  pmbvar = new ParticleMeshBoundaryVariable(pmb, &meshaux, &coarse_meshaux_, this);
   pmbvar->bvar_index = pmb_->pbval->bvars.size();
   pmb_->pbval->bvars.push_back(pmbvar);
   // Add particle mesh boundary variable to the list for main integrator
@@ -71,7 +71,6 @@ ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : nmeshaux(0), iweig
   // outputs.
   pmb_->pbval->bvars_pm.push_back(pmbvar);
   if (ppar_->isgravity_) pmb_->pbval->bvars_pm_grav.push_back(pmbvar);
-  else pmb_->pbval->bvars_pm_out.push_back(pmbvar);
 }
 
 //--------------------------------------------------------------------------------------
