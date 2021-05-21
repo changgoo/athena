@@ -69,7 +69,6 @@ ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : nmeshaux(0), iweig
   // Add particle mesh boundary variable to the list for main integrator
   // if that particle exert gravity. Otherwise, add it to the list for
   // outputs.
-  pmb_->pbval->bvars_main_int.push_back(pmbvar);
   pmb_->pbval->bvars_pm.push_back(pmbvar);
   if (ppar_->isgravity_) pmb_->pbval->bvars_pm_grav.push_back(pmbvar);
   else pmb_->pbval->bvars_pm_out.push_back(pmbvar);

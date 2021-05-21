@@ -411,6 +411,9 @@ void BoundaryValues::StartReceivingShear(BoundaryCommSubset phase) {
         bvar->StartReceivingShear(phase);
       }
       break;
+    case BoundaryCommSubset::pm:
+      // no need to call StartReceivingShear for particle mesh separately
+      break;
     case BoundaryCommSubset::gr_amr:
       // shearing box is currently incompatible with both GR and AMR
       std::stringstream msg;

@@ -1664,6 +1664,7 @@ void TimeIntegratorTaskList::StartupTaskList(MeshBlock *pmb, int stage) {
 
   if (stage_wghts[stage-1].main_stage) {
     pmb->pbval->StartReceivingSubset(BoundaryCommSubset::all, pmb->pbval->bvars_main_int);
+    pmb->pbval->StartReceivingSubset(BoundaryCommSubset::pm, pmb->pbval->bvars_pm);
   } else {
     pmb->pbval->StartReceivingSubset(BoundaryCommSubset::orbital,
                                      pmb->pbval->bvars_main_int);
@@ -1685,6 +1686,8 @@ TaskStatus TimeIntegratorTaskList::ClearAllBoundary(MeshBlock *pmb, int stage) {
   if (stage_wghts[stage-1].main_stage) {
     pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::all,
                                     pmb->pbval->bvars_main_int);
+    pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::pm,
+                                    pmb->pbval->bvars_pm);
     for (Particles *ppar : pmb->ppar) ppar->ClearBoundary();
   } else {
     pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::orbital,
