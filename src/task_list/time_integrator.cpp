@@ -2211,7 +2211,6 @@ TaskStatus TimeIntegratorTaskList::ReceiveParticles(MeshBlock *pmb, int stage) {
   bool ret_all(true), ret(false);
   for (Particles *ppar : pmb->ppar) {
     ret = ppar->ReceiveFromNeighbors();
-    if (ret) ppar->FindLocalDensityOnMesh(false);
     ret_all = (ret_all && ret);
   }
   if (ret_all)
@@ -2221,9 +2220,10 @@ TaskStatus TimeIntegratorTaskList::ReceiveParticles(MeshBlock *pmb, int stage) {
 }
 
 TaskStatus TimeIntegratorTaskList::SendParticleMesh(MeshBlock *pmb, int stage) {
-  for (Particles *ppar : pmb->ppar_grav)
+  for (Particles *ppar : pmb->ppar_grav) {
+    ppar->FindLocalDensityOnMesh(false);
     ppar->ppm->pmbvar->SendBoundaryBuffers();
-
+  }
   return TaskStatus::success;
 }
 

@@ -203,7 +203,6 @@ void Particles::PostInitialize(Mesh *pm, ParameterInput *pin) {
 
 void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
   // Assign particle properties to mesh and send boundary.
-  std::cout << "calculating PM densities" << std::endl;
   int nblocks(pm->nblocal);
 
   for (int b = 0; b < nblocks; ++b) {
