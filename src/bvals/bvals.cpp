@@ -412,7 +412,12 @@ void BoundaryValues::StartReceivingShear(BoundaryCommSubset phase) {
       }
       break;
     case BoundaryCommSubset::pm:
-      // no need to call StartReceivingShear for particle mesh separately
+      for (auto bvar : bvars_pm_grav) {
+        ParticleMeshBoundaryVariable *bb =
+          dynamic_cast<ParticleMeshBoundaryVariable *>(bvar);
+        bb->var_buf.ZeroClear();
+        bb->StartReceivingShear(phase);
+      }
       break;
     case BoundaryCommSubset::gr_amr:
       // shearing box is currently incompatible with both GR and AMR

@@ -57,13 +57,13 @@ friend class OutputType;
   int AddMeshAux();
 
   ParticleMeshBoundaryVariable *pmbvar;
- protected:
-  // Class variables
+
   int nmeshaux;  //!> number of auxiliaries to the meshblock
   int iweight;   //!> index to weight in meshaux
   int imom1, imom2, imom3;   //!> index to momentum vector in meshaux
   int imass; //!> index to mass density in meshaux
 
+ protected:
   // Instance variables
   AthenaArray<Real> meshaux, coarse_meshaux_;   //!> auxiliaries to the meshblock
   int is, ie, js, je, ks, ke;  // beginning and ending indices

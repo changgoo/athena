@@ -120,7 +120,7 @@ class BoundaryValues : public BoundaryBase, //public BoundaryPhysics,
   //! subset of bvars that are exchanged in the FFTGravitySolverTaskList
   std::vector<BoundaryVariable *> bvars_fft_grav;
   //! subset of bvars that are exchanged for particle mesh gravity and outputs
-  std::vector<BoundaryVariable *> bvars_pm, bvars_pm_grav, bvars_pm_out;
+  std::vector<BoundaryVariable *> bvars_pm, bvars_pm_grav;
 
   // inherited functions (interface shared with BoundaryVariable objects):
   // ------
