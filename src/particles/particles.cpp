@@ -193,32 +193,35 @@ void Particles::PostInitialize(Mesh *pm, ParameterInput *pin) {
   for (int b = 0; b < pm->nblocal; ++b)
     for (Particles *ppar : pm->my_blocks(b)->ppar)
       if (ppar->parhstout_) ppar->OutputParticles(true);
-
-  // Calcuate particle density for the first time
-  Particles::FindDensityOnMesh(pm, true, false);
 }
 
 //--------------------------------------------------------------------------------------
 //! \fn void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum)
-//! \brief finds the number density of particles on the mesh.
+//! \brief finds particle mesh densities for all particle containers.
 //!
-//!   If include_momentum is true, the momentum density field is also computed,
-//!   assuming mass of each particle is unity.
-//! \note
-//!   Postcondition: ppm->weight becomes the density in each cell, and
-//!   if include_momentum is true, ppm->meshaux(imom1:imom3,:,:,:)
-//!   becomes the momentum density.
+//! If include_momentum is true, the momentum density field is also computed.
 
-void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum, bool for_gravity) {
+void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
   // Assign particle properties to mesh and send boundary.
+  std::cout << "calculating PM densities" << std::endl;
   int nblocks(pm->nblocal);
-  int np = for_gravity ? Particles::num_particles_grav : Particles::num_particles;
+
   for (int b = 0; b < nblocks; ++b) {
     MeshBlock *pmb(pm->my_blocks(b));
-    for (int i = 0; i < np; ++i) {
-      Particles *ppar = for_gravity ? pmb->ppar_grav[i] : pmb->ppar[i];
+    pmb->pbval->StartReceivingSubset(BoundaryCommSubset::mesh_init,
+                                     pmb->pbval->bvars_pm);
+    for (Particles *ppar : pmb->ppar) {
       ppar->FindLocalDensityOnMesh(include_momentum);
+      ppar->ppm->pmbvar->SendBoundaryBuffers();
     }
+  }
+
+  for (int b = 0; b < nblocks; ++b) {
+    MeshBlock *pmb(pm->my_blocks(b));
+    for (Particles *ppar : pmb->ppar)
+      ppar->ppm->pmbvar->ReceiveAndSetBoundariesWithWait();
+    pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::mesh_init,
+                                    pmb->pbval->bvars_pm);
   }
 }
 

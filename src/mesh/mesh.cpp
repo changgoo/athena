@@ -1487,8 +1487,10 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
           pmb->pscalars->sbvar.SendBoundaryBuffers();
         if (CR_ENABLED)
           pmb->pcr->cr_bvar.SendBoundaryBuffers();
-        for (Particles *ppar : pmb->ppar)
+        for (Particles *ppar : pmb->ppar) {
+          ppar->FindLocalDensityOnMesh(true);
           ppar->ppm->pmbvar->SendBoundaryBuffers();
+        }
       }
 
       // wait to receive conserved variables

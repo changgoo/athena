@@ -1664,7 +1664,7 @@ void TimeIntegratorTaskList::StartupTaskList(MeshBlock *pmb, int stage) {
 
   if (stage_wghts[stage-1].main_stage) {
     pmb->pbval->StartReceivingSubset(BoundaryCommSubset::all, pmb->pbval->bvars_main_int);
-    pmb->pbval->StartReceivingSubset(BoundaryCommSubset::pm, pmb->pbval->bvars_pm);
+    pmb->pbval->StartReceivingSubset(BoundaryCommSubset::pm, pmb->pbval->bvars_pm_grav);
   } else {
     pmb->pbval->StartReceivingSubset(BoundaryCommSubset::orbital,
                                      pmb->pbval->bvars_main_int);
@@ -1687,7 +1687,7 @@ TaskStatus TimeIntegratorTaskList::ClearAllBoundary(MeshBlock *pmb, int stage) {
     pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::all,
                                     pmb->pbval->bvars_main_int);
     pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::pm,
-                                    pmb->pbval->bvars_pm);
+                                    pmb->pbval->bvars_pm_grav);
     for (Particles *ppar : pmb->ppar) ppar->ClearBoundary();
   } else {
     pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::orbital,
@@ -2221,14 +2221,15 @@ TaskStatus TimeIntegratorTaskList::ReceiveParticles(MeshBlock *pmb, int stage) {
 }
 
 TaskStatus TimeIntegratorTaskList::SendParticleMesh(MeshBlock *pmb, int stage) {
-  for (Particles *ppar : pmb->ppar) ppar->ppm->pmbvar->SendBoundaryBuffers();
+  for (Particles *ppar : pmb->ppar_grav)
+    ppar->ppm->pmbvar->SendBoundaryBuffers();
 
   return TaskStatus::success;
 }
 
 TaskStatus TimeIntegratorTaskList::ReceiveParticleMesh(MeshBlock *pmb, int stage) {
   bool ret_all(true), ret(false);
-  for (Particles *ppar : pmb->ppar) {
+  for (Particles *ppar : pmb->ppar_grav) {
     ret = ppar->ppm->pmbvar->ReceiveBoundaryBuffers();
     ret_all = (ret_all & ret);
   }
@@ -2239,7 +2240,8 @@ TaskStatus TimeIntegratorTaskList::ReceiveParticleMesh(MeshBlock *pmb, int stage
 }
 
 TaskStatus TimeIntegratorTaskList::SetBoundariesParticleMesh(MeshBlock *pmb, int stage) {
-  for (Particles *ppar : pmb->ppar) ppar->ppm->pmbvar->SetBoundaries();
+  for (Particles *ppar : pmb->ppar_grav)
+    ppar->ppm->pmbvar->SetBoundaries();
   return TaskStatus::success;
 }
 

@@ -71,7 +71,7 @@ friend class ParticleMesh;
   static void AMRFineToCoarse(Particles *pparc, Particles *pparf);
   static void Initialize(Mesh *pm, ParameterInput *pin);
   static void PostInitialize(Mesh *pm, ParameterInput *pin);
-  static void FindDensityOnMesh(Mesh *pm, bool include_momentum, bool for_gravity);
+  static void FindDensityOnMesh(Mesh *pm, bool include_momentum);
   static void FormattedTableOutput(Mesh *pm, OutputParameters op);
   static void GetHistoryOutputNames(std::string output_names[], int ipar);
   static std::int64_t GetTotalNumber(Mesh *pm);
