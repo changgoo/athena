@@ -21,6 +21,11 @@
 #include "../reconstruct/reconstruction.hpp"
 #include "block_fft_gravity.hpp"
 
+// helper function to compute positive modulus (consistent with python % operator)
+inline int positive_modulo(int i, int n) {
+    return (i % n + n) % n;
+}
+
 //----------------------------------------------------------------------------------------
 //! \fn BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
 //! \brief BlockFFTGravity constructor
@@ -789,12 +794,12 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
 
   // Find ids of upper and lower MeshBlocks
   loc = my_loc;
-  loc.lx2 += 1;
+  loc.lx2 = positive_modulo(loc.lx2+1, Nx2/nx2);
   pleaf = proot->FindMeshBlock(loc);
   upper_id = pleaf->GetGid();
 
   loc = my_loc;
-  loc.lx2 -= 1;
+  loc.lx2 = positive_modulo(loc.lx2-1, Nx2/nx2);
   pleaf = proot->FindMeshBlock(loc);
   lower_id = pleaf->GetGid();
 
@@ -899,12 +904,12 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
         // Find ids of procs that data in [je-(joverlap-1):je] is sent to, and data in
         // [js:js+(joverlap-1)] is received from. Only execute if joverlap>0
         loc = my_loc;
-        loc.lx2 += (Ngrids + 1);
+        loc.lx2 = positive_modulo(loc.lx2+Ngrids+1, Nx2/nx2);
         pleaf = proot->FindMeshBlock(loc);
         sendto_id = pleaf->GetGid();
 
         loc = my_loc;
-        loc.lx2 -= (Ngrids + 1);
+        loc.lx2 = positive_modulo(loc.lx2-Ngrids-1, Nx2/nx2);
         pleaf = proot->FindMeshBlock(loc);
         getfrom_id = pleaf->GetGid();
 
@@ -950,12 +955,12 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
         // Find the id of the MeshBlock that data in [js:je-joverlap] is sent to, and data
         // in [js+joverlap:je] is received from.
         loc = my_loc;
-        loc.lx2 += Ngrids;
+        loc.lx2 = positive_modulo(loc.lx2+Ngrids, Nx2/nx2);
         pleaf = proot->FindMeshBlock(loc);
         sendto_id = pleaf->GetGid();
 
         loc = my_loc;
-        loc.lx2 -= Ngrids;
+        loc.lx2 = positive_modulo(loc.lx2-Ngrids, Nx2/nx2);
         pleaf = proot->FindMeshBlock(loc);
         getfrom_id = pleaf->GetGid();
 
@@ -1000,12 +1005,12 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
         // Find ids of procs that data in [js:js+(joverlap-1)] is sent to, and data in
         // [je-(joverlap-1):je] is received from. Only execute if joverlap>0
         loc = my_loc;
-        loc.lx2 -= (Ngrids + 1);
+        loc.lx2 = positive_modulo(loc.lx2-Ngrids-1, Nx2/nx2);
         pleaf = proot->FindMeshBlock(loc);
         sendto_id = pleaf->GetGid();
 
         loc = my_loc;
-        loc.lx2 += (Ngrids + 1);
+        loc.lx2 = positive_modulo(loc.lx2+Ngrids+1, Nx2/nx2);
         pleaf = proot->FindMeshBlock(loc);
         getfrom_id = pleaf->GetGid();
 
@@ -1051,12 +1056,12 @@ void BlockFFTGravity::RollUnroll(AthenaArray<Real> &dat, Real dt) {
         // Find the id of the MeshBlock that data in [js+joverlap:je] is sent to, and data
         // in [js:je-joverlap] is received from.
         loc = my_loc;
-        loc.lx2 -= Ngrids;
+        loc.lx2 = positive_modulo(loc.lx2-Ngrids, Nx2/nx2);
         pleaf = proot->FindMeshBlock(loc);
         sendto_id = pleaf->GetGid();
 
         loc = my_loc;
-        loc.lx2 += Ngrids;
+        loc.lx2 = positive_modulo(loc.lx2+Ngrids, Nx2/nx2);
         pleaf = proot->FindMeshBlock(loc);
         getfrom_id = pleaf->GetGid();
 
