@@ -113,8 +113,8 @@ def main(**kwargs):
                 module = __import__(name_full, globals(), locals(),
                                     fromlist=['prepare', 'run', 'analyze'])
                 reload(module)
-                os.system('rm -rf {0}/bin'.format(current_dir))
-                os.system('rm -rf {0}/obj'.format(current_dir))
+                # os.system('rm -rf {0}/bin'.format(current_dir))
+                # os.system('rm -rf {0}/obj'.format(current_dir))
 
                 # Change formatting of full single test name, e.g. gr.compile_kerr-schild:
                 # (Lcov test names may only contain letters, numbers, and '_')

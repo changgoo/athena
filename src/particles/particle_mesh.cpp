@@ -176,18 +176,18 @@ void ParticleMesh::InterpolateMeshToParticles(
           u(k,j,i,n) = meshsrc(ms1+n,k,j,i);
 
   // Allocate space for SIMD.
-  Real **w1 __attribute__((aligned(64))) = new Real*[npc1_];
-  Real **w2 __attribute__((aligned(64))) = new Real*[npc2_];
-  Real **w3 __attribute__((aligned(64))) = new Real*[npc3_];
+  Real **w1 __attribute__((aligned(CACHELINE_BYTES))) = new Real*[npc1_];
+  Real **w2 __attribute__((aligned(CACHELINE_BYTES))) = new Real*[npc2_];
+  Real **w3 __attribute__((aligned(CACHELINE_BYTES))) = new Real*[npc3_];
   for (int i = 0; i < npc1_; ++i)
     w1[i] = new Real[SIMD_WIDTH];
   for (int i = 0; i < npc2_; ++i)
     w2[i] = new Real[SIMD_WIDTH];
   for (int i = 0; i < npc3_; ++i)
     w3[i] = new Real[SIMD_WIDTH];
-  Real imb1v[SIMD_WIDTH] __attribute__((aligned(64)));
-  Real imb2v[SIMD_WIDTH] __attribute__((aligned(64)));
-  Real imb3v[SIMD_WIDTH] __attribute__((aligned(64)));
+  int imb1v[SIMD_WIDTH] __attribute__((aligned(CACHELINE_BYTES)));
+  int imb2v[SIMD_WIDTH] __attribute__((aligned(CACHELINE_BYTES)));
+  int imb3v[SIMD_WIDTH] __attribute__((aligned(CACHELINE_BYTES)));
 
   // Loop over each particle.
   int npar = ppar_->npar;
@@ -277,24 +277,22 @@ void ParticleMesh::InterpolateMeshToParticles(
 void ParticleMesh::AssignParticlesToMeshAux(
          const AthenaArray<Real>& par, int p1, int ma1, int nprop) {
   // Zero out meshaux.
-#pragma ivdep
   std::fill(&weight(0,0,0), &weight(0,0,0) + ncells_, 0.0);
-#pragma ivdep
   std::fill(&meshaux(ma1,0,0,0), &meshaux(ma1+nprop,0,0,0), 0.0);
 
   // Allocate space for SIMD.
-  Real **w1 __attribute__((aligned(64))) = new Real*[npc1_];
-  Real **w2 __attribute__((aligned(64))) = new Real*[npc2_];
-  Real **w3 __attribute__((aligned(64))) = new Real*[npc3_];
+  Real **w1 __attribute__((aligned(CACHELINE_BYTES))) = new Real*[npc1_];
+  Real **w2 __attribute__((aligned(CACHELINE_BYTES))) = new Real*[npc2_];
+  Real **w3 __attribute__((aligned(CACHELINE_BYTES))) = new Real*[npc3_];
   for (int i = 0; i < npc1_; ++i)
     w1[i] = new Real[SIMD_WIDTH];
   for (int i = 0; i < npc2_; ++i)
     w2[i] = new Real[SIMD_WIDTH];
   for (int i = 0; i < npc3_; ++i)
     w3[i] = new Real[SIMD_WIDTH];
-  Real imb1v[SIMD_WIDTH] __attribute__((aligned(64)));
-  Real imb2v[SIMD_WIDTH] __attribute__((aligned(64)));
-  Real imb3v[SIMD_WIDTH] __attribute__((aligned(64)));
+  int imb1v[SIMD_WIDTH] __attribute__((aligned(CACHELINE_BYTES)));
+  int imb2v[SIMD_WIDTH] __attribute__((aligned(CACHELINE_BYTES)));
+  int imb3v[SIMD_WIDTH] __attribute__((aligned(CACHELINE_BYTES)));
 
   // Loop over each particle.
   int npar = ppar_->npar;
@@ -392,9 +390,7 @@ void ParticleMesh::InterpolateMeshAndAssignParticles(
          AthenaArray<Real>& pardst, int pd1, int ni,
          const AthenaArray<Real>& parsrc, int ps1, int ma1, int na) {
   // Zero out meshaux.
-#pragma ivdep
   std::fill(&weight(0,0,0), &weight(0,0,0) + ncells_, 0.0);
-#pragma ivdep
   std::fill(&meshaux(ma1,0,0,0), &meshaux(ma1+na,0,0,0), 0.0);
 
   // Transpose meshsrc.
@@ -408,18 +404,18 @@ void ParticleMesh::InterpolateMeshAndAssignParticles(
           u(k,j,i,n) = meshsrc(ms1+n,k,j,i);
 
   // Allocate space for SIMD.
-  Real **w1 __attribute__((aligned(64))) = new Real*[npc1_];
-  Real **w2 __attribute__((aligned(64))) = new Real*[npc2_];
-  Real **w3 __attribute__((aligned(64))) = new Real*[npc3_];
+  Real **w1 __attribute__((aligned(CACHELINE_BYTES))) = new Real*[npc1_];
+  Real **w2 __attribute__((aligned(CACHELINE_BYTES))) = new Real*[npc2_];
+  Real **w3 __attribute__((aligned(CACHELINE_BYTES))) = new Real*[npc3_];
   for (int i = 0; i < npc1_; ++i)
     w1[i] = new Real[SIMD_WIDTH];
   for (int i = 0; i < npc2_; ++i)
     w2[i] = new Real[SIMD_WIDTH];
   for (int i = 0; i < npc3_; ++i)
     w3[i] = new Real[SIMD_WIDTH];
-  Real imb1v[SIMD_WIDTH] __attribute__((aligned(64)));
-  Real imb2v[SIMD_WIDTH] __attribute__((aligned(64)));
-  Real imb3v[SIMD_WIDTH] __attribute__((aligned(64)));
+  int imb1v[SIMD_WIDTH] __attribute__((aligned(CACHELINE_BYTES)));
+  int imb2v[SIMD_WIDTH] __attribute__((aligned(CACHELINE_BYTES)));
+  int imb3v[SIMD_WIDTH] __attribute__((aligned(CACHELINE_BYTES)));
 
   // Loop over each particle.
   int npar = ppar_->npar;

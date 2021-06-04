@@ -126,7 +126,7 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
 //======================================================================================
 void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   // read in the mean velocity
-  direction = pin->GetOrAddReal("problem","direction",0);
+  direction = pin->GetOrAddInteger("problem","direction",0);
   if(direction == 0)
     vx = pin->GetOrAddReal("problem","v0",0);
   else if(direction == 1)

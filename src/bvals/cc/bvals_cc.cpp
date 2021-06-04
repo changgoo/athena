@@ -88,7 +88,7 @@ CellCenteredBoundaryVariable::CellCenteredBoundaryVariable(
 
         // TODO(KGF): the rest of this should be a part of InitBoundaryData()
 
-        int bsize = pmb->block_size.nx2*pbval_->ssize_*(nu_ + 1);
+        int bsize = pmb->block_size.nx2*(pmb->ncells3*NGHOST)*(nu_ + 1);
         int fsize = pmb->block_size.nx2*nx3*(nu_ + 1);
         for (int n=0; n<4; n++) {
           shear_bd_var_[upper].send[n] = new Real[bsize];
@@ -646,7 +646,7 @@ void CellCenteredBoundaryVariable::StartReceiving(BoundaryCommSubset phase) {
   }
 #endif
   if (pbval_->shearing_box == 1) {
-    int ssize = pbval_->ssize_;
+    int ssize = pmb->ncells3*NGHOST;
     int nx3 = pmb->block_size.nx3;
     // TODO(KGF): clear sflag arrays
     if (phase == BoundaryCommSubset::all) {

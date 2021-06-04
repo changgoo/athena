@@ -56,7 +56,7 @@ Multigrid::Multigrid(MultigridDriver *pmd, MeshBlock *pmb, int invar, int nghost
 
   nlevel_=0;
   if (pmy_block_ == nullptr) { // root
-    int nbx, nby, nbz;
+    int nbx(0), nby(0), nbz(0);
     for (int l=0; l<20; l++) {
       if (size_.nx1%(1<<l)==0 && size_.nx2%(1<<l)==0 && size_.nx3%(1<<l)==0) {
         nbx=size_.nx1/(1<<l), nby=size_.nx2/(1<<l), nbz=size_.nx3/(1<<l);

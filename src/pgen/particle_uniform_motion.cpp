@@ -105,7 +105,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
       // Find the total number of particles in each direction.
       RegionSize& mesh_size = pmy_mesh->mesh_size;
-      Real npartot = pin->GetReal("problem","npartot");
+      int npartot = pin->GetInteger("problem","npartot");
       // pin->GetOrAddReal(ppar[ipar]->input_block_name, "npartot",100);
 
       // Update capacity of particle container

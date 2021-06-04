@@ -77,7 +77,8 @@ class OrbitalAdvection{
 
   AthenaArray<Real> vKc, vKf[2]; // Orbital Velocity (cell-centered and face)
   AthenaArray<Real> dvKc1, dvKc2; // Derivatives of vKc
-  Real Omega0, qshear, shboxcoord; // parameters for shearing box in cartesian
+  Real Omega0, qshear; // parameters for shearing box in cartesian
+  int shboxcoord;
   Real gm; // central gravity in cylindrical/spherical_polar
 
   // TODO(tomo-ono): Consider replace these buffers.

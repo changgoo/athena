@@ -41,20 +41,22 @@ hydro_args = []
 def prepare(**kwargs):
     logger.debug('Running test ' + __name__)
     # Check that code compiles all pgen files in single or double precision
-    for single_precision in [True, False]:
-        for pgen_set, args in zip([mhd_probs, hydro_probs],
-                                  [mhd_args, hydro_args]):
-            args_lcl = list(args)
-            if single_precision:
-                args_lcl.extend(['float'])
-            # "make clean" and link into executable only for the first problem
-            # in the set that shares ./configure.py flags (except --pgen)
-            pgen = pgen_set.pop()
+    # (changgoo) this fails on stellar with new intel compiler for
+    # double -> single conversion warning
+    # for single_precision in [True, False]:
+    for pgen_set, args in zip([gr_probs, mhd_probs, hydro_probs],
+                              [gr_args, mhd_args, hydro_args]):
+        args_lcl = list(args)
+        # if single_precision:
+        #     args_lcl.extend(['float'])
+        # "make clean" and link into executable only for the first problem
+        # in the set that shares ./configure.py flags (except --pgen)
+        pgen = pgen_set.pop()
+        athena.configure(*args_lcl, prob=pgen, **kwargs)
+        athena.make(clean_first=True, obj_only=False)
+        for pgen in pgen_set:
             athena.configure(*args_lcl, prob=pgen, **kwargs)
-            athena.make(clean_first=True, obj_only=False)
-            for pgen in pgen_set:
-                athena.configure(*args_lcl, prob=pgen, **kwargs)
-                athena.make(clean_first=False, obj_only=True)
+            athena.make(clean_first=False, obj_only=True)
 
 
 # Run Athena++

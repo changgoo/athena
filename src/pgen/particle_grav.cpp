@@ -120,7 +120,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     Real m0 = (1-fgas)*Mtot/npartot;
 
     // Determine number of particles in the block.
-    pp->UpdateCapacity(npartot/Globals::nranks);
+    pp->UpdateCapacity(static_cast<int>(npartot/Globals::nranks)+1);
 
     // Assign the particles.
     // Ramdomizing position. Or velocity perturbation

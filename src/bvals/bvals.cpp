@@ -225,12 +225,10 @@ BoundaryValues::BoundaryValues(MeshBlock *pmb, BoundaryFlag *input_bcs,
             << " = "<< NGHOST+xgh_ << "with shear_periodic boundary."<<std::endl;
         ATHENA_ERROR(msg);
       }
-      int pnum = pmb->block_size.nx2+2*NGHOST+1;
+      int pnum = pmb->ncells2+1;
       if (MAGNETIC_FIELDS_ENABLED) pnum++;
       pflux_.NewAthenaArray(pnum);
 
-      int nc3 = pmb->ncells3;
-      ssize_ = NGHOST*nc3;
       //! \todo (felker):
       //! * much of this should be a part of InitBoundaryData()
       for (int upper=0; upper<2; upper++) {
@@ -303,7 +301,7 @@ void BoundaryValues::SetupPersistentMPI() {
             shbb_[upper][lx2].level = loclist[gid].level;
           }
           loc.lx1 = loc_shear[1-upper];
-          loc.lx2   = pmb->loc.lx2;
+          loc.lx2 = pmb->loc.lx2;
           MeshBlockTree *mbt = pmy_mesh_->tree.FindMeshBlock(loc);
           if (mbt == nullptr || mbt->GetGid() == -1) {
             std::stringstream msg;

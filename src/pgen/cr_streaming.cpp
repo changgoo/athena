@@ -52,7 +52,7 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
 //! \brief CR streaming test
 //======================================================================================
 void MeshBlock::ProblemGenerator(ParameterInput *pin) {
-  direction = pin->GetOrAddReal("problem","direction",0);
+  direction = pin->GetOrAddInteger("problem","direction",0);
   if(direction == 0)
     vx = pin->GetOrAddReal("problem","v0",0);
   else if(direction == 1)

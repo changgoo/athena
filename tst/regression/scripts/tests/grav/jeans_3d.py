@@ -135,7 +135,7 @@ def analyze():
         logger.warning("Linear wave error is too large for BlockFFT gravity %g",
                        data[8][4])
         analyze_status = False
-    if data[1][4] != data[5][4]:
+    if abs(data[1][4]-data[5][4]) > 1.e-6:
         logger.warning(
             "Linear wave error with one core w/wo MPI not identical for FFT gravity"
             + " %g %g", data[1][4], data[5][4])
@@ -160,7 +160,7 @@ def analyze():
             "Linear wave error between 4 and 1 cores too large for FFT gravity %g %g",
             data[7][4], data[5][4])
         analyze_status = False
-    if data[8][4] != data[7][4]:
+    if abs(data[8][4]-data[7][4]) > 1.e-6:
         logger.warning(
             "Linear wave error between FFT gravity and BlockFFT gravity too large %g %g",
             data[8][4], data[7][4])

@@ -28,6 +28,7 @@ set_warning_cflag () {
 		     "-Wno-unused-parameter"
 		     "-Wno-unknown-pragmas"
 		     "-Wno-unused-function"
+         "-Wno-pass-failed"
 		     # Add even more warnings:
 		     # "-Wconversion"       # also controls sign-,float-conversion
 		     "-Wshorten-64-to-32" # (controlled by above flag; not avail in GCC)

@@ -175,7 +175,6 @@ class BoundaryValues : public BoundaryBase, //public BoundaryPhysics,
   // KGF: remove the redundancies in these variables:
   int shearing_box; // flag for shearing box: 0 = none, 1: xy, 2: xz
   int joverlap_, joverlap_flux_; // # of cells the shear runs over one block
-  Real ssize_;                   // # of ghost cells in x-z plane
   Real eps_, eps_flux_;          // fraction part of the shear
   Real qomL_;
   int xorder_, xgh_;

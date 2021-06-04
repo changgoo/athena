@@ -992,7 +992,7 @@ void Mesh::OutputMeshStructure(int ndim) {
   }
   for (int i=0; i<nbtotal; i++) {
     nb_per_plevel[(loclist[i].level - root_level)]++;
-    cost_per_plevel[(loclist[i].level - root_level)] += costlist[i];
+    cost_per_plevel[(loclist[i].level - root_level)] += static_cast<int>(costlist[i]);
   }
   for (int i=root_level; i<=max_level; i++) {
     if (nb_per_plevel[i-root_level] != 0) {
@@ -1012,7 +1012,7 @@ void Mesh::OutputMeshStructure(int ndim) {
   }
   for (int i=0; i<nbtotal; i++) {
     nb_per_rank[ranklist[i]]++;
-    cost_per_rank[ranklist[i]] += costlist[i];
+    cost_per_rank[ranklist[i]] += static_cast<int>(costlist[i]);
   }
   for (int i=0; i<Globals::nranks; ++i) {
     std::cout << "  Rank = " << i << ": " << nb_per_rank[i] <<" MeshBlocks, cost = "
