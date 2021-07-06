@@ -1,5 +1,5 @@
-#ifndef BVALS_PM_HPP_
-#define BVALS_PM_HPP_
+#ifndef BVALS_CC_PM_BVALS_PM_HPP_
+#define BVALS_CC_PM_BVALS_PM_HPP_
 //========================================================================================
 // Athena++ astrophysical MHD code
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
@@ -15,8 +15,8 @@
 // Athena++ headers
 #include "../../../athena.hpp"
 #include "../../../athena_arrays.hpp"
-#include "../bvals_cc.hpp"
 #include "../../../particles/particle_mesh.hpp"
+#include "../bvals_cc.hpp"
 
 //----------------------------------------------------------------------------------------
 //! \class CellCenteredBoundaryVariable
@@ -49,4 +49,4 @@ class ParticleMeshBoundaryVariable : public CellCenteredBoundaryVariable {
   ParticleMesh *ppm_;
 };
 
-#endif // BVALS_PM_HPP_
+#endif // BVALS_CC_PM_BVALS_PM_HPP_

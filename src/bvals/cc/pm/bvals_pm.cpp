@@ -87,10 +87,10 @@ void ParticleMeshBoundaryVariable::SetBoundarySameLevel(Real *buf,
   for (int n=nl_; n<=nu_; ++n) {
     for (int k=sk; k<=ek; ++k) {
       for (int j=sj; j<=ej; ++j) {
-#pragma omp simd
         for (int i=si; i<=ei; ++i) {
           if (nb.shear) var_buf(n,k,j,i) += buf[p++];
-          else var(n,k,j,i) += buf[p++];
+          else
+            var(n,k,j,i) += buf[p++];
         }
       }
     }
@@ -138,6 +138,7 @@ void ParticleMeshBoundaryVariable::LoadShearingBoxBoundarySameLevel(
   for (int n=nl_; n<=nu_; ++n) {
     for (int k=sk; k<=ek; k++) {
       for (int i=si; i<=ei; i++) {
+#pragma omp simd
         for (int j=sj; j<=ej; j++) {
           buf[p++] = src(n,k,j,i);
         }
