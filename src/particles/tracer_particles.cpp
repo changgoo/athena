@@ -86,9 +86,11 @@ void TracerParticles::SourceTerms(Real t, Real dt, const AthenaArray<Real>& mesh
 
   // Tracer particles
   for (int k = 0; k < npar; ++k) {
+    Real tmpx = vpx(k), tmpy = vpy(k), tmpz = vpz(k);
     vpx(k) = wx(k);
     vpy(k) = wy(k);
     vpz(k) = wz(k);
+    vpx0(k) = tmpx; vpy0(k) = tmpy; vpz0(k) = tmpz;
   }
 
   return;

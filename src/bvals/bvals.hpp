@@ -225,5 +225,6 @@ class BoundaryValues : public BoundaryBase, //public BoundaryPhysics,
   friend class CellCenteredBoundaryVariable;
   friend class HydroBoundaryVariable; // needed for shearing box quantities
   friend class ParticleMeshBoundaryVariable; // needed for shearing box quantities
+  friend class Particles; // needed for shearing box quantities
 };
 #endif // BVALS_BVALS_HPP_

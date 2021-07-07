@@ -71,3 +71,4 @@ tags
 
 # notebook checkpoints
 .ipynb_checkpoints/
+vis/notebook/working

@@ -18,13 +18,14 @@ dt         = 0.1        # time increment between outputs
 ghost_zones = false
 
 <output3>
-file_type  = rst        # Restart data dump
-dt         = -1        # time increment between outputs
+file_type  = partab     # Ascii table dump
+variable   = prim       # variables to be output
+dt         = 0.1        # time increment between outputs
 
 <time>
 cfl_number = 0.3        # The Courant, Friedrichs, & Lewy (CFL) Number
 nlim       = 100000     # cycle limit
-tlim       = 1.0        # time limit
+tlim       = 0.5        # time limit
 integrator  = vl2       # time integration algorithm
 xorder      = 2         # order of spatial reconstruction
 ncycle_out  = 1         # interval for stdout summary info
@@ -50,7 +51,7 @@ ox3_bc     = periodic   # outer-X3 boundary flag
 
 <meshblock>
 nx1        = 16
-nx2        = 16
+nx2        = 4
 nx3        = 4
 
 <hydro>

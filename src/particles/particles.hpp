@@ -106,9 +106,18 @@ friend class ParticleMesh;
                      int root_level);
   void AddOneParticle(Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
   void RemoveOneParticle(int k);
+  void LoadParticleBuffer(ParticleBuffer *ppb, int k);
+  void SendParticleBuffer(ParticleBuffer& send, int dst);
   void SendToNeighbors();
   void SetPositionIndices();
   bool ReceiveFromNeighbors();
+
+  void StartReceivingParticlesShear();
+  void SendParticlesShear();
+  int FindTargetGidAlongX2(Real x2);
+  void ClearBoundaryShear();
+  bool ReceiveFromNeighborsShear();
+
   Real NewBlockTimeStep();
   virtual void FindLocalDensityOnMesh(bool include_momentum);
 
@@ -147,7 +156,7 @@ friend class ParticleMesh;
 
   int imom1, imom2, imom3;  // indices for momentum components on mesh
 
-  int imass;
+  int imass, ish;
   int igx, igy, igz; // indices for gravity force
 
   // Instance methods
@@ -228,6 +237,7 @@ friend class ParticleMesh;
   void SetNewParticleID(int id);
   struct Neighbor* FindTargetNeighbor(
       int ox1, int ox2, int ox3, int xi1, int xi2, int xi3);
+  void ApplyBoundaryConditionsShear(int k, Real &x1, Real &x2, Real &x3);
 
   // Class variable
   static std::vector<int> idmax;
@@ -237,13 +247,14 @@ friend class ParticleMesh;
   int my_particle_num_;
 
   // MeshBlock-to-MeshBlock communication:
-  BoundaryValues *pbval_;            //!> ptr to my BoundaryValues
-  Neighbor neighbor_[3][3][3];       //!> links to neighbors
-  ParticleBuffer recv_[56];          //!> particle receive buffers
-  enum BoundaryStatus bstatus_[56];  //!> boundary status
+  BoundaryValues *pbval_;                            //!> ptr to my BoundaryValues
+  Neighbor neighbor_[3][3][3];                       //!> links to neighbors
+  ParticleBuffer recv_[56], recv_sh_[8];             //!> particle receive buffers
+  enum BoundaryStatus bstatus_[56], bstatus_recv_sh_[8];  //!> boundary status
 #ifdef MPI_PARALLEL
   static MPI_Comm my_comm;   //!> my MPI communicator
-  ParticleBuffer send_[56];  //!> particle send buffers
+  ParticleBuffer send_[56],send_sh_[8];  //!> particle send buffers
+  enum BoundaryStatus bstatus_send_sh_[8];  //!> comm. flags
 #endif
 };
 

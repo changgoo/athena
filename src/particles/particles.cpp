@@ -202,7 +202,7 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
   nint(0), nreal(0), naux(0), nwork(0),
   ipid(-1), ixp(-1), iyp(-1), izp(-1), ivpx(-1), ivpy(-1), ivpz(-1),
   ixp0(-1), iyp0(-1), izp0(-1), ivpx0(-1), ivpy0(-1), ivpz0(-1),
-  ixi1(-1), ixi2(-1), ixi3(-1), imom1(-1), imom2(-1), imom3(-1), imass(-1),
+  ixi1(-1), ixi2(-1), ixi3(-1), imom1(-1), imom2(-1), imom3(-1), imass(-1), ish(-1),
   igx(-1), igy(-1), igz(-1),
   npar(0), nparmax(1),
   my_ipar_(pp->ipar), isgravity_(false), parhstout_(false), mass(1.0) {
@@ -288,7 +288,12 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
       ATHENA_ERROR(msg);
     }
 
+    // q*Omega*Lx
     qomL = qshear_*Omega_0_*pmy_mesh->mesh_size.x1len;
+
+    // aux array for shear boundary flag
+    ish = AddAuxProperty();
+    auxfieldname.push_back("ish");
   }
 
   // Actual memory allocation and shorthand assignment will be done in the derived class
