@@ -106,7 +106,11 @@ friend class ParticleMesh;
   void AddOneParticle(Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
   void RemoveOneParticle(int k);
   void LoadParticleBuffer(ParticleBuffer *ppb, int k);
+#ifdef MPI_PARALLEL
   void SendParticleBuffer(ParticleBuffer& send, int dst);
+  void ReceiveParticleBuffer(int nb_rank, ParticleBuffer& recv,
+                             enum BoundaryStatus& bstatus);
+#endif
   void SendToNeighbors();
   void SetPositionIndices();
   bool ReceiveFromNeighbors();

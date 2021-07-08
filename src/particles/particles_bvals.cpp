@@ -308,8 +308,8 @@ void Particles::SendToNeighbors() {
 //! \fn void Particles::SendParticleBuffer()
 //! \brief send particle buffer
 
-void Particles::SendParticleBuffer(ParticleBuffer& send, int dst) {
 #ifdef MPI_PARALLEL
+void Particles::SendParticleBuffer(ParticleBuffer& send, int dst) {
   int npsend = send.npar;
   int sendtag = send.tag;
   MPI_Send(&npsend, 1, MPI_INT, dst, sendtag, my_comm);
@@ -322,8 +322,62 @@ void Particles::SendParticleBuffer(ParticleBuffer& send, int dst) {
               dst, sendtag + 2, my_comm, &req);
     MPI_Request_free(&req);
   }
-#endif
 }
+#endif
+
+
+//--------------------------------------------------------------------------------------
+//! \fn void Particles::ReceiveParticleBuffer()
+//! \brief recv particle buffer
+
+#ifdef MPI_PARALLEL
+void Particles::ReceiveParticleBuffer(int nb_rank, ParticleBuffer& recv,
+                                      enum BoundaryStatus& bstatus) {
+  // Communicate with neighbor processes.
+  if (nb_rank != Globals::my_rank && bstatus == BoundaryStatus::waiting) {
+    if (!recv.flagn) {
+      // Get the number of incoming particles.
+      if (recv.reqn == MPI_REQUEST_NULL)
+        MPI_Irecv(&recv.npar, 1, MPI_INT, nb_rank, recv.tag, my_comm, &recv.reqn);
+      else
+        MPI_Test(&recv.reqn, &recv.flagn, MPI_STATUS_IGNORE);
+      if (recv.flagn) {
+        if (recv.npar > 0) {
+          // Check the buffer size.
+          int nprecv = recv.npar;
+          if (nprecv > recv.nparmax) {
+            recv.npar = 0;
+            recv.Reallocate(2 * nprecv - recv.nparmax);
+            recv.npar = nprecv;
+          }
+        } else {
+          // No incoming particles.
+          bstatus = BoundaryStatus::completed;
+        }
+      }
+    }
+    if (recv.flagn && recv.npar > 0) {
+      // Receive data from the neighbor.
+      if (!recv.flagi) {
+        if (recv.reqi == MPI_REQUEST_NULL)
+          MPI_Irecv(recv.ibuf, recv.npar * ParticleBuffer::nint, MPI_INT,
+                    nb_rank, recv.tag + 1, my_comm, &recv.reqi);
+        else
+          MPI_Test(&recv.reqi, &recv.flagi, MPI_STATUS_IGNORE);
+      }
+      if (!recv.flagr) {
+        if (recv.reqr == MPI_REQUEST_NULL)
+          MPI_Irecv(recv.rbuf, recv.npar * ParticleBuffer::nreal, MPI_ATHENA_REAL,
+                    nb_rank, recv.tag + 2, my_comm, &recv.reqr);
+        else
+          MPI_Test(&recv.reqr, &recv.flagr, MPI_STATUS_IGNORE);
+      }
+      if (recv.flagi && recv.flagr)
+        bstatus = BoundaryStatus::arrived;
+    }
+  }
+}
+#endif
 
 //--------------------------------------------------------------------------------------
 //! \fn bool Particles::ReceiveFromNeighbors()
@@ -336,56 +390,10 @@ bool Particles::ReceiveFromNeighbors() {
   for (int i = 0; i < pbval_->nneighbor; ++i) {
     NeighborBlock& nb = pbval_->neighbor[i];
     enum BoundaryStatus& bstatus = bstatus_[nb.bufid];
-
+    ParticleBuffer& recv = recv_[nb.bufid];
 #ifdef MPI_PARALLEL
-    // (changgoo) this part can be modularized
-    // Communicate with neighbor processes.
-    int nb_rank = nb.snb.rank;
-    if (nb_rank != Globals::my_rank && bstatus == BoundaryStatus::waiting) {
-      ParticleBuffer& recv = recv_[nb.bufid];
-      if (!recv.flagn) {
-        // Get the number of incoming particles.
-        if (recv.reqn == MPI_REQUEST_NULL)
-          MPI_Irecv(&recv.npar, 1, MPI_INT, nb_rank, recv.tag, my_comm, &recv.reqn);
-        else
-          MPI_Test(&recv.reqn, &recv.flagn, MPI_STATUS_IGNORE);
-        if (recv.flagn) {
-          if (recv.npar > 0) {
-            // Check the buffer size.
-            int nprecv = recv.npar;
-            if (nprecv > recv.nparmax) {
-              recv.npar = 0;
-              recv.Reallocate(2 * nprecv - recv.nparmax);
-              recv.npar = nprecv;
-            }
-          } else {
-            // No incoming particles.
-            bstatus = BoundaryStatus::completed;
-          }
-        }
-      }
-      if (recv.flagn && recv.npar > 0) {
-        // Receive data from the neighbor.
-        if (!recv.flagi) {
-          if (recv.reqi == MPI_REQUEST_NULL)
-            MPI_Irecv(recv.ibuf, recv.npar * ParticleBuffer::nint, MPI_INT,
-                      nb_rank, recv.tag + 1, my_comm, &recv.reqi);
-          else
-            MPI_Test(&recv.reqi, &recv.flagi, MPI_STATUS_IGNORE);
-        }
-        if (!recv.flagr) {
-          if (recv.reqr == MPI_REQUEST_NULL)
-            MPI_Irecv(recv.rbuf, recv.npar * ParticleBuffer::nreal, MPI_ATHENA_REAL,
-                      nb_rank, recv.tag + 2, my_comm, &recv.reqr);
-          else
-            MPI_Test(&recv.reqr, &recv.flagr, MPI_STATUS_IGNORE);
-        }
-        if (recv.flagi && recv.flagr)
-          bstatus = BoundaryStatus::arrived;
-      }
-    }
+    ReceiveParticleBuffer(nb.snb.rank, recv, bstatus);
 #endif
-
     switch (bstatus) {
       case BoundaryStatus::completed:
         break;
@@ -395,7 +403,6 @@ bool Particles::ReceiveFromNeighbors() {
         break;
 
       case BoundaryStatus::arrived:
-        ParticleBuffer& recv = recv_[nb.bufid];
         FlushReceiveBuffer(recv);
         bstatus = BoundaryStatus::completed;
         break;
@@ -696,54 +703,9 @@ bool Particles::ReceiveFromNeighborsShear() {
       for (int n=0; n<4; n++) {
         SimpleNeighborBlock& snb = pbval_->sb_data_[upper].recv_neighbor[n];
         enum BoundaryStatus& bstatus = bstatus_recv_sh_[n+upper*4];
-
+        ParticleBuffer& recv = recv_sh_[n+upper*4];
 #ifdef MPI_PARALLEL
-        // Communicate with neighbor processes.
-        int nb_rank = snb.rank;
-        if (nb_rank != Globals::my_rank && bstatus == BoundaryStatus::waiting) {
-          ParticleBuffer& recv = recv_sh_[n+upper*4];
-          if (!recv.flagn) {
-            // Get the number of incoming particles.
-            if (recv.reqn == MPI_REQUEST_NULL)
-              MPI_Irecv(&recv.npar, 1, MPI_INT, nb_rank, recv.tag, my_comm, &recv.reqn);
-            else
-              MPI_Test(&recv.reqn, &recv.flagn, MPI_STATUS_IGNORE);
-            if (recv.flagn) {
-              // std::cout << " npar:" << recv.npar;
-              if (recv.npar > 0) {
-                // Check the buffer size.
-                int nprecv = recv.npar;
-                if (nprecv > recv.nparmax) {
-                  recv.npar = 0;
-                  recv.Reallocate(2 * nprecv - recv.nparmax);
-                  recv.npar = nprecv;
-                }
-              } else {
-                // No incoming particles.
-                bstatus = BoundaryStatus::completed;
-              }
-            }
-          }
-          if (recv.flagn && recv.npar > 0) {
-            // Receive data from the neighbor.
-            if (!recv.flagi) {
-              if (recv.reqi == MPI_REQUEST_NULL)
-                MPI_Irecv(recv.ibuf, recv.npar * ParticleBuffer::nint, MPI_INT,
-                          nb_rank, recv.tag + 1, my_comm, &recv.reqi);
-              else
-                MPI_Test(&recv.reqi, &recv.flagi, MPI_STATUS_IGNORE);
-            }
-            if (!recv.flagr) {
-              if (recv.reqr == MPI_REQUEST_NULL)
-                MPI_Irecv(recv.rbuf, recv.npar * ParticleBuffer::nreal, MPI_ATHENA_REAL,
-                          nb_rank, recv.tag + 2, my_comm, &recv.reqr);
-              else
-                MPI_Test(&recv.reqr, &recv.flagr, MPI_STATUS_IGNORE);
-            }
-            if (recv.flagi && recv.flagr)
-              bstatus = BoundaryStatus::arrived;
-          }
-        }
+        ReceiveParticleBuffer(snb.rank, recv, bstatus);
 #endif
         switch (bstatus) {
           case BoundaryStatus::completed:
@@ -754,7 +716,6 @@ bool Particles::ReceiveFromNeighborsShear() {
             break;
 
           case BoundaryStatus::arrived:
-            ParticleBuffer& recv = recv_sh_[n+upper*4];
             FlushReceiveBuffer(recv);
             bstatus = BoundaryStatus::completed;
             break;
