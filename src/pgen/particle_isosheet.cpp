@@ -145,7 +145,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       pp->AddOneParticle(mpar,x,y,z,vx,vy,vz);
     }
 
-    std::cout << " nparmax: " << pp->nparmax << " npar: " << pp->npar << std::endl;
+    std::cout << "[Problem IsoSheet] nparmax: " << pp->nparmax << " npar: " << pp->npar
+              << " mpar: " << mpar << std::endl;
   }
   return;
 }

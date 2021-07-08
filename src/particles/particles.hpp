@@ -182,7 +182,7 @@ friend class ParticleMesh;
   int my_ipar_;
   bool isgravity_; //!> flag for gravity
   bool parhstout_; //!> flag for individual particle history output
-  Real mass;   //!> mass of each particle
+  Real mass;   //!> common mass of particle
   Real cfl_par;  //!> CFL number for particles
 
                                // Data attached to the particles:

@@ -48,12 +48,12 @@ ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : nmeshaux(0), iweig
   my_ipar_(ppar->my_ipar_), ppar_(ppar), pmb_(pmb), pmesh_(ppar->pmy_mesh) {
   // Add weight in meshaux.
   iweight = AddMeshAux();
+  if (ppar_->imass != -1) imass = AddMeshAux();
+
   // Add momentum in meshaux
   imom1 = AddMeshAux();
   imom2 = AddMeshAux();
   imom3 = AddMeshAux();
-
-  if (ppar_->imass != -1) imass = AddMeshAux();
 
   meshaux.NewAthenaArray(nmeshaux, nx3_, nx2_, nx1_);
   coarse_meshaux_.NewAthenaArray(nmeshaux, pmb->ncc3, pmb->ncc2, pmb->ncc1);

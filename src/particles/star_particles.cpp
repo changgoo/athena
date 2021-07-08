@@ -296,19 +296,21 @@ void StarParticles::FindLocalDensityOnMesh(bool include_momentum) {
   if (include_momentum) {
     AthenaArray<Real> vp, vp1, vp2, vp3, mpar;
     vp.NewAthenaArray(4, npar);
-    vp1.InitWithShallowSlice(vp, 2, 0, 1);
-    vp2.InitWithShallowSlice(vp, 2, 1, 1);
-    vp3.InitWithShallowSlice(vp, 2, 2, 1);
-    mpar.InitWithShallowSlice(vp, 2, 3, 1);
+    mpar.InitWithShallowSlice(vp, 2, 0, 1);
+    vp1.InitWithShallowSlice(vp, 2, 1, 1);
+    vp2.InitWithShallowSlice(vp, 2, 2, 1);
+    vp3.InitWithShallowSlice(vp, 2, 3, 1);
     for (int k = 0; k < npar; ++k) {
       pc->CartesianToMeshCoordsVector(xp(k), yp(k), zp(k),
         mp(k)*vpx(k), mp(k)*vpy(k), mp(k)*vpz(k), vp1(k), vp2(k), vp3(k));
       mpar(k) = mp(k);
     }
-    ppm->AssignParticlesToMeshAux(vp, 0, ppm->imom1, 4);
+    ppm->AssignParticlesToMeshAux(vp, 0, ppm->imass, 4);
   } else {
     ppm->AssignParticlesToMeshAux(mp, 0, ppm->imass, 1);
   }
+
+  ConvertToDensity(include_momentum);
 }
 
 //--------------------------------------------------------------------------------------

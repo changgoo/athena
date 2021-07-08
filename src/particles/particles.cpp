@@ -789,7 +789,7 @@ void Particles::ConvertToDensity(bool include_momentum) {
       for (int j = js; j <= je; ++j)
         for (int i = is; i <= ie; ++i) {
           Real vol(pc->GetCellVolume(k,j,i));
-          Real rhop(mass/vol);
+          Real rhop(mass/vol); // mass = 1.0 if imass != -1
           ppm->weight(k,j,i) *= rhop;
           ppm->meshaux(ppm->imom1,k,j,i) *= rhop;
           ppm->meshaux(ppm->imom2,k,j,i) *= rhop;
@@ -800,8 +800,10 @@ void Particles::ConvertToDensity(bool include_momentum) {
     for (int k = ks; k <= ke; ++k)
       for (int j = js; j <= je; ++j)
         for (int i = is; i <= ie; ++i) {
-          ppm->weight(k,j,i) *= mass/pc->GetCellVolume(k,j,i);
-          if (ppm->imass != -1) ppm->density(k,j,i) /= pc->GetCellVolume(k,j,i);
+          Real vol(pc->GetCellVolume(k,j,i));
+          Real rhop(mass/vol); // mass = 1.0 if imass != -1
+          ppm->weight(k,j,i) *= rhop;
+          if (ppm->imass != -1) ppm->density(k,j,i) *= rhop;
         }
   }
 }
