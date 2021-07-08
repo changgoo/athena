@@ -37,13 +37,13 @@ int ParticleMesh::AddMeshAux() {
 
 ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : nmeshaux(0), iweight(-1),
   imom1(-1), imom2(-1), imom3(-1), imass(-1),
+  is(pmb->is), ie(pmb->ie), js(pmb->js), je(pmb->je), ks(pmb->ks), ke(pmb->ke),
   active1_(ppar->active1_), active2_(ppar->active2_), active3_(ppar->active3_),
   dxi1_(active1_ ? RINF : 0),
   dxi2_(active2_ ? RINF : 0),
   dxi3_(active3_ ? RINF : 0),
   nx1_(pmb->ncells1), nx2_(pmb->ncells2), nx3_(pmb->ncells3),
   ncells_(nx1_ * nx2_ * nx3_),
-  is(pmb->is), ie(pmb->ie), js(pmb->js), je(pmb->je), ks(pmb->ks), ke(pmb->ke),
   npc1_(active1_ ? NPC : 1), npc2_(active2_ ? NPC : 1), npc3_(active3_ ? NPC : 1),
   my_ipar_(ppar->my_ipar_), ppar_(ppar), pmb_(pmb), pmesh_(ppar->pmy_mesh) {
   // Add weight in meshaux.
@@ -63,7 +63,11 @@ ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : nmeshaux(0), iweig
   if (ppar_->imass != -1) density.InitWithShallowSlice(meshaux, 4, imass, 1);
 
   // Enroll CellCenteredBoundaryVariable object
-  pmbvar = new ParticleMeshBoundaryVariable(pmb, &meshaux, &coarse_meshaux_, this);
+  AthenaArray<Real> empty_flux[3]=
+    {AthenaArray<Real>(),AthenaArray<Real>(), AthenaArray<Real>()};
+
+  pmbvar = new ParticleMeshBoundaryVariable(pmb, &meshaux, &coarse_meshaux_,
+                                            empty_flux,this);
   pmbvar->bvar_index = pmb_->pbval->bvars.size();
   pmb_->pbval->bvars.push_back(pmbvar);
   // Add particle mesh boundary variable to the list for main integrator

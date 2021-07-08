@@ -25,9 +25,8 @@
 
 ParticleMeshBoundaryVariable::ParticleMeshBoundaryVariable(
     MeshBlock *pmb, AthenaArray<Real> *var, AthenaArray<Real> *coarse_var,
-    ParticleMesh *ppm) :
-    empty_flux{AthenaArray<Real>(), AthenaArray<Real>(), AthenaArray<Real>()},
-    CellCenteredBoundaryVariable(pmb, var, coarse_var, empty_flux),
+    AthenaArray<Real> *var_flux, ParticleMesh *ppm) :
+    CellCenteredBoundaryVariable(pmb, var, coarse_var, var_flux),
     ppm_(ppm) {
   var_buf.NewAthenaArray(var->GetDim4(),pmb->ncells3,pmb->ncells2,pmb->ncells1);
 }

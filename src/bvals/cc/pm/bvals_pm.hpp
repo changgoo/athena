@@ -19,24 +19,22 @@
 #include "../bvals_cc.hpp"
 
 //----------------------------------------------------------------------------------------
-//! \class CellCenteredBoundaryVariable
+//! \class ParticleMeshBoundaryVariable
 //! \brief
 
 class ParticleMeshBoundaryVariable : public CellCenteredBoundaryVariable {
  public:
   ParticleMeshBoundaryVariable(MeshBlock *pmb, AthenaArray<Real> *var,
                                AthenaArray<Real> *coarse_var,
+                               AthenaArray<Real> *var_flux,
                                ParticleMesh *ppm);
 
   virtual ~ParticleMeshBoundaryVariable() = default;
 
-  AthenaArray<Real> empty_flux[3];
   AthenaArray<Real> var_buf;
 
   void SendShearingBoxBoundaryBuffers() override;
   void SetShearingBoxBoundaryBuffers() override;
-
-
 
  private:
   void SetBoundarySameLevel(Real *buf, const NeighborBlock& nb) override;
