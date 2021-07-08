@@ -234,7 +234,7 @@ void Particles::SendToNeighbors() {
     int ox1 = CheckSide(xi1i, IS, IE),
         ox2 = CheckSide(xi2i, JS, JE),
         ox3 = CheckSide(xi3i, KS, KE);
-    auxprop(ish,k) = 0; // initialize a flag for shear boundary crossing
+    if (pmy_mesh->shear_periodic) auxprop(ish,k) = 0; // initialize a flag for shear boundary crossing
     if (ox1 == 0 && ox2 == 0 && ox3 == 0) {
       ++k;
       continue;

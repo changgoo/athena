@@ -1,7 +1,7 @@
 <comment>
 problem   = Uniform motion with multi-tracers
 reference =
-configure = --prob=particle_uniform_motion -p -hdf5
+configure = --prob=particle_uniform_motion -hdf5
 
 
 <job>
