@@ -966,6 +966,42 @@ void Particles::OutputParticles(bool header) {
 }
 
 //--------------------------------------------------------------------------------------
+//! \fn Particles::OutputParticles()
+//! \brief outputs the particle data in tabulated format.
+void Particles::OutputParticles(bool header, int kid) {
+  std::stringstream fname, msg;
+  std::ofstream os;
+  std::string file_basename = pinput->GetString("job","problem_id");
+
+  for (int k = 0; k < npar; ++k) {
+    if (pid(k) != kid) continue;
+
+    // Create the filename.
+    fname << file_basename << ".par" << pid(k) << ".csv";
+
+    // Open the file for write.
+    if (header)
+      os.open(fname.str().data(), std::ofstream::out);
+    else
+      os.open(fname.str().data(), std::ofstream::app);
+
+    if (!os.is_open()) {
+      msg << "### FATAL ERROR in function [Particles::OutputParticles]"
+          << std::endl << "Output file '" << fname.str() << "' could not be opened"
+          << std::endl;
+      ATHENA_ERROR(msg);
+    }
+
+    OutputOneParticle(os, k, header);
+
+    // Close the file
+    os.close();
+    // clear filename
+    fname.str("");
+  }
+}
+
+//--------------------------------------------------------------------------------------
 //! \fn Particles::OutputParticle()
 //! \brief outputs the particle data in tabulated format.
 void Particles::OutputOneParticle(std::ostream &os, int k, bool header) {

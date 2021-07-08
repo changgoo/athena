@@ -124,6 +124,7 @@ friend class ParticleMesh;
 
   // output individual particle history
   void OutputParticles(bool header);
+  void OutputParticles(bool header, int kid);
   void OutputOneParticle(std::ostream &os, int k, bool header);
   void ToggleParHstOutFlag();
 

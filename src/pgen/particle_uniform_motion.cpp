@@ -52,23 +52,18 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   EnrollUserHistoryOutput(0, DeltaRho, "drhog");
   EnrollUserHistoryOutput(1, DeltaRho, "drhop");
 
-  // int npars = Particles::num_particles;
-  // Enroll user-defined functions
-  // AllocateUserHistoryOutput(npars+1);
-  // for (int i=0; i<=npars; ++i) {
-  //   if (i == 0) {
-  //     hstr.str("drhog");
-  //   } else {
-  //     hstr << "drhop" << i;
-  //   }
-  //   EnrollUserHistoryOutput(i, DeltaRho, hstr.str().data());
-  //   hstr.str("");
-  // }
   return;
 }
 
 void Mesh::UserWorkInLoop() {
   Particles::FindDensityOnMesh(this, false);
+  // output history of selected particle(s)
+  // for (int b = 0; b < nblocal; ++b) {
+  //   MeshBlock *pmb(my_blocks(b));
+  //   for (int ipar=0; ipar<Particles::num_particles; ++ipar) {
+  //     pmb->ppar[ipar]->OutputParticles((ncycle == 0),1234);
+  //   }
+  // }
 }
 
 //========================================================================================
