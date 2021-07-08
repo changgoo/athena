@@ -1007,3 +1007,26 @@ void Particles::ToggleParHstOutFlag() {
     parhstout_ = false;
   }
 }
+
+//--------------------------------------------------------------------------------------
+//! \fn Particles::DepositPMtoMesh()
+//! \brief deposit PM momentum to hydro vars
+//!
+//! this has to be tested
+void Particles::DepositPMtoMesh(int stage) {
+  // Deposit ParticleMesh meshaux to MeshBlock.
+  Hydro *phydro = pmy_block->phydro;
+  Real t = pmy_mesh->time, dt = pmy_mesh->dt;
+
+  switch (stage) {
+  case 1:
+    dt = 0.5 * dt;
+    break;
+
+  case 2:
+    t += 0.5 * dt;
+    break;
+  }
+
+  DepositToMesh(t, dt, phydro->w, phydro->u);
+}

@@ -66,9 +66,10 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   // }
   return;
 }
-// void Mesh::UserWorkInLoop() {
-//   Particles::FindDensityOnMesh(this, false, false);
-// }
+
+void Mesh::UserWorkInLoop() {
+  Particles::FindDensityOnMesh(this, false);
+}
 
 //========================================================================================
 //! \fn void MeshBlock::ProblemGenerator(ParameterInput *pin)
@@ -170,6 +171,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       std::cout << " ipar: " << ipar << " type: " << ppar[ipar]->partype
                 << " nparmax: " << ppar[ipar]->nparmax
                 << " npar: " << ppar[ipar]->npar << std::endl;
+
+      // calculate PM density every substeps (for history dumps)
+      // ppar[ipar]->pm_stages[0] = true;
+      // ppar[ipar]->pm_stages[1] = true;
     }
   }
 }

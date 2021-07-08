@@ -1705,7 +1705,7 @@ void TimeIntegratorTaskList::StartupTaskList(MeshBlock *pmb, int stage) {
 
   if (stage_wghts[stage-1].main_stage) {
     pmb->pbval->StartReceivingSubset(BoundaryCommSubset::all, pmb->pbval->bvars_main_int);
-    pmb->pbval->StartReceivingSubset(BoundaryCommSubset::pm, pmb->pbval->bvars_pm_grav);
+    pmb->pbval->StartReceivingSubset(BoundaryCommSubset::pm, pmb->pbval->bvars_pm);
     if (SHEAR_PERIODIC)
       for (Particles *ppar : pmb->ppar) ppar->StartReceivingParticlesShear();
   } else {
@@ -1730,7 +1730,7 @@ TaskStatus TimeIntegratorTaskList::ClearAllBoundary(MeshBlock *pmb, int stage) {
     pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::all,
                                     pmb->pbval->bvars_main_int);
     pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::pm,
-                                    pmb->pbval->bvars_pm_grav);
+                                    pmb->pbval->bvars_pm);
     for (Particles *ppar : pmb->ppar) ppar->ClearBoundary();
   } else {
     pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::orbital,
@@ -2282,8 +2282,9 @@ TaskStatus TimeIntegratorTaskList::ReceiveParticlesShear(MeshBlock *pmb, int sta
 }
 
 TaskStatus TimeIntegratorTaskList::SendParticleMesh(MeshBlock *pmb, int stage) {
-  for (Particles *ppar : pmb->ppar_grav) {
-    ppar->FindLocalDensityOnMesh(true);
+  for (Particles *ppar : pmb->ppar) {
+    if (ppar->IsGravity())
+      ppar->FindLocalDensityOnMesh(false);
     ppar->ppm->pmbvar->SendBoundaryBuffers();
   }
   return TaskStatus::success;
@@ -2291,7 +2292,7 @@ TaskStatus TimeIntegratorTaskList::SendParticleMesh(MeshBlock *pmb, int stage) {
 
 TaskStatus TimeIntegratorTaskList::ReceiveParticleMesh(MeshBlock *pmb, int stage) {
   bool ret_all(true), ret(false);
-  for (Particles *ppar : pmb->ppar_grav) {
+  for (Particles *ppar : pmb->ppar) {
     ret = ppar->ppm->pmbvar->ReceiveBoundaryBuffers();
     ret_all = (ret_all & ret);
   }
@@ -2302,7 +2303,7 @@ TaskStatus TimeIntegratorTaskList::ReceiveParticleMesh(MeshBlock *pmb, int stage
 }
 
 TaskStatus TimeIntegratorTaskList::SendParticleMeshShear(MeshBlock *pmb, int stage) {
-  for (Particles *ppar : pmb->ppar_grav) {
+  for (Particles *ppar : pmb->ppar) {
     ppar->ppm->pmbvar->SendShearingBoxBoundaryBuffers();
   }
   return TaskStatus::success;
@@ -2310,12 +2311,12 @@ TaskStatus TimeIntegratorTaskList::SendParticleMeshShear(MeshBlock *pmb, int sta
 
 TaskStatus TimeIntegratorTaskList::ReceiveParticleMeshShear(MeshBlock *pmb, int stage) {
   bool ret_all(true), ret(false);
-  for (Particles *ppar : pmb->ppar_grav) {
+  for (Particles *ppar : pmb->ppar) {
     ret = ppar->ppm->pmbvar->ReceiveShearingBoxBoundaryBuffers();
     ret_all = (ret_all & ret);
   }
   if (ret_all) {
-    for (Particles *ppar : pmb->ppar_grav)
+    for (Particles *ppar : pmb->ppar)
       ppar->ppm->pmbvar->SetShearingBoxBoundaryBuffers();
     return TaskStatus::success;
   } else {
@@ -2324,8 +2325,10 @@ TaskStatus TimeIntegratorTaskList::ReceiveParticleMeshShear(MeshBlock *pmb, int 
 }
 
 TaskStatus TimeIntegratorTaskList::SetBoundariesParticleMesh(MeshBlock *pmb, int stage) {
-  for (Particles *ppar : pmb->ppar_grav)
+  for (Particles *ppar : pmb->ppar) {
     ppar->ppm->pmbvar->SetBoundaries();
+    ppar->DepositPMtoMesh(stage);
+  }
   return TaskStatus::success;
 }
 

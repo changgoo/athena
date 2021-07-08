@@ -67,14 +67,15 @@ ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : nmeshaux(0), iweig
     {AthenaArray<Real>(),AthenaArray<Real>(), AthenaArray<Real>()};
 
   pmbvar = new ParticleMeshBoundaryVariable(pmb, &meshaux, &coarse_meshaux_,
-                                            empty_flux,this);
+                                            empty_flux, this);
   pmbvar->bvar_index = pmb_->pbval->bvars.size();
   pmb_->pbval->bvars.push_back(pmbvar);
   // Add particle mesh boundary variable to the list for main integrator
   // if that particle exert gravity. Otherwise, add it to the list for
   // outputs.
   pmb_->pbval->bvars_pm.push_back(pmbvar);
-  if (ppar_->isgravity_) pmb_->pbval->bvars_pm_grav.push_back(pmbvar);
+  // this is not used for now
+  // if (ppar_->isgravity_) pmb_->pbval->bvars_pm_grav.push_back(pmbvar);
 }
 
 //--------------------------------------------------------------------------------------

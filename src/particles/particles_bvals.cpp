@@ -234,7 +234,10 @@ void Particles::SendToNeighbors() {
     int ox1 = CheckSide(xi1i, IS, IE),
         ox2 = CheckSide(xi2i, JS, JE),
         ox3 = CheckSide(xi3i, KS, KE);
-    if (pmy_mesh->shear_periodic) auxprop(ish,k) = 0; // initialize a flag for shear boundary crossing
+
+    // initialize a flag for shear boundary crossing
+    if (pmy_mesh->shear_periodic) auxprop(ish,k) = 0;
+
     if (ox1 == 0 && ox2 == 0 && ox3 == 0) {
       ++k;
       continue;
@@ -335,6 +338,7 @@ bool Particles::ReceiveFromNeighbors() {
     enum BoundaryStatus& bstatus = bstatus_[nb.bufid];
 
 #ifdef MPI_PARALLEL
+    // (changgoo) this part can be modularized
     // Communicate with neighbor processes.
     int nb_rank = nb.snb.rank;
     if (nb_rank != Globals::my_rank && bstatus == BoundaryStatus::waiting) {

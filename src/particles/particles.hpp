@@ -91,7 +91,6 @@ friend class ParticleMesh;
   virtual AthenaArray<Real> GetMassDensity() const;
   virtual void Integrate(int step);
 
-
   // Accessor
   Real GetMaximumWeight() const;
   AthenaArray<Real> GetVelocityField() const;
@@ -117,6 +116,8 @@ friend class ParticleMesh;
   int FindTargetGidAlongX2(Real x2);
   void ClearBoundaryShear();
   bool ReceiveFromNeighborsShear();
+
+  void DepositPMtoMesh(int stage);
 
   Real NewBlockTimeStep();
   virtual void FindLocalDensityOnMesh(bool include_momentum);
