@@ -131,23 +131,11 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         Real x = udist(rng_generator)*mesh_size.x1len + mesh_size.x1min;
         Real y = udist(rng_generator)*mesh_size.x2len + mesh_size.x2min;
         Real z = udist(rng_generator)*mesh_size.x3len + mesh_size.x3min;
-        int count = 0;
         while (!(InBoundary(x,y,z,xp1min,xp1max,xp2min,xp2max,
                            mesh_size.x3min,mesh_size.x3max))) {
           x = udist(rng_generator)*mesh_size.x1len + mesh_size.x1min;
           y = udist(rng_generator)*mesh_size.x2len + mesh_size.x2min;
           z = udist(rng_generator)*mesh_size.x3len + mesh_size.x3min;
-          // count++;
-          // std::stringstream msg;
-          // msg << count << " "
-          //     << InBoundary(x,y,z,xp1min,xp1max,xp2min,xp2max,
-          //                    mesh_size.x3min,mesh_size.x3max)
-          //     << ppar[ipar]->CheckInMeshBlock(x,y,z)
-          //     << " " << x << " " << y << " " <<  z << std::endl;
-          // std::cout << msg.str();
-          // if (count > 1000) {
-          //   ATHENA_ERROR(msg);
-          // }
         }
         ppar[ipar]->AddOneParticle(x,y,z,vx0,vy0,0.0);
       }
