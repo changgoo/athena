@@ -58,12 +58,12 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 void Mesh::UserWorkInLoop() {
   Particles::FindDensityOnMesh(this, false);
   // output history of selected particle(s)
-  // for (int b = 0; b < nblocal; ++b) {
-  //   MeshBlock *pmb(my_blocks(b));
-  //   for (int ipar=0; ipar<Particles::num_particles; ++ipar) {
-  //     pmb->ppar[ipar]->OutputParticles((ncycle == 0),1234);
-  //   }
-  // }
+  for (int b = 0; b < nblocal; ++b) {
+    MeshBlock *pmb(my_blocks(b));
+    for (int ipar=0; ipar<Particles::num_particles; ++ipar) {
+      pmb->ppar[ipar]->OutputParticles((ncycle == 0),1234);
+    }
+  }
 }
 
 //========================================================================================
@@ -102,58 +102,81 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   }
 
   if (pmy_mesh->particle) {
-    for (int ipar = 0; ipar < Particles::num_particles; ++ipar) {
-      // Assign particles in each container to different regions
-      Real xp1min = pin->GetReal(ppar[ipar]->input_block_name,"x1min");
-      Real xp1max = pin->GetReal(ppar[ipar]->input_block_name,"x1max");
-      Real xp2min = pin->GetReal(ppar[ipar]->input_block_name,"x2min");
-      Real xp2max = pin->GetReal(ppar[ipar]->input_block_name,"x2max");
+    // Ramdomizing position.
+    std::random_device device;
+    std::mt19937_64 rng_generator;
+    // std::int64_t rseed = static_cast<std::int64_t>(device());
+    std::int64_t rseed = gid; // deterministic for tests
+    std::uniform_real_distribution<Real> udist(0.0,1.0); // uniform in [0,1)
+    rng_generator.seed(rseed);
 
-      // Find the total number of particles in each direction.
-      RegionSize& mesh_size = pmy_mesh->mesh_size;
+    for (int ipar = 0; ipar < Particles::num_particles; ++ipar) {
       int npartot = pin->GetInteger("problem","npartot");
-      // pin->GetOrAddReal(ppar[ipar]->input_block_name, "npartot",100);
 
       // Update capacity of particle container
-      ppar[ipar]->UpdateCapacity(npartot);
+      // ppar[ipar]->UpdateCapacity(static_cast<int>(npartot/Globals::nranks));
 
       // Assign the particles.
-      // Ramdomizing position.
-      std::random_device device;
-      std::mt19937_64 rng_generator;
-      // std::int64_t rseed = static_cast<std::int64_t>(device());
-      std::int64_t rseed = gid; // deterministic for tests
-      std::uniform_real_distribution<Real> udist(0.0,1.0); // uniform in [0,1)
-      rng_generator.seed(rseed);
+      RegionSize& mesh_size = pmy_mesh->mesh_size;
 
-      for (int k = 0; k < npartot; ++k ) {
-        // uniformly distributed within the
-        Real x = udist(rng_generator)*mesh_size.x1len + mesh_size.x1min;
-        Real y = udist(rng_generator)*mesh_size.x2len + mesh_size.x2min;
-        Real z = udist(rng_generator)*mesh_size.x3len + mesh_size.x3min;
-        while (!(InBoundary(x,y,z,xp1min,xp1max,xp2min,xp2max,
-                           mesh_size.x3min,mesh_size.x3max))) {
-          x = udist(rng_generator)*mesh_size.x1len + mesh_size.x1min;
-          y = udist(rng_generator)*mesh_size.x2len + mesh_size.x2min;
-          z = udist(rng_generator)*mesh_size.x3len + mesh_size.x3min;
-        }
-        ppar[ipar]->AddOneParticle(x,y,z,vx0,vy0,0.0);
-      }
-
-      Real vol = (xp1max-xp1min)*(xp2max-xp2min)*mesh_size.x3len;
       if (TracerParticles *pp = dynamic_cast<TracerParticles*>(ppar[ipar])) {
-        pp->SetOneParticleMass(d0 * vol / static_cast<Real>(npartot));
+        // Assign particles in each container to different regions
+        Real xp1min = pin->GetReal(ppar[ipar]->input_block_name,"x1min");
+        Real xp1max = pin->GetReal(ppar[ipar]->input_block_name,"x1max");
+        Real xp2min = pin->GetReal(ppar[ipar]->input_block_name,"x2min");
+        Real xp2max = pin->GetReal(ppar[ipar]->input_block_name,"x2max");
+
+        // Find the total number of particles in each direction.
+        Real vol = (xp1max-xp1min)*(xp2max-xp2min)*mesh_size.x3len;
+        Real mass = d0 * vol / static_cast<Real>(npartot);
+        for (int k = 0; k < npartot; ++k ) {
+          // uniformly distributed within the mesh
+          Real x = udist(rng_generator)*mesh_size.x1len + mesh_size.x1min;
+          Real y = udist(rng_generator)*mesh_size.x2len + mesh_size.x2min;
+          Real z = udist(rng_generator)*mesh_size.x3len + mesh_size.x3min;
+          while (!(InBoundary(x,y,z,xp1min,xp1max,xp2min,xp2max,
+                            mesh_size.x3min,mesh_size.x3max))) {
+            x = udist(rng_generator)*mesh_size.x1len + mesh_size.x1min;
+            y = udist(rng_generator)*mesh_size.x2len + mesh_size.x2min;
+            z = udist(rng_generator)*mesh_size.x3len + mesh_size.x3min;
+          }
+          Real vy = vy0;
+          if(!porb->orbital_advection_defined) vy -= qshear*Omega0*x;
+          pp->AddOneParticle(x,y,z,vx0,vy,0.0);
+        }
+        pp->SetOneParticleMass(mass);
+      } else if (StarParticles *pp = dynamic_cast<StarParticles*>(ppar[ipar])) {
+        // Assign particles within a cylinder
+        Real radius = pin->GetReal(ppar[ipar]->input_block_name,"radius");
+        Real x0 = pin->GetOrAddReal(ppar[ipar]->input_block_name,"x0",0.0);
+        Real y0 = pin->GetOrAddReal(ppar[ipar]->input_block_name,"y0",0.0);
+        for (int k = 0; k < npartot; ++k ) {
+          Real r = radius*2;
+          Real x,y,z;
+          Real vol = PI*radius*radius*mesh_size.x3len;
+          Real mass = d0 * vol / static_cast<Real>(npartot);
+          while (r>radius) {
+            // reject particle outside the sphere
+            x = (udist(rng_generator)-0.5)*2*radius + x0;
+            y = (udist(rng_generator)-0.5)*2*radius + y0;
+            z = udist(rng_generator)*mesh_size.x3len + mesh_size.x3min;
+            r = std::sqrt(x*x+y*y+z*z);
+          }
+          Real vy = vy0;
+          if(!porb->orbital_advection_defined) vy -= qshear*Omega0*x;
+          pp->AddOneParticle(mass,x,y,z,vx0,vy,0.0);
+        }
       } else {
         std::stringstream msg;
         msg << "### FATAL ERROR in ProblemGenerator " << std::endl
-            << " partype: " << ppar[ipar]->partype << "is not tracer" << std::endl;
+            << " partype: " << ppar[ipar]->partype << " is not supported" << std::endl;
         ATHENA_ERROR(msg);
         return;
       }
-
-      std::cout << " ipar: " << ipar << " type: " << ppar[ipar]->partype
-                << " nparmax: " << ppar[ipar]->nparmax
-                << " npar: " << ppar[ipar]->npar << std::endl;
+      if (ppar[ipar]->npar > 0)
+        std::cout << " ipar: " << ipar << " type: " << ppar[ipar]->partype
+                  << " nparmax: " << ppar[ipar]->nparmax
+                  << " npar: " << ppar[ipar]->npar << std::endl;
 
       // calculate PM density every substeps (for history dumps)
       // ppar[ipar]->pm_stages[0] = true;

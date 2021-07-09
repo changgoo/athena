@@ -73,8 +73,14 @@ x1max       = 0.5
 x2min       = -0.1
 x2max       = 0.1
 
+<particle2>  # sphere
+type        = star
+output      = true
+gravity     = false
+radius      = 0.2
+
 <problem>
 npartot     = 10000
 d0          = 1
 vx0         = 1
-vy0         = 1
+vy0         = 0.0
