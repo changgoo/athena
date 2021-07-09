@@ -150,6 +150,7 @@ friend class ParticleMesh;
   int nreal;         //!> numbers of real particle properties
   int naux;          //!> number of auxiliary particle properties
   int nwork;         //!> number of working arrays for particles
+  int nint_buf, nreal_buf; //!> number of properties for buffer
 
   int ipid;                 //!> index for the particle ID
   int ixp, iyp, izp;        // indices for the position components

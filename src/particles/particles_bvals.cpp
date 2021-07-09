@@ -315,10 +315,10 @@ void Particles::SendParticleBuffer(ParticleBuffer& send, int dst) {
   MPI_Send(&npsend, 1, MPI_INT, dst, sendtag, my_comm);
   if (npsend > 0) {
     MPI_Request req = MPI_REQUEST_NULL;
-    MPI_Isend(send.ibuf, npsend * ParticleBuffer::nint, MPI_INT,
+    MPI_Isend(send.ibuf, npsend * nint_buf, MPI_INT,
               dst, sendtag + 1, my_comm, &req);
     MPI_Request_free(&req);
-    MPI_Isend(send.rbuf, npsend * ParticleBuffer::nreal, MPI_ATHENA_REAL,
+    MPI_Isend(send.rbuf, npsend * nreal_buf, MPI_ATHENA_REAL,
               dst, sendtag + 2, my_comm, &req);
     MPI_Request_free(&req);
   }
@@ -347,7 +347,7 @@ void Particles::ReceiveParticleBuffer(int nb_rank, ParticleBuffer& recv,
           int nprecv = recv.npar;
           if (nprecv > recv.nparmax) {
             recv.npar = 0;
-            recv.Reallocate(2 * nprecv - recv.nparmax);
+            recv.Reallocate(2 * nprecv - recv.nparmax, nint_buf, nreal_buf);
             recv.npar = nprecv;
           }
         } else {
@@ -360,14 +360,14 @@ void Particles::ReceiveParticleBuffer(int nb_rank, ParticleBuffer& recv,
       // Receive data from the neighbor.
       if (!recv.flagi) {
         if (recv.reqi == MPI_REQUEST_NULL)
-          MPI_Irecv(recv.ibuf, recv.npar * ParticleBuffer::nint, MPI_INT,
+          MPI_Irecv(recv.ibuf, recv.npar * nint_buf, MPI_INT,
                     nb_rank, recv.tag + 1, my_comm, &recv.reqi);
         else
           MPI_Test(&recv.reqi, &recv.flagi, MPI_STATUS_IGNORE);
       }
       if (!recv.flagr) {
         if (recv.reqr == MPI_REQUEST_NULL)
-          MPI_Irecv(recv.rbuf, recv.npar * ParticleBuffer::nreal, MPI_ATHENA_REAL,
+          MPI_Irecv(recv.rbuf, recv.npar * nreal_buf, MPI_ATHENA_REAL,
                     nb_rank, recv.tag + 2, my_comm, &recv.reqr);
         else
           MPI_Test(&recv.reqr, &recv.flagr, MPI_STATUS_IGNORE);
@@ -566,13 +566,13 @@ void Particles::FlushReceiveBuffer(ParticleBuffer& recv) {
 void Particles::LoadParticleBuffer(ParticleBuffer *ppb, int k) {
   // Check the buffer size.
   if (ppb->npar >= ppb->nparmax)
-    ppb->Reallocate((ppb->nparmax > 0) ? 2 * ppb->nparmax : 1);
+    ppb->Reallocate((ppb->nparmax > 0) ? 2 * ppb->nparmax : 1, nint_buf, nreal_buf);
 
   // Copy the properties of the particle to the buffer.
-  int *pi = ppb->ibuf + ParticleBuffer::nint * ppb->npar;
+  int *pi = ppb->ibuf + nint_buf * ppb->npar;
   for (int j = 0; j < nint; ++j)
     *pi++ = intprop(j,k);
-  Real *pr = ppb->rbuf + ParticleBuffer::nreal * ppb->npar;
+  Real *pr = ppb->rbuf + nreal_buf * ppb->npar;
   for (int j = 0; j < nreal; ++j)
     *pr++ = realprop(j,k);
   for (int j = 0; j < naux; ++j)

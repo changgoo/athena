@@ -15,29 +15,6 @@
 // Athena++ headers
 #include "particle_buffer.hpp"
 
-// Class variable initialization
-int ParticleBuffer::nint = 0, ParticleBuffer::nreal = 0;
-
-//--------------------------------------------------------------------------------------
-//! \fn void ParticleBuffer::SetNumberOfProperties(int nint0, int nreal0)
-//! \brief sets the number of integer and real propertes.
-
-void ParticleBuffer::SetNumberOfProperties(int nint0, int nreal0) {
-  // Sanity check
-  if (nint0 < 0 || nreal0 < 0) {
-    std::stringstream msg;
-    msg << "### FATAL ERROR in function [ParticleBuffer::SetNumberOfProperties]"
-        << std::endl
-        << "Invalid nint0 = " << nint0 << " or nreal0 = " << nreal0 << std::endl;
-    ATHENA_ERROR(msg);
-    return;
-  }
-
-  // Set the numbers.
-  nint = nint0;
-  nreal = nreal0;
-}
-
 //--------------------------------------------------------------------------------------
 //! \fn ParticleBuffer::ParticleBuffer()
 //! \brief initiates a default instance of ParticleBuffer.
@@ -57,7 +34,7 @@ ParticleBuffer::ParticleBuffer() {
 //! \fn ParticleBuffer::ParticleBuffer(int nparmax0)
 //! \brief initiates a new instance of ParticleBuffer with nparmax = nparmax0.
 
-ParticleBuffer::ParticleBuffer(int nparmax0) {
+ParticleBuffer::ParticleBuffer(int nparmax0, int nint, int nreal) {
   // Sanity check
   if (nparmax0 <= 0) {
     std::stringstream msg;
@@ -101,7 +78,7 @@ ParticleBuffer::~ParticleBuffer() {
 //! \fn void ParticleBuffer::Reallocate(int new_nparmax)
 //! \brief reallocates the buffers; the old content is preserved.
 
-void ParticleBuffer::Reallocate(int new_nparmax) {
+void ParticleBuffer::Reallocate(int new_nparmax, int nint, int nreal) {
   // Sanity check
   if (new_nparmax <= 0) {
     std::stringstream msg;

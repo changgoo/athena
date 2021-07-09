@@ -338,7 +338,8 @@ Particles::~Particles() {
 //! \brief memory allocation will be done at the end of derived class initialization
 void Particles::AllocateMemory() {
   // Initiate ParticleBuffer class.
-  ParticleBuffer::SetNumberOfProperties(nint, nreal + naux);
+  nint_buf = nint;
+  nreal_buf = nreal + naux;
 
   // Allocate mesh auxiliaries.
   ppm = new ParticleMesh(this, pmy_block);

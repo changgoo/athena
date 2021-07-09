@@ -24,22 +24,15 @@ class ParticleBuffer {
 friend class Particles;
 
  public:
-  // Class methods
-  static void SetNumberOfProperties(int nint0, int nreal0);
-
   // Constructors and destructor
   ParticleBuffer();
-  explicit ParticleBuffer(int nparmax0);
+  ParticleBuffer(int nparmax0, int nint, int nreal);
   ~ParticleBuffer();
 
   // Instance method
-  void Reallocate(int new_nparmax);
+  void Reallocate(int new_nparmax, int nint, int nreal);
 
  protected:
-  // Class variables
-  static int nint;   //!> number of integer properties per particle
-  static int nreal;  //!> number of real properties per particle
-
   // Instance variables
   int* ibuf;   //!> ptr to integer buffer
   Real* rbuf;   //!> ptr to real buffer
