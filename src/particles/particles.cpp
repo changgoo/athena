@@ -450,8 +450,14 @@ AthenaArray<Real> Particles::GetVelocityField() const {
   for (int k = ppm->ks; k <= ppm->ke; ++k)
     for (int j = ppm->js; j <= ppm->je; ++j)
       for (int i = ppm->is; i <= ppm->ie; ++i) {
-        Real rho(ppm->weight(k,j,i));
+        Real rho;
+        if (imass == -1) {
+          rho = ppm->weight(k,j,i);
+        } else {
+          rho = ppm->density(k,j,i);
+        }
         rho = (rho > 0.0) ? rho : 1.0;
+
         vel(0,k,j,i) = ppm->meshaux(imom1,k,j,i) / rho;
         vel(1,k,j,i) = ppm->meshaux(imom2,k,j,i) / rho;
         vel(2,k,j,i) = ppm->meshaux(imom3,k,j,i) / rho;
