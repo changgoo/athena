@@ -634,34 +634,45 @@ void Particles::SendParticlesShear() {
     // find meshblock to send
     // only look-up shearing-box's send_neighbor list
     SimpleNeighborBlock snb;
+    int shid;
     for (int upper=0; upper<2; upper++) {
       if (pbval_->is_shear[upper]) {
         for (int n=0; n<4; n++) {
           snb = pbval_->sb_data_[upper].send_neighbor[n];
           if (snb.gid == target_id) {
-            // Determine which particle buffer to use.
-            ParticleBuffer *ppb = NULL;
-            if (snb.rank == Globals::my_rank) {
-              // the target block is in the same processor
-              MeshBlock *ptarget_block = pmy_mesh->FindMeshBlock(snb.gid);
-              // Use the target receive buffer.
-              ppb = &ptarget_block->ppar[my_ipar_]->recv_sh_[n+upper*4];
-            } else {
-#ifdef MPI_PARALLEL
-              // Use the send buffer.
-              ppb = &send_sh_[n+upper*4];
-#endif
-            }
-            // Load the particle to particle buffer
-            LoadParticleBuffer(ppb, k);
-
-            // Pop the particle from the current MeshBlock.
-            RemoveOneParticle(k);
-            continue;
+            shid = n+upper*4;
+            break;
           }
-        }  // loop over send_neighbor[0] to send_neighbor[3]
-      }  // if boundary is shearing
-    }  // loop over inner/outer boundaries
+        }
+      }
+    }
+
+    // Determine which particle buffer to use.
+    ParticleBuffer *ppb = NULL;
+    if (snb.rank == Globals::my_rank) {
+      // the target block is in the same processor
+      if (snb.gid == pmy_block->gid) {
+        // if the target block is me
+        // Update particle indices and done.
+        Coordinates *pc = pmy_block->pcoord;
+        pc->MeshCoordsToIndices(x1, x2, x3, xi1(k), xi2(k), xi3(k));
+        ++k;
+        continue;
+      }
+      MeshBlock *ptarget_block = pmy_mesh->FindMeshBlock(snb.gid);
+      // Use the target receive buffer.
+      ppb = &ptarget_block->ppar[my_ipar_]->recv_sh_[shid];
+    } else {
+#ifdef MPI_PARALLEL
+      // Use the send buffer.
+      ppb = &send_sh_[shid];
+#endif
+    }
+    // Load the particle to particle buffer
+    LoadParticleBuffer(ppb, k);
+
+    // Pop the particle from the current MeshBlock.
+    RemoveOneParticle(k);
   }  // loop over all particles
 
   for (int upper=0; upper<2; upper++) {
