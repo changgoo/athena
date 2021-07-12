@@ -63,6 +63,7 @@ friend class OutputType;
   int imom1, imom2, imom3;   //!> index to momentum vector in meshaux
   int imass; //!> index to mass density in meshaux
 
+  bool updated; //!> flag whether pm is recacluated
  protected:
   // Instance variables
   AthenaArray<Real> meshaux, coarse_meshaux_;   //!> auxiliaries to the meshblock

@@ -137,7 +137,6 @@ void ParticleMeshBoundaryVariable::LoadShearingBoxBoundarySameLevel(
   for (int n=nl_; n<=nu_; ++n) {
     for (int k=sk; k<=ek; k++) {
       for (int i=si; i<=ei; i++) {
-#pragma omp simd
         for (int j=sj; j<=ej; j++) {
           buf[p++] = src(n,k,j,i);
         }
@@ -199,7 +198,6 @@ void ParticleMeshBoundaryVariable::SetShearingBoxBoundaryBuffers() {
   int jl = pmb->js, ju = pmb->je; // only active zones matter for PM
   int kl = pmb->ks, ku = pmb->ke; // only active zones matter for PM
 
-
   for (int upper=0; upper<2; upper++) {
     if (pbval_->is_shear[upper]) { // check inner boundaries
       // step 1 -- (optionally) apply shear to shear_cc_ y-mom (does nothing by default)
@@ -260,5 +258,30 @@ void ParticleMeshBoundaryVariable::ShearQuantities(AthenaArray<Real> &shear_cc_,
       }
     }
   }
+  return;
+}
+
+//----------------------------------------------------------------------------------------
+//! \fn void ParticleMeshBoundaryVariable::ReceiveAndSetShearingBoxBoundariesWithWait()
+//! \brief receive and set the boundary data for initialization
+
+void ParticleMeshBoundaryVariable::ReceiveAndSetShearingBoxBoundariesWithWait() {
+  bool flag[2]{true, true};
+  int nb_offset[2]{0, 4};
+
+  for (int upper=0; upper<2; upper++) {
+    if (pbval_->is_shear[upper]) { // check inner boundaries
+      for (int n=0; n<4; n++) {
+#ifdef MPI_PARALLEL
+        if (pbval_->sb_data_[upper].recv_neighbor[n].rank != Globals::my_rank)
+          MPI_Wait(&shear_bd_var_[upper].req_recv[n],MPI_STATUS_IGNORE);
+#endif
+        SetShearingBoxBoundarySameLevel(shear_cc_[upper], shear_bd_var_[upper].recv[n],
+                                        n+nb_offset[upper]);
+        shear_bd_var_[upper].flag[n] = BoundaryStatus::completed; // completed
+      }  // loop over recv[0] to recv[3]
+    }  // if boundary is shearing
+  }  // loop over inner/outer boundaries
+
   return;
 }

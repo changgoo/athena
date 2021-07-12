@@ -35,6 +35,7 @@ class ParticleMeshBoundaryVariable : public CellCenteredBoundaryVariable {
 
   void SendShearingBoxBoundaryBuffers() override;
   void SetShearingBoxBoundaryBuffers() override;
+  void ReceiveAndSetShearingBoxBoundariesWithWait();
 
  private:
   void SetBoundarySameLevel(Real *buf, const NeighborBlock& nb) override;

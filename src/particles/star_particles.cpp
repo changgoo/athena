@@ -311,6 +311,10 @@ void StarParticles::FindLocalDensityOnMesh(bool include_momentum) {
   }
 
   ConvertToDensity(include_momentum);
+
+  // set flag to trigger PM communications
+  ppm->updated = true;
+  ppm->pmbvar->var_buf.ZeroClear();
 }
 
 //--------------------------------------------------------------------------------------

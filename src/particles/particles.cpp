@@ -145,6 +145,9 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
 
   for (int b = 0; b < nblocks; ++b) {
     MeshBlock *pmb(pm->my_blocks(b));
+    if (pm->shear_periodic) {
+      pmb->pbval->ComputeShear(pm->time, pm->time);
+    }
     pmb->pbval->StartReceivingSubset(BoundaryCommSubset::mesh_init,
                                      pmb->pbval->bvars_pm);
     for (Particles *ppar : pmb->ppar) {
@@ -155,10 +158,28 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
 
   for (int b = 0; b < nblocks; ++b) {
     MeshBlock *pmb(pm->my_blocks(b));
-    for (Particles *ppar : pmb->ppar)
+    for (Particles *ppar : pmb->ppar) {
       ppar->ppm->pmbvar->ReceiveAndSetBoundariesWithWait();
-    pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::mesh_init,
-                                    pmb->pbval->bvars_pm);
+      if (pm->shear_periodic)
+        ppar->ppm->pmbvar->SendShearingBoxBoundaryBuffers();
+    }
+  }
+
+  if (pm->shear_periodic) {
+    for (int b = 0; b < nblocks; ++b) {
+      MeshBlock *pmb(pm->my_blocks(b));
+      for (Particles *ppar : pmb->ppar) {
+        ppar->ppm->pmbvar->ReceiveAndSetShearingBoxBoundariesWithWait();
+        ppar->ppm->pmbvar->SetShearingBoxBoundaryBuffers();
+      }
+    }
+  }
+
+  for (int b = 0; b < nblocks; ++b) {
+    MeshBlock *pmb(pm->my_blocks(b));
+    for (Particles *ppar : pmb->ppar)
+      pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::mesh_init,
+                                      pmb->pbval->bvars_pm);
   }
 }
 
@@ -773,6 +794,10 @@ void Particles::FindLocalDensityOnMesh(bool include_momentum) {
     ppm->AssignParticlesToMeshAux(realprop, 0, ppm->iweight, 0);
   }
   ConvertToDensity(include_momentum);
+
+  // set flag to trigger PM communications
+  ppm->updated = true;
+  ppm->pmbvar->var_buf.ZeroClear();
 }
 //--------------------------------------------------------------------------------------
 //! \fn void Particles::ConvertToDensity(bool include_momentum)
