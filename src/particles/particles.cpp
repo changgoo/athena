@@ -984,7 +984,7 @@ void Particles::OutputParticles(bool header, int kid) {
     if (pid(k) != kid) continue;
 
     // Create the filename.
-    fname << file_basename << ".par" << pid(k) << ".csv";
+    fname << file_basename << ".pid" << pid(k) << ".par" << my_ipar_ << ".csv";
 
     // Open the file for write.
     if (header)
