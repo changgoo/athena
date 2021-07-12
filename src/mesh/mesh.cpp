@@ -1469,8 +1469,6 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
         }
         pbval->StartReceivingSubset(BoundaryCommSubset::mesh_init,
                                     pbval->bvars_main_int);
-        pbval->StartReceivingSubset(BoundaryCommSubset::mesh_init,
-                                    pbval->bvars_pm);
       }
 
       // send conserved variables
@@ -1487,10 +1485,6 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
           pmb->pscalars->sbvar.SendBoundaryBuffers();
         if (CR_ENABLED)
           pmb->pcr->cr_bvar.SendBoundaryBuffers();
-        for (Particles *ppar : pmb->ppar) {
-          ppar->FindLocalDensityOnMesh(true);
-          ppar->ppm->pmbvar->SendBoundaryBuffers();
-        }
       }
 
       // wait to receive conserved variables
@@ -1504,15 +1498,11 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
           pmb->pscalars->sbvar.ReceiveAndSetBoundariesWithWait();
         if (CR_ENABLED)
           pmb->pcr->cr_bvar.ReceiveAndSetBoundariesWithWait();
-        for (Particles *ppar : pmb->ppar)
-          ppar->ppm->pmbvar->ReceiveAndSetBoundariesWithWait();
         if (shear_periodic && orbital_advection==0) {
           pmb->phydro->hbvar.AddHydroShearForInit();
         }
         pbval->ClearBoundarySubset(BoundaryCommSubset::mesh_init,
                                    pbval->bvars_main_int);
-        pbval->ClearBoundarySubset(BoundaryCommSubset::mesh_init,
-                                   pbval->bvars_pm);
       }
 
       // With AMR/SMR GR send primitives to enable cons->prim before prolongation
