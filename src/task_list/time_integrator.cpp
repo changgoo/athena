@@ -2477,11 +2477,10 @@ TaskStatus TimeIntegratorTaskList::NewBlockTimeStep(MeshBlock *pmb, int stage) {
   if (stage != nstages) return TaskStatus::success; // only do on last stage
 
   pmb->phydro->NewBlockTimeStep();
-  if (PARTICLES) {
-    Real min_dt = pmb->new_block_dt_;
-    for (Particles *ppar : pmb->ppar)
-      min_dt = std::min(min_dt,ppar->NewBlockTimeStep());
-    pmb->new_block_dt_ = std::min(pmb->new_block_dt_, min_dt);
+  Real min_dt = pmb->new_block_dt_;
+  for (Particles *ppar : pmb->ppar) {
+    min_dt = std::min(min_dt,ppar->NewBlockTimeStep());
+    pmb->new_block_dt_ = min_dt;
   }
   return TaskStatus::success;
 }

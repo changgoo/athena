@@ -610,13 +610,6 @@ int Particles::FindTargetGidAlongX2(Real x2) {
 //! \brief send particles outside meshblock due to shear
 
 void Particles::SendParticlesShear() {
-  const int IS = pmy_block->is;
-  const int IE = pmy_block->ie;
-  const int JS = pmy_block->js;
-  const int JE = pmy_block->je;
-  const int KS = pmy_block->ks;
-  const int KE = pmy_block->ke;
-
   for (int k = 0; k < npar; ) {
     // Apply shear offset and find the mesh coordinates.
     Real x1, x2, x3;
