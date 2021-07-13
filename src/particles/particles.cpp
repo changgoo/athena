@@ -423,9 +423,9 @@ void Particles::AddHistoryOutput(Real data_sum[], int pos) {
   }
 
   // Assign the values to output variables.
-  data_sum[pos] = static_cast<Real>(np);
+  data_sum[pos] += static_cast<Real>(np);
   for (int i = 0; i < NSUM; ++i)
-    data_sum[pos+i+1] = sum[i];
+    data_sum[pos+i+1] += sum[i];
 }
 
 //--------------------------------------------------------------------------------------
