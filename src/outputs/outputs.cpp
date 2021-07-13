@@ -916,7 +916,7 @@ void Outputs::MakeOutputs(Mesh *pm, ParameterInput *pin, bool wtflag) {
         (pm->time >= ptype->output_params.next_time) ||
         (pm->time >= pm->tlim) ||
         (wtflag && ptype->output_params.file_type == "rst")) {
-      if (first && ptype->output_params.file_type != "hst") {
+      if (first && (ptype->output_params.file_type != "hst" || wtflag)) {
         pm->ApplyUserWorkBeforeOutput(pin);
         if (pm->particle) Particles::FindDensityOnMesh(pm, true);
         first = false;

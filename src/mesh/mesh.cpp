@@ -1447,6 +1447,9 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
         ppar->ppm->pmbvar->SetupPersistentMPI();
     }
 
+    // find PM density for the first time
+    if (particle) Particles::FindDensityOnMesh(this, true);
+
     // solve gravity for the first time
     if (SELF_GRAVITY_ENABLED == 1)
       pfgrd->Solve(1, 0);
