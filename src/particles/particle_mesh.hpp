@@ -64,6 +64,7 @@ friend class OutputType;
   int imass; //!> index to mass density in meshaux
 
   bool updated; //!> flag whether pm is recacluated
+
  protected:
   // Instance variables
   AthenaArray<Real> meshaux, coarse_meshaux_;   //!> auxiliaries to the meshblock
