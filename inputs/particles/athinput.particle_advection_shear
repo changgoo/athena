@@ -50,8 +50,8 @@ ix3_bc     = periodic   # inner-X3 boundary flag
 ox3_bc     = periodic   # outer-X3 boundary flag
 
 <meshblock>
-nx1        = 16
-nx2        = 16
+nx1        = 8
+nx2        = 8
 nx3        = 4
 
 <hydro>

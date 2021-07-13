@@ -621,22 +621,36 @@ void Particles::SendParticlesShear() {
       ApplyBoundaryConditionsShear(k, x1, x2, x3);
     }
 
+    // we know which side to check
+    int upper = (auxprop(ish,k) == -1) ? 1 : 0;
+    if (!pbval_->is_shear[upper]) {
+      // shouldn't reach here
+      std::stringstream msg;
+      if (upper == 0) {
+        msg << "### FATAL ERROR in function [Particles::SendParticleShear]"
+            << " Particle " << k << " has crossed outer shear-periodic boundary"
+            << " but the current meshbock's inner boundary is not shearing-periodic."
+            << " This doesn't make sens." << std::endl;
+      } else {
+        msg << "### FATAL ERROR in function [Particles::SendParticleShear]"
+            << " Particle " << k << " has crossed inner shear-periodic boundary"
+            << " but the current meshbock's outer boundary is not shearing-periodic."
+            << " This doesn't make sens." << std::endl;
+      }
+      ATHENA_ERROR(msg);
+    }
+
     // given this particle's new position, what is the correct meshblock id?
     int target_id = FindTargetGidAlongX2(x2);
-
     // find meshblock to send
     // only look-up shearing-box's send_neighbor list
     SimpleNeighborBlock snb;
-    int shid;
-    for (int upper=0; upper<2; upper++) {
-      if (pbval_->is_shear[upper]) {
-        for (int n=0; n<4; n++) {
-          snb = pbval_->sb_data_[upper].send_neighbor[n];
-          if (snb.gid == target_id) {
-            shid = n+upper*4;
-            break;
-          }
-        }
+    int shid = -1;
+    for (int n=0; n<4; n++) {
+      snb = pbval_->sb_data_[upper].send_neighbor[n];
+      if (snb.gid == target_id) {
+        shid = n+upper*4;
+        break;
       }
     }
 
