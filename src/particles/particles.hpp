@@ -77,7 +77,7 @@ friend class ParticleMesh;
   static std::int64_t GetTotalNumber(Mesh *pm);
 
   // Class constant
-  static const int NHISTORY = 7;  //!> number of variables in history output
+  static const int NHISTORY = 8;  //!> number of variables in history output
   // number of particle containers
   static int num_particles, num_particles_grav, num_particles_output;
 

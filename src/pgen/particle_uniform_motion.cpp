@@ -37,6 +37,7 @@
 
 Real d0;
 Real DeltaRho(MeshBlock *pmb, int iout);
+Real TotalMass(MeshBlock *pmb, int iout);
 bool InBoundary(Real x, Real y, Real z, Real x1min, Real x1max,
   Real x2min, Real x2max, Real x3min, Real x3max);
 //========================================================================================
@@ -54,22 +55,26 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   // initial density
   d0 = pin->GetReal("problem","d0");
 
-  AllocateUserHistoryOutput(2);
+  AllocateUserHistoryOutput(2+Particles::num_particles);
   EnrollUserHistoryOutput(0, DeltaRho, "drhog");
   EnrollUserHistoryOutput(1, DeltaRho, "drhop");
-
+  for (int ipar = 0; ipar < Particles::num_particles; ++ipar) {
+    std::string head = "pm";
+    head.append(std::to_string(ipar));
+    EnrollUserHistoryOutput(ipar+2, TotalMass, (head+"-m").data());
+  }
   return;
 }
 
 void Mesh::UserWorkInLoop() {
-  // Particles::FindDensityOnMesh(this, false);
-  // output history of selected particle(s)
-  for (int b = 0; b < nblocal; ++b) {
-    MeshBlock *pmb(my_blocks(b));
-    for (int ipar=0; ipar<Particles::num_particles; ++ipar) {
-      pmb->ppar[ipar]->OutputParticles((ncycle == 0),1234);
-    }
-  }
+  Particles::FindDensityOnMesh(this, false);
+//   // output history of selected particle(s)
+//   for (int b = 0; b < nblocal; ++b) {
+//     MeshBlock *pmb(my_blocks(b));
+//     for (int ipar=0; ipar<Particles::num_particles; ++ipar) {
+//       pmb->ppar[ipar]->OutputParticles((ncycle == 0),1234);
+//     }
+//   }
 }
 
 //========================================================================================
@@ -125,8 +130,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       // Assign the particles.
       RegionSize& mesh_size = pmy_mesh->mesh_size;
       Real mass;
-
-      if (TracerParticles *pp = dynamic_cast<TracerParticles*>(ppar[ipar])) {
+      Real radius = pin->GetOrAddReal(ppar[ipar]->input_block_name,"radius",-1);
+      if (radius == -1) {
         // Assign particles in each container to different regions
         Real xp1min = pin->GetReal(ppar[ipar]->input_block_name,"x1min");
         Real xp1max = pin->GetReal(ppar[ipar]->input_block_name,"x1max");
@@ -148,13 +153,23 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
             z = udist(rng_generator)*mesh_size.x3len + mesh_size.x3min;
           }
           Real vy = vy0;
-          if(!porb->orbital_advection_defined) vy -= qshear*Omega0*x;
-          pp->AddOneParticle(x,y,z,vx0,vy,0.0);
+          if (!porb->orbital_advection_defined) vy -= qshear*Omega0*x;
+          if (StarParticles *pp = dynamic_cast<StarParticles*>(ppar[ipar])) {
+            pp->AddOneParticle(mass,x,y,z,vx0,vy,0.0);
+          } else if (TracerParticles *pp = dynamic_cast<TracerParticles*>(ppar[ipar])) {
+            pp->AddOneParticle(x,y,z,vx0,vy,0.0);
+            pp->SetOneParticleMass(mass);
+          } else {
+            std::stringstream msg;
+            msg << "### FATAL ERROR in ProblemGenerator " << std::endl
+                << " partype: " << ppar[ipar]->partype
+                << " is not supported" << std::endl;
+            ATHENA_ERROR(msg);
+            return;
+          }
         }
-        pp->SetOneParticleMass(mass);
-      } else if (StarParticles *pp = dynamic_cast<StarParticles*>(ppar[ipar])) {
+      } else {
         // Assign particles within a cylinder
-        Real radius = pin->GetReal(ppar[ipar]->input_block_name,"radius");
         Real x0 = pin->GetOrAddReal(ppar[ipar]->input_block_name,"x0",0.0);
         Real y0 = pin->GetOrAddReal(ppar[ipar]->input_block_name,"y0",0.0);
         for (int k = 0; k < npartot; ++k ) {
@@ -171,15 +186,22 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           }
           Real vy = vy0;
           if(!porb->orbital_advection_defined) vy -= qshear*Omega0*x;
-          pp->AddOneParticle(mass,x,y,z,vx0,vy,0.0);
+          if (StarParticles *pp = dynamic_cast<StarParticles*>(ppar[ipar])) {
+            pp->AddOneParticle(mass,x,y,z,vx0,vy,0.0);
+          } else if (TracerParticles *pp = dynamic_cast<TracerParticles*>(ppar[ipar])) {
+            pp->AddOneParticle(x,y,z,vx0,vy,0.0);
+            pp->SetOneParticleMass(mass);
+          } else {
+            std::stringstream msg;
+            msg << "### FATAL ERROR in ProblemGenerator " << std::endl
+                << " partype: " << ppar[ipar]->partype
+                << " is not supported" << std::endl;
+            ATHENA_ERROR(msg);
+            return;
+          }
         }
-      } else {
-        std::stringstream msg;
-        msg << "### FATAL ERROR in ProblemGenerator " << std::endl
-            << " partype: " << ppar[ipar]->partype << " is not supported" << std::endl;
-        ATHENA_ERROR(msg);
-        return;
       }
+
       if (ppar[ipar]->npar > 0)
         std::cout << " ipar: " << ipar << " type: " << ppar[ipar]->partype
                   << " nparmax: " << ppar[ipar]->nparmax
@@ -228,6 +250,33 @@ Real DeltaRho(MeshBlock *pmb, int iout) {
   }
 
   return l1_err;
+}
+
+//========================================================================================
+//! \fn Real TotalMass(MeshBlock *pmb, int iout)
+//! \brief Total particle mass from particles and partcle mesh
+//========================================================================================
+Real TotalMass(MeshBlock *pmb, int iout) {
+  Real mass{0};
+  int is=pmb->is, ie=pmb->ie;
+  int js=pmb->js, je=pmb->je;
+  int ks=pmb->ks, ke=pmb->ke;
+  AthenaArray<Real> vol(pmb->ncells1);
+
+  int ipar = iout-2;
+  Particles *ppar = pmb->ppar[ipar];
+
+  AthenaArray<Real> rhop(ppar->GetMassDensity());
+  for (int k=ks; k<=ke; ++k) {
+    for (int j=js; j<=je; ++j) {
+      pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
+      for (int i=is; i<=ie; ++i) {
+        mass += rhop(k,j,i)*vol(i);
+      }
+    }
+  }
+
+  return mass;
 }
 
 //--------------------------------------------------------------------------------------

@@ -197,6 +197,7 @@ void Particles::GetHistoryOutputNames(std::string output_names[], int ipar) {
   output_names[4] = head + "-v1sq";
   output_names[5] = head + "-v2sq";
   output_names[6] = head + "-v3sq";
+  output_names[7] = head + "-m";
 }
 
 //--------------------------------------------------------------------------------------
@@ -415,6 +416,10 @@ void Particles::AddHistoryOutput(Real data_sum[], int pos) {
     sum[3] += vp1 * vp1;
     sum[4] += vp2 * vp2;
     sum[5] += vp3 * vp3;
+    if (imass != -1)
+      sum[6] += realprop(imass,k);
+    else
+      sum[6] += mass;
   }
 
   // Assign the values to output variables.

@@ -32,20 +32,20 @@ ncycle_out  = 1         # interval for stdout summary info
 
 <mesh>
 nx1        = 32         # Number of zones in X1-direction
-x1min      = -0.5       # minimum value of X1
-x1max      = 0.5        # maximum value of X1
+x1min      = -1       # minimum value of X1
+x1max      = 1        # maximum value of X1
 ix1_bc     = shear_periodic   # inner-X1 boundary flag
 ox1_bc     = shear_periodic   # outer-X1 boundary flag
 
 nx2        = 32         # Number of zones in X2-direction
-x2min      = -0.5       # minimum value of X2
-x2max      = 0.5        # maximum value of X2
+x2min      = -1       # minimum value of X2
+x2max      = 1        # maximum value of X2
 ix2_bc     = periodic   # inner-X2 boundary flag
 ox2_bc     = periodic   # outer-X2 boundary flag
 
 nx3        = 4          # Number of zones in X3-direction
-x3min      = -0.0625    # minimum value of X3
-x3max      = 0.0625     # maximum value of X3
+x3min      = -0.125    # minimum value of X3
+x3max      = 0.125     # maximum value of X3
 ix3_bc     = periodic   # inner-X3 boundary flag
 ox3_bc     = periodic   # outer-X3 boundary flag
 
@@ -72,16 +72,19 @@ shboxcoord   = 1       # 1=xy (default); 2=xz
 type        = tracer
 output      = true
 gravity     = false
-x1min       = -0.5
-x1max       = 0.5
-x2min       = -0.1
-x2max       = 0.1
+x1min       = -1
+x1max       = 1
+x2min       = -0.2
+x2max       = 0.2
 
 <particle2>  # sphere
 type        = star
 output      = true
-gravity     = true
-radius      = 0.2
+gravity     = false
+x1min       = -1
+x1max       = 1
+x2min       = -0.2
+x2max       = 0.2
 
 <problem>
 npartot     = 10000
