@@ -148,7 +148,7 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
     if (pm->shear_periodic) {
       pmb->pbval->ComputeShear(pm->time, pm->time);
     }
-    pmb->pbval->StartReceivingSubset(BoundaryCommSubset::mesh_init,
+    pmb->pbval->StartReceivingSubset(BoundaryCommSubset::pm,
                                      pmb->pbval->bvars_pm);
     for (Particles *ppar : pmb->ppar) {
       ppar->FindLocalDensityOnMesh(include_momentum);
@@ -177,9 +177,9 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
 
   for (int b = 0; b < nblocks; ++b) {
     MeshBlock *pmb(pm->my_blocks(b));
-    for (Particles *ppar : pmb->ppar)
-      pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::mesh_init,
-                                      pmb->pbval->bvars_pm);
+    pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::pm,
+                                    pmb->pbval->bvars_pm);
+    for (Particles *ppar : pmb->ppar) ppar->ppm->updated=false;
   }
 }
 

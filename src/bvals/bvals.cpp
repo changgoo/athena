@@ -413,10 +413,12 @@ void BoundaryValues::StartReceivingShear(BoundaryCommSubset phase) {
       break;
     case BoundaryCommSubset::pm:
       for (auto bvar : bvars_pm) {
-        ParticleMeshBoundaryVariable *bb =
-          dynamic_cast<ParticleMeshBoundaryVariable *>(bvar);
-        bb->var_buf.ZeroClear();
-        bb->StartReceivingShear(phase);
+        bvar->StartReceivingShear(phase);
+      }
+      break;
+    case BoundaryCommSubset::pm_grav:
+      for (auto bvar : bvars_pm_grav) {
+        bvar->StartReceivingShear(phase);
       }
       break;
     case BoundaryCommSubset::gr_amr:

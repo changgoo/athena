@@ -1705,7 +1705,8 @@ void TimeIntegratorTaskList::StartupTaskList(MeshBlock *pmb, int stage) {
 
   if (stage_wghts[stage-1].main_stage) {
     pmb->pbval->StartReceivingSubset(BoundaryCommSubset::all, pmb->pbval->bvars_main_int);
-    pmb->pbval->StartReceivingSubset(BoundaryCommSubset::pm, pmb->pbval->bvars_pm);
+    pmb->pbval->StartReceivingSubset(BoundaryCommSubset::pm_grav,
+                                     pmb->pbval->bvars_pm_grav);
     if (SHEAR_PERIODIC)
       for (Particles *ppar : pmb->ppar) ppar->StartReceivingParticlesShear();
   } else {
@@ -1729,8 +1730,8 @@ TaskStatus TimeIntegratorTaskList::ClearAllBoundary(MeshBlock *pmb, int stage) {
   if (stage_wghts[stage-1].main_stage) {
     pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::all,
                                     pmb->pbval->bvars_main_int);
-    pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::pm,
-                                    pmb->pbval->bvars_pm);
+    pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::pm_grav,
+                                    pmb->pbval->bvars_pm_grav);
     for (Particles *ppar : pmb->ppar) ppar->ClearBoundary();
   } else {
     pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::orbital,
@@ -2312,7 +2313,6 @@ TaskStatus TimeIntegratorTaskList::SetBoundariesParticleMesh(MeshBlock *pmb, int
       if (!pmb->pmy_mesh->shear_periodic) ppar->ppm->updated=false;
     }
     ppar->DepositPMtoMesh(stage);
-
   }
   return TaskStatus::success;
 }

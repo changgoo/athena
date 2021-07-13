@@ -74,8 +74,7 @@ ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : nmeshaux(0), iweig
   // if that particle exert gravity. Otherwise, add it to the list for
   // outputs.
   pmb_->pbval->bvars_pm.push_back(pmbvar);
-  // this is not used for now
-  // if (ppar_->isgravity_) pmb_->pbval->bvars_pm_grav.push_back(pmbvar);
+  if (ppar_->isgravity_) pmb_->pbval->bvars_pm_grav.push_back(pmbvar);
 }
 
 //--------------------------------------------------------------------------------------
