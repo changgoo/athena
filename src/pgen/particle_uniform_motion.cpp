@@ -173,8 +173,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         Real x0 = pin->GetOrAddReal(ppar[ipar]->input_block_name,"x0",0.0);
         Real y0 = pin->GetOrAddReal(ppar[ipar]->input_block_name,"y0",0.0);
         for (int k = 0; k < npartot; ++k ) {
-          Real r = radius*2;
-          Real x,y,z;
+          Real x = (udist(rng_generator)-0.5)*2*radius + x0;
+          Real y = (udist(rng_generator)-0.5)*2*radius + y0;
+          Real z = udist(rng_generator)*mesh_size.x3len + mesh_size.x3min;
+          Real r = std::sqrt(x*x+y*y+z*z);
           Real vol = PI*radius*radius*mesh_size.x3len;
           mass = d0 * vol / static_cast<Real>(npartot);
           while (r>radius) {
