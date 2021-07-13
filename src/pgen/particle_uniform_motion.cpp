@@ -44,6 +44,12 @@ bool InBoundary(Real x, Real y, Real z, Real x1min, Real x1max,
 //! \brief
 //========================================================================================
 void Mesh::InitUserMeshData(ParameterInput *pin) {
+  if (SELF_GRAVITY_ENABLED) {
+    Real four_pi_G = pin->GetOrAddReal("gravity","four_pi_G",1.0);
+    Real eps = pin->GetOrAddReal("gravity","grav_eps", 0.0);
+    SetFourPiG(four_pi_G);
+    SetGravityThreshold(eps);
+  }
   // std::stringstream hstr;
   // initial density
   d0 = pin->GetReal("problem","d0");
@@ -56,7 +62,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 }
 
 void Mesh::UserWorkInLoop() {
-  Particles::FindDensityOnMesh(this, false);
+  // Particles::FindDensityOnMesh(this, false);
   // output history of selected particle(s)
   for (int b = 0; b < nblocal; ++b) {
     MeshBlock *pmb(my_blocks(b));
@@ -118,6 +124,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
       // Assign the particles.
       RegionSize& mesh_size = pmy_mesh->mesh_size;
+      Real mass;
 
       if (TracerParticles *pp = dynamic_cast<TracerParticles*>(ppar[ipar])) {
         // Assign particles in each container to different regions
@@ -128,7 +135,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
         // Find the total number of particles in each direction.
         Real vol = (xp1max-xp1min)*(xp2max-xp2min)*mesh_size.x3len;
-        Real mass = d0 * vol / static_cast<Real>(npartot);
+        mass = d0 * vol / static_cast<Real>(npartot);
         for (int k = 0; k < npartot; ++k ) {
           // uniformly distributed within the mesh
           Real x = udist(rng_generator)*mesh_size.x1len + mesh_size.x1min;
@@ -154,7 +161,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           Real r = radius*2;
           Real x,y,z;
           Real vol = PI*radius*radius*mesh_size.x3len;
-          Real mass = d0 * vol / static_cast<Real>(npartot);
+          mass = d0 * vol / static_cast<Real>(npartot);
           while (r>radius) {
             // reject particle outside the sphere
             x = (udist(rng_generator)-0.5)*2*radius + x0;
@@ -176,7 +183,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       if (ppar[ipar]->npar > 0)
         std::cout << " ipar: " << ipar << " type: " << ppar[ipar]->partype
                   << " nparmax: " << ppar[ipar]->nparmax
-                  << " npar: " << ppar[ipar]->npar << std::endl;
+                  << " npar: " << ppar[ipar]->npar << " mass: " << mass << std::endl;
 
       // calculate PM density every substeps (for history dumps)
       // ppar[ipar]->pm_stages[0] = true;
