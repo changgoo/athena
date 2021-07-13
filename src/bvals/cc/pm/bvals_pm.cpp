@@ -154,25 +154,23 @@ void ParticleMeshBoundaryVariable::SendShearingBoxBoundaryBuffers() {
   MeshBlock *pmb = pmy_block_;
   Mesh *pmesh = pmb->pmy_mesh;
   int ssize = nu_ + 1;
-  int offset[2]{0, 4};
   for (int upper=0; upper<2; upper++) {
     if (pbval_->is_shear[upper]) {
       for (int n=0; n<4; n++) {
         SimpleNeighborBlock& snb = pbval_->sb_data_[upper].send_neighbor[n];
         if (snb.rank != -1) {
           // this loads var_buf not var (in contrast to bvals_shear_cc.cpp)
-          LoadShearingBoxBoundarySameLevel(var_buf, shear_bd_var_[upper].send[n],
-                                          n+offset[upper]);
+          int size = shear_send_count_cc_[upper][n]*ssize;
+          int shid = n+4*upper;
+          Real *sbuf = shear_bd_var_[upper].send[n];
+          LoadShearingBoxBoundarySameLevel(var_buf, sbuf, shid);
           if (snb.rank == Globals::my_rank) {// on the same process
-            CopyShearBufferSameProcess(snb, shear_send_count_cc_[upper][n]*ssize, n,
-                                       upper);
+            CopyShearBufferSameProcess(snb, size, n, upper);
           } else { // MPI
 #ifdef MPI_PARALLEL
-            int tag = pbval_->CreateBvalsMPITag(snb.lid, n+offset[upper],
-                                                shear_cc_phys_id_);
-            MPI_Isend(shear_bd_var_[upper].send[n], shear_send_count_cc_[upper][n]*ssize,
-                      MPI_ATHENA_REAL, snb.rank, tag, MPI_COMM_WORLD,
-                      &shear_bd_var_[upper].req_send[n]);
+            int tag = pbval_->CreateBvalsMPITag(snb.lid, shid, shear_cc_phys_id_);
+            MPI_Request *sreq = &shear_bd_var_[upper].req_send[n];
+            MPI_Isend(sbuf, size, MPI_ATHENA_REAL, snb.rank, tag, MPI_COMM_WORLD, sreq);
 #endif
           }
         }
