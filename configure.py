@@ -99,7 +99,7 @@ parser.add_argument('--eos',
 # --flux=[name] argument
 parser.add_argument('--flux',
                     default='default',
-                    choices=['default', 'hlle', 'hllc', 'hlld', 'roe', 'llf'],
+                    choices=['default', 'hlle', 'hllc', 'lhllc', 'hlld', 'lhlld', 'roe', 'llf'], # noqa
                     help='select Riemann solver')
 
 # --nghost=[value] argument
@@ -320,8 +320,16 @@ if args['flux'] == 'hllc' and args['eos'] == 'isothermal':
     raise SystemExit('### CONFIGURE ERROR: HLLC flux cannot be used with isothermal EOS')
 if args['flux'] == 'hllc' and args['b']:
     raise SystemExit('### CONFIGURE ERROR: HLLC flux cannot be used with MHD')
+if args['flux'] == 'lhllc' and args['eos'] == 'isothermal':
+    raise SystemExit('### CONFIGURE ERROR: LHLLC flux cannot be used with isothermal EOS') # noqa
+if args['flux'] == 'lhllc' and args['b']:
+    raise SystemExit('### CONFIGURE ERROR: LHLLC flux cannot be used with MHD')
 if args['flux'] == 'hlld' and not args['b']:
     raise SystemExit('### CONFIGURE ERROR: HLLD flux can only be used with MHD')
+if args['flux'] == 'lhlld' and args['eos'] == 'isothermal':
+    raise SystemExit('### CONFIGURE ERROR: LHLLD flux cannot be used with isothermal EOS') # noqa
+if args['flux'] == 'lhlld' and not args['b']:
+    raise SystemExit('### CONFIGURE ERROR: LHLLD flux can only be used with MHD')
 
 # Check relativity
 if args['s'] and args['g']:
@@ -731,6 +739,7 @@ else:
                 '### CONFIGURE ERROR: FFT Poisson solver only be used with FFT')
 
     definitions['NGRAV_VARIABLES'] = '1'
+
 # -fft argument
 makefile_options['MPIFFT_FILE'] = ' '
 definitions['FFT_OPTION'] = 'NO_FFT'
