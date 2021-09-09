@@ -76,21 +76,6 @@ void PrintParameters(const Real rho, const Real Press);
 //! functions in this file.  Called in Mesh constructor.
 //========================================================================================
 void Mesh::InitUserMeshData(ParameterInput *pin) {
-  // turb_flag is initialzed in the Mesh constructor to 0 by default;
-  // turb_flag = 1 for decaying turbulence
-  // turb_flag = 2 for driven turbulence
-  // turb_flag = 3 for density perturbations
-  turb_flag = pin->GetInteger("problem","turb_flag");
-  if (turb_flag != 0) {
-#ifndef FFT
-    std::stringstream msg;
-    msg << "### FATAL ERROR in ProblemGenerator " << std::endl
-        << "non zero Turbulence flag is set without FFT!" << std::endl;
-    throw std::runtime_error(msg.str().c_str());
-    return;
-#endif
-  }
-
   // determine length of the box in code units
   Lbox = mesh_size.x1max - mesh_size.x1min;
 
