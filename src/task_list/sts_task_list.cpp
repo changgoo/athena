@@ -325,12 +325,11 @@ SuperTimeStepTaskList::SuperTimeStepTaskList(
     if (pm->sts_integrator == "rkl2") {
       // TaskType::op_split_after tasks:
       AddTask(USERWORK,PHY_BVAL);
-      AddTask(NEW_DT,USERWORK);
       if (pm->adaptive) {
         AddTask(FLAG_AMR,USERWORK);
         AddTask(CLEAR_ALLBND,FLAG_AMR);
       } else {
-        AddTask(CLEAR_ALLBND,NEW_DT);
+        AddTask(CLEAR_ALLBND,USERWORK);
       }
     } else { // rkl1, no TaskType::op_split_after tasks
       AddTask(CLEAR_ALLBND,PHY_BVAL);
@@ -532,11 +531,6 @@ void SuperTimeStepTaskList::AddTask(const TaskID& id, const TaskID& dep) {
     task_list_[ntasks].TaskFunc=
         static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
         (&SuperTimeStepTaskList::UserWork_STS);
-    task_list_[ntasks].lb_time = true;
-  } else if (id == NEW_DT) {
-    task_list_[ntasks].TaskFunc=
-        static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
-        (&SuperTimeStepTaskList::NewBlockTimeStep_STS);
     task_list_[ntasks].lb_time = true;
   } else if (id == FLAG_AMR) {
     task_list_[ntasks].TaskFunc=
@@ -974,16 +968,6 @@ TaskStatus SuperTimeStepTaskList::UserWork_STS(MeshBlock *pmb, int stage) {
     pmb->UserWorkInLoop();
   return TaskStatus::success;
 }
-
-
-TaskStatus SuperTimeStepTaskList::NewBlockTimeStep_STS(MeshBlock *pmb, int stage) {
-  if (stage != nstages) return TaskStatus::success; // only do on last stage
-
-  if (pmb->pmy_mesh->sts_loc == TaskType::op_split_after)
-    pmb->phydro->NewBlockTimeStep();
-  return TaskStatus::success;
-}
-
 
 TaskStatus SuperTimeStepTaskList::CheckRefinement_STS(MeshBlock *pmb, int stage) {
   if (stage != nstages) return TaskStatus::success; // only do on last stage

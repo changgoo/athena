@@ -252,13 +252,11 @@ class Mesh {
 
   int step_since_lb;
   int gflag;
-  int turb_flag; // turbulence flag
   bool amr_updated;
   EosTable *peos_table;
 
   AthenaArray<MeshBlock*> my_blocks;
 
-  TurbulenceDriver *ptrbd;
   FFTGravityDriver *pfgrd;
   MGGravityDriver *pmgrd;
 
@@ -267,6 +265,7 @@ class Mesh {
 
   // functions
   void Initialize(int res_flag, ParameterInput *pin);
+  void PostInitialize(int res_flag, ParameterInput *pin);
   void SetBlockSizeAndBoundaries(LogicalLocation loc, RegionSize &block_size,
                                  BoundaryFlag *block_bcs);
   void NewTimeStep();

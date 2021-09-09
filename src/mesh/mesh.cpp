@@ -33,7 +33,6 @@
 #include "../cr/cr.hpp"
 #include "../eos/eos.hpp"
 #include "../fft/athena_fft.hpp"
-#include "../fft/turbulence.hpp"
 #include "../field/field.hpp"
 #include "../field/field_diffusion/field_diffusion.hpp"
 #include "../globals.hpp"
@@ -103,7 +102,7 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
     muj(), nuj(), muj_tilde(), gammaj_tilde(),
     nbnew(), nbdel(),
     particle(false), particle_gravity(false),
-    step_since_lb(), gflag(), turb_flag(), amr_updated(multilevel),
+    step_since_lb(), gflag(), amr_updated(multilevel),
     // private members:
     next_phys_id_(), num_mesh_threads_(pin->GetOrAddInteger("mesh", "num_threads", 1)),
     gids_(), gide_(),
@@ -560,9 +559,6 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
   }
 
   ResetLoadBalanceVariables();
-
-  if (turb_flag > 0) // TurbulenceDriver depends on the MeshBlock ctor
-    ptrbd = new TurbulenceDriver(this, pin);
 }
 
 //----------------------------------------------------------------------------------------
@@ -609,7 +605,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     muj(), nuj(), muj_tilde(), gammaj_tilde(),
     nbnew(), nbdel(),
     particle(false), particle_gravity(false),
-    step_since_lb(), gflag(), turb_flag(), amr_updated(multilevel),
+    step_since_lb(), gflag(), amr_updated(multilevel),
     // private members:
     next_phys_id_(), num_mesh_threads_(pin->GetOrAddInteger("mesh", "num_threads", 1)),
     gids_(), gide_(),
@@ -916,9 +912,6 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
 
   // clean up
   delete [] offset;
-
-  if (turb_flag > 0) // TurbulenceDriver depends on the MeshBlock ctor
-    ptrbd = new TurbulenceDriver(this, pin);
 }
 
 //----------------------------------------------------------------------------------------
@@ -934,7 +927,6 @@ Mesh::~Mesh() {
   delete [] loclist;
   if (SELF_GRAVITY_ENABLED == 1) delete pfgrd;
   else if (SELF_GRAVITY_ENABLED == 2) delete pmgrd;
-  if (turb_flag > 0) delete ptrbd;
   if (adaptive) { // deallocate arrays for AMR
     delete [] nref;
     delete [] nderef;
@@ -1111,6 +1103,17 @@ void Mesh::OutputMeshStructure(int ndim) {
 //!        this assumes that phydro->NewBlockTimeStep is already called
 
 void Mesh::NewTimeStep() {
+  // call phydro->NewBlockTimeStep
+  for (int i=0; i<nblocal; ++i) {
+    MeshBlock *pmb = my_blocks(i);
+    pmb->phydro->NewBlockTimeStep();
+    Real min_dt = pmb->new_block_dt_;
+    for (Particles *ppar : pmb->ppar) {
+      min_dt = std::min(min_dt,ppar->NewBlockTimeStep());
+      pmb->new_block_dt_ = min_dt;
+    }
+  }
+
   MeshBlock *pmb = my_blocks(0);
 
   // prevent timestep from growing too fast in between 2x cycles (even if every MeshBlock
@@ -1427,12 +1430,9 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
       }
     }
 
+    PostInitialize(res_flag, pin);
     // Preprocess the Particles class.
     if (particle) Particles::PostInitialize(this, pin);
-
-    // add initial perturbation for decaying or impulsive turbulence
-    if (((turb_flag == 1) || (turb_flag == 2)) && (res_flag == 0))
-      ptrbd->Driving();
 
     // Create send/recv MPI_Requests for all BoundaryData objects
 #pragma omp parallel for num_threads(nthreads)
@@ -1692,12 +1692,6 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
       }
     }
   } while (!iflag);
-
-  // calculate the first time step
-#pragma omp parallel for num_threads(nthreads)
-  for (int i=0; i<nblocal; ++i) {
-    my_blocks(i)->phydro->NewBlockTimeStep();
-  }
 
   NewTimeStep();
   return;

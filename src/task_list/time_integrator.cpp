@@ -1174,12 +1174,11 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
 
     if (!STS_ENABLED || pm->sts_integrator == "rkl1") {
       AddTask(USERWORK,before_userwork);
-      AddTask(NEW_DT,USERWORK);
       if (pm->adaptive) {
         AddTask(FLAG_AMR,USERWORK);
         AddTask(CLEAR_ALLBND,FLAG_AMR);
       } else {
-        AddTask(CLEAR_ALLBND,NEW_DT);
+        AddTask(CLEAR_ALLBND,USERWORK);
       }
     } else {
       AddTask(CLEAR_ALLBND,PHY_BVAL);
@@ -1375,12 +1374,6 @@ void TimeIntegratorTaskList::AddTask(const TaskID& id, const TaskID& dep) {
         (&TimeIntegratorTaskList::UserWork);
     task_list_[ntasks].lb_time = true;
     task_list_[ntasks].task_name.append("UserWork");
-  } else if (id == NEW_DT) {
-    task_list_[ntasks].TaskFunc=
-        static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
-        (&TimeIntegratorTaskList::NewBlockTimeStep);
-    task_list_[ntasks].lb_time = true;
-    task_list_[ntasks].task_name.append("NewBlockTimeStep");
   } else if (id == FLAG_AMR) {
     task_list_[ntasks].TaskFunc=
         static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
@@ -2469,19 +2462,6 @@ TaskStatus TimeIntegratorTaskList::UserWork(MeshBlock *pmb, int stage) {
   if (stage != nstages) return TaskStatus::success; // only do on last stage
 
   pmb->UserWorkInLoop();
-  return TaskStatus::success;
-}
-
-
-TaskStatus TimeIntegratorTaskList::NewBlockTimeStep(MeshBlock *pmb, int stage) {
-  if (stage != nstages) return TaskStatus::success; // only do on last stage
-
-  pmb->phydro->NewBlockTimeStep();
-  Real min_dt = pmb->new_block_dt_;
-  for (Particles *ppar : pmb->ppar) {
-    min_dt = std::min(min_dt,ppar->NewBlockTimeStep());
-    pmb->new_block_dt_ = min_dt;
-  }
   return TaskStatus::success;
 }
 

@@ -47,10 +47,9 @@ double MarkTime() {
 void OutputLoopTime(const int ncycle, double dt_array[], std::string basename) {
 #ifdef MPI_PARALLEL
   // pack array, MPI allreduce over array, then unpack into Mesh variables
-  MPI_Allreduce(MPI_IN_PLACE, dt_array, 5, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, dt_array, 4, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 #endif
-  double time_per_step = dt_array[0] + dt_array[1] + dt_array[2]
-                       + dt_array[3] + dt_array[4];
+  double time_per_step = dt_array[0] + dt_array[1] + dt_array[2] + dt_array[3];
   if (Globals::my_rank == 0) {
     std::ofstream os;
     std::string fname;
@@ -72,10 +71,9 @@ void OutputLoopTime(const int ncycle, double dt_array[], std::string basename) {
 
     os << "ncycle=" << ncycle << ", time=" << time_per_step;
     os << ",Before=" << dt_array[0];
-    os << ",TurbulenceDriver=" << dt_array[1];
-    os << ",TimeIntegratorTaskList=" << dt_array[2];
-    os << ",SelfGravity=" << dt_array[3];
-    os << ",After=" << dt_array[4] << std::endl;
+    os << ",TimeIntegratorTaskList=" << dt_array[1];
+    os << ",SelfGravity=" << dt_array[2];
+    os << ",After=" << dt_array[3] << std::endl;
 
     os.close();
   }
