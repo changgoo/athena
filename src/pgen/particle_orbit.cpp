@@ -22,6 +22,7 @@
 #include "../coordinates/coordinates.hpp"
 #include "../eos/eos.hpp"
 #include "../fft/athena_fft.hpp"
+#include "../fft/perturbation.hpp"
 #include "../field/field.hpp"
 #include "../globals.hpp"
 #include "../hydro/hydro.hpp"
@@ -38,6 +39,7 @@
 Real m0;
 Real ParticleEnergy(MeshBlock *pmb, int iout);
 
+TurbulenceDriver *ptrbd;
 //========================================================================================
 //! \fn void Mesh::InitUserMeshData(ParameterInput *pin)
 //! \brief
