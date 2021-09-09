@@ -34,7 +34,6 @@
 
 // Athena++ headers
 #include "athena.hpp"
-#include "fft/turbulence.hpp"
 #include "globals.hpp"
 #include "gravity/block_fft_gravity.hpp"
 #include "gravity/fft_gravity.hpp"
@@ -433,7 +432,7 @@ int main(int argc, char *argv[]) {
   while ((pmesh->time < pmesh->tlim) &&
          (pmesh->nlim < 0 || pmesh->ncycle < pmesh->nlim)) {
     double t0, t1, t2, t2_0, t2_1, t2_2, t3, t4;
-    double dt_before, dt_turb, dt_int = 0, dt_grav = 0, dt_after;
+    double dt_before, dt_int = 0, dt_grav = 0, dt_after;
     t0 = MarkTime();
     if (Globals::my_rank == 0)
       pmesh->OutputCycleDiagnostics();
@@ -461,10 +460,7 @@ int main(int argc, char *argv[]) {
     }
 
     t1 = MarkTime();
-    if (pmesh->turb_flag > 1) pmesh->ptrbd->Driving(); // driven turbulence
-    t2 = MarkTime();
     dt_before = t1 - t0;
-    dt_turb = t2 - t1;
     for (int stage=1; stage<=ptlist->nstages; ++stage) {
       t2_0 = MarkTime();
       ptlist->DoTaskListOneStage(pmesh, stage);
@@ -532,7 +528,7 @@ int main(int argc, char *argv[]) {
 
     if (pinput->GetOrAddBoolean("job","output_timing",false)) {
       // output timing result
-      double dt_array[5] = {dt_before, dt_turb, dt_int, dt_grav, dt_after};
+      double dt_array[4] = {dt_before, dt_int, dt_grav, dt_after};
       ptlist->OutputAllTaskTime(pmesh->ncycle,pinput->GetString("job","problem_id"));
       OutputLoopTime(pmesh->ncycle,dt_array,pinput->GetString("job","problem_id"));
     }

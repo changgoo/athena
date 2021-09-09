@@ -196,7 +196,6 @@ class TimeIntegratorTaskList : public TaskList {
   TaskStatus Primitives(MeshBlock *pmb, int stage);
   TaskStatus PhysicalBoundary(MeshBlock *pmb, int stage);
   TaskStatus UserWork(MeshBlock *pmb, int stage);
-  TaskStatus NewBlockTimeStep(MeshBlock *pmb, int stage);
   TaskStatus CheckRefinement(MeshBlock *pmb, int stage);
 
   TaskStatus CalculateScalarFlux(MeshBlock *pmb, int stage);
@@ -275,7 +274,6 @@ class SuperTimeStepTaskList : public TaskList {
   TaskStatus Primitives_STS(MeshBlock *pmb, int stage);
   TaskStatus PhysicalBoundary_STS(MeshBlock *pmb, int stage);
   TaskStatus UserWork_STS(MeshBlock *pmb, int stage);
-  TaskStatus NewBlockTimeStep_STS(MeshBlock *pmb, int stage);
   TaskStatus CheckRefinement_STS(MeshBlock *pmb, int stage);
 
 
@@ -341,7 +339,6 @@ const TaskID PROLONG(34);
 const TaskID CONS2PRIM(35);
 const TaskID PHY_BVAL(36);
 const TaskID USERWORK(37);
-const TaskID NEW_DT(38);
 const TaskID FLAG_AMR(39);
 
 const TaskID SEND_HYDFLXSH(40);

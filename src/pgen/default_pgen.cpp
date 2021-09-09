@@ -45,6 +45,18 @@ void __attribute__((weak)) Mesh::InitUserMeshData(ParameterInput *pin) {
 }
 
 //========================================================================================
+//! \fn void Mesh::PostInitialize(ParameterInput *pin)
+//! \brief Function to initialize problem-specific data in Mesh class.  Can also be used
+//! to initialize variables which are global to (and therefore can be passed to) other
+//! functions in this file.  Called in Mesh constructor.
+//========================================================================================
+
+void __attribute__((weak)) Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
+  // do nothing
+  return;
+}
+
+//========================================================================================
 //! \fn void Mesh::UserWorkInLoop()
 //! \brief Function called once every time step for user-defined work.
 //========================================================================================
