@@ -50,21 +50,6 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     SetGravityThreshold(eps);
   }
 
-  // turb_flag is initialzed in the Mesh constructor to 0 by default;
-  // turb_flag = 1 for decaying turbulence
-  // turb_flag = 2 for impulsively driven turbulence
-  // turb_flag = 3 for continuously driven turbulence
-  turb_flag = pin->GetInteger("problem","turb_flag");
-  if (turb_flag != 0) {
-#ifndef FFT
-    std::stringstream msg;
-    msg << "### FATAL ERROR in TurbulenceDriver::TurbulenceDriver" << std::endl
-        << "non zero Turbulence flag is set without FFT!" << std::endl;
-    ATHENA_ERROR(msg);
-    return;
-#endif
-  }
-
   // set central mass
   m0 = pin->GetReal("problem","m0");
 
@@ -180,16 +165,37 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 }
 
 //========================================================================================
-//! \fn void Mesh::UserWorkInLoop()
-//! \brief Output particle history
+//! \fn void Mesh::PostInitialize(ParameterInput *pin)
+//  \brief
 //========================================================================================
+void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
+  ptrbd = new TurbulenceDriver(this, pin);
 
+  if (((ptrbd->turb_flag == 1) || (ptrbd->turb_flag == 2)) && (res_flag == 0)) {
+    ptrbd->Driving();
+    if (ptrbd->turb_flag == 1) delete ptrbd;
+  }
+}
+
+//========================================================================================
+//! \fn void Mesh::UserWorkInLoop()
+//  \brief
+//========================================================================================
 void Mesh::UserWorkInLoop() {
-  for (int b = 0; b < nblocal; ++b) {
+  if (ptrbd->turb_flag > 1) ptrbd->Driving(); // driven turbulence
+
+  for (int b = 0; b < nblocal; ++b) { // output particle history
     MeshBlock *pmb(my_blocks(b));
     for (Particles *ppar : pmb->ppar) ppar->OutputParticles(false);
   }
-  return;
+}
+
+//========================================================================================
+//! \fn void Mesh::UserWorkAfterLoop()
+//  \brief
+//========================================================================================
+void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
+  if (ptrbd->turb_flag > 1) delete ptrbd; // driven turbulence
 }
 
 //========================================================================================
