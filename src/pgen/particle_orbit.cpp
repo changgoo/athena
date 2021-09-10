@@ -38,8 +38,6 @@
 
 Real m0;
 Real ParticleEnergy(MeshBlock *pmb, int iout);
-
-TurbulenceDriver *ptrbd;
 //========================================================================================
 //! \fn void Mesh::InitUserMeshData(ParameterInput *pin)
 //! \brief
@@ -167,25 +165,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 }
 
 //========================================================================================
-//! \fn void Mesh::PostInitialize(ParameterInput *pin)
-//  \brief
-//========================================================================================
-void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
-  ptrbd = new TurbulenceDriver(this, pin);
-
-  if (((ptrbd->turb_flag == 1) || (ptrbd->turb_flag == 2)) && (res_flag == 0)) {
-    ptrbd->Driving();
-    if (ptrbd->turb_flag == 1) delete ptrbd;
-  }
-}
-
-//========================================================================================
 //! \fn void Mesh::UserWorkInLoop()
 //  \brief
 //========================================================================================
 void Mesh::UserWorkInLoop() {
-  if (ptrbd->turb_flag > 1) ptrbd->Driving(); // driven turbulence
-
   for (int b = 0; b < nblocal; ++b) { // output particle history
     MeshBlock *pmb(my_blocks(b));
     for (Particles *ppar : pmb->ppar) ppar->OutputParticles(false);
@@ -197,7 +180,6 @@ void Mesh::UserWorkInLoop() {
 //  \brief
 //========================================================================================
 void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
-  if (ptrbd->turb_flag > 1) delete ptrbd; // driven turbulence
 }
 
 //========================================================================================
