@@ -176,7 +176,8 @@ void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
         }
       }
     }
-    std::cout<<"magnetic fields are initialized with Emag " << Emag << " and max divB="<<max_divB<<std::endl;
+    std::cout<< "magnetic fields are initialized with Emag " << Emag
+             << " and max divB="<<max_divB<<std::endl;
   }
 
   delete ppert;
