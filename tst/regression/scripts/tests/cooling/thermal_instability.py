@@ -57,7 +57,6 @@ def run(**kwargs):
                      'mesh/x2max='+repr(0.00625*32/N),
                      'mesh/x3min='+repr(-0.00625*32/N),
                      'mesh/x3max='+repr(0.00625*32/N),
-                     'problem/turb_flag=0',
                      'problem/rho_0=5.0',
                      'problem/kn=1',
                      'problem/alpha={}'.format(_amp)]

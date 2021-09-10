@@ -60,7 +60,6 @@ def run(**kwargs):
                  'cooling/coolftn=tigress',
                  'cooling/cfl_cool=0.01',
                  'cooling/solver=euler',
-                 'problem/turb_flag=0',
                  'problem/rho_0=30.0',
                  'problem/pgas_0=30000000']
 
