@@ -49,13 +49,6 @@ def run(**kwargs):
     # list is simply a string of the form '<block>/<field>=<value>', where the contents of
     # the string are exactly what one would type on the command line run running Athena++.
     arguments_def = ['time/ncycle_out=100',
-                     'output1/file_type=hst',
-                     'output1/dt=1e-8',
-                     'time/cfl_number=0.3',
-                     'time/tlim=2.0',
-                     'mesh/nx1=8',
-                     'mesh/nx2=1',
-                     'mesh/nx3=1',
                      'cooling/coolftn=tigress',
                      'cooling/cfl_cool=0.01',
                      'problem/rho_0=30.0',

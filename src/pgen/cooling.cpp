@@ -56,7 +56,7 @@ static Real dtnet(CoolingFunctionBase *pcool, const Real rho, const Real Press);
 void PrintCoolingFunction(CoolingFunctionBase *pcool, std::string coolftn);
 void PrintParameters(CoolingFunctionBase *pcool, const Real rho, const Real Press);
 
-bool op_cooling=false;
+Real cfl_op_cool=-1;
 //========================================================================================
 //! \fn void Mesh::InitUserMeshData(ParameterInput *pin)
 //! \brief Function to initialize problem-specific data in mesh class.  Can also be used
@@ -108,7 +108,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     EnrollUserExplicitSourceFunction(Cooling_RK4);
     std::cout << "Cooling solver is set to RK4" << std::endl;
   } else if (coolsolver.compare("op") ==0) {
-    op_cooling=true;
+    cfl_op_cool=pin->GetOrAddReal("cooling","cfl_op_cool",0.1);
     std::cout << "Cooling solver is set to operator split" << std::endl;
   } else {
     std::stringstream msg;
@@ -218,7 +218,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 //========================================================================================
 
 void MeshBlock::UserWorkInLoop() {
-  if (!op_cooling) return;
+  if (cfl_op_cool < 0) return; // no operator split cooling
+
   Real dt_mhd = pmy_mesh->dt*punit->Time;
   // std::cout << " userwork" << std::endl;
   for (int k = ks; k <= ke; ++k) {
@@ -249,24 +250,19 @@ void MeshBlock::UserWorkInLoop() {
         Real nH_before = w_d*pcool->to_nH; // store original nH
         Real T_before = P_before*pcool->to_pok/nH_before;
 
-        Real dt_net = dtnet(pcool, rho_before, P_before);
+        Real dt_net = cfl_op_cool*dtnet(pcool, rho_before, P_before);
         Real dt_sub = std::min(dt_mhd,dt_net);
 
         Real T_next = T_before*(1-dt_sub/tcool(pcool, rho_before, P_before));
         Real P_next = nH_before*T_next/pcool->to_pok;
 
         Real tnow = dt_sub, tleft = dt_mhd-dt_sub;
-        // std::cout << " [Initial] P: " << P_before
-        //           << " T: " << T_before << std::endl
-        //           << " [Next] P: " << P_next
-        //           << " T: " << T_next << std::endl
-        //           << " dt: " << dt_mhd << " " << dt_net << " " << dt_sub << std::endl
-        //           << " t: " << tnow << " " << tleft << std::endl;
 
+        int nsub=0;
         while (tnow < dt_mhd) {
           P_before = P_next;
           T_before = P_before*pcool->to_pok/nH_before;
-          dt_net = dtnet(pcool, rho_before, P_before);
+          dt_net = cfl_op_cool*dtnet(pcool, rho_before, P_before);
           dt_sub = std::min(std::min(dt_mhd,dt_net),tleft);
 
           T_next = T_before*(1-dt_sub/tcool(pcool, rho_before, P_before));
@@ -274,7 +270,9 @@ void MeshBlock::UserWorkInLoop() {
 
           tnow += dt_sub;
           tleft = dt_mhd-tnow;
+          nsub++;
         }
+
         // dont cool below cooling floor and find new internal thermal energy
         Real T_floor = pcool->Get_Tfloor();
         Real P_floor = T_floor*nH_before/pcool->to_pok;
