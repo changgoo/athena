@@ -60,6 +60,7 @@ static Real CoolingTimestep(MeshBlock *pmb);
 
 // calculate tcool = e/L(rho, P)
 static Real tcool(const Real rho, const Real Press);
+static Real dtnet(const Real rho, const Real Press);
 
 // calculate growth rate of perturbation
 static Real SolveCubic(const Real b, const Real c, const Real d);
@@ -69,6 +70,7 @@ static Real OmegaG(const Real rho, const Real Press, const Real k);
 void PrintCoolingFunction(std::string coolftn);
 void PrintParameters(const Real rho, const Real Press);
 
+bool op_cooling=false;
 //========================================================================================
 //! \fn void Mesh::InitUserMeshData(ParameterInput *pin)
 //! \brief Function to initialize problem-specific data in mesh class.  Can also be used
@@ -127,6 +129,9 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     EnrollUserExplicitSourceFunction(CoolingRK4);
     if (Globals::my_rank == 0)
       std::cout << "Cooling solver is set to RK4" << std::endl;
+  } else if (coolsolver.compare("op") ==0) {
+    op_cooling=true;
+    std::cout << "Cooling solver is set to operator split" << std::endl;
   } else {
     std::stringstream msg;
     msg << "### FATAL ERROR in ProblemGenerator" << std::endl
@@ -290,6 +295,85 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   AthenaArray<Real> b;
   peos->PrimitiveToConserved(phydro->w, b, phydro->u, pcoord,
        il, iu, jl, ju, kl, ku);
+  return;
+}
+
+//========================================================================================
+//! \fn void MeshBlock::UserWorkInLoop()
+//! \brief Function called once every time step for user-defined work.
+//========================================================================================
+
+void MeshBlock::UserWorkInLoop() {
+  if (!op_cooling) return;
+  Real dt_mhd = pmy_mesh->dt*punit->Time;
+  // std::cout << " userwork" << std::endl;
+  for (int k = ks; k <= ke; ++k) {
+    for (int j = js; j <= je; ++j) {
+      for (int i = is; i <= ie; ++i) {
+        // both u and w are updated by integrator
+        Real& u_d  = phydro->u(IDN,k,j,i);
+        Real& u_e  = phydro->u(IEN,k,j,i);
+
+        Real& w_d  = phydro->w(IDN,k,j,i);
+        Real& w_p  = phydro->w(IPR,k,j,i);
+        // std::cout << " denstiy: " << w_d << " pressure: " << w_p << std::endl;
+        // find non-thermal part of energy to keep it the same
+        Real e_non_thermal = u_e - w_p/(pcool->gamma_adi-1.0);
+        // check bad cell
+        if (w_d < 0)
+          std::cout << " density is bad: d("
+                    << k << "," << j << "," << i << ") = "
+                    << w_d << std::endl;
+        if (w_p < 0)
+          std::cout << " pressure is bad: d("
+                    << k << "," << j << "," << i << ") = "
+                    << w_p << std::endl;
+
+        // first cooling
+        Real P_before = w_p; // store original P
+        Real rho_before = w_d; // store original d
+        Real nH_before = w_d*pcool->to_nH; // store original nH
+        Real T_before = P_before*pcool->to_pok/nH_before;
+
+        Real dt_net = dtnet(rho_before, P_before);
+        Real dt_sub = std::min(dt_mhd,dt_net);
+
+        Real T_next = T_before*(1-dt_sub/tcool(rho_before, P_before));
+        Real P_next = nH_before*T_next/pcool->to_pok;
+
+        Real tnow = dt_sub, tleft = dt_mhd-dt_sub;
+        // std::cout << " [Initial] P: " << P_before
+        //           << " T: " << T_before << std::endl
+        //           << " [Next] P: " << P_next
+        //           << " T: " << T_next << std::endl
+        //           << " dt: " << dt_mhd << " " << dt_net << " " << dt_sub << std::endl
+        //           << " t: " << tnow << " " << tleft << std::endl;
+
+        while (tnow < dt_mhd) {
+          P_before = P_next;
+          T_before = P_before*pcool->to_pok/nH_before;
+          dt_net = dtnet(rho_before, P_before);
+          dt_sub = std::min(std::min(dt_mhd,dt_net),tleft);
+
+          T_next = T_before*(1-dt_sub/tcool(rho_before, P_before));
+          P_next = nH_before*T_next/pcool->to_pok;
+
+          tnow += dt_sub;
+          tleft = dt_mhd-tnow;
+        }
+        // dont cool below cooling floor and find new internal thermal energy
+        Real T_floor = pcool->Get_Tfloor();
+        Real P_floor = T_floor*nH_before/pcool->to_pok;
+
+        Real P_after = std::max(P_next,P_floor);
+        Real u_after = P_after/(pcool->gamma_adi-1.0);
+
+        // change internal energy
+        u_e = u_after + e_non_thermal;
+        w_p = P_after;
+      }
+    }
+  }
   return;
 }
 
@@ -501,7 +585,7 @@ static Real CoolingTimestep(MeshBlock *pmb) {
         // Real nH = rho*pcool->to_nH;
         Real T_floor = pcool->Get_Tfloor();
         if (T_before > 1.01 * T_floor) {
-          Real dtcool = pcool->cfl_cool*std::abs(tcool(rho,Press))
+          Real dtcool = pcool->cfl_cool*std::abs(dtnet(rho,Press))
                        /pcool->punit->Time;
           min_dt = std::min(min_dt, dtcool);
         }
@@ -525,6 +609,22 @@ static Real tcool(const Real rho, const Real Press) {
   Real heat = nH*pcool->Gamma_T(rho, Press);
   Real eint = Press*pcool->punit->Pressure/(pcool->gamma_adi-1);
   Real tcool = eint/(cool - heat);
+  return tcool;
+}
+
+//========================================================================================
+//! \fn static Real dtnet(CoolingFunctionBase *pcool, const Real rho, const Real Press)
+//! \brief dtnet = e / (n^2*Cool + n*heat)
+//! \note
+//! - input rho and P are in code Units
+//! - output dtnet is in second
+//========================================================================================
+static Real dtnet(const Real rho, const Real Press) {
+  Real nH = rho*pcool->to_nH;
+  Real cool = nH*nH*pcool->Lambda_T(rho, Press);
+  Real heat = nH*pcool->Gamma_T(rho, Press);
+  Real eint = Press*pcool->punit->Pressure/(pcool->gamma_adi-1);
+  Real tcool = eint/(cool + heat);
   return tcool;
 }
 
