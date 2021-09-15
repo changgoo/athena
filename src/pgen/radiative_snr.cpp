@@ -186,6 +186,7 @@ void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
     // Initialize primitive values
     for (int k = pmb->ks; k <= pmb->ke; ++k) {
       for (int j = pmb->js; j <= pmb->je; ++j) {
+#pragma omp simd
         for (int i = pmb->is; i <= pmb->ie; ++i) {
           Real r = std::sqrt(SQR(pmb->pcoord->x1v(i))
                             +SQR(pmb->pcoord->x2v(j))
@@ -212,6 +213,7 @@ void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
     Hydro *phydro = pmb->phydro;
     for (int k = pmb->ks; k <= pmb->ke; ++k) {
       for (int j = pmb->js; j <= pmb->je; ++j) {
+#pragma omp simd
         for (int i = pmb->is; i <= pmb->ie; ++i) {
           Real r = std::sqrt(SQR(pmb->pcoord->x1v(i))
                             +SQR(pmb->pcoord->x2v(j))
@@ -239,6 +241,7 @@ void MeshBlock::UserWorkInLoop() {
 
   for (int k = ks; k <= ke; ++k) {
     for (int j = js; j <= je; ++j) {
+#pragma omp simd
       for (int i = is; i <= ie; ++i) {
         // both u and w are updated by integrator
         Real& u_d  = phydro->u(IDN,k,j,i);
@@ -314,6 +317,7 @@ static Real cooling_timestep(MeshBlock *pmb) {
   Real min_dt=1.0e10;
   for (int k=pmb->ks; k<=pmb->ke; ++k) {
     for (int j=pmb->js; j<=pmb->je; ++j) {
+#pragma omp simd
       for (int i=pmb->is; i<=pmb->ie; ++i) {
         Real Press = pmb->phydro->w(IPR,k,j,i);
         Real rho = pmb->phydro->w(IDN,k,j,i);
