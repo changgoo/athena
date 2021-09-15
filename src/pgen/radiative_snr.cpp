@@ -164,7 +164,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     for (int j = js; j <= je; ++j) {
       for (int i = is; i <= ie; ++i) {
         phydro->u(IDN,k,j,i) = rho_0;
-        phydro->u(IEN,k,j,i) = pgas_0;
+        phydro->u(IEN,k,j,i) = pgas_0/(peos->GetGamma()-1);
         phydro->u(IM1,k,j,i) = 0.0;
         phydro->u(IM2,k,j,i) = 0.0;
         phydro->u(IM3,k,j,i) = 0.0;
@@ -205,7 +205,7 @@ void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
   // get pressure fron SNe in the code unit
   Real Esn = pin->GetOrAddReal("problem","Esn",1.0)*pcool->punit->Bethe_in_code;
   Real usn = Esn/my_vol;
-  std::cout << " SN energy: " << Esn << " volume: " << my_vol << " E/vol: " << usn << std::endl;
+
   // add the SN energy
   for (int b=0; b<nblocal; ++b){
     MeshBlock *pmb = my_blocks(b);
