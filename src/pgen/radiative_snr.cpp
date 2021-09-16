@@ -38,13 +38,16 @@ CoolingFunctionBase *pcool;
 // user history
 Real CoolingLosses(MeshBlock *pmb, int iout);
 Real HistoryMass(MeshBlock *pmb, int iout);
+Real HistoryEnergy(MeshBlock *pmb, int iout);
 Real HistoryRadialMomentum(MeshBlock *pmb, int iout);
 Real HistoryShell(MeshBlock *pmb, int iout);
 
 // user timestep
 static Real cooling_timestep(MeshBlock *pmb);
 
+// cooling solver related private function
 // calculate tcool = e/L(rho, P)
+static Real CoolingExplicitSubcycling(Real tend, Real P, const Real rho);
 static Real tcool(CoolingFunctionBase *pcool, const Real rho, const Real Press);
 static Real dtnet(CoolingFunctionBase *pcool, const Real rho, const Real Press);
 
@@ -54,6 +57,7 @@ void PrintParameters(CoolingFunctionBase *pcool, const Real rho, const Real Pres
 
 Real cfl_op_cool=-1;
 Real Thot0 = 2.e4, vr0=0.1;
+int i_M_hot, i_e_hot, i_M_sh, i_pr_sh, i_RM_sh; // indicies for history
 //========================================================================================
 //! \fn void Mesh::InitUserMeshData(ParameterInput *pin)
 //! \brief Function to initialize problem-specific data in mesh class.  Can also be used
@@ -104,14 +108,24 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   EnrollUserTimeStepFunction(cooling_timestep);
 
   // Enroll user-defined functions
-  AllocateUserHistoryOutput(7);
-  EnrollUserHistoryOutput(0, CoolingLosses, "e_cool");
-  EnrollUserHistoryOutput(1, HistoryMass, "M");
-  EnrollUserHistoryOutput(2, HistoryMass, "M_hot");
-  EnrollUserHistoryOutput(3, HistoryRadialMomentum, "pr");
-  EnrollUserHistoryOutput(4, HistoryShell, "M_sh");
-  EnrollUserHistoryOutput(5, HistoryShell, "pr_sh");
-  EnrollUserHistoryOutput(6, HistoryShell, "RM_sh");
+  int n_user_hst=9, i_user_hst=0;
+  AllocateUserHistoryOutput(n_user_hst);
+
+  EnrollUserHistoryOutput(i_user_hst++, CoolingLosses, "e_cool");
+  EnrollUserHistoryOutput(i_user_hst++, HistoryMass, "M");
+  i_M_hot = i_user_hst;
+  EnrollUserHistoryOutput(i_user_hst++, HistoryMass, "M_hot");
+  EnrollUserHistoryOutput(i_user_hst++, HistoryRadialMomentum, "pr");
+  i_M_sh = i_user_hst;
+  EnrollUserHistoryOutput(i_user_hst++, HistoryShell, "M_sh");
+  i_pr_sh = i_user_hst;
+  EnrollUserHistoryOutput(i_user_hst++, HistoryShell, "pr_sh");
+  i_RM_sh = i_user_hst;
+  EnrollUserHistoryOutput(i_user_hst++, HistoryShell, "RM_sh");
+  EnrollUserHistoryOutput(i_user_hst++, HistoryEnergy, "e_th");
+  i_e_hot = i_user_hst;
+  EnrollUserHistoryOutput(i_user_hst++, HistoryEnergy, "e_hot");
+
 }
 
 //========================================================================================
@@ -124,10 +138,10 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   // Allocate storage for keeping track of cooling
   AllocateRealUserMeshBlockDataField(1);
   ruser_meshblock_data[0].NewAthenaArray(1);
-  ruser_meshblock_data[0](0) = 0.0; // e_cool
+  ruser_meshblock_data[0](0) = 0.0; // total e_cool between history dumps
 
   // Set output variables
-  AllocateUserOutputVariables(1);
+  AllocateUserOutputVariables(1); // instantanoues e_dot
 
   return;
 }
@@ -282,8 +296,6 @@ void MeshBlock::UserWorkInLoop() {
         // set the initial conditions
         Real P_before = w_p; // store original P
         Real rho_before = w_d; // store original d
-        Real nH_before = w_d*pcool->to_nH; // store original nH
-        Real T1_before = P_before/rho_before*pcool->punit->Temperature;
 
         // calculate pressure floor
         Real P_floor = rho_before*T_floor/pcool->punit->Temperature;
@@ -298,30 +310,13 @@ void MeshBlock::UserWorkInLoop() {
 
           continue;
         }
-
-        Real tnow = 0., tleft = dt_mhd;
-        Real P_next, T1_next; // declare vars outside while-scope
-        int nsub=0;
-        while (tnow < dt_mhd) {
-          Real dt_net = cfl_op_cool*dtnet(pcool, rho_before, P_before);
-          Real dt_sub = std::min(std::min(dt_mhd,dt_net),tleft);
-
-          T1_next = T1_before*(1-dt_sub/tcool(pcool, rho_before, P_before));
-          P_next = rho_before*T1_next/pcool->punit->Temperature;
-
-          tnow += dt_sub;
-          tleft = dt_mhd-tnow;
-
-          P_before = P_next;
-          T1_before = P_before/rho_before*pcool->punit->Temperature;
-        }
-
+        Real P_next = CoolingExplicitSubcycling(dt_mhd,P_before,rho_before);
         // apply floor if cooled too much
         Real P_after = std::max(P_next,P_floor);
         Real u_after = P_after/gm1;
 
         // store edot (code units)
-        Real delta_e = (P_after-w_p)/gm1;
+        Real delta_e = (P_after-P_before)/gm1;
         edot(k,j,i) = delta_e/pmy_mesh->dt;
 
         // change internal energy
@@ -343,6 +338,33 @@ void MeshBlock::UserWorkInLoop() {
   ruser_meshblock_data[0](0) += delta_e_block;
 
   return;
+}
+
+//========================================================================================
+//! \fn Real Real CoolingExplicitSubcycling(Real tend, Real P, const Real rho)
+//! \brief explicit cooling solver from 0 to tend with subcycling
+//========================================================================================
+static Real CoolingExplicitSubcycling(Real tend, Real P, const Real rho) {
+  Real tnow = 0., tleft = tend;
+  Real T1 = P/rho*pcool->punit->Temperature;
+  int nsub_max = pcool->cfl_cool/cfl_op_cool*10;
+  for (int i=0; i<nsub_max; ++i) {
+    Real dt_net = cfl_op_cool*dtnet(pcool, rho, P);
+    Real dt_sub = std::min(std::min(tend,dt_net),tleft);
+
+    T1 *= (1-dt_sub/tcool(pcool, rho, P));
+    P = rho*T1/pcool->punit->Temperature;
+
+    tnow += dt_sub;
+    tleft = tend-tnow;
+
+    if (tnow >= tend) break;
+  }
+
+  if (tnow < tend)
+    std::cout << "Too many substeps required: tnow = " << tnow
+              << " tend = " << tend << std::endl;
+  return P;
 }
 
 //========================================================================================
@@ -432,20 +454,50 @@ Real HistoryMass(MeshBlock *pmb, int iout) {
   Real Temp;
   for (int k=ks; k<=ke; ++k) {
     for (int j=js; j<=je; ++j) {
-      pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
+      pmb->pcoord->CellVolume(k, j, is, ie, vol);
       for (int i=is; i<=ie; ++i) {
-        if (iout == 1) {
-          mass += rho(k,j,i)*vol(i);
-        } else {
+        if (iout == i_M_hot) {
           Temp = pcool->GetTemperature(rho(k,j,i), press(k,j,i));
           if (Temp > Thot0) {
             mass += rho(k,j,i)*vol(i);
           }
+        } else {
+          mass += rho(k,j,i)*vol(i);
         }
       }
     }
   }
   return mass;
+}
+
+//========================================================================================
+//! \fn Real HistoryEnergy(MeshBlock *pmb, int iout)
+//! \brief Total gas mass (total/hot)
+//========================================================================================
+Real HistoryEnergy(MeshBlock *pmb, int iout) {
+  int is=pmb->is, ie=pmb->ie;
+  int js=pmb->js, je=pmb->je;
+  int ks=pmb->ks, ke=pmb->ke;
+  AthenaArray<Real> vol(pmb->ncells1);
+  AthenaArray<Real> rho,press;
+  rho.InitWithShallowSlice(pmb->phydro->w,4,IDN,1);
+  press.InitWithShallowSlice(pmb->phydro->w,4,IPR,1);
+  Real energy=0.0;
+  for (int k=ks; k<=ke; ++k) {
+    for (int j=js; j<=je; ++j) {
+      pmb->pcoord->CellVolume(k, j, is, ie, vol);
+      for (int i=is; i<=ie; ++i) {
+        Real eint = press(k,j,i)*vol(i)/(pmb->peos->GetGamma()-1);
+        if (iout == i_e_hot) {
+          Real Temp = pcool->GetTemperature(rho(k,j,i), press(k,j,i));
+          if (Temp > Thot0) energy += eint;
+        } else {
+          energy += eint;
+        }
+      }
+    }
+  }
+  return energy;
 }
 
 //========================================================================================
@@ -462,7 +514,7 @@ Real HistoryRadialMomentum(MeshBlock *pmb, int iout) {
   Real x0 = 0.0, y0 = 0.0, z0 = 0.0;
   for (int k=ks; k<=ke; ++k) {
     for (int j=js; j<=je; ++j) {
-      pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
+      pmb->pcoord->CellVolume(k, j, is, ie, vol);
       for (int i=is; i<=ie; ++i) {
         Real x = pmb->pcoord->x1v(i);
         Real y = pmb->pcoord->x2v(j);
@@ -511,18 +563,18 @@ Real HistoryShell(MeshBlock *pmb, int iout) {
         Real vr = (vx*(x-x0) + vy*(y-y0) + vz*(z-z0))/rad;
         Temp = pcool->GetTemperature(rho(k,j,i), press(k,j,i));
         if ((Temp < Thot0) && (vr > vr0)) {
-          if (iout == 4) { // Mass
+          if (iout == i_M_sh) { // Mass
             sum += rho(k,j,i)*vol(i);
-          } else if (iout == 5) { // Momentum
+          } else if (iout == i_pr_sh) { // Momentum
             sum += rho(k,j,i)*vr*vol(i);
-          } else if (iout == 6) { // mass-weighted radius (need to be divided by shell mass)
+          } else if (iout == i_RM_sh) {
+            // mass-weighted radius (need to be divided by shell mass)
             sum += rho(k,j,i)*vol(i)*rad;
           }
         }
       }
     }
   }
-
   return sum;
 }
 
