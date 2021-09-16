@@ -430,7 +430,8 @@ int main(int argc, char *argv[]) {
 #endif
 
   while ((pmesh->time < pmesh->tlim) &&
-         (pmesh->nlim < 0 || pmesh->ncycle < pmesh->nlim)) {
+         (pmesh->nlim < 0 || pmesh->ncycle < pmesh->nlim) &&
+         (pmesh->dt > pmesh->dtlim)) {
     double t0, t1, t2, t2_0, t2_1, t2_2, t3, t4;
     double dt_before, dt_int = 0, dt_grav = 0, dt_after;
     t0 = MarkTime();
