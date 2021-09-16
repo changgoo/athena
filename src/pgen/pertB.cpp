@@ -84,11 +84,16 @@ void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
   ppert->AssignVector(); // do backward FFT and assign the vec array
   ppert->SetBoundary(); // fill in the ghost zones
 
+  // In the problem generator, I only set E with internal energy assuming a static medium
+  // Therefore, I expect to have Emag = Eint(gamma-1)/beta and
+  // the normalization factor B0 = sqrt((gamma-1)/beta/sum(b))
+  Real beta = pin->GetOrAddReal("problem","beta", 1);
+  Real Emag_tot = 0;
+
   for (int i=0; i<nblocal; ++i) {
     MeshBlock *pmb = my_blocks(i);
     Hydro *phydro = pmb->phydro;
     Field *pfield = pmb->pfield;
-    Real max_divB=1.e-30,amp = 1.e5;
     AthenaArray<Real> vecpot(ppert->GetVector(i)), Ax, Ay, Az;
     Ax.InitWithShallowSlice(vecpot, 4, 0, 1);
     Ay.InitWithShallowSlice(vecpot, 4, 1, 1);
@@ -96,11 +101,11 @@ void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
     for (int k=pmb->ks; k<=pmb->ke; k++) {
       for (int j=pmb->js; j<=pmb->je; j++) {
         for (int i=pmb->is; i<=pmb->ie; i++) {
-          phydro->u(IM1,k,j,i) = amp*Ax(k,j,i);
-          phydro->u(IM2,k,j,i) = amp*Ay(k,j,i);
-          phydro->u(IM3,k,j,i) = amp*Az(k,j,i);
+          phydro->u(IM1,k,j,i) = Ax(k,j,i);
+          phydro->u(IM2,k,j,i) = Ay(k,j,i);
+          phydro->u(IM3,k,j,i) = Az(k,j,i);
           if (NON_BAROTROPIC_EOS) {
-            phydro->u(IEN,k,j,i) += 0.5*SQR(amp)*(SQR(Ax(k,j,i))
+            phydro->u(IEN,k,j,i) += 0.5*(SQR(Ax(k,j,i))
                                  +SQR(Ay(k,j,i))+SQR(Az(k,j,i)));
           }
         }
@@ -116,7 +121,6 @@ void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
                        +  (Az(k,j+1,i-1) - Az(k,j-1,i-1)))
              - 0.25/dz * ((Ay(k+1,j,i  ) - Ay(k-1,j,i  ))
                        +  (Ay(k+1,j,i-1) - Ay(k-1,j,i-1)));
-          Bx *= amp;
         }
       }
     }
@@ -130,7 +134,6 @@ void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
                        +  (Ax(k+1,j-1,i) - Ax(k-1,j-1,i)))
              - 0.25/dx * ((Az(k,j  ,i+1) - Az(k,j  ,i-1))
                        +  (Az(k,j-1,i+1) - Az(k,j-1,i-1)));
-          By *= amp;
         }
       }
     }
@@ -144,20 +147,63 @@ void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
                        +  (Ay(k-1,j,i+1) - Ay(k-1,j,i-1)))
              - 0.25/dy * ((Ax(k  ,j+1,i) - Ax(k  ,j-1,i))
                        +  (Ax(k-1,j+1,i) - Ax(k-1,j-1,i)));
-          Bz *= amp;
         }
       }
     }
 
-    // add magnetic energy
-    Real Emag = 0;
+    // calculate un-normalized magnetic energy
+    for (int k=pmb->ks; k<=pmb->ke; k++) {
+      for (int j=pmb->js; j<=pmb->je; j++) {
+        for (int i=pmb->is; i<=pmb->ie; i++) {
+          Emag_tot += 0.5*(SQR(0.5*(pfield->b.x1f(k,j,i) + pfield->b.x1f(k,j,i+1))) +
+                        SQR(0.5*(pfield->b.x2f(k,j,i) + pfield->b.x2f(k,j+1,i))) +
+                        SQR(0.5*(pfield->b.x3f(k,j,i) + pfield->b.x3f(k+1,j,i))));
+        }
+      }
+    }
+  }
+#ifdef MPI_PARALLEL
+  int mpierr;
+  // Sum the perturbations over all processors
+  mpierr = MPI_Allreduce(MPI_IN_PLACE, &Emag_tot, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+#endif
+  Emag_tot /= GetTotalCells();
+  for (int i=0; i<nblocal; ++i) {
+    MeshBlock *pmb = my_blocks(i);
+    Hydro *phydro = pmb->phydro;
+    Field *pfield = pmb->pfield;
+
+    Real Pth,B0; // nomalization factor
+    // find thermal pressure
+    if (NON_BAROTROPIC_EOS) {
+      Pth = (pmb->peos->GetGamma() - 1); // I've set E = 1 in ProblemGenerator
+    } else {
+      Pth = SQR(pmb->peos->GetIsoSoundSpeed()); // I've set d = 1 in ProblemGenerator
+    }
+    B0 = std::sqrt(Pth/beta/Emag_tot);
+
+    // normalize face fields
+    for (int k=pmb->ks; k<=pmb->ke; k++) {
+      for (int j=pmb->js; j<=pmb->je; j++) {
+        for (int i=pmb->is; i<=pmb->ie; i++) {
+          pfield->b.x1f(k,j,i) *= B0;
+          pfield->b.x2f(k,j,i) *= B0;
+          pfield->b.x3f(k,j,i) *= B0;
+          if (i == pmb->ie) pfield->b.x1f(k,j,i+1) *= B0;
+          if (j == pmb->je) pfield->b.x2f(k,j+1,i) *= B0;
+          if (k == pmb->ke) pfield->b.x3f(k+1,j,i) *= B0;
+        }
+      }
+    }
+
+    // add magnetic energy to total energy
     if (NON_BAROTROPIC_EOS) {
       for (int k=pmb->ks; k<=pmb->ke; k++) {
         for (int j=pmb->js; j<=pmb->je; j++) {
           for (int i=pmb->is; i<=pmb->ie; i++) {
-            Emag = 0.5*(SQR(0.5*(pfield->b.x1f(k,j,i) + pfield->b.x1f(k,j,i+1))) +
-                         SQR(0.5*(pfield->b.x2f(k,j,i) + pfield->b.x2f(k,j+1,i))) +
-                         SQR(0.5*(pfield->b.x3f(k,j,i) + pfield->b.x3f(k+1,j,i))));
+            Real Emag = 0.5*(SQR(0.5*(pfield->b.x1f(k,j,i) + pfield->b.x1f(k,j,i+1))) +
+                             SQR(0.5*(pfield->b.x2f(k,j,i) + pfield->b.x2f(k,j+1,i))) +
+                             SQR(0.5*(pfield->b.x3f(k,j,i) + pfield->b.x3f(k+1,j,i))));
             phydro->u(IEN,k,j,i) += Emag;
           }
         }
@@ -165,6 +211,7 @@ void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
     }
 
     // check divB
+    Real max_divB=TINY_NUMBER;
     for (int k=pmb->ks; k<=pmb->ke; k++) {
       for (int j=pmb->js; j<=pmb->je; j++) {
         for (int i=pmb->is; i<=pmb->ie; i++) {
@@ -176,7 +223,7 @@ void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
         }
       }
     }
-    std::cout<< "magnetic fields are initialized with Emag " << Emag
+    std::cout<< "magnetic fields are initialized with Emag " << Emag_tot*SQR(B0)
              << " and max divB="<<max_divB<<std::endl;
   }
 
