@@ -327,10 +327,12 @@ void MeshBlock::UserWorkInLoop() {
   }
 
   // sum up cooling only done in the active cells
+  AthenaArray<Real> vol(ncells1);
   for (int k = ks; k <= ke; ++k) {
     for (int j = js; j <= je; ++j) {
+      pcoord->CellVolume(k, j, is, ie, vol);
       for (int i = is; i <= ie; ++i) {
-        delta_e_block += edot(k,j,i)*pmy_mesh->dt;
+        delta_e_block += edot(k,j,i)*pmy_mesh->dt*vol(i);
       }
     }
   }
