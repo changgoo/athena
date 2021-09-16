@@ -231,15 +231,36 @@ void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
 void MeshBlock::UserWorkInLoop() {
   if (cfl_op_cool < 0) return; // no operator split cooling
 
+  // boundary comm. will not be called.
+  // need to solve cooling in the ghost zones
+  // Prepare index bounds
+  int il = is - NGHOST;
+  int iu = ie + NGHOST;
+  int jl = js;
+  int ju = je;
+  if (block_size.nx2 > 1) {
+    jl -= (NGHOST);
+    ju += (NGHOST);
+  }
+  int kl = ks;
+  int ku = ke;
+  if (block_size.nx3 > 1) {
+    kl -= (NGHOST);
+    ku += (NGHOST);
+  }
+
+
   Real dt_mhd = pmy_mesh->dt*punit->Time;
 
   AthenaArray<Real> edot;
   edot.InitWithShallowSlice(user_out_var, 4, 0, 1);
   Real delta_e_block = 0.0;
+  Real T_floor = pcool->Get_Tfloor(); // temperature floor
+  Real gm1 = pcool->gamma_adi-1; // gamma-1
 
-  for (int k = ks; k <= ke; ++k) {
-    for (int j = js; j <= je; ++j) {
-      for (int i = is; i <= ie; ++i) {
+  for (int k = kl; k <= ku; ++k) {
+    for (int j = jl; j <= ju; ++j) {
+      for (int i = il; i <= iu; ++i) {
         // both u and w are updated by integrator
         Real& u_d  = phydro->u(IDN,k,j,i);
         Real& u_e  = phydro->u(IEN,k,j,i);
@@ -247,7 +268,7 @@ void MeshBlock::UserWorkInLoop() {
         Real& w_d  = phydro->w(IDN,k,j,i);
         Real& w_p  = phydro->w(IPR,k,j,i);
         // find non-thermal part of energy to keep it the same
-        Real e_non_thermal = u_e - w_p/(pcool->gamma_adi-1.0);
+        Real e_non_thermal = u_e - w_p/gm1;
         // check bad cell
         if (w_d < 0)
           std::cout << " density is bad: d("
@@ -263,6 +284,21 @@ void MeshBlock::UserWorkInLoop() {
         Real rho_before = w_d; // store original d
         Real nH_before = w_d*pcool->to_nH; // store original nH
         Real T1_before = P_before/rho_before*pcool->punit->Temperature;
+
+        // calculate pressure floor
+        Real P_floor = rho_before*T_floor/pcool->punit->Temperature;
+        if (P_before < P_floor) {
+          // store edot (code units)
+          Real delta_e = (P_floor-w_p)/gm1;
+          edot(k,j,i) = delta_e/pmy_mesh->dt;
+
+          // don't solve cooling; just apply floor
+          u_e = P_floor/gm1 + e_non_thermal;
+          w_p = P_floor;
+
+          continue;
+        }
+
         Real tnow = 0., tleft = dt_mhd;
         Real P_next, T1_next; // declare vars outside while-scope
         int nsub=0;
@@ -280,22 +316,26 @@ void MeshBlock::UserWorkInLoop() {
           T1_before = P_before/rho_before*pcool->punit->Temperature;
         }
 
-        // dont cool below cooling floor and find new internal thermal energy
-        Real T_floor = pcool->Get_Tfloor();
-        Real P_floor = rho_before*T_floor/pcool->punit->Temperature;
-
+        // apply floor if cooled too much
         Real P_after = std::max(P_next,P_floor);
-        Real u_after = P_after/(pcool->gamma_adi-1.0);
+        Real u_after = P_after/gm1;
 
         // store edot (code units)
-        Real delta_e = (P_after-w_p)/(pcool->gamma_adi-1.0);
+        Real delta_e = (P_after-w_p)/gm1;
         edot(k,j,i) = delta_e/pmy_mesh->dt;
-
-        delta_e_block += delta_e;
 
         // change internal energy
         u_e = u_after + e_non_thermal;
         w_p = P_after;
+      }
+    }
+  }
+
+  // sum up cooling only done in the active cells
+  for (int k = ks; k <= ke; ++k) {
+    for (int j = js; j <= je; ++j) {
+      for (int i = is; i <= ie; ++i) {
+        delta_e_block += edot(k,j,i)*pmy_mesh->dt;
       }
     }
   }
