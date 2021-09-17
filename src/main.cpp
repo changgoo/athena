@@ -322,6 +322,8 @@ int main(int argc, char *argv[]) {
     return(0);
   }
 
+  // Dump input parameters before running the code
+  if (Globals::my_rank == 0) pinput->ParameterDump(std::cout);
   //--- Step 5. --------------------------------------------------------------------------
   // Construct and initialize TaskList
 
