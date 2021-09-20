@@ -173,6 +173,7 @@ TigressClassic::TigressClassic(ParameterInput *pin) :
 //========================================================================================
 Real TigressClassic::Lambda_T(const Real rho, const Real Press) {
   Real T1 = Press/rho*punit->Temperature;
+  if (T1 < Tmin_tbl) return 0;
 
   int T1idx = get_Tidx(T1);
   Real dTemp = (T1-T1_tbl[T1idx])/(T1_tbl[T1idx+1]-T1_tbl[T1idx]);
@@ -192,6 +193,7 @@ Real TigressClassic::Lambda_T(const Real rho, const Real Press) {
 //========================================================================================
 Real TigressClassic::dlnL_dlnT(const Real rho, const Real Press) {
   Real T1 = Press/rho*punit->Temperature;
+
   int T1idx = get_Tidx(T1);
 
   Real dLdT = (cool_table[T1idx+1]-cool_table[T1idx])/(T1_tbl[T1idx+1]-T1_tbl[T1idx]);

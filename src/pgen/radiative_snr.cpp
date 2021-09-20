@@ -108,10 +108,13 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   EnrollUserTimeStepFunction(cooling_timestep);
 
   // Enroll user-defined functions
-  int n_user_hst=9, i_user_hst=0;
+  int n_user_hst=10, i_user_hst=0;
   AllocateUserHistoryOutput(n_user_hst);
 
+  // these should come first
   EnrollUserHistoryOutput(i_user_hst++, CoolingLosses, "e_cool");
+  EnrollUserHistoryOutput(i_user_hst++, CoolingLosses, "e_floor");
+  //
   EnrollUserHistoryOutput(i_user_hst++, HistoryMass, "M");
   i_M_hot = i_user_hst;
   EnrollUserHistoryOutput(i_user_hst++, HistoryMass, "M_hot");
@@ -137,11 +140,12 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   // Allocate storage for keeping track of cooling
   AllocateRealUserMeshBlockDataField(1);
-  ruser_meshblock_data[0].NewAthenaArray(1);
+  ruser_meshblock_data[0].NewAthenaArray(2);
   ruser_meshblock_data[0](0) = 0.0; // total e_cool between history dumps
+  ruser_meshblock_data[0](1) = 0.0; // total e_cool between history dumps
 
   // Set output variables
-  AllocateUserOutputVariables(1); // instantanoues e_dot
+  AllocateUserOutputVariables(2); // instantanoues e_dot, e_dot_floor
 
   return;
 }
@@ -266,14 +270,16 @@ void MeshBlock::UserWorkInLoop() {
 
   Real dt_mhd = pmy_mesh->dt*punit->Time;
 
-  AthenaArray<Real> edot;
+  AthenaArray<Real> edot, edot_floor;
   edot.InitWithShallowSlice(user_out_var, 4, 0, 1);
-  Real delta_e_block = 0.0;
+  edot_floor.InitWithShallowSlice(user_out_var, 4, 1, 1);
+
   Real T_floor = pcool->Get_Tfloor(); // temperature floor
   Real gm1 = pcool->gamma_adi-1; // gamma-1
 
   for (int k = kl; k <= ku; ++k) {
     for (int j = jl; j <= ju; ++j) {
+#pragma omp simd
       for (int i = il; i <= iu; ++i) {
         // both u and w are updated by integrator
         Real& u_d  = phydro->u(IDN,k,j,i);
@@ -299,25 +305,35 @@ void MeshBlock::UserWorkInLoop() {
 
         // calculate pressure floor
         Real P_floor = rho_before*T_floor/pcool->punit->Temperature;
-        if (P_before < P_floor) {
-          // store edot (code units)
-          Real delta_e = (P_floor-w_p)/gm1;
-          edot(k,j,i) = delta_e/pmy_mesh->dt;
+        Real P_next;
+        if (P_before < P_floor)
+          P_next = P_floor;
+        else
+          P_next = CoolingExplicitSubcycling(dt_mhd,P_before,rho_before);
 
-          // don't solve cooling; just apply floor
-          u_e = P_floor/gm1 + e_non_thermal;
-          w_p = P_floor;
-
-          continue;
+        Real delta_P, delta_P_floor;
+        if (P_next == P_floor) {
+          // original P is too low; cooling solver is skipped
+          // store artificial heating by flooring
+          delta_P = 0.;
+          delta_P_floor = P_floor-P_before;
+        } else if (P_next < P_floor) {
+          // cooled too much; apply floor
+          // store both cooling loss and artificial heating
+          delta_P = P_next-P_before;
+          delta_P_floor = P_floor-P_next;
+        } else {
+          // normal cooling without floor;
+          // store cooling loss only
+          delta_P = P_next-P_before;
+          delta_P_floor = 0.;
         }
-        Real P_next = CoolingExplicitSubcycling(dt_mhd,P_before,rho_before);
+        edot(k,j,i) = delta_P/gm1/pmy_mesh->dt;
+        edot_floor(k,j,i) = delta_P_floor/gm1/pmy_mesh->dt;
+
         // apply floor if cooled too much
         Real P_after = std::max(P_next,P_floor);
         Real u_after = P_after/gm1;
-
-        // store edot (code units)
-        Real delta_e = (P_after-P_before)/gm1;
-        edot(k,j,i) = delta_e/pmy_mesh->dt;
 
         // change internal energy
         u_e = u_after + e_non_thermal;
@@ -328,16 +344,20 @@ void MeshBlock::UserWorkInLoop() {
 
   // sum up cooling only done in the active cells
   AthenaArray<Real> vol(ncells1);
+  Real delta_e_block = 0.0, delta_ef_block = 0.0;
   for (int k = ks; k <= ke; ++k) {
     for (int j = js; j <= je; ++j) {
       pcoord->CellVolume(k, j, is, ie, vol);
+#pragma omp simd reduction(+:delta_e_block,delta_ef_block)
       for (int i = is; i <= ie; ++i) {
         delta_e_block += edot(k,j,i)*pmy_mesh->dt*vol(i);
+        delta_ef_block += edot_floor(k,j,i)*pmy_mesh->dt*vol(i);
       }
     }
   }
   // add cooling and ceiling to hist outputs
   ruser_meshblock_data[0](0) += delta_e_block;
+  ruser_meshblock_data[0](1) += delta_ef_block;
 
   return;
 }
