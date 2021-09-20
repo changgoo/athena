@@ -13,37 +13,38 @@ dt         = 1.e-8      # time increment between outputs
 <output2>
 file_type  = hdf5        # hdf5 data dump
 variable   = prim
-dt         = 1.e-3      # time increment between outputs
+dt         = 1.e-2      # time increment between outputs
 
 <output3>
 file_type  = hdf5        # hdf5 data dump
 variable   = uov
-dt         = 1.e-3      # time increment between outputs
+dt         = 1.e-2      # time increment between outputs
 
 <time>
 cfl_number = 0.3        # The Courant, Friedrichs, & Lewy (CFL) Number
 nlim       = -1		      # cycle limit
-tlim       = 0.3        # time limit
+tlim       = 0.1        # time limit
 integrator  = vl2       # time integration algorithm
 xorder      = 2         # order of spatial reconstruction
-ncycle_out  = 10        # interval for stdout summary info
+ncycle_out  = 1         # interval for stdout summary info
+dt_diagnostics = 0
 
 <mesh>
-nx1        = 128         # Number of zones in X1-direction
-x1min      = -64.0       # minimum value of X1
-x1max      = 64.0        # maximum value of X1
+nx1        = 64         # Number of zones in X1-direction
+x1min      = -32.0       # minimum value of X1
+x1max      = 32.0        # maximum value of X1
 ix1_bc     = periodic   # inner-X1 boundary flag
 ox1_bc     = periodic   # outer-X1 boundary flag
 
-nx2        = 128          # Number of zones in X2-direction
-x2min      = -64       # minimum value of X2
-x2max      = 64        # maximum value of X2
+nx2        = 64          # Number of zones in X2-direction
+x2min      = -32       # minimum value of X2
+x2max      = 32        # maximum value of X2
 ix2_bc     = periodic   # inner-X2 boundary flag
 ox2_bc     = periodic   # outer-X2 boundary flag
 
-nx3        = 128          # Number of zones in X3-direction
-x3min      = -64       # minimum value of X3
-x3max      = 64        # maximum value of X3
+nx3        = 64          # Number of zones in X3-direction
+x3min      = -32       # minimum value of X3
+x3max      = 32        # maximum value of X3
 ix3_bc     = periodic   # inner-X3 boundary flag
 ox3_bc     = periodic   # outer-X3 boundary flag
 
