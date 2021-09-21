@@ -21,6 +21,7 @@
 #include "../coordinates/coordinates.hpp"  // Coordinates
 #include "../eos/eos.hpp"                  // EquationOfState
 #include "../field/field.hpp"              // Field
+#include "../fft/perturbation.hpp"         // PerturbationGenerator
 #include "../globals.hpp"                  // Globals
 #include "../hydro/hydro.hpp"              // Hydro
 #include "../mesh/mesh.hpp"
@@ -35,6 +36,8 @@ Units *punit;
 // will be set to specific function depending on the input parameter (cooling/coolftn).
 CoolingFunctionBase *pcool;
 
+// user function
+void AddSupernova(Mesh *pm);
 // user history
 Real CoolingLosses(MeshBlock *pmb, int iout);
 Real HistoryMass(MeshBlock *pmb, int iout);
@@ -58,6 +61,9 @@ void PrintParameters(CoolingFunctionBase *pcool, const Real rho, const Real Pres
 Real cfl_op_cool=-1;
 Real Thot0 = 2.e4, vr0=0.1;
 int i_M_hot, i_e_hot, i_M_sh, i_pr_sh, i_RM_sh; // indicies for history
+
+// SN related parameters
+Real r_SN, E_SN, t_SN, dt_SN;
 //========================================================================================
 //! \fn void Mesh::InitUserMeshData(ParameterInput *pin)
 //! \brief Function to initialize problem-specific data in mesh class.  Can also be used
@@ -84,12 +90,18 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     throw std::runtime_error(msg.str().c_str());
     return;
   }
+  // SN related parameters
+  t_SN = pin->GetOrAddReal("problem","t_SN",0.0); // when to explode SN
+  if (t_SN >= 0.0) {
+    r_SN = pin->GetReal("problem","r_SN");
+    E_SN = pin->GetOrAddReal("problem","E_SN",1.0);
+    dt_SN = pin->GetOrAddReal("problem","dt_SN",-1); // interval of SNe
+  }
 
   // shorthand for unit class
   // not unit class is initialized within cooling function constructor
   // to use appropreate mu and muH
   punit = pcool->punit;
-
 
   // show some values for sanity check.
   if (Globals::my_rank == 0) {
@@ -197,55 +209,85 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 //! \brief add SN energy
 //========================================================================================
 void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
-  Real my_vol = 0;
-  Real r_sn = pin->GetReal("problem","r_sn");
-  for (int b=0; b<nblocal; ++b){
-    MeshBlock *pmb = my_blocks(b);
-    // Initialize primitive values
-    for (int k = pmb->ks; k <= pmb->ke; ++k) {
-      for (int j = pmb->js; j <= pmb->je; ++j) {
-        for (int i = pmb->is; i <= pmb->ie; ++i) {
-          Real r = std::sqrt(SQR(pmb->pcoord->x1v(i))
-                            +SQR(pmb->pcoord->x2v(j))
-                            +SQR(pmb->pcoord->x3v(k)));
-          if (r<r_sn) my_vol += pmb->pcoord->GetCellVolume(k,j,i);
-
-        }
-      }
-    }
+  if (t_SN == 0.0) {
+    AddSupernova(this);
+    t_SN += dt_SN;
   }
 
-  // calculate total feedback region volume
-#ifdef MPI_PARALLEL
-  MPI_Allreduce(MPI_IN_PLACE, &my_vol, 1, MPI_ATHENA_REAL, MPI_SUM, MPI_COMM_WORLD);
-#endif
+  // Add density perturbation
+  Real rho_0   = pin->GetReal("problem", "rho_0"); // measured in m_p muH cm^-3
+  Real amp_den = pin->GetOrAddReal("problem","amp_den",0.0);
+  if (amp_den>0) {
+    PerturbationGenerator *ppert;
+    ppert = new PerturbationGenerator(this, pin);
 
-  // get pressure fron SNe in the code unit
-  Real Esn = pin->GetOrAddReal("problem","Esn",1.0)*pcool->punit->Bethe_in_code;
-  Real usn = Esn/my_vol;
-
-  // add the SN energy
-  for (int b=0; b<nblocal; ++b){
-    MeshBlock *pmb = my_blocks(b);
-    Hydro *phydro = pmb->phydro;
-    for (int k = pmb->ks; k <= pmb->ke; ++k) {
-      for (int j = pmb->js; j <= pmb->je; ++j) {
-        for (int i = pmb->is; i <= pmb->ie; ++i) {
-          Real r = std::sqrt(SQR(pmb->pcoord->x1v(i))
-                            +SQR(pmb->pcoord->x2v(j))
-                            +SQR(pmb->pcoord->x3v(k)));
-          if (r<r_sn) phydro->u(IEN,k,j,i) += usn;
+    ppert->GenerateScalar(); // generate a scalar in Fourier space
+    ppert->AssignScalar(); // do backward FFT and assign the scalar array
+    // calculate total
+    Real dtot = 0.0, d2tot = 0.0;
+    for (int nb=0; nb<nblocal; ++nb) {
+      MeshBlock *pmb = my_blocks(nb);
+      AthenaArray<Real> dden(ppert->GetScalar(nb));
+      for (int k=pmb->ks; k<=pmb->ke; k++) {
+        for (int j=pmb->js; j<=pmb->je; j++) {
+          for (int i=pmb->is; i<=pmb->ie; i++) {
+            dtot += dden(k,j,i);
+            d2tot += SQR(dden(k,j,i));
+          }
         }
       }
     }
+#ifdef MPI_PARALLEL
+    int mpierr;
+    // Sum the perturbations over all processors
+    mpierr = MPI_Allreduce(MPI_IN_PLACE, &dtot, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    mpierr = MPI_Allreduce(MPI_IN_PLACE, &d2tot, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+#endif
+    d2tot /= GetTotalCells();
+    dtot /= GetTotalCells();
+    Real d_std= std::sqrt(d2tot - dtot*dtot);
+
+    std::cout << " unscaled density std: " << d_std << std::endl;
+    // assign normalized density perturbation with assigned amplitude
+    for (int nb=0; nb<nblocal; ++nb) {
+      MeshBlock *pmb = my_blocks(nb);
+      Hydro *phydro = pmb->phydro;
+      AthenaArray<Real> dden(ppert->GetScalar(nb));
+      for (int k=pmb->ks; k<=pmb->ke; k++) {
+        for (int j=pmb->js; j<=pmb->je; j++) {
+          for (int i=pmb->is; i<=pmb->ie; i++) {
+            phydro->u(IDN,k,j,i) += rho_0*(amp_den/d_std)*dden(k,j,i);
+          }
+        }
+      }
+    }
+
+    delete ppert;
+  }
+
+  // velocity perturbation; decaying turbulence
+  Real turb_flag(pin->GetOrAddInteger("problem","turb_flag",0));
+  if (turb_flag>0) {
+    TurbulenceDriver *ptrbd;
+    ptrbd = new TurbulenceDriver(this, pin);
+    if (res_flag == 0) ptrbd->Driving();
   }
 }
 
 //========================================================================================
+//! \fn void Mesh::UserWorkInLoop()
+//! \brief Function called once every time step for Mesh-level user-defined work.
+//========================================================================================
+void Mesh::UserWorkInLoop() {
+  if ((t_SN>0) && (t_SN < time)) {
+    AddSupernova(this);
+    t_SN += dt_SN;
+  }
+}
+//========================================================================================
 //! \fn void MeshBlock::UserWorkInLoop()
 //! \brief Function called once every time step for user-defined work.
 //========================================================================================
-
 void MeshBlock::UserWorkInLoop() {
   if (cfl_op_cool < 0) return; // no operator split cooling
 
@@ -446,6 +488,54 @@ static Real dtnet(CoolingFunctionBase *pc, const Real rho, const Real Press) {
   Real eint = Press*pc->punit->Pressure/(pc->gamma_adi-1);
   Real tcool = eint/(cool + heat);
   return tcool;
+}
+
+//========================================================================================
+//! \fn void AddSupernova(Mesh *pm)
+//! \brief add a SN at the center
+//========================================================================================
+void AddSupernova(Mesh *pm) {
+  Real my_vol = 0;
+
+  // Add SN
+  for (int b=0; b<pm->nblocal; ++b){
+    MeshBlock *pmb = pm->my_blocks(b);
+    // Initialize primitive values
+    for (int k = pmb->ks; k <= pmb->ke; ++k) {
+      for (int j = pmb->js; j <= pmb->je; ++j) {
+        for (int i = pmb->is; i <= pmb->ie; ++i) {
+          Real r = std::sqrt(SQR(pmb->pcoord->x1v(i))
+                            +SQR(pmb->pcoord->x2v(j))
+                            +SQR(pmb->pcoord->x3v(k)));
+          if (r<r_SN) my_vol += pmb->pcoord->GetCellVolume(k,j,i);
+        }
+      }
+    }
+  }
+
+  // calculate total feedback region volume
+#ifdef MPI_PARALLEL
+  MPI_Allreduce(MPI_IN_PLACE, &my_vol, 1, MPI_ATHENA_REAL, MPI_SUM, MPI_COMM_WORLD);
+#endif
+
+  // get pressure fron SNe in the code unit
+  Real usn = E_SN*pcool->punit->Bethe_in_code/my_vol;
+
+  // add the SN energy
+  for (int b=0; b<pm->nblocal; ++b){
+    MeshBlock *pmb = pm->my_blocks(b);
+    Hydro *phydro = pmb->phydro;
+    for (int k = pmb->ks; k <= pmb->ke; ++k) {
+      for (int j = pmb->js; j <= pmb->je; ++j) {
+        for (int i = pmb->is; i <= pmb->ie; ++i) {
+          Real r = std::sqrt(SQR(pmb->pcoord->x1v(i))
+                            +SQR(pmb->pcoord->x2v(j))
+                            +SQR(pmb->pcoord->x3v(k)));
+          if (r<r_SN) phydro->u(IEN,k,j,i) += usn;
+        }
+      }
+    }
+  }
 }
 
 //========================================================================================

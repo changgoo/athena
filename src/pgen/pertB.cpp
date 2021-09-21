@@ -90,28 +90,16 @@ void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
   Real beta = pin->GetOrAddReal("problem","beta", 1);
   Real Emag_tot = 0;
 
-  for (int i=0; i<nblocal; ++i) {
-    MeshBlock *pmb = my_blocks(i);
+  for (int nb=0; nb<nblocal; ++nb) {
+    MeshBlock *pmb = my_blocks(nb);
     Hydro *phydro = pmb->phydro;
     Field *pfield = pmb->pfield;
-    AthenaArray<Real> vecpot(ppert->GetVector(i)), Ax, Ay, Az;
+    AthenaArray<Real> vecpot(ppert->GetVector(nb)), Ax, Ay, Az;
     Ax.InitWithShallowSlice(vecpot, 4, 0, 1);
     Ay.InitWithShallowSlice(vecpot, 4, 1, 1);
     Az.InitWithShallowSlice(vecpot, 4, 2, 1);
-    for (int k=pmb->ks; k<=pmb->ke; k++) {
-      for (int j=pmb->js; j<=pmb->je; j++) {
-        for (int i=pmb->is; i<=pmb->ie; i++) {
-          phydro->u(IM1,k,j,i) = Ax(k,j,i);
-          phydro->u(IM2,k,j,i) = Ay(k,j,i);
-          phydro->u(IM3,k,j,i) = Az(k,j,i);
-          if (NON_BAROTROPIC_EOS) {
-            phydro->u(IEN,k,j,i) += 0.5*(SQR(Ax(k,j,i))
-                                 +SQR(Ay(k,j,i))+SQR(Az(k,j,i)));
-          }
-        }
-      }
-    }
-
+    // Get B from curl A
+    // Bx
     for (int k=pmb->ks; k<=pmb->ke; k++) {
       for (int j=pmb->js; j<=pmb->je; j++) {
         for (int i=pmb->is; i<=pmb->ie+1; i++) {
@@ -125,6 +113,7 @@ void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
       }
     }
 
+    // By
     for (int k=pmb->ks; k<=pmb->ke; k++) {
       for (int j=pmb->js; j<=pmb->je+1; j++) {
         for (int i=pmb->is; i<=pmb->ie; i++) {
@@ -138,6 +127,7 @@ void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
       }
     }
 
+    // Bz
     for (int k=pmb->ks; k<=pmb->ke+1; k++) {
       for (int j=pmb->js; j<=pmb->je; j++) {
         for (int i=pmb->is; i<=pmb->ie; i++) {
