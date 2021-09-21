@@ -73,13 +73,15 @@ heat_ratio    = 1.0       # Gamma/Gamma0, if tigress
 <perturbation>
 nlow          = 2
 nhigh         = 8
-expo          = 1
+expo          = 2
+rseed         = 1
 
 <problem>
 rho_0         = 2.        # initial density meant to be in cm^-3
 pgas_0        = 3000     # initial gas pressure meant to be in kB K cm^-3
 r_SN          = 5
 t_SN          = -1
-amp_den       = 0.0
-turb_flag     = 0
-dedt          = 10
+amp_den       = 0.0      # non zero to turn on
+turb_flag     = 0        # 1 to turn on
+v3d           = 5.0      # v3d
+dedt          = 0.       # place holder -- will be set by Mach and p_gas0

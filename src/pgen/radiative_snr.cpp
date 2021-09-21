@@ -270,6 +270,10 @@ void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
   if (turb_flag>0) {
     TurbulenceDriver *ptrbd;
     ptrbd = new TurbulenceDriver(this, pin);
+    Real ek = 0.5*rho_0*SQR(pin->GetReal("problem","v3d")); // alpha=Ek/Eth
+    Real vol = mesh_size.x1len*mesh_size.x2len*mesh_size.x3len;
+    ptrbd->dedt = ek*vol;
+    pin->SetReal("problem","dedt",ek*vol);
     if (res_flag == 0) ptrbd->Driving();
   }
 }
