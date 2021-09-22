@@ -86,3 +86,4 @@ turb_flag     = 0        # 1 to turn on
 v3d           = 5.0      # v3d
 dedt          = 0.       # place holder -- will be set by Mach and p_gas0
 kappa_iso     = 1.e5     # thermal conductivity in c.g.s.
+spitzer       = false    # false for constant conductivity

@@ -57,6 +57,10 @@ void SpitzerConductivity(HydroDiffusion *phdif, MeshBlock *pmb,
                      const AthenaArray<Real> &prim,
                      const AthenaArray<Real> &bcc,
                      int is, int ie, int js, int je, int ks, int ke);
+void SpitzerParkerConductivity(HydroDiffusion *phdif, MeshBlock *pmb,
+                     const AthenaArray<Real> &prim,
+                     const AthenaArray<Real> &bcc,
+                     int is, int ie, int js, int je, int ks, int ke);
 void SimpleSpitzerConductivity(HydroDiffusion *phdif, MeshBlock *pmb,
                      const AthenaArray<Real> &prim,
                      const AthenaArray<Real> &bcc,
@@ -141,22 +145,21 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     // set Spitzer conductivity coefficient in the code unit;
     pin->SetReal("problem","kappa_iso",kappa_cond);
 
-    EnrollConductionCoefficient(SimpleSpitzerConductivity);
+    // EnrollConductionCoefficient(SimpleSpitzerConductivity);
+    EnrollConductionCoefficient(SpitzerParkerConductivity);
     // EnrollConductionCoefficient(SpitzerConductivity); // density dependent
   } else {
     // use constant conductivity
-    if (pin->DoesParameterExist("problem","kappa_iso")) {
-      Real kappa_cond = pin->GetReal("problem","kappa_iso");
-      if (kappa_cond>0) {
-        // mu is incorrect for TIGRESS cooling, but it will be fine for the testing purposes
-        Real kappa_units = punit->Density*punit->Length*punit->Velocity;
-        kappa_units *= Constants::kB/(1.27*Constants::mH);
-        kappa_cond /= kappa_units;
-        // set thermal conductivity in the code unit;
-        pin->SetReal("problem","kappa_iso",kappa_cond);
-        // Enroll thermal conduction coefficient (conductivity to diffusivity)
-        EnrollConductionCoefficient(ConstantConductivity);
-      }
+    Real kappa_cond = pin->GetReal("problem","kappa_iso");
+    if (kappa_cond>0) {
+      // mu is incorrect for TIGRESS cooling, but it will be fine for the testing purposes
+      Real kappa_units = punit->Density*punit->Length*punit->Velocity;
+      kappa_units *= Constants::kB/(1.27*Constants::mH);
+      kappa_cond /= kappa_units;
+      // set thermal conductivity in the code unit;
+      pin->SetReal("problem","kappa_iso",kappa_cond);
+      // Enroll thermal conduction coefficient (conductivity to diffusivity)
+      EnrollConductionCoefficient(ConstantConductivity);
     }
   }
 
@@ -689,6 +692,42 @@ void SpitzerConductivity(HydroDiffusion *phdif, MeshBlock *pmb,
           Real ne2 = 1.2*rho*pcool->to_nH/1.e-2;
           Real kappa = phdif->kappa_iso/1.116*std::pow(temp,2.5);
           kappa = kappa/(1+0.029*std::log(T7/std::sqrt(ne2)));
+          phdif->kappa(HydroDiffusion::DiffProcess::iso,k,j,i) = kappa/rho;
+        }
+      }
+    }
+  }
+
+  if (phdif->kappa_aniso > 0.0) {
+    // nothing implemented yet
+  }
+  return;
+}
+
+//========================================================================================
+//! \fn void SpitzerParkerConductivity(HydroDiffusion *phdif, MeshBlock *pmb,
+//!                     const AthenaArray<Real> &prim,
+//!                     const AthenaArray<Real> &bcc,
+//!                     int is, int ie, int js, int je, int ks, int ke)
+//! \brief Isotropic Spitzer and Paker Conductivity
+//!
+//! Spitzer (1962), Paker (1953); El-Badry et al. (2019) Eq.(16) and Eq.(17) w/o den term
+//========================================================================================
+void SpitzerParkerConductivity(HydroDiffusion *phdif, MeshBlock *pmb,
+                     const AthenaArray<Real> &prim,
+                     const AthenaArray<Real> &bcc,
+                     int is, int ie, int js, int je, int ks, int ke) {
+  if (phdif->kappa_iso > 0.0) {
+    for (int k=ks; k<=ke; ++k) {
+      for (int j=js; j<=je; ++j) {
+#pragma omp simd
+        for (int i=is; i<=ie; ++i) {
+          Real rho = prim(IDN,k,j,i);
+          Real press = prim(IPR,k,j,i);
+          Real temp = pcool->GetTemperature(rho,press);
+          Real kappaS = phdif->kappa_iso*std::pow(temp,2.5);
+          Real kappaP = phdif->kappa_iso*2.5e3/6.e-7*std::sqrt(temp);
+          Real kappa = std::max(kappaS,kappaP);
           phdif->kappa(HydroDiffusion::DiffProcess::iso,k,j,i) = kappa/rho;
         }
       }

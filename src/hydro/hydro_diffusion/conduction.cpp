@@ -19,6 +19,7 @@
 #include "../hydro.hpp"
 #include "hydro_diffusion.hpp"
 
+// #define SATURATION
 //---------------------------------------------------------------------------------------
 //! Calculate isotropic thermal conduction
 //! Including saturation effect
@@ -51,12 +52,15 @@ void HydroDiffusion::ThermalFluxIso(
         denf = 0.5*(p(IDN,k,j,i) + p(IDN,k,j,i-1));
         dTdx = (p(IPR,k,j,i)/p(IDN,k,j,i) - p(IPR,k,j,i-1)/
                 p(IDN,k,j,i-1))/pco_->dx1v(i-1);
+#ifdef SATURATION
         // saturation of heat flux
         csf = std::sqrt(0.5*(p(IPR,k,j,i) + p(IPR,k,j,i-1))/denf);
         qsat = 1.5*denf*csf*csf*csf;
         kappa_eff = 1/(1/(kappaf*denf)+std::abs(dTdx)/qsat);
         x1flux(k,j,i) -= kappa_eff*dTdx;
-        // x1flux(k,j,i) -= kappaf*denf*dTdx;
+#else
+        x1flux(k,j,i) -= kappaf*denf*dTdx;
+#endif
       }
     }
   }
@@ -79,12 +83,15 @@ void HydroDiffusion::ThermalFluxIso(
           denf = 0.5*(p(IDN,k,j,i) + p(IDN,k,j-1,i));
           dTdy = (p(IPR,k,j,i)/p(IDN,k,j,i) - p(IPR,k,j-1,i)/
                   p(IDN,k,j-1,i))/pco_->h2v(i)/pco_->dx2v(j-1);
+#ifdef SATURATION
           // saturation of heat flux
           csf = std::sqrt(0.5*(p(IPR,k,j,i) + p(IPR,k,j-1,i))/denf);
           qsat = 1.5*denf*csf*csf*csf;
           kappa_eff = 1/(1/(kappaf*denf)+std::abs(dTdy)/qsat);
           x2flux(k,j,i) -= kappa_eff*dTdy;
-          // x2flux(k,j,i) -= kappaf*denf*dTdy;
+#else
+          x2flux(k,j,i) -= kappaf*denf*dTdy;
+#endif
         }
       }
     }
@@ -108,12 +115,15 @@ void HydroDiffusion::ThermalFluxIso(
           denf = 0.5*(p(IDN,k,j,i) + p(IDN,k-1,j,i));
           dTdz = (p(IPR,k,j,i)/p(IDN,k,j,i) - p(IPR,k-1,j,i)/
                   p(IDN,k-1,j,i))/pco_->dx3v(k-1)/pco_->h31v(i)/pco_->h32v(j);
+#ifdef SATURATION
           // saturation of heat flux
           csf = std::sqrt(0.5*(p(IPR,k,j,i) + p(IPR,k-1,j,i))/denf);
           qsat = 1.5*denf*csf*csf*csf;
           kappa_eff = 1/(1/(kappaf*denf)+std::abs(dTdz)/qsat);
           x3flux(k,j,i) -= kappa_eff*dTdz;
-          // x3flux(k,j,i) -= kappaf*denf*dTdz;
+#else
+          x3flux(k,j,i) -= kappaf*denf*dTdz;
+#endif
         }
       }
     }
