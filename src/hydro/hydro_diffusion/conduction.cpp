@@ -21,6 +21,7 @@
 
 //---------------------------------------------------------------------------------------
 //! Calculate isotropic thermal conduction
+//! Including saturation effect
 
 void HydroDiffusion::ThermalFluxIso(
      const AthenaArray<Real> &p, AthenaArray<Real> *flx) {
@@ -30,7 +31,7 @@ void HydroDiffusion::ThermalFluxIso(
   int il, iu, jl, ju, kl, ku;
   int is = pmb_->is; int js = pmb_->js; int ks = pmb_->ks;
   int ie = pmb_->ie; int je = pmb_->je; int ke = pmb_->ke;
-  Real kappaf, denf, dTdx, dTdy, dTdz;
+  Real kappaf, denf, dTdx, dTdy, dTdz, csf, qsat, kappa_eff;
 
   // i-direction
   jl = js, ju = je, kl = ks, ku = ke;
@@ -44,13 +45,18 @@ void HydroDiffusion::ThermalFluxIso(
   }
   for (int k=kl; k<=ku; ++k) {
     for (int j=jl; j<=ju; ++j) {
-#pragma omp simd private(kappaf, denf, dTdx)
+#pragma omp simd private(kappaf, denf, dTdx, csf, qsat, kappa_eff)
       for (int i=is; i<=ie+1; ++i) {
         kappaf = 0.5*(kappa(DiffProcess::iso,k,j,i) + kappa(DiffProcess::iso,k,j,i-1));
         denf = 0.5*(p(IDN,k,j,i) + p(IDN,k,j,i-1));
         dTdx = (p(IPR,k,j,i)/p(IDN,k,j,i) - p(IPR,k,j,i-1)/
                 p(IDN,k,j,i-1))/pco_->dx1v(i-1);
-        x1flux(k,j,i) -= kappaf*denf*dTdx;
+        // saturation of heat flux
+        csf = std::sqrt(0.5*(p(IPR,k,j,i) + p(IPR,k,j,i-1))/denf);
+        qsat = 1.5*denf*csf*csf*csf;
+        kappa_eff = 1/(1/(kappaf*denf)+std::abs(dTdx)/qsat);
+        x1flux(k,j,i) -= kappa_eff*dTdx;
+        // x1flux(k,j,i) -= kappaf*denf*dTdx;
       }
     }
   }
@@ -67,13 +73,18 @@ void HydroDiffusion::ThermalFluxIso(
     AthenaArray<Real> &x2flux = flx[X2DIR];
     for (int k=kl; k<=ku; ++k) {
       for (int j=js; j<=je+1; ++j) {
-#pragma omp simd private(kappaf, denf, dTdy)
+#pragma omp simd private(kappaf, denf, dTdy, csf, qsat, kappa_eff)
         for (int i=il; i<=iu; ++i) {
           kappaf = 0.5*(kappa(DiffProcess::iso,k,j,i) + kappa(DiffProcess::iso,k,j-1,i));
           denf = 0.5*(p(IDN,k,j,i) + p(IDN,k,j-1,i));
           dTdy = (p(IPR,k,j,i)/p(IDN,k,j,i) - p(IPR,k,j-1,i)/
                   p(IDN,k,j-1,i))/pco_->h2v(i)/pco_->dx2v(j-1);
-          x2flux(k,j,i) -= kappaf*denf*dTdy;
+          // saturation of heat flux
+          csf = std::sqrt(0.5*(p(IPR,k,j,i) + p(IPR,k,j-1,i))/denf);
+          qsat = 1.5*denf*csf*csf*csf;
+          kappa_eff = 1/(1/(kappaf*denf)+std::abs(dTdy)/qsat);
+          x2flux(k,j,i) -= kappa_eff*dTdy;
+          // x2flux(k,j,i) -= kappaf*denf*dTdy;
         }
       }
     }
@@ -91,13 +102,18 @@ void HydroDiffusion::ThermalFluxIso(
     AthenaArray<Real> &x3flux = flx[X3DIR];
     for (int k=ks; k<=ke+1; ++k) {
       for (int j=jl; j<=ju; ++j) {
-#pragma omp simd private(kappaf, denf, dTdz)
+#pragma omp simd private(kappaf, denf, dTdz, csf, qsat, kappa_eff)
         for (int i=il; i<=iu; ++i) {
           kappaf = 0.5*(kappa(DiffProcess::iso,k,j,i) + kappa(DiffProcess::iso,k-1,j,i));
           denf = 0.5*(p(IDN,k,j,i) + p(IDN,k-1,j,i));
           dTdz = (p(IPR,k,j,i)/p(IDN,k,j,i) - p(IPR,k-1,j,i)/
                   p(IDN,k-1,j,i))/pco_->dx3v(k-1)/pco_->h31v(i)/pco_->h32v(j);
-          x3flux(k,j,i) -= kappaf*denf*dTdz;
+          // saturation of heat flux
+          csf = std::sqrt(0.5*(p(IPR,k,j,i) + p(IPR,k-1,j,i))/denf);
+          qsat = 1.5*denf*csf*csf*csf;
+          kappa_eff = 1/(1/(kappaf*denf)+std::abs(dTdz)/qsat);
+          x3flux(k,j,i) -= kappa_eff*dTdz;
+          // x3flux(k,j,i) -= kappaf*denf*dTdz;
         }
       }
     }
