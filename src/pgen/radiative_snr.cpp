@@ -48,6 +48,12 @@ Real HistoryShell(MeshBlock *pmb, int iout);
 // user timestep
 static Real cooling_timestep(MeshBlock *pmb);
 
+// user conductivity
+void ConstantConductivity(HydroDiffusion *phdif, MeshBlock *pmb,
+                     const AthenaArray<Real> &prim,
+                     const AthenaArray<Real> &bcc,
+                     int is, int ie, int js, int je, int ks, int ke);
+
 // cooling solver related private function
 // calculate tcool = e/L(rho, P)
 static Real CoolingExplicitSubcycling(Real tend, Real P, const Real rho);
@@ -113,11 +119,28 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     punit->PrintConstantsInCodeUnits();
   }
 
+  // read-in thermal conductivity in c.g.s.
+  if (pin->DoesParameterExist("problem","kappa_iso")) {
+    Real kappa_cond = pin->GetReal("problem","kappa_iso");
+    if (kappa_cond>0) {
+      // mu is incorrect for TIGRESS cooling, but it will be fine for the testing purposes
+      Real kappa_units = punit->Density*punit->Length*punit->Velocity;
+      kappa_units *= Constants::kB/(1.27*Constants::mH);
+      kappa_cond /= kappa_units;
+      // set thermal conductivity in the code unit;
+      std::cout << "kappa in code " << kappa_cond << std::endl;
+      pin->SetReal("problem","kappa_iso",kappa_cond);
+    }
+  }
+
   // use operator split cooling solver
   cfl_op_cool=pin->GetOrAddReal("cooling","cfl_op_cool",0.1);
 
   // Enroll timestep so that dt <= min t_cool
   EnrollUserTimeStepFunction(cooling_timestep);
+
+  // Enroll thermal conduction coefficient (conductivity to diffusivity)
+  EnrollConductionCoefficient(ConstantConductivity);
 
   // Enroll user-defined functions
   int n_user_hst=10, i_user_hst=0;
@@ -325,7 +348,6 @@ void MeshBlock::UserWorkInLoop() {
 
   for (int k = kl; k <= ku; ++k) {
     for (int j = jl; j <= ju; ++j) {
-#pragma omp simd
       for (int i = il; i <= iu; ++i) {
         // both u and w are updated by integrator
         Real& u_d  = phydro->u(IDN,k,j,i);
@@ -541,6 +563,45 @@ void AddSupernova(Mesh *pm) {
     }
   }
 }
+
+//========================================================================================
+//! \fn void ConstConductivity(HydroDiffusion *phdif, MeshBlock *pmb,
+//!                     const AthenaArray<Real> &prim,
+//!                     const AthenaArray<Real> &bcc,
+//!                     int is, int ie, int js, int je, int ks, int ke) {
+//! \brief Get thermal diffusivity from constant conductivity
+//! \note
+//! Note, the kappa_iso and kappa_aniso coefficients correspond to diffusivities,
+//! not conductivities. Also note that the current implementation uses a dimensionless
+//! system of units in that the factor (mbar/kB) is not included in calculating the
+//! temperature (instead, T=P/d is used). That is, the energy flux is set to -
+//! kappa*d d(P/d)/dx, and kappa must have dimensions L2/t. For an energy flux of the
+//! form -kappa dT/dx (e.g. with density-independent Spitzer conductivity),
+//! the value assigned to kappa must include the factor (kB/mbar) and
+//! must include a factor 1/d.
+//========================================================================================
+void ConstantConductivity(HydroDiffusion *phdif, MeshBlock *pmb,
+                     const AthenaArray<Real> &prim,
+                     const AthenaArray<Real> &bcc,
+                     int is, int ie, int js, int je, int ks, int ke) {
+  if (phdif->kappa_iso > 0.0) {
+    for (int k=ks; k<=ke; ++k) {
+      for (int j=js; j<=je; ++j) {
+#pragma omp simd
+        for (int i=is; i<=ie; ++i) {
+          phdif->kappa(HydroDiffusion::DiffProcess::iso,k,j,i) =
+            phdif->kappa_iso/prim(IDN,k,j,i);
+        }
+      }
+    }
+  }
+
+  if (phdif->kappa_aniso > 0.0) {
+    // nothing implemented yet
+  }
+  return;
+}
+
 
 //========================================================================================
 //! \fn Real CoolingLosses(MeshBlock *pmb, int iout)
