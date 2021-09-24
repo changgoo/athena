@@ -81,7 +81,7 @@ Real Thot0 = 2.e4, vr0=0.1;
 int i_M_hot, i_e_hot, i_M_sh, i_pr_sh, i_RM_sh; // indicies for history
 
 // SN related parameters
-Real r_SN, E_SN, t_SN, dt_SN;
+Real r_SN, M_ej, E_SN, t_SN, dt_SN;
 //========================================================================================
 //! \fn void Mesh::InitUserMeshData(ParameterInput *pin)
 //! \brief Function to initialize problem-specific data in mesh class.  Can also be used
@@ -113,6 +113,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   if (t_SN >= 0.0) {
     r_SN = pin->GetReal("problem","r_SN");
     E_SN = pin->GetOrAddReal("problem","E_SN",1.0);
+    M_ej = pin->GetOrAddReal("problem","M_ej",10.0);
     dt_SN = pin->GetOrAddReal("problem","dt_SN",-1); // interval of SNe
   }
 
@@ -300,7 +301,6 @@ void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
     dtot /= GetTotalCells();
     Real d_std= std::sqrt(d2tot - dtot*dtot);
 
-    std::cout << " unscaled density std: " << d_std << std::endl;
     // assign normalized density perturbation with assigned amplitude
     for (int nb=0; nb<nblocal; ++nb) {
       MeshBlock *pmb = my_blocks(nb);
@@ -575,6 +575,7 @@ void AddSupernova(Mesh *pm) {
 #endif
 
   // get pressure fron SNe in the code unit
+  Real rhosn = M_ej*pcool->punit->Msun_in_code/my_vol;
   Real usn = E_SN*pcool->punit->Bethe_in_code/my_vol;
 
   // add the SN energy
@@ -587,7 +588,10 @@ void AddSupernova(Mesh *pm) {
           Real r = std::sqrt(SQR(pmb->pcoord->x1v(i))
                             +SQR(pmb->pcoord->x2v(j))
                             +SQR(pmb->pcoord->x3v(k)));
-          if (r<r_SN) phydro->u(IEN,k,j,i) += usn;
+          if (r<r_SN) {
+            phydro->u(IDN,k,j,i) += rhosn;
+            phydro->u(IEN,k,j,i) += usn;
+          }
         }
       }
     }
