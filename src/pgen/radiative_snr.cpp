@@ -20,8 +20,8 @@
 #include "../athena_arrays.hpp"            // AthenaArray
 #include "../coordinates/coordinates.hpp"  // Coordinates
 #include "../eos/eos.hpp"                  // EquationOfState
-#include "../field/field.hpp"              // Field
 #include "../fft/perturbation.hpp"         // PerturbationGenerator
+#include "../field/field.hpp"              // Field
 #include "../globals.hpp"                  // Globals
 #include "../hydro/hydro.hpp"              // Hydro
 #include "../mesh/mesh.hpp"
@@ -38,6 +38,7 @@ CoolingFunctionBase *pcool;
 
 // user function
 void AddSupernova(Mesh *pm);
+
 // user history
 Real CoolingLosses(MeshBlock *pmb, int iout);
 Real HistoryMass(MeshBlock *pmb, int iout);
@@ -66,17 +67,21 @@ void SimpleSpitzerConductivity(HydroDiffusion *phdif, MeshBlock *pmb,
                      const AthenaArray<Real> &bcc,
                      int is, int ie, int js, int je, int ks, int ke);
 
-// cooling solver related private function
-// calculate tcool = e/L(rho, P)
-static Real CoolingExplicitSubcycling(Real tend, Real P, const Real rho);
-static Real tcool(CoolingFunctionBase *pcool, const Real rho, const Real Press);
-static Real dtnet(CoolingFunctionBase *pcool, const Real rho, const Real Press);
-
 // Utility functions for debugging
 void PrintCoolingFunction(CoolingFunctionBase *pcool, std::string coolftn);
 void PrintParameters(CoolingFunctionBase *pcool, const Real rho, const Real Press);
 
+// calculate tcool = e/L(rho, P)
+static Real tcool(CoolingFunctionBase *pcool, const Real rho, const Real Press);
+// calculate dtnet = e/(|cool| + |heat|)
+static Real dtnet(CoolingFunctionBase *pcool, const Real rho, const Real Press);
+// cooling solver private function
+static Real CoolingExplicitSubcycling(Real tend, Real P, const Real rho);
+
+// cooling solver related parameters
 Real cfl_op_cool=-1;
+
+// SN history related parameters
 Real Thot0 = 2.e4, vr0=0.1;
 int i_M_hot, i_e_hot, i_M_sh, i_pr_sh, i_RM_sh; // indicies for history
 
@@ -194,7 +199,6 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   EnrollUserHistoryOutput(i_user_hst++, HistoryEnergy, "e_th");
   i_e_hot = i_user_hst;
   EnrollUserHistoryOutput(i_user_hst++, HistoryEnergy, "e_hot");
-
 }
 
 //========================================================================================
@@ -265,7 +269,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
   if (t_SN == 0.0) {
     AddSupernova(this);
-    t_SN += dt_SN;
+    t_SN = time + dt_SN;
+    if (Globals::my_rank == 0)
+      std::cout << "SN exploded at " << time
+                << " --> next SN will be at " << t_SN << std::endl;
   }
 
   // Add density perturbation
@@ -339,6 +346,9 @@ void Mesh::UserWorkInLoop() {
   if ((t_SN>0) && (t_SN < time)) {
     AddSupernova(this);
     t_SN += dt_SN;
+    if (Globals::my_rank == 0)
+      std::cout << "SN exploded at " << time
+                << " --> next SN will be at " << t_SN << std::endl;
   }
 }
 //========================================================================================
@@ -554,7 +564,7 @@ void AddSupernova(Mesh *pm) {
   Real my_vol = 0;
 
   // Add SN
-  for (int b=0; b<pm->nblocal; ++b){
+  for (int b=0; b<pm->nblocal; ++b) {
     MeshBlock *pmb = pm->my_blocks(b);
     // Initialize primitive values
     for (int k = pmb->ks; k <= pmb->ke; ++k) {
@@ -579,7 +589,7 @@ void AddSupernova(Mesh *pm) {
   Real usn = E_SN*pcool->punit->Bethe_in_code/my_vol;
 
   // add the SN energy
-  for (int b=0; b<pm->nblocal; ++b){
+  for (int b=0; b<pm->nblocal; ++b) {
     MeshBlock *pmb = pm->my_blocks(b);
     Hydro *phydro = pmb->phydro;
     for (int k = pmb->ks; k <= pmb->ke; ++k) {
@@ -847,7 +857,6 @@ Real HistoryRadialMomentum(MeshBlock *pmb, int iout) {
   }
 
   return pr;
-
 }
 
 //========================================================================================

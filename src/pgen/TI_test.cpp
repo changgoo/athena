@@ -70,7 +70,11 @@ static Real OmegaG(const Real rho, const Real Press, const Real k);
 void PrintCoolingFunction(std::string coolftn);
 void PrintParameters(const Real rho, const Real Press);
 
-bool op_cooling=false;
+// cooling solver private function
+static Real CoolingExplicitSubcycling(Real tend, Real P, const Real rho);
+
+// cooling solver related parameters
+Real cfl_op_cool=-1;
 //========================================================================================
 //! \fn void Mesh::InitUserMeshData(ParameterInput *pin)
 //! \brief Function to initialize problem-specific data in mesh class.  Can also be used
@@ -130,8 +134,15 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     if (Globals::my_rank == 0)
       std::cout << "Cooling solver is set to RK4" << std::endl;
   } else if (coolsolver.compare("op") ==0) {
-    op_cooling=true;
+    // use operator split cooling solver
+    cfl_op_cool=pin->GetOrAddReal("cooling","cfl_op_cool",0.1);
     std::cout << "Cooling solver is set to operator split" << std::endl;
+    if ((cfl_op_cool<=0) || (cfl_op_cool>=1)) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in ProblemGenerator" << std::endl
+          << "cfl_op_cool = " << cfl_op_cool << " must be between (0,1) " << std::endl;
+      throw std::runtime_error(msg.str().c_str());
+    }
   } else {
     std::stringstream msg;
     msg << "### FATAL ERROR in ProblemGenerator" << std::endl
@@ -139,7 +150,6 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     throw std::runtime_error(msg.str().c_str());
     return;
   }
-
 
   // Enroll timestep so that dt <= min t_cool
   EnrollUserTimeStepFunction(CoolingTimestep);
@@ -165,7 +175,7 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   ruser_meshblock_data[0](1) = 0.0; // e_ceil
 
   // Set output variables
-  AllocateUserOutputVariables(1);
+  AllocateUserOutputVariables(2);
 
   return;
 }
@@ -304,21 +314,46 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 //========================================================================================
 
 void MeshBlock::UserWorkInLoop() {
-  if (!op_cooling) return;
+  if (cfl_op_cool < 0) return; // no operator split cooling
+
+  // boundary comm. will not be called.
+  // need to solve cooling in the ghost zones
+  // Prepare index bounds
+  int il = is - NGHOST;
+  int iu = ie + NGHOST;
+  int jl = js;
+  int ju = je;
+  if (block_size.nx2 > 1) {
+    jl -= (NGHOST);
+    ju += (NGHOST);
+  }
+  int kl = ks;
+  int ku = ke;
+  if (block_size.nx3 > 1) {
+    kl -= (NGHOST);
+    ku += (NGHOST);
+  }
+
   Real dt_mhd = pmy_mesh->dt*punit->Time;
-  // std::cout << " userwork" << std::endl;
-  for (int k = ks; k <= ke; ++k) {
-    for (int j = js; j <= je; ++j) {
-      for (int i = is; i <= ie; ++i) {
+
+  AthenaArray<Real> edot, edot_floor;
+  edot.InitWithShallowSlice(user_out_var, 4, 0, 1);
+  edot_floor.InitWithShallowSlice(user_out_var, 4, 1, 1);
+
+  Real T_floor = pcool->Get_Tfloor(); // temperature floor
+  Real gm1 = pcool->gamma_adi-1; // gamma-1
+
+  for (int k = kl; k <= ku; ++k) {
+    for (int j = jl; j <= ju; ++j) {
+      for (int i = il; i <= iu; ++i) {
         // both u and w are updated by integrator
         Real& u_d  = phydro->u(IDN,k,j,i);
         Real& u_e  = phydro->u(IEN,k,j,i);
 
         Real& w_d  = phydro->w(IDN,k,j,i);
         Real& w_p  = phydro->w(IPR,k,j,i);
-        // std::cout << " denstiy: " << w_d << " pressure: " << w_p << std::endl;
         // find non-thermal part of energy to keep it the same
-        Real e_non_thermal = u_e - w_p/(pcool->gamma_adi-1.0);
+        Real e_non_thermal = u_e - w_p/gm1;
         // check bad cell
         if (w_d < 0)
           std::cout << " density is bad: d("
@@ -329,44 +364,41 @@ void MeshBlock::UserWorkInLoop() {
                     << k << "," << j << "," << i << ") = "
                     << w_p << std::endl;
 
-        // first cooling
+        // set the initial conditions
         Real P_before = w_p; // store original P
         Real rho_before = w_d; // store original d
-        Real nH_before = w_d*pcool->to_nH; // store original nH
-        Real T_before = P_before*pcool->to_pok/nH_before;
 
-        Real dt_net = dtnet(rho_before, P_before);
-        Real dt_sub = std::min(dt_mhd,dt_net);
+        // calculate pressure floor
+        Real P_floor = rho_before*T_floor/pcool->punit->Temperature;
+        Real P_next;
+        if (P_before < P_floor)
+          P_next = P_floor;
+        else
+          P_next = CoolingExplicitSubcycling(dt_mhd,P_before,rho_before);
 
-        Real T_next = T_before*(1-dt_sub/tcool(rho_before, P_before));
-        Real P_next = nH_before*T_next/pcool->to_pok;
-
-        Real tnow = dt_sub, tleft = dt_mhd-dt_sub;
-        // std::cout << " [Initial] P: " << P_before
-        //           << " T: " << T_before << std::endl
-        //           << " [Next] P: " << P_next
-        //           << " T: " << T_next << std::endl
-        //           << " dt: " << dt_mhd << " " << dt_net << " " << dt_sub << std::endl
-        //           << " t: " << tnow << " " << tleft << std::endl;
-
-        while (tnow < dt_mhd) {
-          P_before = P_next;
-          T_before = P_before*pcool->to_pok/nH_before;
-          dt_net = dtnet(rho_before, P_before);
-          dt_sub = std::min(std::min(dt_mhd,dt_net),tleft);
-
-          T_next = T_before*(1-dt_sub/tcool(rho_before, P_before));
-          P_next = nH_before*T_next/pcool->to_pok;
-
-          tnow += dt_sub;
-          tleft = dt_mhd-tnow;
+        Real delta_P, delta_P_floor;
+        if (P_next == P_floor) {
+          // original P is too low; cooling solver is skipped
+          // store artificial heating by flooring
+          delta_P = 0.;
+          delta_P_floor = P_floor-P_before;
+        } else if (P_next < P_floor) {
+          // cooled too much; apply floor
+          // store both cooling loss and artificial heating
+          delta_P = P_next-P_before;
+          delta_P_floor = P_floor-P_next;
+        } else {
+          // normal cooling without floor;
+          // store cooling loss only
+          delta_P = P_next-P_before;
+          delta_P_floor = 0.;
         }
-        // dont cool below cooling floor and find new internal thermal energy
-        Real T_floor = pcool->Get_Tfloor();
-        Real P_floor = T_floor*nH_before/pcool->to_pok;
+        edot(k,j,i) = delta_P/gm1/pmy_mesh->dt;
+        edot_floor(k,j,i) = delta_P_floor/gm1/pmy_mesh->dt;
 
+        // apply floor if cooled too much
         Real P_after = std::max(P_next,P_floor);
-        Real u_after = P_after/(pcool->gamma_adi-1.0);
+        Real u_after = P_after/gm1;
 
         // change internal energy
         u_e = u_after + e_non_thermal;
@@ -374,7 +406,52 @@ void MeshBlock::UserWorkInLoop() {
       }
     }
   }
+
+  // sum up cooling only done in the active cells
+  AthenaArray<Real> vol(ncells1);
+  Real delta_e_block = 0.0, delta_ef_block = 0.0;
+  for (int k = ks; k <= ke; ++k) {
+    for (int j = js; j <= je; ++j) {
+      pcoord->CellVolume(k, j, is, ie, vol);
+#pragma omp simd reduction(+:delta_e_block,delta_ef_block)
+      for (int i = is; i <= ie; ++i) {
+        delta_e_block += edot(k,j,i)*pmy_mesh->dt*vol(i);
+        delta_ef_block += edot_floor(k,j,i)*pmy_mesh->dt*vol(i);
+      }
+    }
+  }
+  // add cooling and ceiling to hist outputs
+  ruser_meshblock_data[0](0) += delta_e_block;
+  ruser_meshblock_data[0](1) += delta_ef_block;
+
   return;
+}
+
+//========================================================================================
+//! \fn Real Real CoolingExplicitSubcycling(Real tend, Real P, const Real rho)
+//! \brief explicit cooling solver from 0 to tend with subcycling
+//========================================================================================
+static Real CoolingExplicitSubcycling(Real tend, Real P, const Real rho) {
+  Real tnow = 0., tleft = tend;
+  Real T1 = P/rho*pcool->punit->Temperature;
+  int nsub_max = pcool->cfl_cool/cfl_op_cool*10;
+  for (int i=0; i<nsub_max; ++i) {
+    Real dt_net = cfl_op_cool*dtnet(rho, P);
+    Real dt_sub = std::min(std::min(tend,dt_net),tleft);
+
+    T1 *= (1-dt_sub/tcool(rho, P));
+    P = rho*T1/pcool->punit->Temperature;
+
+    tnow += dt_sub;
+    tleft = tend-tnow;
+
+    if (tnow >= tend) break;
+  }
+
+  if (tnow < tend)
+    std::cout << "Too many substeps required: tnow = " << tnow
+              << " tend = " << tend << std::endl;
+  return P;
 }
 
 //========================================================================================
