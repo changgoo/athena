@@ -73,14 +73,6 @@ HydroDiffusion::HydroDiffusion(Hydro *phyd, ParameterInput *pin) :
       cndflx[X3DIR].NewAthenaArray(nc3+1, nc2, nc1);
 
       kappa.NewAthenaArray(2, nc3, nc2, nc1);
-
-      heatflux_saturation = pin->GetOrAddBoolean("problem", "heatflux_saturation", false);
-      if (heatflux_saturation) {
-        kappa_eff1.NewAthenaArray(nc3, nc2, nc1+1);
-        kappa_eff2.NewAthenaArray(nc3, nc2+1, nc1);
-        kappa_eff3.NewAthenaArray(nc3+1, nc2, nc1);
-      }
-
       if (pmb_->pmy_mesh->ConductionCoeff_ == nullptr)
         CalcCondCoeff_ = ConstConduction;
       else
