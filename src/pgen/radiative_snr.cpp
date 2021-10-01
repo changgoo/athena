@@ -66,6 +66,7 @@ void SimpleSpitzerConductivity(HydroDiffusion *phdif, MeshBlock *pmb,
                      const AthenaArray<Real> &prim,
                      const AthenaArray<Real> &bcc,
                      int is, int ie, int js, int je, int ks, int ke);
+bool heatflux_saturation = false;
 
 // Utility functions for debugging
 void PrintCoolingFunction(CoolingFunctionBase *pcool, std::string coolftn);
@@ -154,6 +155,8 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     // EnrollConductionCoefficient(SimpleSpitzerConductivity);
     EnrollConductionCoefficient(SpitzerParkerConductivity);
     // EnrollConductionCoefficient(SpitzerConductivity); // density dependent
+    
+    heatflux_saturation = pin->GetOrAddBoolean("problem","heatflux_saturation",false);
   } else {
     // use constant conductivity
     Real kappa_cond = pin->GetReal("problem","kappa_iso");
@@ -215,7 +218,10 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   ruser_meshblock_data[0](1) = 0.0; // total e_cool between history dumps
 
   // Set output variables
-  AllocateUserOutputVariables(2); // instantanoues e_dot, e_dot_floor
+  int num_user_variables = 0;
+  if (cfl_op_cool > 0) num_user_variables += 2;
+  if (phydro->hdif.hydro_diffusion_defined) num_user_variables++;
+  AllocateUserOutputVariables(num_user_variables); // instantanoues e_dot, e_dot_floor, kappa
 
   return;
 }
@@ -248,17 +254,23 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   pgas_0 /= pcool->to_pok; // to code units
 
   // Initialize primitive values
-  for (int k = ks; k <= ke; ++k) {
-    for (int j = js; j <= je; ++j) {
-      for (int i = is; i <= ie; ++i) {
-        phydro->u(IDN,k,j,i) = rho_0;
-        phydro->u(IEN,k,j,i) = pgas_0/(peos->GetGamma()-1);
-        phydro->u(IM1,k,j,i) = 0.0;
-        phydro->u(IM2,k,j,i) = 0.0;
-        phydro->u(IM3,k,j,i) = 0.0;
+  for (int k = kl; k <= ku; ++k) {
+    for (int j = jl; j <= ju; ++j) {
+      for (int i = il; i <= iu; ++i) {
+        phydro->w(IDN,k,j,i) = rho_0;
+        phydro->w(IPR,k,j,i) = pgas_0;
+        phydro->w(IVX,k,j,i) = 0.0;
+        phydro->w(IVY,k,j,i) = 0.0;
+        phydro->w(IVZ,k,j,i) = 0.0;
       }
     }
   }
+
+  // Initialize conserved values
+  AthenaArray<Real> b;
+  peos->PrimitiveToConserved(phydro->w, b, phydro->u, pcoord,
+       il, iu, jl, ju, kl, ku);
+ 
   return;
 }
 
@@ -351,6 +363,7 @@ void Mesh::UserWorkInLoop() {
                 << " --> next SN will be at " << t_SN << std::endl;
   }
 }
+
 //========================================================================================
 //! \fn void MeshBlock::UserWorkInLoop()
 //! \brief Function called once every time step for user-defined work.
@@ -468,6 +481,25 @@ void MeshBlock::UserWorkInLoop() {
   ruser_meshblock_data[0](1) += delta_ef_block;
 
   return;
+}
+
+//========================================================================================
+//! \fn void MeshBlock::UserWorkBeforeOutput(ParameterInput *pin)
+//! \brief Function called before generating output files
+void MeshBlock::UserWorkBeforeOutput(ParameterInput *pin) {
+  // copy thermal diffusivity to the user output variable
+  if (phydro->hdif.kappa_iso == 0.0) return;
+
+  AthenaArray<Real> kappa_eff;
+  kappa_eff.InitWithShallowSlice(user_out_var, 4, nuser_out_var-1, 1);
+
+  for (int k = ks; k <= ke; ++k) {
+    for (int j = js; j <= je; ++j) {
+      for (int i = is; i <= ie; ++i) {
+        kappa_eff(k,j,i) = phydro->hdif.kappa(HydroDiffusion::DiffProcess::iso,k,j,i);
+      }
+    }
+  }
 }
 
 //========================================================================================
@@ -746,6 +778,40 @@ void SpitzerParkerConductivity(HydroDiffusion *phdif, MeshBlock *pmb,
         }
       }
     }
+    if (heatflux_saturation) {
+      for (int k=ks+1; k<=ke-1; ++k) {
+        for (int j=js+1; j<=je-1; ++j) {
+#pragma omp simd
+          for (int i=is+1; i<=ie-1; ++i) {
+            Real rho = prim(IDN,k,j,i);
+            Real press = prim(IPR,k,j,i);
+            Real temp = std::max(pcool->GetTemperature(rho,press),pcool->Get_Tfloor());
+            Real cs2f = prim(IPR,k,j,i)/prim(IDN,k,j,i);
+            Real qsat = 1.5*prim(IPR,k,j,i)*std::sqrt(cs2f);
+            Real cs2f_ip1 = prim(IPR,k,j,i+1)/prim(IDN,k,j,i+1);
+            Real cs2f_im1 = prim(IPR,k,j,i-1)/prim(IDN,k,j,i-1);
+            Real cs2f_jp1 = prim(IPR,k,j+1,i)/prim(IDN,k,j+1,i);
+            Real cs2f_jm1 = prim(IPR,k,j-1,i)/prim(IDN,k,j-1,i);
+            Real cs2f_kp1 = prim(IPR,k+1,j,i)/prim(IDN,k+1,j,i);
+            Real cs2f_km1 = prim(IPR,k-1,j,i)/prim(IDN,k-1,j,i);
+            Real twodx = pmb->pcoord->dx1v(i-1)+pmb->pcoord->dx1v(i);
+            Real twody = pmb->pcoord->dx2v(j-1)+pmb->pcoord->dx2v(j);
+            twody *= pmb->pcoord->h2v(i);
+            Real twodz = pmb->pcoord->dx3v(k-1)+pmb->pcoord->dx3v(k);
+            twodz *= pmb->pcoord->h31v(i)*pmb->pcoord->h32v(j);;
+            // take centered difference
+            Real dTdx = (cs2f_ip1-cs2f_im1)/twodx;
+            Real dTdy = (cs2f_jp1-cs2f_jm1)/twody;
+            Real dTdz = (cs2f_kp1-cs2f_km1)/twodz;
+            Real gradT = std::sqrt(SQR(dTdx)+SQR(dTdy)+SQR(dTdz));
+            Real kappa = phdif->kappa(HydroDiffusion::DiffProcess::iso,k,j,i)*rho;
+            Real kappaP = phdif->kappa_iso*2.5e3/6.e-7*std::sqrt(temp);
+            Real kappa_eff = std::max(1/(1/kappa+gradT/qsat),kappaP);
+            phdif->kappa(HydroDiffusion::DiffProcess::iso,k,j,i) = kappa_eff/rho;
+          }
+        }
+      }
+    }
   }
 
   if (phdif->kappa_aniso > 0.0) {
@@ -882,7 +948,6 @@ Real HistoryShell(MeshBlock *pmb, int iout) {
         Real x = pmb->pcoord->x1v(i);
         Real y = pmb->pcoord->x2v(j);
         Real z = pmb->pcoord->x3v(k);
-
         Real vx = pmb->phydro->w(IVX,k,j,i);
         Real vy = pmb->phydro->w(IVY,k,j,i);
         Real vz = pmb->phydro->w(IVZ,k,j,i);
