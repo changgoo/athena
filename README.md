@@ -13,9 +13,6 @@ athena
 <!--[![Public GitHub  issues](https://img.shields.io/github/issues/PrincetonUniversity/athena-public-version.svg)](https://github.com/PrincetonUniversity/athena-public-version/issues)
 [![Public GitHub pull requests](https://img.shields.io/github/issues-pr/PrincetonUniversity/athena-public-version.svg)](https://github.com/PrincetonUniversity/athena-public-version/pulls) -->
 
-=======
-TIGRIS
-=======
 <p align="center">
 	  <img width="345" height="345" src="https://user-images.githubusercontent.com/1410981/115276281-759d8580-a108-11eb-9fc9-833480b97f95.png">
 </p>
@@ -58,6 +55,9 @@ Finally, we have minted DOIs for each released version of Athena++ on Zenodo. Th
   url          = {https://doi.org/10.5281/zenodo.4455880}
 }
 ```
+
+TIGRIS
+=======
 
 # Introduction to TIGRIS
 

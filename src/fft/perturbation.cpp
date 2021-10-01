@@ -114,6 +114,7 @@ PerturbationGenerator::PerturbationGenerator(Mesh *pm, ParameterInput *pin) :
 PerturbationGenerator::~PerturbationGenerator() {
   for (int b=0; b<pmy_mesh_->nblocal; ++b)
     delete my_ptblocks(b);
+
   for (int nv=0; nv<3; nv++) {
     delete [] fv_[nv];
     delete [] fv_sh_[nv];
