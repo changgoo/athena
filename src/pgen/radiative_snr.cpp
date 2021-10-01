@@ -155,7 +155,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     // EnrollConductionCoefficient(SimpleSpitzerConductivity);
     EnrollConductionCoefficient(SpitzerParkerConductivity);
     // EnrollConductionCoefficient(SpitzerConductivity); // density dependent
-    
+
     heatflux_saturation = pin->GetOrAddBoolean("problem","heatflux_saturation",false);
   } else {
     // use constant conductivity
@@ -221,7 +221,8 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   int num_user_variables = 0;
   if (cfl_op_cool > 0) num_user_variables += 2;
   if (phydro->hdif.hydro_diffusion_defined) num_user_variables++;
-  AllocateUserOutputVariables(num_user_variables); // instantanoues e_dot, e_dot_floor, kappa
+  // instantanoues e_dot, e_dot_floor, kappa
+  AllocateUserOutputVariables(num_user_variables);
 
   return;
 }
@@ -268,9 +269,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
   // Initialize conserved values
   AthenaArray<Real> b;
-  peos->PrimitiveToConserved(phydro->w, b, phydro->u, pcoord,
-       il, iu, jl, ju, kl, ku);
- 
+  peos->PrimitiveToConserved(phydro->w, b, phydro->u, pcoord, il, iu, jl, ju, kl, ku);
+
   return;
 }
 
