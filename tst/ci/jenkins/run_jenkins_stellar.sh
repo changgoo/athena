@@ -41,7 +41,7 @@ module purge
 module load anaconda3/2020.11 intel/2021.1.2 intel-mpi/intel/2021.1.1 hdf5/intel-2021.1/1.10.6 fftw/intel-2021.1/3.3.9
 module list
 
-time python -u ./run_tests.py pgen/pgen_compile --config=--cxx=icpx --config=--cflag="$(../ci/set_warning_cflag.sh icpc)"
+time python -u ./run_tests.py pgen/pgen_compile --config=--cxx=icpx --config=--cflag="$(../ci/set_warning_cflag.sh clang++)"
 
 # Build step #1: regression tests using GNU compiler and OpenMPI library
 module purge
