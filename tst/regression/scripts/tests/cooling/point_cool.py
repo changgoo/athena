@@ -48,25 +48,31 @@ def run(**kwargs):
     # Create list of runtime arguments to override the athinput file. Each element in the
     # list is simply a string of the form '<block>/<field>=<value>', where the contents of
     # the string are exactly what one would type on the command line run running Athena++.
-    arguments = ['time/ncycle_out=100',
-                 'job/problem_id=cooling',
-                 'output1/file_type=hst',
-                 'output1/dt=1e-8',
-                 'time/cfl_number=0.3',
-                 'time/tlim=2.0',
-                 'mesh/nx1=8',
-                 'mesh/nx2=1',
-                 'mesh/nx3=1',
-                 'cooling/coolftn=tigress',
-                 'cooling/cfl_cool=0.01',
-                 'cooling/solver=euler',
-                 'problem/rho_0=30.0',
-                 'problem/pgas_0=30000000']
+    arguments_def = ['time/ncycle_out=100',
+                     'cooling/coolftn=tigress',
+                     'cooling/cfl_cool=0.01',
+                     'problem/rho_0=30.0',
+                     'problem/pgas_0=30000000']
 
     # Run Athena++ as though we called
     #     ./athena -i ../inputs/cooling/athinput.cooling_test job/problem_id=cooling <...>
     # from the bin/ directory. Note we omit the leading '../inputs/' below when specifying
     # the athinput file.)
+    arguments = arguments_def + \
+        ['cooling/solver=euler',
+         'job/problem_id=cooling1']
+    athena.run('cooling/athinput.cooling_test', arguments)
+
+    arguments = arguments_def + \
+        ['cooling/solver=rk4',
+         'job/problem_id=cooling2']
+    athena.run('cooling/athinput.cooling_test', arguments)
+
+    arguments = arguments_def + \
+        ['cooling/solver=op',
+         'cooling/cfl_cool=1',
+         'cooling/cfl_op_cool=0.01',
+         'job/problem_id=cooling3']
     athena.run('cooling/athinput.cooling_test', arguments)
     # No return statement/value is ever required from run(), but returning anything other
     # than default None will cause run_tests.py to skip executing the optional Lcov cmd
@@ -96,46 +102,52 @@ def analyze():
     # Read in the data produced during this test. This will usually be stored in the
     # tst/regression/bin/ directory, but again we omit the first part of the path. Note
     # the file name is what we expect based on the job/problem_id field supplied in run().
-    (t_sol, mass_sol, Etot_sol) = np.loadtxt('bin/cooling.hst', usecols=(0, 2, 9)).T
+    (t_sol1, mass_sol1, Etot_sol1) = np.loadtxt('bin/cooling1.hst', usecols=(0, 2, 9)).T
+    (t_sol2, mass_sol2, Etot_sol2) = np.loadtxt('bin/cooling2.hst', usecols=(0, 2, 9)).T
+    (t_sol3, mass_sol3, Etot_sol3) = np.loadtxt('bin/cooling3.hst', usecols=(0, 2, 9)).T
     # default volume of the simulation domain
     vol = 8
     # default conversion factor from code to kB K cm^-3 if using TIGRESS Units
     Pconv = 1.729586e+02
     # density, pressure, and T_mu of the solution
-    rho = mass_sol/vol
-    P = (2./3)*Pconv*Etot_sol/vol
-    T_sol = P/rho
+    for solver, t_sol, mass_sol, Etot_sol in zip(['euler', 'RK4', 'op_split'],
+                                                 [t_sol1, t_sol2, t_sol3],
+                                                 [mass_sol1, mass_sol2, mass_sol3],
+                                                 [Etot_sol1, Etot_sol2, Etot_sol3]):
+        rho = mass_sol/vol
+        P = (2./3)*Pconv*Etot_sol/vol
+        T_sol = P/rho
 
-    # Next we compute the differences between the reference arrays and the newly created
-    # ones in the L^1 sense. That is, given functions f and g, we want
-    #     \int |f(x)-g(x)| dx.
-    # The utility script comparison.l1_diff() does this exactly, conveniently taking N+1
-    # interface locations and N volume-averaged quantities. The two datasets can have
-    # different values of N.
-    error_abs_T = np.trapz(abs(T_sol - np.interp(t_sol, t_ref, T_ref)), t_sol)
+        # Next we compute the diff. between the reference arrays and the newly created
+        # ones in the L^1 sense. That is, given functions f and g, we want
+        #     \int |f(x)-g(x)| dx.
+        # The utility script comparison.l1_diff() does this, conveniently taking N+1
+        # interface locations and N volume-averaged quantities. The two datasets can have
+        # different values of N.
+        error_abs_T = np.trapz(abs(T_sol - np.interp(t_sol, t_ref, T_ref)), t_sol)
 
-    # The errors are more meaningful if we account for the length of the domain and the
-    # typical magnitude of the function itself. Fortunately, comparison.l1_norm() computes
-    #     \int |f(x)| dx.
-    # (Note neither comparison.l1_diff() nor comparison.l1_norm() divides by the length of
-    # the domain.)
-    error_rel_T = error_abs_T / np.trapz(np.interp(t_sol, t_ref, T_ref), t_sol)
+        # The errors are more meaningful if we account for the length of the domain and
+        # the typical magnitude of the function itself.
+        # Fortunately, comparison.l1_norm() computes
+        #     \int |f(x)| dx.
+        # (Note neither comparison.l1_diff() nor comparison.l1_norm()
+        #  divides by the length of the domain.)
+        error_rel_T = error_abs_T / np.trapz(np.interp(t_sol, t_ref, T_ref), t_sol)
 
-    # Finally, we test that the relative errors in the two quantities are no more than 1%.
-    # If they are, we return False at the very end of the function and file; otherwise
-    # we return True. NumPy provides a way of checking if the error is NaN, which also
-    # indicates something went wrong. The same check can (and should) be enabled
-    # automatically at the point of reading the input files via the athena_read.py
-    # functions by setting "athena_read.check_nan_flag=True" (as done at the top of this
-    # file). Regression test authors should keep in mind the caveats of floating-point
-    # calculations and perform multiple checks for NaNs when necessary.
+        # Finally, we test that the rel. errors in the two quantities are no more than 1%.
+        # If they are, we return False at the very end of the function and file; otherwise
+        # we return True. NumPy provides a way of checking if the error is NaN, which also
+        # indicates something went wrong. The same check can (and should) be enabled
+        # automatically at the point of reading the input files via the athena_read.py
+        # functions by setting "athena_read.check_nan_flag=True"
+        # (as done at the top of this file).
+        # Regression test authors should keep in mind the caveats of floating-point
+        # calculations and perform multiple checks for NaNs when necessary.
 
-    # The main test script will record the result and delete both tst/regression/bin/ and
-    # obj/ folders before proceeding on to the next test.
-    analyze_status = True
-    if error_rel_T > 0.01 or np.isnan(error_rel_T):
-        print("Relative errorr is ", error_rel_T)
-        analyze_status = False
+        analyze_status = True
+        if error_rel_T > 0.01 or np.isnan(error_rel_T):
+            print("Relative errorr is for solver {}".format(solver), error_rel_T)
+            analyze_status = False
 
     # Note, if the problem generator in question outputs a unique CSV file containing
     # quantitative error measurements (e.g. --prob=linear_wave outputs

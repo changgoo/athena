@@ -1,0 +1,87 @@
+<comment>
+problem   = radiative snr
+reference =
+configure = --prob radiative_snr -hdf5 -mpi
+
+<job>
+problem_id = SNR # problem ID: basename of output filenames
+
+<output1>
+file_type  = hst        # History data dump
+dt         = 1.e-8      # time increment between outputs
+
+<output2>
+file_type  = hdf5        # hdf5 data dump
+variable   = prim
+dt         = 1.e-2      # time increment between outputs
+
+<output3>
+file_type  = hdf5        # hdf5 data dump
+variable   = uov
+dt         = 1.e-2      # time increment between outputs
+
+<time>
+cfl_number = 0.3        # The Courant, Friedrichs, & Lewy (CFL) Number
+nlim       = -1		      # cycle limit
+tlim       = 0.1        # time limit
+integrator  = rk2       # time integration algorithm
+xorder      = 2         # order of spatial reconstruction
+ncycle_out  = 1         # interval for stdout summary info
+dt_diagnostics = 0
+
+<mesh>
+nx1        = 64         # Number of zones in X1-direction
+x1min      = -32.0       # minimum value of X1
+x1max      = 32.0        # maximum value of X1
+ix1_bc     = periodic   # inner-X1 boundary flag
+ox1_bc     = periodic   # outer-X1 boundary flag
+
+nx2        = 64          # Number of zones in X2-direction
+x2min      = -32       # minimum value of X2
+x2max      = 32        # maximum value of X2
+ix2_bc     = periodic   # inner-X2 boundary flag
+ox2_bc     = periodic   # outer-X2 boundary flag
+
+nx3        = 64          # Number of zones in X3-direction
+x3min      = -32       # minimum value of X3
+x3max      = 32        # maximum value of X3
+ix3_bc     = periodic   # inner-X3 boundary flag
+ox3_bc     = periodic   # outer-X3 boundary flag
+
+<meshblock>
+nx1        = 32
+nx2        = 32
+nx3        = 32
+
+<hydro>
+gamma           = 1.666666666667 # gamma = C_p/C_v
+iso_sound_speed = 0.4082482905   # equivalent to sqrt(gamma*p/d) for p=0.1, d=1
+
+<cooling>
+coolftn       = tigress	# tigress or plf
+
+cfl_cool      = 1      # min dt_hydro/dt_cool
+cfl_op_cool   = 0.1       # dt_sub/dt_cool (must be less than 1)
+T_floor       = 10        # temperature floor
+T_max         = 1e8       # temperature ceiling
+
+T_PE          = 15000     # temperature below which PE heating is applied, if plf
+Gamma         = 2e-26     # heating rate in ergs / sec, if plf
+
+heat_ratio    = 1.0       # Gamma/Gamma0, if tigress
+
+<perturbation>
+nlow          = 2
+nhigh         = 8
+expo          = 2
+rseed         = 1
+
+<problem>
+rho_0         = 1.        # initial density meant to be in cm^-3
+pgas_0        = 3000     # initial gas pressure meant to be in kB K cm^-3
+r_SN          = 5
+t_SN          = 0.0
+amp_den       = 0.0      # non zero to turn on
+turb_flag     = 0        # 1 to turn on
+v3d           = 5.0      # v3d
+dedt          = 0.       # place holder -- will be set by Mach and p_gas0

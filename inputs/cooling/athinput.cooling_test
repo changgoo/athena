@@ -1,6 +1,6 @@
 <comment>
 problem   = point cooling of a set of 4 cells
-reference = Tigress classic and El Badry '19 cooling functions 
+reference =
 configure = --prob cooling
 
 <job>
@@ -16,7 +16,7 @@ nlim       = -1		# cycle limit
 tlim       = 2.0        # time limit
 integrator  = vl2       # time integration algorithm
 xorder      = 2         # order of spatial reconstruction
-ncycle_out  = 1         # interval for stdout summary info
+ncycle_out  = 100       # interval for stdout summary info
 
 <mesh>
 nx1        = 8          # Number of zones in X1-direction
@@ -43,9 +43,10 @@ iso_sound_speed = 0.4082482905   # equivalent to sqrt(gamma*p/d) for p=0.1, d=1
 
 <cooling>
 coolftn       = tigress	# tigress or plf
-solver        = rk4	# euler or rk4
+solver        = rk4	# euler or rk4 or op
 
-cfl_cool      = 0.001       # min dt_hydro/dt_cool
+cfl_cool      = 0.01      # min dt_hydro/dt_cool
+cfl_op_cool   = 0.1       # dt_sub/dt_cool (must be less than 1)
 T_floor       = 10        # temperature floor
 T_max         = 1e8       # temperature ceiling
 
@@ -55,5 +56,5 @@ Gamma         = 2e-26     # heating rate in ergs / sec, if plf
 heat_ratio    = 1.0       # Gamma/Gamma0, if tigress
 
 <problem>
-rho_0         = 0.1        # initial density meant to be in cm^-3
+rho_0         = 30.        # initial density meant to be in cm^-3
 pgas_0        = 30000000     # initial gas pressure meant to be in kB K cm^-3

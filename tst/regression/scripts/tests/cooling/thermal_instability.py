@@ -18,7 +18,9 @@ resolution_range = [32, 64, 128]
 # cooling function to be used
 coolfnc = 'tigress'
 # integrator to be used for cooling
-integrator = 'euler'
+# integrator = 'euler'
+# integrator = 'rk4'
+integrator = 'op'
 # tolerance in relative error for each resolution
 error_rel_tols = [0.008, 0.004, 0.001]
 
