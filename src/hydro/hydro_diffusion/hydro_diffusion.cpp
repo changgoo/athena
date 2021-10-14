@@ -71,7 +71,12 @@ HydroDiffusion::HydroDiffusion(Hydro *phyd, ParameterInput *pin) :
       cndflx[X1DIR].NewAthenaArray(nc3, nc2, nc1+1);
       cndflx[X2DIR].NewAthenaArray(nc3, nc2+1, nc1);
       cndflx[X3DIR].NewAthenaArray(nc3+1, nc2, nc1);
-
+      if ((kappa_aniso > 0.0) && (!MAGNETIC_FIELDS_ENABLED)) {
+        std::stringstream msg;
+        msg << "### FATAL ERROR in HydroDiffusion" << std::endl
+            << "Anisotropic conduction is incompatibile with hydro" << std::endl;
+        ATHENA_ERROR(msg);
+      }
       kappa.NewAthenaArray(2, nc3, nc2, nc1);
       if (pmb_->pmy_mesh->ConductionCoeff_ == nullptr)
         CalcCondCoeff_ = ConstConduction;
@@ -104,6 +109,7 @@ HydroDiffusion::HydroDiffusion(Hydro *phyd, ParameterInput *pin) :
 
 void HydroDiffusion::CalcDiffusionFlux(const AthenaArray<Real> &prim,
                                        const AthenaArray<Real> &iprim,
+                                       const FaceField &b,
                                        const AthenaArray<Real> &bcc) {
   SetDiffusivity(prim, bcc);
 
@@ -113,7 +119,7 @@ void HydroDiffusion::CalcDiffusionFlux(const AthenaArray<Real> &prim,
 
   if (kappa_iso > 0.0 || kappa_aniso > 0.0) ClearFlux(cndflx);
   if (kappa_iso > 0.0) ThermalFluxIso(prim, cndflx);
-  if (kappa_aniso > 0.0) ThermalFluxAniso(prim, cndflx);
+  if (kappa_aniso > 0.0) ThermalFluxAniso(prim, b, bcc, cndflx);
 
   return;
 }

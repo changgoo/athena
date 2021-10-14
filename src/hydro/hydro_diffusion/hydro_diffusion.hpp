@@ -57,7 +57,7 @@ class HydroDiffusion {
   // functions
   // iprim is primitives in the inertial system
   void CalcDiffusionFlux(const AthenaArray<Real> &prim, const AthenaArray<Real> &iprim,
-                         const AthenaArray<Real> &bcc);
+                         const FaceField &b, const AthenaArray<Real> &bcc);
   // TODO(felker): Rename+move out of this class. Confusing w/ Hydro::AddDiffusionFluxes()
   // See note in hydro_diffusion.cpp.
   void AddDiffusionFlux(AthenaArray<Real> *flx_src, AthenaArray<Real> *flx_des);
@@ -74,7 +74,8 @@ class HydroDiffusion {
 
   // thermal conduction
   void ThermalFluxIso(const AthenaArray<Real> &p, AthenaArray<Real> *flx);
-  void ThermalFluxAniso(const AthenaArray<Real> &p, AthenaArray<Real> *flx);
+  void ThermalFluxAniso(const AthenaArray<Real> &p, const FaceField &b,
+                        const AthenaArray<Real> &bcc,AthenaArray<Real> *flx);
 
  private:
   Hydro *pmy_hydro_;  // ptr to Hydro containing this HydroDiffusion
@@ -111,5 +112,17 @@ class HydroDiffusion {
                const AthenaArray<Real> &prim, AthenaArray<Real> &len);
   void FaceZdz(const int k, const int j, const int il, const int iu,
                const AthenaArray<Real> &prim, AthenaArray<Real> &len);
+
+#pragma omp declare simd simdlen(SIMD_WIDTH) notinbranch
+  Real VanLeerLimiter(const Real A, const Real B) {
+    if (A*B > 0)
+      return 2.0*A*B/(A+B);
+    else
+      return 0.0;
+  }
+#pragma omp declare simd simdlen(SIMD_WIDTH) notinbranch
+  Real FourLimiter(const Real A, const Real B, const Real C, const Real D) {
+    return VanLeerLimiter(VanLeerLimiter(A,B),VanLeerLimiter(C,D));
+  }
 };
 #endif // HYDRO_HYDRO_DIFFUSION_HYDRO_DIFFUSION_HPP_

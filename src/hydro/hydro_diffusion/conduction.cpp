@@ -4,7 +4,33 @@
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
 //! \file conduction.cpp
-//! \brief
+//! \brief Add explicit thermal conduction term to the energy equation
+//!
+//! dE/dt = -Div(Q)
+//!
+//!   where
+//!    - Q = -kappa_iso Grad(T) - kappa_aniso([b Dot Grad(T)]b) = heat flux
+//!    - T = (P/d)*(mbar/k_B) = temperature
+//!    - b = magnetic field unit vector
+//!
+//!   Here
+//!    - kappa_iso   is the   isotropic coefficient of thermal diffusion
+//!    - kappa_aniso is the anisotropic coefficient of thermal diffusion
+//!
+//! Note the kappa's are DIFFUSIVITIES, not CONDUCTIVITIES.  Also note this
+//! version uses "dimensionless units" in that the factor (mbar/k_B) is not
+//! included in calculating the temperature (instead, T=P/d is used).  For cgs
+//! units, kappa must be entered in units of [cm^2/s], and the heat fluxes would
+//! need to be multiplied by (k_B/mbar).
+//!
+//! Anisotropic conduction is adapted from Athena-Cversion
+//! - Originally developed by Ian Parrish and Jim Stone
+//! - Ported by Jono Squire and Chang-Goo Kim
+//!
+//! REFERENCE:
+//! - Parrish, I.~J. \& Stone, J.~M.\ 2005, \apj, 633, 334. doi:10.1086/444589
+//! - Sharma, P. \& Hammett, G.~W.\ 2007, Journal of Computational Physics,
+//!   227, 123. doi:10.1016/j.jcp.2007.07.026
 
 // C headers
 
@@ -20,7 +46,11 @@
 #include "hydro_diffusion.hpp"
 
 //---------------------------------------------------------------------------------------
-//! Calculate isotropic thermal conduction
+//! \fn void HydroDiffusion::ThermalFluxIso(const AthenaArray<Real> &p,
+//!        AthenaArray<Real> *flx)
+//! \brief Calculate isotropic thermal conduction
+//!
+//! Q = -kappa_iso Grad(T)
 
 void HydroDiffusion::ThermalFluxIso(
      const AthenaArray<Real> &p, AthenaArray<Real> *flx) {
@@ -107,7 +137,13 @@ void HydroDiffusion::ThermalFluxIso(
 
 
 //---------------------------------------------------------------------------------------
-//! Calculate anisotropic thermal conduction
+//! \fn void HydroDiffusion::ThermalFluxAniso(
+//!     const AthenaArray<Real> &p, const FaceField &b,
+//!     const AthenaArray<Real> &bcc, AthenaArray<Real> *flx)
+//! \brief Calculate anisotropic thermal conduction
+//!
+//! Q = -kappa_aniso([b Dot Grad(T)]b)
+//! b = magnetic field unit vector
 
 void HydroDiffusion::ThermalFluxAniso(
      const AthenaArray<Real> &p, const FaceField &b,
@@ -352,7 +388,11 @@ void HydroDiffusion::ThermalFluxAniso(
 
 
 //----------------------------------------------------------------------------------------
-//! constant viscosity
+//! \fn void ConstConduction(HydroDiffusion *phdif, MeshBlock *pmb,
+//!                      const AthenaArray<Real> &prim,
+//!                      const AthenaArray<Real> &bcc,
+//!                      int is, int ie, int js, int je, int ks, int ke)
+//! \brief constant thermal diffusivity
 
 void ConstConduction(HydroDiffusion *phdif, MeshBlock *pmb, const AthenaArray<Real> &prim,
                      const AthenaArray<Real> &bcc,
