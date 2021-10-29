@@ -55,6 +55,7 @@ nx3 = 1
 <hydro>
 gamma = 2.0
 iso_sound_speed = 1.0         # isothermal sound speed
+active = diffusion
 
 <problem>
 iprob   = 1        # 1: ring segment 2: gaussian
