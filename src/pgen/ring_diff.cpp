@@ -18,7 +18,7 @@
 // C headers
 
 // C++ headers
-#include <cmath>      // sqrt()
+#include <cmath>      // sqrt(), erfc
 #include <cstring>    // strcmp()
 #include <iostream>   // endl
 #include <sstream>    // stringstream
@@ -38,6 +38,11 @@
 #include "../scalars/scalars.hpp"
 
 Real HistoryEleak(MeshBlock *pmb, int iout);
+Real HistoryL1Error(MeshBlock *pmb, int iout);
+Real AnalyticSolution(Real phi, Real r, Real t);
+
+static const Real r1 = 0.5, r2 = 0.7;
+static const Real phi1 = PI*5/12., phi2 = PI*7/12.;
 
 void Mesh::InitUserMeshData(ParameterInput *pin) {
   if (!MAGNETIC_FIELDS_ENABLED) {
@@ -52,8 +57,14 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
         << "EOS must be non barotropic" << std::endl;
     ATHENA_ERROR(msg);
   }
-  AllocateUserHistoryOutput(1);
-  EnrollUserHistoryOutput(0, HistoryEleak, "Eleak");
+  int iprob = pin->GetOrAddInteger("problem", "iprob", 1);
+
+  if (iprob == 1) {
+    AllocateUserHistoryOutput(2);
+    EnrollUserHistoryOutput(0, HistoryEleak, "Eleak");
+    EnrollUserHistoryOutput(1, HistoryL1Error, "L1");
+  }
+
   return;
 }
 
@@ -66,8 +77,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real x1, x2, x3;
   Real r, theta, phi, z;
   Real v1 = 0., v2 = 0., v3 = 0.;
-  Real r1 = 0.5, r2 = 0.7;
-  Real phi1 = PI*5/12., phi2 = PI*7/12.;
+
   Real d0 = 1.;
   int iprob = pin->GetOrAddInteger("problem", "iprob", 1);
   Real amp = pin->GetOrAddReal("problem", "amp", 1.e-6);
@@ -198,7 +208,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 Real HistoryEleak(MeshBlock *pmb, int iout) {
   Real x1, x2;
   Real r, phi;
-  Real r1=0.5, r2=0.7;
   Real Eleak = 0.0;
   int is = pmb->is, ie = pmb->ie, js = pmb->js, je = pmb->je, ks = pmb->ks, ke = pmb->ke;
   AthenaArray<Real> &w = pmb->phydro->w;
@@ -226,4 +235,49 @@ Real HistoryEleak(MeshBlock *pmb, int iout) {
     }
   }
   return Eleak;
+}
+
+Real HistoryL1Error(MeshBlock *pmb, int iout) {
+  Real x1, x2;
+  Real r, phi, pa;
+  Real l1_error=0.0;
+
+  int is = pmb->is, ie = pmb->ie, js = pmb->js, je = pmb->je, ks = pmb->ks, ke = pmb->ke;
+  AthenaArray<Real> &w = pmb->phydro->w;
+  AthenaArray<Real> volume; // 1D array of volumes
+  // allocate 1D array for cell volume used in usr def history
+  volume.NewAthenaArray(pmb->ncells1);
+
+  for (int k=ks; k<=ke; k++) {
+    for (int j=js; j<=je; j++) {
+      pmb->pcoord->CellVolume(k, j, is, ie, volume);
+      for (int i=is; i<=ie; i++) {
+        if (std::strcmp(COORDINATE_SYSTEM, "cartesian") == 0) {
+          x1 = pmb->pcoord->x1v(i);
+          x2 = pmb->pcoord->x2v(j);
+          r = std::sqrt(SQR(x1)+SQR(x2));
+          phi = std::atan2(x2,x1);
+        } else if (std::strcmp(COORDINATE_SYSTEM, "cylindrical") == 0) {
+          r = pmb->pcoord->x1v(i);
+          phi = pmb->pcoord->x2v(j);
+          x1 = r*std::cos(phi);
+          x2 = r*std::sin(phi);
+        }
+        if ((r>r1) & (r<r2)) {
+          pa = AnalyticSolution(phi,r,pmb->pmy_mesh->time);
+        } else {
+          pa = 10.;
+        }
+        l1_error += std::abs(w(IPR,k,j,i)-pa)*volume(i);
+      }
+    }
+  }
+  return l1_error;
+}
+
+Real AnalyticSolution(Real phi, Real r, Real t) {
+  Real dphi = 0.5*(phi2-phi1);
+  Real phi0 = 0.5*(phi2+phi1);
+  Real D = std::sqrt(4*t); // sqrt(4*t*(gamma-1)/kappa_aniso)
+  return 10+std::erfc((phi-phi0-dphi)*r/D) - std::erfc((phi-phi0+dphi)*r/D);
 }
