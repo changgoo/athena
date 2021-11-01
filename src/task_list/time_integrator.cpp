@@ -1746,10 +1746,17 @@ TaskStatus TimeIntegratorTaskList::CalculateHydroFlux(MeshBlock *pmb, int stage)
 
   if (stage <= nstages) {
     if (stage_wghts[stage-1].main_stage) {
-      if ((integrator == "vl2") && (stage-stage_wghts[0].orbital_stage == 1)) {
-        phydro->CalculateFluxes(phydro->w,  pfield->b,  pfield->bcc, 1);
+      if (pmb->pmy_mesh->fluid_setup == FluidFormulation::diffusion) {
+        // need to clear previous flux
+        phydro->hdif.ClearFlux(pmb->phydro->flux);
+        phydro->CalculateFluxes_STS(); // simply call AddDiffusionFluxes
       } else {
-        phydro->CalculateFluxes(phydro->w,  pfield->b,  pfield->bcc, pmb->precon->xorder);
+        if ((integrator == "vl2") && (stage-stage_wghts[0].orbital_stage == 1)) {
+          phydro->CalculateFluxes(phydro->w,  pfield->b,  pfield->bcc, 1);
+        } else {
+          phydro->CalculateFluxes(phydro->w,  pfield->b,  pfield->bcc,
+                                  pmb->precon->xorder);
+        }
       }
     }
     return TaskStatus::next;
@@ -1763,7 +1770,13 @@ TaskStatus TimeIntegratorTaskList::CalculateHydroFlux(MeshBlock *pmb, int stage)
 TaskStatus TimeIntegratorTaskList::CalculateEMF(MeshBlock *pmb, int stage) {
   if (stage <= nstages) {
     if (stage_wghts[stage-1].main_stage) {
-      pmb->pfield->ComputeCornerE(pmb->phydro->w,  pmb->pfield->bcc);
+      if (pmb->pmy_mesh->fluid_setup == FluidFormulation::diffusion) {
+        // need to clear previous EMF
+        pmb->pfield->fdif.ClearEMF(pmb->pfield->e);
+        pmb->pfield->ComputeCornerE_STS();
+      } else {
+        pmb->pfield->ComputeCornerE(pmb->phydro->w,  pmb->pfield->bcc);
+      }
     }
     return TaskStatus::next;
   }
@@ -1847,7 +1860,10 @@ TaskStatus TimeIntegratorTaskList::IntegrateHydro(MeshBlock *pmb, int stage) {
   Hydro *ph = pmb->phydro;
   Field *pf = pmb->pfield;
 
-  if (pmb->pmy_mesh->fluid_setup != FluidFormulation::evolve) return TaskStatus::next;
+  if ((STS_ENABLED && (pmb->pmy_mesh->fluid_setup == FluidFormulation::diffusion)) ||
+      (pmb->pmy_mesh->fluid_setup == FluidFormulation::background) ||
+      (pmb->pmy_mesh->fluid_setup == FluidFormulation::disabled))
+    return TaskStatus::next;
 
   if (stage <= nstages) {
     if (stage_wghts[stage-1].main_stage) {
@@ -1901,7 +1917,10 @@ TaskStatus TimeIntegratorTaskList::IntegrateHydro(MeshBlock *pmb, int stage) {
 TaskStatus TimeIntegratorTaskList::IntegrateField(MeshBlock *pmb, int stage) {
   Field *pf = pmb->pfield;
 
-  if (pmb->pmy_mesh->fluid_setup != FluidFormulation::evolve) return TaskStatus::next;
+  if ((STS_ENABLED && (pmb->pmy_mesh->fluid_setup == FluidFormulation::diffusion)) ||
+      (pmb->pmy_mesh->fluid_setup == FluidFormulation::background) ||
+      (pmb->pmy_mesh->fluid_setup == FluidFormulation::disabled))
+    return TaskStatus::next;
 
   if (stage <= nstages) {
     if (stage_wghts[stage-1].main_stage) {
@@ -1941,8 +1960,11 @@ TaskStatus TimeIntegratorTaskList::AddSourceTermsHydro(MeshBlock *pmb, int stage
   PassiveScalars *ps = pmb->pscalars;
 
   // return if there are no source terms to be added
-  if (!(ph->hsrc.hydro_sourceterms_defined)
-      || pmb->pmy_mesh->fluid_setup != FluidFormulation::evolve) return TaskStatus::next;
+  if (!(ph->hsrc.hydro_sourceterms_defined) ||
+      (STS_ENABLED && (pmb->pmy_mesh->fluid_setup == FluidFormulation::diffusion)) ||
+      (pmb->pmy_mesh->fluid_setup == FluidFormulation::background) ||
+      (pmb->pmy_mesh->fluid_setup == FluidFormulation::disabled))
+    return TaskStatus::next;
 
   if (stage <= nstages) {
     if (stage_wghts[stage-1].main_stage) {
@@ -1969,8 +1991,10 @@ TaskStatus TimeIntegratorTaskList::DiffuseHydro(MeshBlock *pmb, int stage) {
   Field *pf = pmb->pfield;
 
   // return if there are no diffusion to be added
-  if (!(ph->hdif.hydro_diffusion_defined)
-      || pmb->pmy_mesh->fluid_setup != FluidFormulation::evolve) return TaskStatus::next;
+  if (!(ph->hdif.hydro_diffusion_defined) ||
+      (pmb->pmy_mesh->fluid_setup == FluidFormulation::background) ||
+      (pmb->pmy_mesh->fluid_setup == FluidFormulation::disabled))
+    return TaskStatus::next;
 
   if (stage <= nstages) {
     if (stage_wghts[stage-1].main_stage ||
@@ -1979,9 +2003,9 @@ TaskStatus TimeIntegratorTaskList::DiffuseHydro(MeshBlock *pmb, int stage) {
       // if using orbital advection, put modified conservative into the function
       if (pmb->porb->orbital_advection_defined) {
         pmb->porb->ConvertOrbitalSystem(ph->w, ph->u, OrbitalTransform::prim);
-        ph->hdif.CalcDiffusionFlux(ph->w, pmb->porb->w_orb, pf->bcc);
+        ph->hdif.CalcDiffusionFlux(ph->w, pmb->porb->w_orb, pf->b, pf->bcc);
       } else {
-        ph->hdif.CalcDiffusionFlux(ph->w, ph->w, pf->bcc);
+        ph->hdif.CalcDiffusionFlux(ph->w, ph->w, pf->b, pf->bcc);
       }
     }
     return TaskStatus::next;
@@ -1996,7 +2020,10 @@ TaskStatus TimeIntegratorTaskList::DiffuseField(MeshBlock *pmb, int stage) {
   Field *pf = pmb->pfield;
 
   // return if there are no diffusion to be added
-  if (!(pf->fdif.field_diffusion_defined)) return TaskStatus::next;
+  if (!(pf->fdif.field_diffusion_defined) ||
+      (pmb->pmy_mesh->fluid_setup == FluidFormulation::background) ||
+      (pmb->pmy_mesh->fluid_setup == FluidFormulation::disabled))
+    return TaskStatus::next;
 
   if (stage <= nstages) {
     if (stage_wghts[stage-1].main_stage ||

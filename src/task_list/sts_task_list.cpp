@@ -720,7 +720,9 @@ TaskStatus SuperTimeStepTaskList::IntegrateHydro_STS(MeshBlock *pmb, int stage) 
   Hydro *ph = pmb->phydro;
   Field *pf = pmb->pfield;
 
-  if (pmb->pmy_mesh->fluid_setup != FluidFormulation::evolve) return TaskStatus::next;
+  if ((pmb->pmy_mesh->fluid_setup == FluidFormulation::background)
+      || (pmb->pmy_mesh->fluid_setup == FluidFormulation::disabled))
+    return TaskStatus::next;
 
   // set registers
   if (pmb->pmy_mesh->sts_integrator == "rkl2" && stage == 1) {
@@ -801,7 +803,9 @@ TaskStatus SuperTimeStepTaskList::IntegrateScalars_STS(MeshBlock *pmb, int stage
 TaskStatus SuperTimeStepTaskList::IntegrateField_STS(MeshBlock *pmb, int stage) {
   Field *pf = pmb->pfield;
 
-  if (pmb->pmy_mesh->fluid_setup != FluidFormulation::evolve) return TaskStatus::next;
+  if ((pmb->pmy_mesh->fluid_setup == FluidFormulation::background)
+      || (pmb->pmy_mesh->fluid_setup == FluidFormulation::disabled))
+    return TaskStatus::next;
 
   // set reigsters
   if (pmb->pmy_mesh->sts_integrator == "rkl2" && stage == 1) {

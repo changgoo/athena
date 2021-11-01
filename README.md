@@ -45,7 +45,7 @@ Finally, we have minted DOIs for each released version of Athena++ on Zenodo. Th
 ```
 @software{athena,
   author       = {Athena++ development team},
-  title        = {{PrincetonUniversity/athena-public-version: 
+  title        = {{PrincetonUniversity/athena-public-version:
                    Athena++ v21.0}},
   month        = jan,
   year         = 2021,
@@ -55,9 +55,6 @@ Finally, we have minted DOIs for each released version of Athena++ on Zenodo. Th
   url          = {https://doi.org/10.5281/zenodo.4455880}
 }
 ```
-
-TIGRIS
-=======
 
 # Introduction to TIGRIS
 

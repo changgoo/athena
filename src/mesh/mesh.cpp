@@ -1990,6 +1990,8 @@ FluidFormulation GetFluidFormulation(const std::string& input_string) {
     return FluidFormulation::disabled;
   } else if (input_string == "background") {
     return FluidFormulation::background;
+} else if (input_string == "diffusion") {
+    return FluidFormulation::diffusion;
   } else {
     std::stringstream msg;
     msg << "### FATAL ERROR in GetFluidFormulation" << std::endl
