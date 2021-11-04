@@ -588,7 +588,7 @@ void MeshBlock::StopTimeMeasurement() {
            - lb_time_;
 #endif
 #endif
-  cost_ += lb_time_;
+  if (pmy_mesh->lb_automatic_) cost_ += lb_time_;
 }
 
 
