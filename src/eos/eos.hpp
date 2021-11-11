@@ -62,6 +62,12 @@ class EquationOfState {
     AthenaArray<Real> &s, const AthenaArray<Real> &r_old, AthenaArray<Real> &r,
     Coordinates *pco, int il, int iu, int jl, int ju, int kl, int ku);
 
+  bool ApplyNeighborFloorsDensity(AthenaArray<Real> &cons, AthenaArray<Real> &bcc,
+    int k, int j, int i, int il, int iu, int jl, int ju, int kl, int ku);
+
+  bool ApplyNeighborFloorsPressure(AthenaArray<Real> &cons, AthenaArray<Real> &bcc,
+    int k, int j, int i, int il, int iu, int jl, int ju, int kl, int ku);
+
   // pass k, j, i to following 2x functions even though x1-sliced input array is expected
   // in order to accomodate position-dependent floors
 #pragma omp declare simd simdlen(SIMD_WIDTH) uniform(this,prim,k,j) linear(i)
@@ -163,6 +169,7 @@ class EquationOfState {
   Real density_floor_, pressure_floor_;  // density and pressure floors
   Real energy_floor_;                    // energy floor
   Real scalar_floor_; // dimensionless concentration floor
+  bool neighbor_flooring_;
   Real sigma_max_, beta_min_;            // limits on ratios of gas quantities to pmag
   Real gamma_max_;                       // maximum Lorentz factor
   Real rho_min_, rho_pow_;               // variables to control power-law denity floor
