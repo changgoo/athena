@@ -9,6 +9,7 @@
 // C headers
 
 // C++ headers
+#include <algorithm>  // max
 #include <cmath>
 #include <iostream>
 #include <sstream>    // sstream
@@ -54,12 +55,18 @@ BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
                                                  "cell_averaged"));
   Omega_0_ = pin->GetReal("orbital_advection","Omega0");
   qshear_  = pin->GetReal("orbital_advection","qshear");
-  in2_ = new std::complex<Real>[nx1*nx2*nx3];
-  in_e_ = new std::complex<Real>[nx1*nx2*nx3];
-  in_o_ = new std::complex<Real>[nx1*nx2*nx3];
-  grf_ = new std::complex<Real>[8*fast_nx3*fast_nx2*fast_nx1];
 #ifdef MPI_PARALLEL
 #ifdef FFT
+  // initialize arrays
+  in2_ = new std::complex<Real>[nx1*nx2*nx3];
+  in_e_ = new std::complex<Real>[slow_nx1*slow_nx2*slow_nx3];
+  in_o_ = new std::complex<Real>[slow_nx1*slow_nx2*slow_nx3];
+  int cnt = nx1*nx2*nx3;
+  cnt = std::max(cnt, fast_nx1*fast_nx2*fast_nx3);
+  cnt = std::max(cnt, mid_nx1*mid_nx2*mid_nx3);
+  cnt = std::max(cnt, slow_nx1*slow_nx2*slow_nx3);
+  grf_ = new std::complex<Real>[8*cnt];
+
   // setup fft in the 8x extended domain for the Green's function
   int permute=2; // will make output array (slow,mid,fast) = (y,x,z) = (j,i,k)
   int fftsize, sendsize, recvsize;
@@ -97,12 +104,12 @@ BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
 
 BlockFFTGravity::~BlockFFTGravity() {
   delete gtlist_;
+#ifdef FFT
+#ifdef MPI_PARALLEL
   delete[] in2_;
   delete[] in_e_;
   delete[] in_o_;
   delete[] grf_;
-#ifdef FFT
-#ifdef MPI_PARALLEL
   delete pf3dgrf_;
 #endif
 #endif
@@ -167,8 +174,10 @@ void BlockFFTGravity::ExecuteForward() {
     pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data),FFTW_FORWARD,pf3d->fft_fast);
     // fast2slow
     pf3d->remap(data,data,pf3d->remap_fastslow);
-    std::memcpy(in_e_, in_, sizeof(std::complex<Real>)*nx1*nx2*nx3); // even term (l=2p)
-    std::memcpy(in_o_, in_, sizeof(std::complex<Real>)*nx1*nx2*nx3); // odd term (l=2p+1)
+    // even term (l=2p)
+    std::memcpy(in_e_, in_, sizeof(std::complex<Real>)*slow_nx1*slow_nx2*slow_nx3);
+    // odd term (l=2p+1)
+    std::memcpy(in_o_, in_, sizeof(std::complex<Real>)*slow_nx1*slow_nx2*slow_nx3);
     // apply odd term phase shift for vertical open BC
     for (int j=0; j<slow_nx2; j++) {
       for (int i=0; i<slow_nx1; i++) {
