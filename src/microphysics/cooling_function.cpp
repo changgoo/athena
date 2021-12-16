@@ -14,7 +14,7 @@
 #include "../athena.hpp"
 #include "../athena_arrays.hpp"
 #include "../parameter_input.hpp"          // ParameterInput
-#include "cooling_function.hpp"
+#include "cooling.hpp"
 #include "units.hpp"
 
 //========================================================================================
@@ -25,7 +25,6 @@
 CoolingFunctionBase::CoolingFunctionBase(ParameterInput *pin) :
   T_max(pin->GetOrAddReal("cooling", "T_max",1.e9)),
   T_floor(pin->GetOrAddReal("cooling", "T_floor",10)),
-  cfl_cool(pin->GetReal("cooling", "cfl_cool")), // min dt_hydro/dt_cool
   gamma_adi(pin->GetReal("hydro","gamma")) {
   mu = 1.27;
   muH = 1.4;
@@ -54,6 +53,37 @@ CoolingFunctionBase::~CoolingFunctionBase() {
   delete punit;
 }
 
+//========================================================================================
+//! \fn static Real CoolingTime(const Real rho, const Real press)
+//! \brief tcool = e / (n^2*Cool - n*heat)
+//! \note
+//! - input rho and P are in code units
+//! - output tcool is in code units
+//========================================================================================
+Real CoolingFunctionBase::CoolingTime(const Real rho, const Real press) {
+  Real nH = rho*to_nH;
+  Real cool = nH*nH*Lambda_T(rho, press);
+  Real heat = nH*Gamma_T(rho, press);
+  Real eint = press*punit->Pressure/(gamma_adi-1);
+  Real tcool = eint/(cool - heat);
+  return tcool/punit->Time;
+}
+
+//========================================================================================
+//! \fn static Real NetCoolingTime(const Real rho, const Real press)
+//! \brief tcool = e / (|n^2*Cool| + |n*heat|)
+//! \note
+//! - input rho and P are in code units
+//! - output tcool is in code units
+//========================================================================================
+Real CoolingFunctionBase::NetCoolingTime(const Real rho, const Real press) {
+  Real nH = rho*to_nH;
+  Real cool = nH*nH*Lambda_T(rho, press);
+  Real heat = nH*Gamma_T(rho, press);
+  Real eint = press*punit->Pressure/(gamma_adi-1);
+  Real tcool = eint/(std::abs(cool) + std::abs(heat));
+  return tcool/punit->Time;
+}
 //========================================================================================
 //! \fn PiecewiseLinearFits::PiecewiseLinearFits(ParameterInput *pin)
 //! \brief Cooling function with Piecewise Linear Fits used in El-Badry et al. 2019

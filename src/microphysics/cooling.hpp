@@ -17,6 +17,37 @@
 #include "../athena_arrays.hpp"
 #include "units.hpp" // Units
 
+class CoolingSolver {
+ public:
+  explicit CoolingSolver(MeshBlock *pmb, ParameterInput *pin);
+  ~CoolingSolver();
+
+  void OperatorSplitSolver();
+  void EnrollEulerSolver();
+
+  Real CoolingTimeStep(MeshBlock *pmb);
+
+  void InitEdotArray();
+  void InitEdotArray(AthenaArray<Real> uov, int index);
+  void InitEdotFloorArray();
+  void InitEdotFloorArray(AthenaArray<Real> uov, int index);
+
+  Real cfl_cool;
+  Real cfl_op_cool;
+
+  void CalculateTotalCoolingRate();
+ private:
+  Real CoolingExplicitSubcycling(Real tend, Real press, const Real rho);
+
+  CoolingFunctionBase *pcf;
+  Units *punit_;
+  MeshBlock *pmb_;
+
+  AthenaArray<Real> edot, edot_floor;
+  bool op_flag;
+  int nsub_max;
+}
+
 //! \brief Base class for Cooling Functions
 class CoolingFunctionBase {
  public:
@@ -24,8 +55,11 @@ class CoolingFunctionBase {
   ~CoolingFunctionBase();
 
   void Initialize(Real mu, Real muH);
-  // Real tcool(const Real T, const Real nH);
-  // Real netcool(const Real T, const Real nH);
+  Real CoolingTime(const Real rho, const Real Press);
+  Real NetCoolingTime(const Real rho, const Real Press);
+
+  // cooling solvers
+
 
   // Real Getdt(const Real T, const Real nH);
   virtual Real Lambda_T(const Real rho, const Real Press) = 0;
