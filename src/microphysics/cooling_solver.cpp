@@ -22,10 +22,12 @@
 #include "cooling.hpp"
 #include "units.hpp"
 
+// initialization of static class variables/pointers
 CoolingFunctionBase* CoolingSolver::pcf = nullptr;
 Units* CoolingSolver::punit = nullptr;
 AthenaArray<Real> CoolingSolver::edot, CoolingSolver::edot_floor;
 Real CoolingSolver::cfl_cool, CoolingSolver::cfl_op_cool;
+bool CoolingSolver::bookkeeping_ = false;
 
 //========================================================================================
 //! \fn CoolingFunctionBase::CoolingFunctionBase(ParameterInput *pin)
@@ -33,7 +35,8 @@ Real CoolingSolver::cfl_cool, CoolingSolver::cfl_op_cool;
 //! \note Read parameters from "cooling" block in the input file
 //========================================================================================
 CoolingSolver::CoolingSolver(ParameterInput *pin) :
-  nsub_max(pin->GetOrAddInteger("cooling","nsub_max",-1)) {
+  uov_idx_(-1), umbd_idx_(-1),
+  nsub_max_(pin->GetOrAddInteger("cooling","nsub_max",-1)) {
   CoolingSolver::cfl_cool=pin->GetReal("cooling", "cfl_cool"); // min dt_hydro/dt_cool
   CoolingSolver::cfl_op_cool=pin->GetOrAddReal("cooling","cfl_op_cool",-1);
 
@@ -55,9 +58,9 @@ CoolingSolver::CoolingSolver(ParameterInput *pin) :
   CoolingSolver::punit = CoolingSolver::pcf->punit;
 
   op_flag = CoolingSolver::cfl_op_cool > 0 ? true: false;
-  if (op_flag && (nsub_max == -1)) {
-    nsub_max = static_cast<int>(CoolingSolver::cfl_cool/CoolingSolver::cfl_op_cool*10);
-    std::cout << "nsub_max is set to " << nsub_max << std::endl;
+  if (op_flag && (nsub_max_ == -1)) {
+    nsub_max_ = static_cast<int>(CoolingSolver::cfl_cool/CoolingSolver::cfl_op_cool)*10;
+    std::cout << "nsub_max_ is set to " << nsub_max_ << std::endl;
   }
 
   // error if cooling solver is enrolled but cfl_cool > 1
@@ -79,21 +82,19 @@ CoolingSolver::CoolingSolver(ParameterInput *pin) :
   }
 }
 
-
-void CoolingSolver::InitEdotArray(MeshBlock *pmb) {
-  CoolingSolver::edot.NewAthenaArray(pmb->ncells3,pmb->ncells2,pmb->ncells1);
-}
-
-void CoolingSolver::InitEdotArray(AthenaArray<Real> uov, int index) {
-  CoolingSolver::edot.InitWithShallowSlice(uov,4,index,1);
-}
-
-void CoolingSolver::InitEdotFloorArray(MeshBlock *pmb) {
-  CoolingSolver::edot_floor.NewAthenaArray(pmb->ncells3,pmb->ncells2,pmb->ncells1);
-}
-
-void CoolingSolver::InitEdotFloorArray(AthenaArray<Real> uov, int index) {
-  CoolingSolver::edot_floor.InitWithShallowSlice(uov,4,index,1);
+void CoolingSolver::InitBookKeepingArrays(MeshBlock *pmb, int uov_idx, int umbd_idx) {
+  uov_idx_=uov_idx; // starting index for user_out_var
+  umbd_idx_=umbd_idx; // starting index for ruser_meshblock_data[0]
+  if (uov_idx_ == -1) {
+    // allocate new arrays for bookkeeping
+    CoolingSolver::edot.NewAthenaArray(pmb->ncells3,pmb->ncells2,pmb->ncells1);
+    CoolingSolver::edot_floor.NewAthenaArray(pmb->ncells3,pmb->ncells2,pmb->ncells1);
+  } else {
+    // or shallow copy existing arrays
+    CoolingSolver::edot.InitWithShallowSlice(pmb->user_out_var,4,uov_idx_,1);
+    CoolingSolver::edot_floor.InitWithShallowSlice(pmb->user_out_var,4,uov_idx_+1,1);
+  }
+  CoolingSolver::bookkeeping_ = true;
 }
 
 //========================================================================================
@@ -168,8 +169,10 @@ void CoolingSolver::OperatorSplitSolver(MeshBlock *pmb) {
           delta_press = press_next-w_p;
           delta_press_floor = 0.;
         }
-        CoolingSolver::edot(k,j,i) = delta_press/gm1/dt_mhd;
-        CoolingSolver::edot_floor(k,j,i) = delta_press_floor/gm1/dt_mhd;
+        if (CoolingSolver::bookkeeping_) {
+          CoolingSolver::edot(k,j,i) = delta_press/gm1/dt_mhd;
+          CoolingSolver::edot_floor(k,j,i) = delta_press_floor/gm1/dt_mhd;
+        }
 
         // apply floor if cooled too much
         Real press_after = std::max(press_next,press_floor);
@@ -189,11 +192,12 @@ void CoolingSolver::OperatorSplitSolver(MeshBlock *pmb) {
 //========================================================================================
 Real CoolingSolver::CoolingExplicitSubcycling(Real tend, Real press, const Real rho) {
   Real tnow = 0., tleft = tend;
+  Real dt_net, dt_sub;
   int icount = 0;
-  while ((icount<nsub_max) && (tnow<tend)) {
-    Real dt_net = CoolingSolver::pcf->NetCoolingTime(rho, press);
+  while ((icount<nsub_max_) && (tnow<tend)) {
+    dt_net = std::abs(CoolingSolver::pcf->CoolingTime(rho, press));
     dt_net *= CoolingSolver::cfl_op_cool;
-    Real dt_sub = std::min(std::min(tend,dt_net),tleft);
+    dt_sub = std::min(std::min(tend,dt_net),tleft);
     press = press*(1-dt_sub/CoolingSolver::pcf->CoolingTime(rho, press));
 
     tnow += dt_sub;
@@ -202,8 +206,12 @@ Real CoolingSolver::CoolingExplicitSubcycling(Real tend, Real press, const Real 
   }
 
   if (tnow < tend)
-    std::cout << "Too many substeps required: tnow = " << tnow
-              << " tend = " << tend << std::endl;
+    std::cout << "Too many substeps required: "
+              << " nsub_max_ = " << nsub_max_
+              << " nsub_max_needed_ = " << tend/dt_net
+              << " tnow = " << tnow
+              << " tend = " << tend
+              << std::endl;
   return press;
 }
 
@@ -251,8 +259,10 @@ void CoolingSolver::CoolingEuler(MeshBlock *pmb, const Real t, const Real dt,
           delta_press = press_next-press;
           delta_press_floor = 0.;
         }
-        CoolingSolver::edot(k,j,i) = delta_press/gm1/dt;
-        CoolingSolver::edot_floor(k,j,i) = delta_press_floor/gm1/dt;
+        if (CoolingSolver::bookkeeping_) {
+          CoolingSolver::edot(k,j,i) = delta_press/gm1/dt;
+          CoolingSolver::edot_floor(k,j,i) = delta_press_floor/gm1/dt;
+        }
 
         Real delta_e = (delta_press+delta_press_floor)/gm1;
         // change internal energy
@@ -265,6 +275,9 @@ void CoolingSolver::CoolingEuler(MeshBlock *pmb, const Real t, const Real dt,
 }
 
 void CoolingSolver::CalculateTotalCoolingRate(MeshBlock *pmb, Real dt) {
+  // do nothing it bookkeeping arrays are not initialized
+  if (!CoolingSolver::bookkeeping_) return;
+
   // Extract indices
   int is = pmb->is, ie = pmb->ie;
   int js = pmb->js, je = pmb->je;
@@ -283,6 +296,6 @@ void CoolingSolver::CalculateTotalCoolingRate(MeshBlock *pmb, Real dt) {
     }
   }
   // add cooling and ceiling to hist outputs
-  pmb->ruser_meshblock_data[0](0) += delta_e_block;
-  pmb->ruser_meshblock_data[0](1) += delta_ef_block;
+  pmb->ruser_meshblock_data[0](umbd_idx_) += delta_e_block;
+  pmb->ruser_meshblock_data[0](umbd_idx_+1) += delta_ef_block;
 }

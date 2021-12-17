@@ -3,8 +3,8 @@
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
-//! \file cooling.cpp
-//! \brief Problem generator for cooling test using RK4 integration
+//! \file point_cooling.cpp
+//! \brief Problem generator for point cooling test
 //========================================================================================
 
 // C++ headers

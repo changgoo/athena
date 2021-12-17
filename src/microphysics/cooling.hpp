@@ -37,18 +37,18 @@ class CoolingSolver {
   static AthenaArray<Real> edot, edot_floor;
 
   void OperatorSplitSolver(MeshBlock *pmb);
-  void InitEdotArray(MeshBlock *pmb);
-  void InitEdotArray(AthenaArray<Real> uov, int index);
-  void InitEdotFloorArray(MeshBlock *pmb);
-  void InitEdotFloorArray(AthenaArray<Real> uov, int index);
-
+  void InitBookKeepingArrays(MeshBlock *pmb, int uov_idx, int umbd_idx);
   void CalculateTotalCoolingRate(MeshBlock *pmb, Real dt);
 
   bool op_flag;
 
  private:
+  static bool bookkeeping_;
+
   Real CoolingExplicitSubcycling(Real tend, Real press, const Real rho);
-  int nsub_max;
+
+  int uov_idx_,umbd_idx_; // indicies for user_out_var, ruser_meshblock_data
+  int nsub_max_;
 };
 
 //! \brief Base class for Cooling Functions

@@ -28,7 +28,7 @@ def prepare(**kwargs):
 
     # Configure as though we ran
     #     python configure.py -hdf5 --prob=cooling
-    athena.configure(prob='cooling', **kwargs)
+    athena.configure(prob='point_cooling', **kwargs)
 
     # Call make as though we ran
     #     make clean
@@ -58,14 +58,16 @@ def run(**kwargs):
     # from the bin/ directory. Note we omit the leading '../inputs/' below when specifying
     # the athinput file.)
     arguments = arguments_def + \
-        ['cooling/cfl_cool=0.01', 'job/problem_id=cooling1']
-    athena.run('cooling/athinput.cooling_test', arguments)
+        ['cooling/cfl_cool=0.01',
+         'cooling/cfl_op_cool=-1',
+         'job/problem_id=cooling1']
+    athena.run('cooling/athinput.point_cooling_test', arguments)
 
     arguments = arguments_def + \
-        ['cooling/cfl_cool=1',
-         'cooling/cfl_op_cool=0.01',
+        ['cooling/cfl_cool=0.1',
+         'cooling/cfl_op_cool=0.001',
          'job/problem_id=cooling2']
-    athena.run('cooling/athinput.cooling_test', arguments)
+    athena.run('cooling/athinput.point_cooling_test', arguments)
     # No return statement/value is ever required from run(), but returning anything other
     # than default None will cause run_tests.py to skip executing the optional Lcov cmd
     # immediately after this module.run() finishes, e.g. if Lcov was already invoked by:
