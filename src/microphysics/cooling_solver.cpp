@@ -35,12 +35,11 @@ bool CoolingSolver::bookkeeping_ = false;
 //! \note Read parameters from "cooling" block in the input file
 //========================================================================================
 CoolingSolver::CoolingSolver(ParameterInput *pin) :
+  coolftn(pin->GetOrAddString("cooling", "coolftn", "tigress")),
   uov_idx_(-1), umbd_idx_(-1),
   nsub_max_(pin->GetOrAddInteger("cooling","nsub_max",-1)) {
   CoolingSolver::cfl_cool=pin->GetReal("cooling", "cfl_cool"); // min dt_hydro/dt_cool
   CoolingSolver::cfl_op_cool=pin->GetOrAddReal("cooling","cfl_op_cool",-1);
-
-  std::string coolftn = pin->GetOrAddString("cooling", "coolftn", "tigress");
 
   if (coolftn.compare("tigress") == 0) {
     CoolingSolver::pcf = new TigressClassic(pin);
@@ -110,8 +109,11 @@ Real CoolingSolver::CoolingTimeStep(MeshBlock *pmb) {
       for (int i=pmb->is; i<=pmb->ie; ++i) {
         Real press = pmb->phydro->w(IPR,k,j,i);
         Real rho = pmb->phydro->w(IDN,k,j,i);
+        Real press_floor = rho*CoolingSolver::pcf->Get_Tfloor()/
+          CoolingSolver::punit->Temperature;
+        press = std::max(press,press_floor);
         Real dtcool = CoolingSolver::cfl_cool*
-          std::abs(CoolingSolver::pcf->CoolingTime(rho,press));
+          std::abs(CoolingSolver::pcf->NetCoolingTime(rho,press));
         min_dt = std::min(min_dt, dtcool);
       }
     }
@@ -154,33 +156,34 @@ void CoolingSolver::OperatorSplitSolver(MeshBlock *pmb) {
         // find non-thermal part of energy to keep it the same
         Real e_non_thermal = u_e - w_p/gm1;
 
+        // pressure and interanl energy update done in cod units
+        Real delta_press=0.0, delta_press_floor=0.0;
         Real press_floor = w_d*temp_floor/CoolingSolver::punit->Temperature;
-        Real press_next = CoolingExplicitSubcycling(dt_mhd,w_p,w_d);
+        if (w_p < press_floor) {
+          // floor applied before solving the cooling
+          delta_press_floor = press_floor-w_p;
+        }
+        Real press_next = std::max(w_p,press_floor);
+        press_next = CoolingExplicitSubcycling(dt_mhd,press_next,w_d);
 
-        Real delta_press, delta_press_floor;
         if (press_next < press_floor) {
           // cooled too much; apply floor
-          // store both cooling loss and artificial heating
-          delta_press = press_next-w_p;
-          delta_press_floor = press_floor-press_next;
-        } else {
-          // normal cooling without floor;
-          // store cooling loss only
-          delta_press = press_next-w_p;
-          delta_press_floor = 0.;
+          delta_press_floor += press_floor-press_next;
+          press_next = std::max(press_next,press_floor);
         }
+        delta_press = press_next-w_p;
+
         if (CoolingSolver::bookkeeping_) {
           CoolingSolver::edot(k,j,i) = delta_press/gm1/dt_mhd;
           CoolingSolver::edot_floor(k,j,i) = delta_press_floor/gm1/dt_mhd;
         }
 
         // apply floor if cooled too much
-        Real press_after = std::max(press_next,press_floor);
-        Real u_after = press_after/gm1;
+        Real u_after = press_next/gm1;
 
         // change internal energy
         u_e = u_after + e_non_thermal;
-        w_p = press_after;
+        w_p = press_next;
       }
     }
   }
@@ -244,27 +247,28 @@ void CoolingSolver::CoolingEuler(MeshBlock *pmb, const Real t, const Real dt,
         const Real rho = prim(IDN,k,j,i);
 
         // pressure and interanl energy update done in cod units
-        Real press_floor = press*temp_floor/CoolingSolver::punit->Temperature;
-        Real press_next = press*(1 - dt/CoolingSolver::pcf->CoolingTime(rho, press));
+        Real delta_press=0.0, delta_press_floor=0.0;
+        Real press_floor = rho*temp_floor/CoolingSolver::punit->Temperature;
+        if (press < press_floor) {
+          // floor applied before solving the cooling
+          delta_press_floor = press_floor-press;
+        }
+        Real press_next = std::max(press,press_floor);
+        press_next *= (1 - dt/CoolingSolver::pcf->CoolingTime(rho, press_next));
 
-        Real delta_press, delta_press_floor;
         if (press_next < press_floor) {
           // cooled too much; apply floor
-          // store both cooling loss and artificial heating
-          delta_press = press_next-press;
-          delta_press_floor = press_floor-press_next;
-        } else {
-          // normal cooling without floor;
-          // store cooling loss only
-          delta_press = press_next-press;
-          delta_press_floor = 0.;
+          delta_press_floor += press_floor-press_next;
+          press_next = std::max(press_next,press_floor);
         }
+        delta_press = press_next-press;
+
         if (CoolingSolver::bookkeeping_) {
           CoolingSolver::edot(k,j,i) = delta_press/gm1/dt;
           CoolingSolver::edot_floor(k,j,i) = delta_press_floor/gm1/dt;
         }
 
-        Real delta_e = (delta_press+delta_press_floor)/gm1;
+        Real delta_e = delta_press/gm1;
         // change internal energy
         cons(IEN,k,j,i) += delta_e;
       }

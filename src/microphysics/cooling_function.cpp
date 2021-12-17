@@ -9,6 +9,7 @@
 // C headers
 
 // C++ headers
+#include <fstream>    // ofstream
 
 // Athena++ headers
 #include "../athena.hpp"
@@ -25,11 +26,8 @@
 CoolingFunctionBase::CoolingFunctionBase(ParameterInput *pin) :
   T_max(pin->GetOrAddReal("cooling", "T_max",1.e9)),
   T_floor(pin->GetOrAddReal("cooling", "T_floor",10)),
-  gamma_adi(pin->GetReal("hydro","gamma")) {
-  mu = 1.27;
-  muH = 1.4;
-  Initialize(mu,muH);
-}
+  gamma_adi(pin->GetReal("hydro","gamma")),
+  coolftn_name("base"), mu(1.27), muH(1.4) {}
 
 //========================================================================================
 //! \fn void CoolingFunctionBase::Initialize(Real mu, Real muH)
@@ -86,6 +84,31 @@ Real CoolingFunctionBase::NetCoolingTime(const Real rho, const Real press) {
   Real tcool = eint/(std::abs(cool) + std::abs(heat));
   return tcool/punit->Time;
 }
+
+//========================================================================================
+//! \fn void PrintCoolingFunction()
+//! \brief private function to check cooling and heating functions
+//========================================================================================
+void CoolingFunctionBase::PrintCoolingFunction() {
+  Real pok = 3.e3;
+  std::string coolfilename(coolftn_name);
+  coolfilename.append("_coolftn.txt");
+  std::ofstream coolfile (coolfilename.c_str());
+  coolfile << "#rho,Press,Temp,cool,heat,tcool" << "\n";
+
+  for (int i=0; i<1000; ++i) {
+    Real logn = 5.0*((static_cast<Real>(i)/500.)-1.0)-2; // logn = -7 ~ 3
+    Real rho = std::pow(10,logn);
+    Real press = pok*pok_to_code_press;
+    Real temp = GetTemperature(rho, press);
+    Real cool = Lambda_T(rho, press);
+    Real heat = Gamma_T(rho, press);
+    Real t_cool = CoolingTime(rho, press);
+    coolfile << rho << "," << press << "," << temp << ","
+             << cool << "," << heat << "," << t_cool << "\n";
+  }
+}
+
 //========================================================================================
 //! \fn PiecewiseLinearFits::PiecewiseLinearFits(ParameterInput *pin)
 //! \brief Cooling function with Piecewise Linear Fits used in El-Badry et al. 2019
@@ -98,9 +121,8 @@ Real CoolingFunctionBase::NetCoolingTime(const Real rho, const Real press) {
 PiecewiseLinearFits::PiecewiseLinearFits(ParameterInput *pin) :
   CoolingFunctionBase(pin),
   T_PE(pin->GetReal("cooling", "T_PE")), // temperature below which PE heating is applied
-  Gamma0(pin->GetReal("cooling", "Gamma")) { // heating rate in ergs / sec
-  mu = 0.62;
-  muH = 1.4;
+  Gamma0(pin->GetReal("cooling", "Gamma")), // heating rate in ergs / sec
+  coolftn_name("plf"), mu(0.62), muH(1.4) {
   Initialize(mu,muH);
 }
 
@@ -189,10 +211,9 @@ Real PiecewiseLinearFits::GetTemperature(const Real rho, const Real Press) {
 //========================================================================================
 TigressClassic::TigressClassic(ParameterInput *pin) :
   CoolingFunctionBase(pin),
-  heat_ratio(pin->GetReal("cooling", "heat_ratio")) {
-  mu = 1.0;
-  muH = 1.4271;
-
+  coolftn_name("tigress"),
+  heat_ratio(pin->GetReal("cooling", "heat_ratio")),
+  mu(1.0), muH(1.4271) {
   Initialize(mu,muH);
 }
 

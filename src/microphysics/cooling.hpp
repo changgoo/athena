@@ -41,6 +41,7 @@ class CoolingSolver {
   void CalculateTotalCoolingRate(MeshBlock *pmb, Real dt);
 
   bool op_flag;
+  std::string coolftn;
 
  private:
   static bool bookkeeping_;
@@ -61,8 +62,7 @@ class CoolingFunctionBase {
   Real CoolingTime(const Real rho, const Real Press);
   Real NetCoolingTime(const Real rho, const Real Press);
 
-  // cooling solvers
-
+  void PrintCoolingFunction();
 
   // Real Getdt(const Real T, const Real nH);
   virtual Real Lambda_T(const Real rho, const Real Press) = 0;
@@ -86,6 +86,7 @@ class CoolingFunctionBase {
   Real T_max, T_floor, cfl_cool, gamma_adi;
 
  private:
+  std::string coolftn_name;
   Real mu,muH;
 };
 
@@ -112,6 +113,7 @@ class PiecewiseLinearFits : public CoolingFunctionBase {
   Real GetTemperature(const Real rho, const Real Press) override;
 
  private:
+  std::string coolftn_name;
   Real mu,muH;
   Real T_PE,Gamma0;
   // fitting parameters
@@ -167,6 +169,8 @@ class TigressClassic : public CoolingFunctionBase {
   Real GetTemperature(const Real rho, const Real Press) override;
 
  private:
+  std::string coolftn_name;
+
   Real heat_ratio;
   Real mu, muH;
   const Real mumin=0.6182, mumax=1.295;

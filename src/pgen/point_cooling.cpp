@@ -103,6 +103,5 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
 void MeshBlock::UserWorkInLoop() {
   if (pcool->op_flag) pcool->OperatorSplitSolver(this);
-  pcool->CalculateTotalCoolingRate(this,pmy_mesh->dt);
   return;
 }
