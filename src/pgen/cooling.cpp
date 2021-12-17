@@ -101,7 +101,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real rho_0   = pin->GetReal("problem", "rho_0"); // measured in m_p muH cm^-3
   Real pgas_0  = pin->GetReal("problem", "pgas_0"); // measured in kB K cm^-3
 
-  pgas_0 /= pcool->pcf->to_pok; // to code units
+  pgas_0 *= pcool->pcf->pok_to_code_press; // to code units
 
   // Initialize primitive values
   for (int k = kl; k <= ku; ++k) {

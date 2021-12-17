@@ -79,7 +79,8 @@ class CoolingFunctionBase {
 
   Units *punit;
 
-  Real to_nH,to_pok;
+  Real code_den_to_nH,code_press_to_pok;
+  Real nH_to_code_den,pok_to_code_press;
   Real mean_mass_per_H;
 
   Real T_max, T_floor, cfl_cool, gamma_adi;

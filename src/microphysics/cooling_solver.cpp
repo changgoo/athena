@@ -47,17 +47,36 @@ CoolingSolver::CoolingSolver(ParameterInput *pin) :
     std::cout << "Cooling function is set to PiecewiseLinearFits" << std::endl;
   } else {
     std::stringstream msg;
-    msg << "### FATAL ERROR in ProblemGenerator" << std::endl
+    msg << "### FATAL ERROR in CoolingSolver" << std::endl
         << "coolftn = " << coolftn.c_str() << " is not supported" << std::endl;
-    throw std::runtime_error(msg.str().c_str());
+    ATHENA_ERROR(msg);
   }
 
   CoolingSolver::punit = CoolingSolver::pcf->punit;
 
   op_flag = CoolingSolver::cfl_op_cool > 0 ? true: false;
-  if (op_flag && (nsub_max == -1))
-    nsub_max = 10000;
-    // std::static_cast<int>(CoolingSolver::cfl_cool/CoolingSolver::cfl_op_cool*10);
+  if (op_flag && (nsub_max == -1)) {
+    nsub_max = static_cast<int>(CoolingSolver::cfl_cool/CoolingSolver::cfl_op_cool*10);
+    std::cout << "nsub_max is set to " << nsub_max << std::endl;
+  }
+
+  // error if cooling solver is enrolled but cfl_cool > 1
+  if ((CoolingSolver::cfl_cool > 1) && (!op_flag)) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in CoolingSolver" << std::endl
+        << "Cooling will be enrolled but cfl_cool = "
+        << CoolingSolver::cfl_cool << " > 1" << std::endl;
+    ATHENA_ERROR(msg);
+  }
+
+  // error if op cooling solver is used but cfl_op_cool > 1
+  if ((CoolingSolver::cfl_op_cool > 1) && (op_flag)) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in CoolingSolver" << std::endl
+        << "Cooling will be solved by operator split method but cfl_op_cool = "
+        << CoolingSolver::cfl_op_cool << " > 1" << std::endl;
+    ATHENA_ERROR(msg);
+  }
 }
 
 

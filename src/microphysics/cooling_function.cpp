@@ -45,8 +45,10 @@ void CoolingFunctionBase::Initialize(Real mu, Real muH) {
 
   punit = new Units(dunit, lunit, vunit, mu);
 
-  to_nH = punit->Density/mean_mass_per_H;
-  to_pok = punit->Pressure/Constants::kB;
+  code_den_to_nH = punit->Density/mean_mass_per_H;
+  code_press_to_pok = punit->Pressure/Constants::kB;
+  nH_to_code_den = 1/code_den_to_nH;
+  pok_to_code_press = 1/code_press_to_pok;
 }
 
 CoolingFunctionBase::~CoolingFunctionBase() {
@@ -61,7 +63,7 @@ CoolingFunctionBase::~CoolingFunctionBase() {
 //! - output tcool is in code units
 //========================================================================================
 Real CoolingFunctionBase::CoolingTime(const Real rho, const Real press) {
-  Real nH = rho*to_nH;
+  Real nH = rho*code_den_to_nH;
   Real cool = nH*nH*Lambda_T(rho, press);
   Real heat = nH*Gamma_T(rho, press);
   Real eint = press*punit->Pressure/(gamma_adi-1);
@@ -77,7 +79,7 @@ Real CoolingFunctionBase::CoolingTime(const Real rho, const Real press) {
 //! - output tcool is in code units
 //========================================================================================
 Real CoolingFunctionBase::NetCoolingTime(const Real rho, const Real press) {
-  Real nH = rho*to_nH;
+  Real nH = rho*code_den_to_nH;
   Real cool = nH*nH*Lambda_T(rho, press);
   Real heat = nH*Gamma_T(rho, press);
   Real eint = press*punit->Pressure/(gamma_adi-1);
