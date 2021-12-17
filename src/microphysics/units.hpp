@@ -1,5 +1,5 @@
-#ifndef UTILS_UNITS_HPP_
-#define UTILS_UNITS_HPP_
+#ifndef MICROPHYSICS_UNITS_HPP_
+#define MICROPHYSICS_UNITS_HPP_
 //========================================================================================
 // Athena++ astrophysical MHD code
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
@@ -66,4 +66,4 @@ class Units {
   Real e_in_code;
   Real Bethe_in_code;
 };
-#endif // UTILS_UNITS_HPP_
+#endif // MICROPHYSICS_UNITS_HPP_

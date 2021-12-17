@@ -43,7 +43,6 @@ iso_sound_speed = 0.4082482905   # equivalent to sqrt(gamma*p/d) for p=0.1, d=1
 
 <cooling>
 coolftn       = tigress	# tigress or plf
-solver        = rk4	# euler or rk4 or op
 
 cfl_cool      = 0.01      # min dt_hydro/dt_cool
 cfl_op_cool   = 0.1       # dt_sub/dt_cool (must be less than 1)

@@ -12,8 +12,8 @@
 #include "../athena.hpp"
 #include "../globals.hpp"
 #include "../mesh/mesh.hpp"
+#include "../microphysics/units.hpp"
 #include "../parameter_input.hpp"
-#include "../utils/units.hpp"
 #include "cr.hpp"
 
 // MPI/OpenMP header

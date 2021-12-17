@@ -1,5 +1,5 @@
-#ifndef UTILS_COOLING_FUNCTION_HPP_
-#define UTILS_COOLING_FUNCTION_HPP_
+#ifndef MICROPHYSICS_COOLING_HPP_
+#define MICROPHYSICS_COOLING_HPP_
 //========================================================================================
 // Athena++ astrophysical MHD code
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
@@ -15,38 +15,41 @@
 // Athena++ headers
 #include "../athena.hpp"
 #include "../athena_arrays.hpp"
+#include "cooling.hpp"
 #include "units.hpp" // Units
+
+class CoolingFunctionBase;
 
 class CoolingSolver {
  public:
-  explicit CoolingSolver(MeshBlock *pmb, ParameterInput *pin);
+  explicit CoolingSolver(ParameterInput *pin);
   ~CoolingSolver();
 
-  void OperatorSplitSolver();
-  void EnrollEulerSolver();
+  static void CoolingEuler(MeshBlock *pmb, const Real t, const Real dt,
+       const AthenaArray<Real> &prim, const AthenaArray<Real> &prim_scalar,
+       const AthenaArray<Real> &bcc, AthenaArray<Real> &cons,
+       AthenaArray<Real> &cons_scalar);
+  static Real CoolingTimeStep(MeshBlock *pmb);
+  static CoolingFunctionBase *pcf;
+  static Units *punit;
+  static Real cfl_cool;
+  static Real cfl_op_cool;
+  static AthenaArray<Real> edot, edot_floor;
 
-  Real CoolingTimeStep(MeshBlock *pmb);
-
-  void InitEdotArray();
+  void OperatorSplitSolver(MeshBlock *pmb);
+  void InitEdotArray(MeshBlock *pmb);
   void InitEdotArray(AthenaArray<Real> uov, int index);
-  void InitEdotFloorArray();
+  void InitEdotFloorArray(MeshBlock *pmb);
   void InitEdotFloorArray(AthenaArray<Real> uov, int index);
 
-  Real cfl_cool;
-  Real cfl_op_cool;
+  void CalculateTotalCoolingRate(MeshBlock *pmb, Real dt);
 
-  void CalculateTotalCoolingRate();
+  bool op_flag;
+
  private:
   Real CoolingExplicitSubcycling(Real tend, Real press, const Real rho);
-
-  CoolingFunctionBase *pcf;
-  Units *punit_;
-  MeshBlock *pmb_;
-
-  AthenaArray<Real> edot, edot_floor;
-  bool op_flag;
   int nsub_max;
-}
+};
 
 //! \brief Base class for Cooling Functions
 class CoolingFunctionBase {
@@ -1250,4 +1253,4 @@ class TigressClassic : public CoolingFunctionBase {
            0.00000000e+00,   0.00000000e+00,   0.00000000e+00,
     };
 };
-#endif // UTILS_COOLING_FUNCTION_HPP_
+#endif // MICROPHYSICS_COOLING_HPP_
