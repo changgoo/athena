@@ -24,11 +24,12 @@
 
 EquationOfState::EquationOfState(MeshBlock *pmb, ParameterInput *pin) :
     pmy_block_(pmb),
+    neighbor_flooring_{pin->GetOrAddBoolean("hydro", "neighbor_flooring", false)},
     gamma_{pin->GetReal("hydro", "gamma")},
     density_floor_{pin->GetOrAddReal("hydro", "dfloor", std::sqrt(1024*float_min))},
     pressure_floor_{pin->GetOrAddReal("hydro", "pfloor", std::sqrt(1024*float_min))},
     scalar_floor_{pin->GetOrAddReal("hydro", "sfloor", std::sqrt(1024*float_min))},
-    neighbor_flooring_{pin->GetOrAddBoolean("hydro", "neighbor_flooring", false)} {}
+    efloor_(pmb->ncells3, pmb->ncells1, pmb->ncells2) {}
 
 //----------------------------------------------------------------------------------------
 //! \fn void EquationOfState::ConservedToPrimitive(AthenaArray<Real> &cons,
@@ -45,22 +46,20 @@ void EquationOfState::ConservedToPrimitive(
   int nbad_d = 0, nbad_p = 0;
   for (int k=kl; k<=ku; ++k) {
     for (int j=jl; j<=ju; ++j) {
-// #pragma omp simd
-      for (int i=il; i<=iu; ++i) {
-        Real& u_d  = cons(IDN,k,j,i);
-        Real& u_m1 = cons(IM1,k,j,i);
-        Real& u_m2 = cons(IM2,k,j,i);
-        Real& u_m3 = cons(IM3,k,j,i);
-        Real& u_e  = cons(IEN,k,j,i);
+      if (neighbor_flooring_) {
+        for (int i=il; i<=iu; ++i) {
+          Real& u_d  = cons(IDN,k,j,i);
+          Real& u_m1 = cons(IM1,k,j,i);
+          Real& u_m2 = cons(IM2,k,j,i);
+          Real& u_m3 = cons(IM3,k,j,i);
+          Real& u_e  = cons(IEN,k,j,i);
 
-        Real& w_d  = prim(IDN,k,j,i);
-        Real& w_vx = prim(IVX,k,j,i);
-        Real& w_vy = prim(IVY,k,j,i);
-        Real& w_vz = prim(IVZ,k,j,i);
-        Real& w_p  = prim(IPR,k,j,i);
+          Real& w_d  = prim(IDN,k,j,i);
+          Real& w_vx = prim(IVX,k,j,i);
+          Real& w_vy = prim(IVY,k,j,i);
+          Real& w_vz = prim(IVZ,k,j,i);
+          Real& w_p  = prim(IPR,k,j,i);
 
-        // apply density floor, without changing momentum or energy
-        if (neighbor_flooring_) {
           w_d = u_d; // store old value
           if (ApplyNeighborFloorsDensity(cons,bcc,k,j,i,il,iu,jl,ju,kl,ku)) {
             nbad_d++;
@@ -68,30 +67,66 @@ void EquationOfState::ConservedToPrimitive(
                       << " density floor applied: old=" << w_d
                       << " new=" << u_d << std::endl;
           }
-        }
 
-        u_d = (u_d > density_floor_) ?  u_d : density_floor_;
-        w_d = u_d;
+          u_d = (u_d > density_floor_) ?  u_d : density_floor_;
+          w_d = u_d;
 
-        Real di = 1.0/u_d;
-        w_vx = u_m1*di;
-        w_vy = u_m2*di;
-        w_vz = u_m3*di;
+          Real di = 1.0/u_d;
+          w_vx = u_m1*di;
+          w_vy = u_m2*di;
+          w_vz = u_m3*di;
 
-        Real e_k = 0.5*di*(SQR(u_m1) + SQR(u_m2) + SQR(u_m3));
+          Real e_k = 0.5*di*(SQR(u_m1) + SQR(u_m2) + SQR(u_m3));
 
-        // apply pressure floor, correct total energy
-        u_e -= e_k; // make u_e internal energy temporarily
-        if (neighbor_flooring_) {
+          u_e -= e_k; // make u_e internal energy temporarily
           if (ApplyNeighborFloorsPressure(cons,bcc,k,j,i,il,iu,jl,ju,kl,ku)) {
             // pressure corrected
             nbad_p++;
           }
+          w_p = gm1*u_e; // calculate pressure
+          // apply pressure floor, correct total energy
+          if (w_p < pressure_floor_) {
+            efloor_(k,j,i) += (pressure_floor_- w_p)/gm1;
+            w_p = pressure_floor_;
+            u_e = w_p/gm1 + e_k;
+          } else {
+            u_e += e_k;
+          }
         }
-        w_p = gm1*u_e; // calculate pressure
-        // update total energy with floor
-        u_e = (w_p > pressure_floor_) ?  (u_e+e_k) : ((pressure_floor_/gm1) + e_k);
-        w_p = (w_p > pressure_floor_) ?  w_p : pressure_floor_;
+      } else {
+#pragma omp simd
+        for (int i=il; i<=iu; ++i) {
+          Real& u_d  = cons(IDN,k,j,i);
+          Real& u_m1 = cons(IM1,k,j,i);
+          Real& u_m2 = cons(IM2,k,j,i);
+          Real& u_m3 = cons(IM3,k,j,i);
+          Real& u_e  = cons(IEN,k,j,i);
+
+          Real& w_d  = prim(IDN,k,j,i);
+          Real& w_vx = prim(IVX,k,j,i);
+          Real& w_vy = prim(IVY,k,j,i);
+          Real& w_vz = prim(IVZ,k,j,i);
+          Real& w_p  = prim(IPR,k,j,i);
+
+          // apply density floor, without changing momentum or energy
+          u_d = (u_d > density_floor_) ?  u_d : density_floor_;
+          w_d = u_d;
+
+          Real di = 1.0/u_d;
+          w_vx = u_m1*di;
+          w_vy = u_m2*di;
+          w_vz = u_m3*di;
+
+          Real e_k = 0.5*di*(SQR(u_m1) + SQR(u_m2) + SQR(u_m3));
+          w_p = gm1*(u_e - e_k);
+
+          // apply pressure floor, correct total energy
+          if (w_p < pressure_floor_) {
+            efloor_(k,j,i) += (pressure_floor_- w_p)/gm1;
+            w_p = pressure_floor_;
+            u_e = w_p/gm1 + e_k;
+          }
+        }
       }
     }
   }
@@ -238,6 +273,8 @@ bool EquationOfState::ApplyNeighborFloorsDensity(AthenaArray<Real> &cons,
         q_neighbors(IEN) += (u_e - e_k);
       }
     }
+    // update bookkeeping array before assignment
+    efloor_(k,j,i) += q_neighbors(IEN)/n_neighbors - cons(IEN,k,j,i);
     // assign averaged density, momentum, internal energy
     for (int n=0; n<(NHYDRO); ++n)
       cons(n,k,j,i) = q_neighbors(n)/n_neighbors;
@@ -296,6 +333,8 @@ bool EquationOfState::ApplyNeighborFloorsPressure(AthenaArray<Real> &cons,
         }
       }
     }
+    // update bookkeeping array before assignment
+    efloor_(k,j,i) += q_neighbors/n_neighbors - eint;
     cons(IEN,k,j,i) = q_neighbors/n_neighbors;
     return true;
   }

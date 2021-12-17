@@ -1684,7 +1684,10 @@ void TimeIntegratorTaskList::StartupTaskList(MeshBlock *pmb, int stage) {
       if(integrator == "ssprk5_4")
         pmb->pcr->u_cr2 = pmb->pcr->u_cr;
     }
+    if (NON_BAROTROPIC_EOS && (integrator == "rk2")) pmb->peos->ClearBookKeepingArray();
   }
+
+  if (NON_BAROTROPIC_EOS && (integrator == "vl2")) pmb->peos->ClearBookKeepingArray();
 
   if (SHEAR_PERIODIC) {
     Real dt_fc   = pmb->pmy_mesh->dt*(stage_wghts[stage-1].sbeta);
