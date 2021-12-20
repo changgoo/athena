@@ -64,7 +64,7 @@ cooling       = enroll           # [none, enroll, op_split]
 solver        = forward_euler    # [forward_euler]
 coolftn       = tigress	         # tigress or plf
 
-cfl_cool      = 1      # min dt_hydro/dt_cool
+cfl_cool      = 0.5       # min dt_hydro/dt_cool
 cfl_op_cool   = 0.1       # dt_sub/dt_cool (must be less than 1)
 T_floor       = 10        # temperature floor
 T_max         = 1e8       # temperature ceiling

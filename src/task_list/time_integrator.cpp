@@ -29,6 +29,7 @@
 #include "../hydro/hydro_diffusion/hydro_diffusion.hpp"
 #include "../hydro/srcterms/hydro_srcterms.hpp"
 #include "../mesh/mesh.hpp"
+#include "../microphysics/cooling.hpp"
 #include "../orbital_advection/orbital_advection.hpp"
 #include "../parameter_input.hpp"
 #include "../particles/particles.hpp"
@@ -1684,10 +1685,22 @@ void TimeIntegratorTaskList::StartupTaskList(MeshBlock *pmb, int stage) {
       if(integrator == "ssprk5_4")
         pmb->pcr->u_cr2 = pmb->pcr->u_cr;
     }
-    if (NON_BAROTROPIC_EOS && (integrator == "rk2")) pmb->peos->ClearBookKeepingArray();
   }
 
-  if (NON_BAROTROPIC_EOS && (integrator == "vl2")) pmb->peos->ClearBookKeepingArray();
+  if (NON_BAROTROPIC_EOS && (integrator == "rk2")) {
+    if (stage == 1) {
+      pmb->peos->beta=0.5;
+      pmb->peos->ClearBookKeepingArray();
+      if (pmb->pmy_mesh->cooling) pmb->pcool->ClearBookKeepingArray();
+    } else {
+      pmb->peos->beta=1.0;
+    }
+  }
+
+  if (NON_BAROTROPIC_EOS && (integrator == "vl2")) {
+    pmb->peos->ClearBookKeepingArray();
+    if (pmb->pmy_mesh->cooling) pmb->pcool->ClearBookKeepingArray();
+  }
 
   if (SHEAR_PERIODIC) {
     Real dt_fc   = pmb->pmy_mesh->dt*(stage_wghts[stage-1].sbeta);

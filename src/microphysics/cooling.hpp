@@ -40,6 +40,7 @@ class CoolingSolver {
   void OperatorSplitSolver(MeshBlock *pmb);
   void InitBookKeepingArrays(MeshBlock *pmb, int uov_idx, int umbd_idx);
   void CalculateTotalCoolingRate(MeshBlock *pmb, Real dt);
+  void ClearBookKeepingArray();
 
   bool op_flag;
   std::string cooling, solver, coolftn;

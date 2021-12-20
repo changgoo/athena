@@ -161,6 +161,7 @@ class EquationOfState {
   Real GetGamma() const {return gamma_;}
 #endif
 
+  Real beta;
   void ClearBookKeepingArray() {efloor_.ZeroClear();}
   AthenaArray<Real> ReturnBookKeepingArray() {return efloor_;}
 

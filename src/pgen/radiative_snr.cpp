@@ -85,12 +85,13 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   }
 
   // Enroll user-defined functions
-  int n_user_hst=10, i_user_hst=0;
+  int n_user_hst=11, i_user_hst=0;
   AllocateUserHistoryOutput(n_user_hst);
 
   // these should come first
   EnrollUserHistoryOutput(i_user_hst++, CoolingLosses, "e_cool");
   EnrollUserHistoryOutput(i_user_hst++, CoolingLosses, "e_floor");
+  EnrollUserHistoryOutput(i_user_hst++, CoolingLosses, "e_floor2");
   //
   EnrollUserHistoryOutput(i_user_hst++, HistoryMass, "M");
   i_M_hot = i_user_hst;
@@ -116,9 +117,10 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   // Allocate storage for keeping track of cooling
   AllocateRealUserMeshBlockDataField(1);
-  ruser_meshblock_data[0].NewAthenaArray(2);
+  ruser_meshblock_data[0].NewAthenaArray(3);
   ruser_meshblock_data[0](0) = 0.0; // total e_cool between history dumps
-  ruser_meshblock_data[0](1) = 0.0; // total e_floor between history dumps
+  ruser_meshblock_data[0](1) = 0.0; // total e_floor in coolsolver between history dumps
+  ruser_meshblock_data[0](2) = 0.0; // total e_floor in cons2prim between history dumps
 
   // Set output variables
   int num_user_variables = 2; // for edot bookkeeping
@@ -275,7 +277,27 @@ void Mesh::UserWorkInLoop() {
 //========================================================================================
 void MeshBlock::UserWorkInLoop() {
   if (pcool->op_flag) pcool->OperatorSplitSolver(this);
+  // sum up energy lost/gain through cooling and flooring in cooling solver
   pcool->CalculateTotalCoolingRate(this,pmy_mesh->dt); // update ruser_meshblock_data
+
+  // sum up energy gain due to flooring in Cons2Prim
+  AthenaArray<Real> efloor(peos->ReturnBookKeepingArray());
+  // sum up cooling only done in the active cells
+  AthenaArray<Real> vol(ncells1);
+  Real delta_ef_block = 0.0;
+  for (int k = ks; k <= ke; ++k) {
+    for (int j = js; j <= je; ++j) {
+      pcoord->CellVolume(k, j, is, ie, vol);
+#pragma omp simd reduction(+:delta_ef_block)
+      for (int i = is; i <= ie; ++i) {
+        // if (pmy_mesh->time_integrator == "rk2")
+        //   delta_ef_block += 0.5*efloor(k,j,i)*vol(i);
+        // else if (pmy_mesh->time_integrator == "vl2")
+        delta_ef_block += efloor(k,j,i)*vol(i);
+      }
+    }
+  }
+  ruser_meshblock_data[0](2) += delta_ef_block;
   return;
 }
 
