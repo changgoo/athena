@@ -58,13 +58,15 @@ def run(**kwargs):
     # from the bin/ directory. Note we omit the leading '../inputs/' below when specifying
     # the athinput file.)
     arguments = arguments_def + \
-        ['cooling/cfl_cool=0.01',
+        ['cooling/cooling=enroll',
+         'cooling/cfl_cool=0.01',
          'cooling/cfl_op_cool=-1',
          'job/problem_id=cooling1']
     athena.run('cooling/athinput.point_cooling_test', arguments)
 
     arguments = arguments_def + \
-        ['cooling/cfl_cool=0.1',
+        ['cooling/cooling=op_split',
+         'cooling/cfl_cool=0.1',
          'cooling/cfl_op_cool=0.001',
          'job/problem_id=cooling2']
     athena.run('cooling/athinput.point_cooling_test', arguments)

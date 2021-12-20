@@ -48,6 +48,7 @@ def run(**kwargs):
     # for enrolled cooling
     for N in resolution_range:
         arguments = ['job/problem_id=linear_ti_test-euler-{}'.format(N),
+                     'cooling/cooling=enroll',
                      'cooling/coolftn='+coolfnc,
                      'cooling/cfl_cool=0.5',
                      'cooling/cfl_op_cool=-1',
@@ -67,6 +68,7 @@ def run(**kwargs):
     # for operater split cooling
     for N in resolution_range:
         arguments = ['job/problem_id=linear_ti_test-op-{}'.format(N),
+                     'cooling/cooling=op_split',
                      'cooling/coolftn='+coolfnc,
                      'cooling/cfl_cool=5.0',
                      'cooling/cfl_op_cool=0.5',

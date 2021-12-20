@@ -11,6 +11,7 @@
 // C headers
 
 // C++ headers
+#include <string>
 
 // Athena++ headers
 #include "../athena.hpp"
@@ -22,34 +23,35 @@ class CoolingFunctionBase;
 
 class CoolingSolver {
  public:
-  explicit CoolingSolver(ParameterInput *pin);
+  explicit CoolingSolver(MeshBlock *pmb, ParameterInput *pin);
   ~CoolingSolver();
 
-  static void CoolingEuler(MeshBlock *pmb, const Real t, const Real dt,
+  static void CoolingSourceTerm(MeshBlock *pmb, const Real t, const Real dt,
        const AthenaArray<Real> &prim, const AthenaArray<Real> &prim_scalar,
        const AthenaArray<Real> &bcc, AthenaArray<Real> &cons,
        AthenaArray<Real> &cons_scalar);
   static Real CoolingTimeStep(MeshBlock *pmb);
-  static CoolingFunctionBase *pcf;
-  static Units *punit;
-  static Real cfl_cool;
-  static Real cfl_op_cool;
-  static AthenaArray<Real> edot, edot_floor;
+  CoolingFunctionBase *pcf;
+  Units *punit;
+  Real cfl_cool;
+  Real cfl_op_cool;
+  AthenaArray<Real> edot, edot_floor;
 
   void OperatorSplitSolver(MeshBlock *pmb);
   void InitBookKeepingArrays(MeshBlock *pmb, int uov_idx, int umbd_idx);
   void CalculateTotalCoolingRate(MeshBlock *pmb, Real dt);
 
   bool op_flag;
-  std::string coolftn;
+  std::string cooling, solver, coolftn;
+
+  Real Solver(Real press, Real rho, Real dt);
 
  private:
-  static bool bookkeeping_;
-
   Real CoolingExplicitSubcycling(Real tend, Real press, const Real rho);
 
   int uov_idx_,umbd_idx_; // indicies for user_out_var, ruser_meshblock_data
   int nsub_max_;
+  bool bookkeeping_;
 };
 
 //! \brief Base class for Cooling Functions

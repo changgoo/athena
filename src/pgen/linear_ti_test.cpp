@@ -31,9 +31,6 @@
 #include "../microphysics/units.hpp"     // Units
 #include "../parameter_input.hpp"          // ParameterInput
 
-// Global variables ---
-CoolingSolver *pcool;
-
 // mean density input to the simulation, for comparing to the maximum density
 Real rhobar_init;
 // Length of the box in code units, initialized in InitUserMeshData()
@@ -43,7 +40,7 @@ Real MaxOverDens(MeshBlock *pmb, int iout);
 
 // calculate growth rate of perturbation
 static Real SolveCubic(const Real b, const Real c, const Real d);
-static Real OmegaG(const Real rho, const Real Press, const Real k);
+static Real OmegaG(MeshBlock *pmb, const Real rho, const Real Press, const Real k);
 
 //========================================================================================
 //! \fn void Mesh::InitUserMeshData(ParameterInput *pin)
@@ -55,14 +52,19 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   // determine length of the box in code units
   Lbox = mesh_size.x1max - mesh_size.x1min;
 
-  // initialze cooling function, cooling solver, units
-  pcool = new CoolingSolver(pin);
-  // Enroll source function
-  if (!pcool->op_flag) {
-    EnrollUserExplicitSourceFunction(&CoolingSolver::CoolingEuler);
-    std::cout << "Cooling solver is enrolled" << std::endl;
+  if (cooling) {
+    std::string cooling_type = pin->GetString("cooling", "cooling");
+    if (cooling_type.compare("enroll") == 0) {
+      EnrollUserExplicitSourceFunction(&CoolingSolver::CoolingSourceTerm);
+      std::cout << "Cooling solver is enrolled" << std::endl;
+    } else if (cooling_type.compare("op_split") == 0) {
+      std::cout << "Cooling solver is set to operator split" << std::endl;
+    }
   } else {
-    std::cout << "Cooling solver is set to operator split" << std::endl;
+    std::stringstream msg;
+    msg << "### FATAL ERROR in ProblemGenerator" << std::endl
+        << "Cooling must be turned on" << std::endl;
+    ATHENA_ERROR(msg);
   }
 
   // Enroll timestep so that dt <= min t_cool
@@ -160,7 +162,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   // determine wavenumber in inverse code length
   Real kx = 2*PI*kn/Lbox;
   // determine growth rate via dispersion relation
-  Real om = OmegaG(rho_0,pgas_0,kx);
+  Real om = OmegaG(this, rho_0,pgas_0,kx);
   if (Globals::my_rank == 0) {
     std::cout << "  Lbox = " << Lbox << std::endl;
     std::cout << "  k = " << kx << std::endl;
@@ -196,7 +198,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
 void MeshBlock::UserWorkInLoop() {
   if (pcool->op_flag) pcool->OperatorSplitSolver(this);
-  pcool->CalculateTotalCoolingRate(this,pmy_mesh->dt);
+  // pcool->CalculateTotalCoolingRate(this,pmy_mesh->dt);
 
   return;
 }
@@ -249,7 +251,8 @@ static Real SolveCubic(const Real b, const Real c, const Real d) {
 //! - input rho and P are in code Units
 //! - output growth rate of instability in code Units
 //========================================================================================
-static Real OmegaG(const Real rho, const Real Press, const Real k) {
+static Real OmegaG(MeshBlock *pmb, const Real rho, const Real Press, const Real k) {
+  CoolingSolver *pcool=pmb->pcool;
   CoolingFunctionBase *pcf = pcool->pcf;
   Units *punit = pcf->punit;
   Real gm1 = pcf->gamma_adi-1;

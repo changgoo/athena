@@ -33,6 +33,7 @@
 #include "../gravity/gravity.hpp"
 #include "../gravity/mg_gravity.hpp"
 #include "../hydro/hydro.hpp"
+#include "../microphysics/cooling.hpp"
 #include "../orbital_advection/orbital_advection.hpp"
 #include "../parameter_input.hpp"
 #include "../particles/particles.hpp"
@@ -206,6 +207,11 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
     pbval->AdvanceCounterPhysID(CellCenteredBoundaryVariable::max_phys_id);
   }
 
+  // CoolingSolver: constructor depends on EOS
+  if (pm->cooling) {
+    pcool = new CoolingSolver(this, pin);
+  }
+
   // OrbitalAdvection: constructor depends on Coordinates, Hydro, Field, PassiveScalars.
   porb = new OrbitalAdvection(this, pin);
 
@@ -349,6 +355,11 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
   if(CR_ENABLED) {
     pcr = new CosmicRay(this, pin);
     pbval->AdvanceCounterPhysID(CellCenteredBoundaryVariable::max_phys_id);
+  }
+
+  // CoolingSolver: constructor depends on EOS
+  if (pm->cooling) {
+    pcool = new CoolingSolver(this, pin);
   }
 
   // OrbitalAdvection: constructor depends on Coordinates, Hydro, Field, PassiveScalars.

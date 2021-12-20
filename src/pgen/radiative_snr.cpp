@@ -29,7 +29,7 @@
 #include "../parameter_input.hpp"          // ParameterInput
 
 // Global variables ---
-CoolingSolver *pcool;
+// CoolingSolver *pcool;
 
 // user function
 void AddSupernova(Mesh *pm);
@@ -55,13 +55,21 @@ Real r_SN, M_ej, E_SN, t_SN, dt_SN;
 //========================================================================================
 void Mesh::InitUserMeshData(ParameterInput *pin) {
   // Initialize Cooling Solver
-  pcool = new CoolingSolver(pin);
+  // pcool = new CoolingSolver(pin);
   // Enroll source function
-  if (!pcool->op_flag) {
-    EnrollUserExplicitSourceFunction(&CoolingSolver::CoolingEuler);
-    std::cout << "Cooling solver is enrolled" << std::endl;
+  if (cooling) {
+    std::string cooling_type = pin->GetString("cooling", "cooling");
+    if (cooling_type.compare("enroll") == 0) {
+      EnrollUserExplicitSourceFunction(&CoolingSolver::CoolingSourceTerm);
+      std::cout << "Cooling solver is enrolled" << std::endl;
+    } else if (cooling_type.compare("op_split") == 0) {
+      std::cout << "Cooling solver is set to operator split" << std::endl;
+    }
   } else {
-    std::cout << "Cooling solver is set to operator split" << std::endl;
+    std::stringstream msg;
+    msg << "### FATAL ERROR in ProblemGenerator" << std::endl
+        << "Cooling must be turned on" << std::endl;
+    ATHENA_ERROR(msg);
   }
 
   // Enroll timestep so that dt <= min t_cool
@@ -75,13 +83,6 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     M_ej = pin->GetOrAddReal("problem","M_ej",10.0);
     dt_SN = pin->GetOrAddReal("problem","dt_SN",-1); // interval of SNe
   }
-
-  // show some values for sanity check.
-  if (Globals::my_rank == 0) {
-    // dump cooling function used in ascii format to e.g., tigress_coolftn.txt
-    pcool->pcf->PrintCoolingFunction();
-  }
-  Units *punit = pcool->pcf->punit;
 
   // Enroll user-defined functions
   int n_user_hst=10, i_user_hst=0;
@@ -189,9 +190,10 @@ void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
                 << " --> next SN will be at " << t_SN << std::endl;
   }
 
+  CoolingFunctionBase *pcf = my_blocks(0)->pcool->pcf;
   // Add density perturbation
   Real nH_0 = pin->GetReal("problem", "nH_0"); // measured in m_p muH cm^-3
-  Real rho_0 = nH_0*pcool->pcf->nH_to_code_den;
+  Real rho_0 = nH_0*pcf->nH_to_code_den;
   Real amp_den = pin->GetOrAddReal("problem","amp_den",0.0);
   if (amp_den>0) {
     PerturbationGenerator *ppert;
@@ -311,10 +313,10 @@ void AddSupernova(Mesh *pm) {
 #ifdef MPI_PARALLEL
   MPI_Allreduce(MPI_IN_PLACE, &my_vol, 1, MPI_ATHENA_REAL, MPI_SUM, MPI_COMM_WORLD);
 #endif
-
+  Units *punit = pm->my_blocks(0)->pcool->punit;
   // get pressure fron SNe in the code unit
-  Real rhosn = M_ej*pcool->punit->Msun_in_code/my_vol;
-  Real usn = E_SN*pcool->punit->Bethe_in_code/my_vol;
+  Real rhosn = M_ej*punit->Msun_in_code/my_vol;
+  Real usn = E_SN*punit->Bethe_in_code/my_vol;
 
   // add the SN energy
   for (int b=0; b<pm->nblocal; ++b) {
@@ -367,7 +369,7 @@ Real HistoryMass(MeshBlock *pmb, int iout) {
       pmb->pcoord->CellVolume(k, j, is, ie, vol);
       for (int i=is; i<=ie; ++i) {
         if (iout == i_M_hot) {
-          Temp = pcool->pcf->GetTemperature(rho(k,j,i), press(k,j,i));
+          Temp = pmb->pcool->pcf->GetTemperature(rho(k,j,i), press(k,j,i));
           if (Temp > Thot0) {
             mass += rho(k,j,i)*vol(i);
           }
@@ -399,7 +401,7 @@ Real HistoryEnergy(MeshBlock *pmb, int iout) {
       for (int i=is; i<=ie; ++i) {
         Real eint = press(k,j,i)*vol(i)/(pmb->peos->GetGamma()-1);
         if (iout == i_e_hot) {
-          Real Temp = pcool->pcf->GetTemperature(rho(k,j,i), press(k,j,i));
+          Real Temp = pmb->pcool->pcf->GetTemperature(rho(k,j,i), press(k,j,i));
           if (Temp > Thot0) energy += eint;
         } else {
           energy += eint;
@@ -469,7 +471,7 @@ Real HistoryShell(MeshBlock *pmb, int iout) {
         Real vz = pmb->phydro->w(IVZ,k,j,i);
         Real rad = std::sqrt(SQR(x - x0) + SQR(y - y0) + SQR(z - z0));
         Real vr = (vx*(x-x0) + vy*(y-y0) + vz*(z-z0))/rad;
-        Temp = pcool->pcf->GetTemperature(rho(k,j,i), press(k,j,i));
+        Temp = pmb->pcool->pcf->GetTemperature(rho(k,j,i), press(k,j,i));
         if ((Temp < Thot0) && (vr > vr0)) {
           if (iout == i_M_sh) { // Mass
             sum += rho(k,j,i)*vol(i);

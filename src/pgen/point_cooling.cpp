@@ -27,9 +27,6 @@
 #include "../microphysics/cooling.hpp"     // CoolingSolver
 #include "../parameter_input.hpp"          // ParameterInput
 
-// Global variables ---
-CoolingSolver *pcool;
-
 //========================================================================================
 //! \fn void Mesh::InitUserMeshData(ParameterInput *pin)
 //! \brief Function to initialize problem-specific data in mesh class.  Can also be used
@@ -37,13 +34,19 @@ CoolingSolver *pcool;
 //! functions in this file.  Called in Mesh constructor.
 //========================================================================================
 void Mesh::InitUserMeshData(ParameterInput *pin) {
-  pcool = new CoolingSolver(pin);
-  // Enroll source function
-  if (!pcool->op_flag) {
-    EnrollUserExplicitSourceFunction(&CoolingSolver::CoolingEuler);
-    std::cout << "Cooling solver is enrolled" << std::endl;
+  if (cooling) {
+    std::string cooling_type = pin->GetString("cooling", "cooling");
+    if (cooling_type.compare("enroll") == 0) {
+      EnrollUserExplicitSourceFunction(&CoolingSolver::CoolingSourceTerm);
+      std::cout << "Cooling solver is enrolled" << std::endl;
+    } else if (cooling_type.compare("op_split") == 0) {
+      std::cout << "Cooling solver is set to operator split" << std::endl;
+    }
   } else {
-    std::cout << "Cooling solver is set to operator split" << std::endl;
+    std::stringstream msg;
+    msg << "### FATAL ERROR in ProblemGenerator" << std::endl
+        << "Cooling must be turned on" << std::endl;
+    ATHENA_ERROR(msg);
   }
 
   // Enroll timestep so that dt <= min t_cool
