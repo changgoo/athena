@@ -62,6 +62,12 @@ class EquationOfState {
     AthenaArray<Real> &s, const AthenaArray<Real> &r_old, AthenaArray<Real> &r,
     Coordinates *pco, int il, int iu, int jl, int ju, int kl, int ku);
 
+  bool ApplyNeighborFloorsDensity(AthenaArray<Real> &cons, AthenaArray<Real> &bcc,
+    int k, int j, int i, int il, int iu, int jl, int ju, int kl, int ku);
+
+  bool ApplyNeighborFloorsPressure(AthenaArray<Real> &cons, AthenaArray<Real> &bcc,
+    int k, int j, int i, int il, int iu, int jl, int ju, int kl, int ku);
+
   // pass k, j, i to following 2x functions even though x1-sliced input array is expected
   // in order to accomodate position-dependent floors
 #pragma omp declare simd simdlen(SIMD_WIDTH) uniform(this,prim,k,j) linear(i)
@@ -155,14 +161,18 @@ class EquationOfState {
   Real GetGamma() const {return gamma_;}
 #endif
 
+  void ClearBookKeepingArray() {efloor_.ZeroClear();}
+  AthenaArray<Real> ReturnBookKeepingArray() {return efloor_;}
+
  private:
   // (C++11) in-class Default Member Initializer (fallback option):
   const Real float_min{std::numeric_limits<float>::min()};
   MeshBlock *pmy_block_;                 // ptr to MeshBlock containing this EOS
+  bool neighbor_flooring_;               // flag for negibhor_flooring_
   Real iso_sound_speed_, gamma_;         // isothermal Cs, ratio of specific heats
   Real density_floor_, pressure_floor_;  // density and pressure floors
   Real energy_floor_;                    // energy floor
-  Real scalar_floor_; // dimensionless concentration floor
+  Real scalar_floor_;                    // dimensionless concentration floor
   Real sigma_max_, beta_min_;            // limits on ratios of gas quantities to pmag
   Real gamma_max_;                       // maximum Lorentz factor
   Real rho_min_, rho_pow_;               // variables to control power-law denity floor
@@ -170,6 +180,7 @@ class EquationOfState {
   Real rho_unit_, inv_rho_unit_;         // physical unit/sim unit for mass density
   Real egas_unit_, inv_egas_unit_;       // physical unit/sim unit for energy density
   Real vsqr_unit_, inv_vsqr_unit_;       // physical unit/sim unit for speed^2
+  AthenaArray<Real> efloor_;
   AthenaArray<Real> g_, g_inv_;          // metric and its inverse, used in GR
   AthenaArray<Real> normal_dd_;          // normal-frame densities, used in relativity
   AthenaArray<Real> normal_ee_;          // normal-frame energies, used in relativity
