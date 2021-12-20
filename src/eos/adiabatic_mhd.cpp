@@ -30,8 +30,7 @@ EquationOfState::EquationOfState(MeshBlock *pmb, ParameterInput *pin) :
     density_floor_{pin->GetOrAddReal("hydro", "dfloor", std::sqrt(1024*float_min))},
     pressure_floor_{pin->GetOrAddReal("hydro", "pfloor", std::sqrt(1024*float_min))},
     scalar_floor_{pin->GetOrAddReal("hydro", "sfloor", std::sqrt(1024*float_min))},
-    beta(1.0),
-    efloor_(pmb->ncells3, pmb->ncells2, pmb->ncells1) {}
+    beta(1.0), bookkeeping(false) {}
 
 //----------------------------------------------------------------------------------------
 //! \fn void EquationOfState::ConservedToPrimitive(AthenaArray<Real> &cons,
@@ -100,7 +99,7 @@ void EquationOfState::ConservedToPrimitive(
           w_p = gm1*u_e; // calculate pressure
           // apply pressure floor, correct total energy
           if (w_p < pressure_floor_) {
-            efloor_(k,j,i) += beta*(pressure_floor_- w_p)/gm1;
+            if (bookkeeping) efloor(k,j,i) += beta*(pressure_floor_- w_p)/gm1;
             w_p = pressure_floor_;
             u_e = w_p/gm1 + e_k + pb;
           } else {
@@ -141,7 +140,7 @@ void EquationOfState::ConservedToPrimitive(
 
           // apply pressure floor, correct total energy
           if (w_p < pressure_floor_) {
-            efloor_(k,j,i) += beta*(pressure_floor_- w_p)/gm1;
+            if (bookkeeping) efloor(k,j,i) += beta*(pressure_floor_- w_p)/gm1;
             w_p = pressure_floor_;
             u_e = w_p/gm1 + e_k + pb;
           }
@@ -318,7 +317,8 @@ bool EquationOfState::ApplyNeighborFloorsDensity(AthenaArray<Real> &cons,
       }
     }
     // update bookkeeping array before assignment
-    efloor_(k,j,i) += (q_neighbors(IEN)/n_neighbors - cons(IEN,k,j,i))*beta;
+    if (bookkeeping)
+      efloor(k,j,i) += (q_neighbors(IEN)/n_neighbors - cons(IEN,k,j,i))*beta;
     // assign averaged density, momentum, internal energy
     for (int n=0; n<(NHYDRO); ++n)
       cons(n,k,j,i) = q_neighbors(n)/n_neighbors;
@@ -388,7 +388,7 @@ bool EquationOfState::ApplyNeighborFloorsPressure(AthenaArray<Real> &cons,
       }
     }
     // update bookkeeping array before assignment
-    efloor_(k,j,i) += (q_neighbors/n_neighbors - eint)*beta;
+    if (bookkeeping) efloor(k,j,i) += (q_neighbors/n_neighbors - eint)*beta;
     // assign internal energy
     cons(IEN,k,j,i) = q_neighbors/n_neighbors;
     return true;

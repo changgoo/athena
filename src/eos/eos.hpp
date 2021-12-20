@@ -162,8 +162,8 @@ class EquationOfState {
 #endif
 
   Real beta;
-  void ClearBookKeepingArray() {efloor_.ZeroClear();}
-  AthenaArray<Real> ReturnBookKeepingArray() {return efloor_;}
+  bool bookkeeping;
+  AthenaArray<Real> efloor;
 
  private:
   // (C++11) in-class Default Member Initializer (fallback option):
@@ -181,7 +181,6 @@ class EquationOfState {
   Real rho_unit_, inv_rho_unit_;         // physical unit/sim unit for mass density
   Real egas_unit_, inv_egas_unit_;       // physical unit/sim unit for energy density
   Real vsqr_unit_, inv_vsqr_unit_;       // physical unit/sim unit for speed^2
-  AthenaArray<Real> efloor_;
   AthenaArray<Real> g_, g_inv_;          // metric and its inverse, used in GR
   AthenaArray<Real> normal_dd_;          // normal-frame densities, used in relativity
   AthenaArray<Real> normal_ee_;          // normal-frame energies, used in relativity

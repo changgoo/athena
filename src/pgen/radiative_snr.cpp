@@ -123,11 +123,21 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   ruser_meshblock_data[0](2) = 0.0; // total e_floor in cons2prim between history dumps
 
   // Set output variables
-  int num_user_variables = 2; // for edot bookkeeping
-  // instantanoues e_dot, e_dot_floor
+  int num_user_variables = 3; // for edot bookkeeping
+  // instantanoues e_dot, e_dot_floor, efloor (in eos)
   AllocateUserOutputVariables(num_user_variables);
 
-  pcool->InitBookKeepingArrays(this,0,0);
+  // initialize arrays for bookkeeping
+  // pcool->edot.NewAthenaArray(ncells3,ncells2,ncells1);
+  // pcool->edot_floor.NewAthenaArray(ncells3,ncells2,ncells1);
+  // pcool->efloor.NewAthenaArray(ncells3,ncells2,ncells1);
+  // shallow copy existing arrays
+  pcool->edot.InitWithShallowSlice(user_out_var,4,0,1);
+  pcool->edot_floor.InitWithShallowSlice(user_out_var,4,1,1);
+  pcool->bookkeeping = true;
+
+  peos->efloor.InitWithShallowSlice(user_out_var,4,2,1);
+  peos->bookkeeping = true;
 
   return;
 }
@@ -278,26 +288,25 @@ void Mesh::UserWorkInLoop() {
 void MeshBlock::UserWorkInLoop() {
   if (pcool->op_flag) pcool->OperatorSplitSolver(this);
   // sum up energy lost/gain through cooling and flooring in cooling solver
-  pcool->CalculateTotalCoolingRate(this,pmy_mesh->dt); // update ruser_meshblock_data
-
-  // sum up energy gain due to flooring in Cons2Prim
-  AthenaArray<Real> efloor(peos->ReturnBookKeepingArray());
-  // sum up cooling only done in the active cells
-  AthenaArray<Real> vol(ncells1);
-  Real delta_ef_block = 0.0;
-  for (int k = ks; k <= ke; ++k) {
-    for (int j = js; j <= je; ++j) {
-      pcoord->CellVolume(k, j, is, ie, vol);
-#pragma omp simd reduction(+:delta_ef_block)
-      for (int i = is; i <= ie; ++i) {
-        // if (pmy_mesh->time_integrator == "rk2")
-        //   delta_ef_block += 0.5*efloor(k,j,i)*vol(i);
-        // else if (pmy_mesh->time_integrator == "vl2")
-        delta_ef_block += efloor(k,j,i)*vol(i);
+  if (pcool->bookkeeping) {
+    AthenaArray<Real> vol(ncells1);
+    Real delta_e_cool=0.0, delta_e_floor=0.0, delta_e_floor2 = 0.0;
+    Real dt = pmy_mesh->dt;
+    for (int k = ks; k <= ke; ++k) {
+      for (int j = js; j <= je; ++j) {
+        pcoord->CellVolume(k, j, is, ie, vol);
+#pragma omp simd reduction(+:delta_e_cool,delta_e_floor,delta_e_floor2)
+        for (int i = is; i <= ie; ++i) {
+          delta_e_cool += pcool->edot(k,j,i)*dt*vol(i);
+          delta_e_floor += pcool->edot_floor(k,j,i)*dt*vol(i);
+          delta_e_floor2 += pcool->edot_floor(k,j,i)*vol(i);
+        }
       }
     }
+    ruser_meshblock_data[0](0) += delta_e_cool;
+    ruser_meshblock_data[0](1) += delta_e_floor;
+    ruser_meshblock_data[0](2) += delta_e_floor2;
   }
-  ruser_meshblock_data[0](2) += delta_ef_block;
   return;
 }
 

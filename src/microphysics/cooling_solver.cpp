@@ -96,7 +96,7 @@ void CoolingSolver::CoolingSourceTerm(MeshBlock *pmb, const Real t, const Real d
         if (press_after < press_floor) delta_press_floor += press_floor-press_after;
         Real press_next = std::max(press_after,press_floor);
 
-        if (pcool->bookkeeping_) {
+        if (pcool->bookkeeping) {
           if (pmb->pmy_mesh->time_integrator == "vl2") {
             pcool->edot(k,j,i) = delta_press/gm1/dt;
             pcool->edot_floor(k,j,i) = delta_press_floor/gm1/dt;
@@ -124,11 +124,11 @@ void CoolingSolver::CoolingSourceTerm(MeshBlock *pmb, const Real t, const Real d
 CoolingSolver::CoolingSolver(MeshBlock *pmb, ParameterInput *pin) :
   cfl_cool(pin->GetReal("cooling", "cfl_cool")),
   cfl_op_cool(pin->GetOrAddReal("cooling","cfl_op_cool",-1)),
+  op_flag(false), bookkeeping(false),
   coolftn(pin->GetOrAddString("cooling", "coolftn", "tigress")),
   cooling(pin->GetOrAddString("cooling", "cooling", "none")),
   solver(pin->GetOrAddString("cooling","solver","forward_euler")),
-  uov_idx_(-1), umbd_idx_(-1), op_flag(false),
-  nsub_max_(pin->GetOrAddInteger("cooling","nsub_max",-1)) {
+  uov_idx_(-1), nsub_max_(pin->GetOrAddInteger("cooling","nsub_max",-1)) {
   if (cooling.compare("op_split") == 0) {
     op_flag = true;
     if (nsub_max_ == -1) {
@@ -188,27 +188,20 @@ CoolingSolver::CoolingSolver(MeshBlock *pmb, ParameterInput *pin) :
   }
 }
 
-inline Real CoolingSolver::Solver(Real press, Real rho, Real dt) {
+//========================================================================================
+//! \fn CoolingSolver::Solver(Real press, Real rho, Real dt)
+//! \brief solve one cell. potentially extended with different methods
+//========================================================================================
+Real CoolingSolver::Solver(Real press, Real rho, Real dt) {
   // maybe added some conditionals for different solvers
   // if (solver.compare("forward_euler") == 0)
   return press*(1-dt/pcf->CoolingTime(rho, press));
 }
 
-void CoolingSolver::InitBookKeepingArrays(MeshBlock *pmb, int uov_idx, int umbd_idx) {
-  uov_idx_=uov_idx; // starting index for user_out_var
-  umbd_idx_=umbd_idx; // starting index for ruser_meshblock_data[0]
-  if (uov_idx_ == -1) {
-    // allocate new arrays for bookkeeping
-    edot.NewAthenaArray(pmb->ncells3,pmb->ncells2,pmb->ncells1);
-    edot_floor.NewAthenaArray(pmb->ncells3,pmb->ncells2,pmb->ncells1);
-  } else {
-    // or shallow copy existing arrays
-    edot.InitWithShallowSlice(pmb->user_out_var,4,uov_idx_,1);
-    edot_floor.InitWithShallowSlice(pmb->user_out_var,4,uov_idx_+1,1);
-  }
-  bookkeeping_ = true;
-}
-
+//========================================================================================
+//! \fn CoolingSolver::OperatorSplitSolver(MeshBlock *pmb, ParameterInput *pin)
+//! \brief Update cooling source term in a operatoer split manner using subcycling
+//========================================================================================
 void CoolingSolver::OperatorSplitSolver(MeshBlock *pmb) {
   // boundary comm. will not be called.
   // need to solve cooling in the ghost zones
@@ -258,7 +251,7 @@ void CoolingSolver::OperatorSplitSolver(MeshBlock *pmb) {
         if (press_after < press_floor) delta_press_floor += press_floor-press_after;
         Real press_next = std::max(press_after,press_floor);
 
-        if (bookkeeping_) {
+        if (bookkeeping) {
           edot(k,j,i) = delta_press/gm1/dt_mhd;
           edot_floor(k,j,i) = delta_press_floor/gm1/dt_mhd;
         }
@@ -300,35 +293,4 @@ Real CoolingSolver::CoolingExplicitSubcycling(Real tend, Real press, const Real 
               << " tend = " << tend
               << std::endl;
   return press;
-}
-
-void CoolingSolver::CalculateTotalCoolingRate(MeshBlock *pmb, Real dt) {
-  // do nothing it bookkeeping arrays are not initialized
-  if (!bookkeeping_) return;
-
-  // Extract indices
-  int is = pmb->is, ie = pmb->ie;
-  int js = pmb->js, je = pmb->je;
-  int ks = pmb->ks, ke = pmb->ke;
-  // sum up cooling only done in the active cells
-  AthenaArray<Real> vol(pmb->ncells1);
-  Real delta_e_block = 0.0, delta_ef_block = 0.0;
-  for (int k = ks; k <= ke; ++k) {
-    for (int j = js; j <= je; ++j) {
-      pmb->pcoord->CellVolume(k, j, is, ie, vol);
-#pragma omp simd reduction(+:delta_e_block,delta_ef_block)
-      for (int i = is; i <= ie; ++i) {
-        delta_e_block += edot(k,j,i)*dt*vol(i);
-        delta_ef_block += edot_floor(k,j,i)*dt*vol(i);
-      }
-    }
-  }
-  // add cooling and ceiling to hist outputs
-  pmb->ruser_meshblock_data[0](umbd_idx_) += delta_e_block;
-  pmb->ruser_meshblock_data[0](umbd_idx_+1) += delta_ef_block;
-}
-
-void CoolingSolver::ClearBookKeepingArray() {
-  edot.ZeroClear();
-  edot_floor.ZeroClear();
 }

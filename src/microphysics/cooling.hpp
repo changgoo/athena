@@ -31,28 +31,23 @@ class CoolingSolver {
        const AthenaArray<Real> &bcc, AthenaArray<Real> &cons,
        AthenaArray<Real> &cons_scalar);
   static Real CoolingTimeStep(MeshBlock *pmb);
-  CoolingFunctionBase *pcf;
-  Units *punit;
-  Real cfl_cool;
-  Real cfl_op_cool;
-  AthenaArray<Real> edot, edot_floor;
 
   void OperatorSplitSolver(MeshBlock *pmb);
-  void InitBookKeepingArrays(MeshBlock *pmb, int uov_idx, int umbd_idx);
-  void CalculateTotalCoolingRate(MeshBlock *pmb, Real dt);
-  void ClearBookKeepingArray();
-
-  bool op_flag;
-  std::string cooling, solver, coolftn;
-
   Real Solver(Real press, Real rho, Real dt);
+
+  CoolingFunctionBase *pcf;
+  Units *punit;
+  Real cfl_cool, cfl_op_cool;
+  AthenaArray<Real> edot, edot_floor;
+
+  bool op_flag,bookkeeping;
+  std::string cooling, solver, coolftn;
 
  private:
   Real CoolingExplicitSubcycling(Real tend, Real press, const Real rho);
 
-  int uov_idx_,umbd_idx_; // indicies for user_out_var, ruser_meshblock_data
+  int uov_idx_; // indicies for user_out_var
   int nsub_max_;
-  bool bookkeeping_;
 };
 
 //! \brief Base class for Cooling Functions
