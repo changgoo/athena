@@ -127,7 +127,7 @@ CoolingSolver::CoolingSolver(MeshBlock *pmb, ParameterInput *pin) :
   op_flag(false), bookkeeping(false),
   coolftn(pin->GetOrAddString("cooling", "coolftn", "tigress")),
   cooling(pin->GetOrAddString("cooling", "cooling", "none")),
-  solver(pin->GetOrAddString("cooling","solver","forward_euler")),
+  solver(pin->GetOrAddString("cooling", "solver", "forward_euler")),
   uov_idx_(-1), nsub_max_(pin->GetOrAddInteger("cooling","nsub_max",-1)) {
   if (cooling.compare("op_split") == 0) {
     op_flag = true;
@@ -162,12 +162,12 @@ CoolingSolver::CoolingSolver(MeshBlock *pmb, ParameterInput *pin) :
   if (coolftn.compare("tigress") == 0) {
     pcf = new TigressClassic(pin);
     if (Globals::my_rank == 0)
-      std::cout << "[CoolingSoler] Cooling function is set to TigressClassic"
+      std::cout << "[CoolingSolver] Cooling function is set to TigressClassic"
                 << std::endl;
   } else if (coolftn.compare("plf") == 0) {
     pcf = new PiecewiseLinearFits(pin);
     if (Globals::my_rank == 0)
-      std::cout << "[CoolingSoler] Cooling function is set to PiecewiseLinearFits"
+      std::cout << "[CoolingSolver] Cooling function is set to PiecewiseLinearFits"
                 << std::endl;
   } else {
     std::stringstream msg;
@@ -181,7 +181,7 @@ CoolingSolver::CoolingSolver(MeshBlock *pmb, ParameterInput *pin) :
   // set function pointer
   if (solver.compare("forward_euler") == 0) {
     if (Globals::my_rank == 0)
-      std::cout << "[CoolingSoler] Solver is set to ForwardEuler" << std::endl;
+      std::cout << "[CoolingSolver] Solver is set to ForwardEuler" << std::endl;
   } else {
     std::cout << "cooling/solver must be one of [forward_euler], but "
               << solver << " is given" << std::endl;
