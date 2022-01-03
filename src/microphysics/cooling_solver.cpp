@@ -36,7 +36,7 @@ Real CoolingSolver::CoolingTimeStep(MeshBlock *pmb) {
   Real cfl_cool = pmb->pcool->cfl_cool;
   for (int k=pmb->ks; k<=pmb->ke; ++k) {
     for (int j=pmb->js; j<=pmb->je; ++j) {
-#pragma omp simd
+#pragma omp simd reduction (min:min_dt)
       for (int i=pmb->is; i<=pmb->ie; ++i) {
         Real press = pmb->phydro->w(IPR,k,j,i);
         Real rho = pmb->phydro->w(IDN,k,j,i);

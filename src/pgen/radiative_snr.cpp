@@ -299,7 +299,7 @@ void MeshBlock::UserWorkInLoop() {
         for (int i = is; i <= ie; ++i) {
           delta_e_cool += pcool->edot(k,j,i)*dt*vol(i);
           delta_e_floor += pcool->edot_floor(k,j,i)*dt*vol(i);
-          delta_e_floor2 += pcool->edot_floor(k,j,i)*vol(i);
+          delta_e_floor2 += peos->efloor(k,j,i)*vol(i);
         }
       }
     }
