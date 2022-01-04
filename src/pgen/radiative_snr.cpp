@@ -61,9 +61,11 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     std::string cooling_type = pin->GetString("cooling", "cooling");
     if (cooling_type.compare("enroll") == 0) {
       EnrollUserExplicitSourceFunction(&CoolingSolver::CoolingSourceTerm);
-      std::cout << "Cooling solver is enrolled" << std::endl;
+      if (Globals::my_rank == 0)
+        std::cout << "Cooling solver is enrolled" << std::endl;
     } else if (cooling_type.compare("op_split") == 0) {
-      std::cout << "Cooling solver is set to operator split" << std::endl;
+      if (Globals::my_rank == 0)
+        std::cout << "Cooling solver is set to operator split" << std::endl;
     }
   } else {
     std::stringstream msg;

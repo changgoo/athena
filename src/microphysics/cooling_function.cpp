@@ -140,12 +140,14 @@ Real PiecewiseLinearFits::Lambda_T(const Real rho, const Real Press) {
   for (k=n; k>=0; k--) {
     if (T >= T_cooling_curve[k]) break;
   }
+  Real cool;
   if (T > T_cooling_curve[0]) {
-    return (lambda_cooling_curve[k] *
+    cool = (lambda_cooling_curve[k] *
       std::pow(T/T_cooling_curve[k], exponent_cooling_curve[k]));
   } else {
-    return 1.0e-30;
+    cool = 1.0e-30;
   }
+  return cool;
 }
 
 //========================================================================================
@@ -163,11 +165,13 @@ Real PiecewiseLinearFits::dlnL_dlnT(const Real rho, const Real Press) {
   for (k=n; k>=0; k--) {
     if (T >= T_cooling_curve[k]) break;
   }
+  Real dcool;
   if (T > T_cooling_curve[0]) {
-    return exponent_cooling_curve[k];
+    dcool = exponent_cooling_curve[k];
   } else {
-    return 0.0;
+    dcool = 0.0;
   }
+  return dcool;
 }
 
 //========================================================================================
@@ -179,10 +183,8 @@ Real PiecewiseLinearFits::dlnL_dlnT(const Real rho, const Real Press) {
 //========================================================================================
 Real PiecewiseLinearFits::Gamma_T(const Real rho, const Real Press) {
   Real T = GetTemperature(rho,Press);
-  if (T < T_PE)
-    return Gamma0;
-  else
-    return 0.0;
+  Real heat = T < T_PE ? Gamma0 : 0;
+  return heat;
 }
 
 //========================================================================================
@@ -226,12 +228,10 @@ TigressClassic::TigressClassic(ParameterInput *pin) :
 //========================================================================================
 Real TigressClassic::Lambda_T(const Real rho, const Real Press) {
   Real T1 = Press/rho*punit->Temperature;
-  if (T1 < Tmin_tbl) return 0;
-
   int T1idx = get_Tidx(T1);
   Real dTemp = (T1-T1_tbl[T1idx])/(T1_tbl[T1idx+1]-T1_tbl[T1idx]);
   Real cool = cool_table[T1idx]+(cool_table[T1idx+1]-cool_table[T1idx])*dTemp;
-
+  cool = T1 < Tmin_tbl ? 0.0 : cool;
   return cool;
 }
 
@@ -246,9 +246,7 @@ Real TigressClassic::Lambda_T(const Real rho, const Real Press) {
 //========================================================================================
 Real TigressClassic::dlnL_dlnT(const Real rho, const Real Press) {
   Real T1 = Press/rho*punit->Temperature;
-
   int T1idx = get_Tidx(T1);
-
   Real dLdT = (cool_table[T1idx+1]-cool_table[T1idx])/(T1_tbl[T1idx+1]-T1_tbl[T1idx]);
   Real dlnLdlnT = dLdT*T1/(cool_table[T1idx]+dLdT*(T1-T1_tbl[T1idx]));
   return dlnLdlnT;
@@ -264,7 +262,6 @@ Real TigressClassic::dlnL_dlnT(const Real rho, const Real Press) {
 //========================================================================================
 Real TigressClassic::Gamma_T(const Real rho, const Real Press) {
   Real T1 = Press/rho*punit->Temperature;
-
   int T1idx = get_Tidx(T1);
   Real dTemp = (T1-T1_tbl[T1idx])/(T1_tbl[T1idx+1]-T1_tbl[T1idx]);
   Real heat = heat_table[T1idx]+(heat_table[T1idx+1]-heat_table[T1idx])*dTemp;
@@ -281,22 +278,12 @@ Real TigressClassic::Gamma_T(const Real rho, const Real Press) {
 //========================================================================================
 Real TigressClassic::GetTemperature(const Real rho, const Real Press) {
   Real T1 = Press / rho * punit->Temperature;
-  int T1idx;
-  Real Tnew;
-  Real Ti,Tip1,T1i,T1ip1;
-
-  Real Tmax=mumax*T1;
-  Real Tmin=mumin*T1;
-
-  if(Tmax < 5.e3) return Tmax;
-  if(Tmin > 1.e7) return Tmin;
-
-  T1idx = get_Tidx(T1);
-  T1i   = T1_tbl[T1idx  ];
-  T1ip1 = T1_tbl[T1idx+1];
-  Ti   = temp_tbl[T1idx  ];
-  Tip1 = temp_tbl[T1idx+1];
-  Tnew = Ti+(Tip1-Ti)*(T1-T1i)/(T1ip1-T1i);
+  int T1idx = get_Tidx(T1);
+  Real T1i   = T1_tbl[T1idx  ];
+  Real T1ip1 = T1_tbl[T1idx+1];
+  Real Ti   = temp_tbl[T1idx  ];
+  Real Tip1 = temp_tbl[T1idx+1];
+  Real Tnew = Ti+(Tip1-Ti)*(T1-T1i)/(T1ip1-T1i);
 
   return Tnew;
 }
@@ -323,17 +310,11 @@ Real TigressClassic::Get_mu(const Real rho, const Real Press) {
 //! - cooling/heating will be extrapolated beyond this range
 //========================================================================================
 int TigressClassic::get_Tidx(const Real T1) {
-  Real Tidx;
-  Real x1, x2;
+  int idx, ireturn;
 
-  if(T1 < Tmin_tbl) return 0;
-  if(T1 >= Tmax_tbl) return NTBL-2;
+  idx = static_cast<int>(std::log10(T1/Tmin_tbl)/dlnT_tbl);
+  ireturn = T1 < Tmin_tbl ? 0 : idx;
+  ireturn = T1 > Tmax_tbl ? NTBL-2 : idx;
 
-  x1 = log10(T1/Tmin_tbl)/dlnT_tbl;
-  x2 = NTBL-2;
-  if (x1 < x2) {
-    return static_cast<int>(x1);
-  } else {
-    return static_cast<int>(x2);
-  }
+  return ireturn;
 }
