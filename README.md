@@ -117,7 +117,7 @@ The easiest way to contribute to TIGRIS is to fork the repository to your GitHub
 1. Fork the repository to your GitHub account (only once) at https://github.com/PrincetonUniversity/tigris/fork
 2. Clone a local copy of your private fork:
 ```
-git clone https://github.com/<username>/athena ./athena-<username>
+git clone https://github.com/<username>/tigris ./tigris-<username>
 ```
 3. Create a descriptively-named feature branch on the fork:
 ```
@@ -145,11 +145,11 @@ The use of separate branches for both new features and bug fixes, no matter how 
 For the majority of development, users should use personal forks instead of branches on [PrincetonUniversity/tigris](https://github.com/PrincetonUniversity/tigris) (especially for larger development projects). The shared Athena++ repository should only contain a restricted set of main feature branches and temporary hotfix branches at any given time. <!-- consider reaching out to Athena++ developers before starting any significant PR/feature development to see if anyone is working on it or if we would consider merging it into Athena++-->
 
 To update your private fork with changes from [PrincetonUniversity/tigris](https://github.com/PrincetonUniversity/tigris), from the `master` branch on a cloned copy of the forked repo:
-1. Add a remote named `upstream` for the original Athena++ repository:
+1. Add a remote named `upstream` for the original TIGRIS repository:
 ```
 git remote add upstream https://github.com/PrincetonUniversity/tigris
 ```
-2. Fetch the updates from the original Athena++ repository:
+2. Fetch the updates from the original TIGRIS repository:
 ```
 git fetch upstream
 ```
