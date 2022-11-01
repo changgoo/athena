@@ -112,8 +112,8 @@ void TurbulenceDriver::Generate() {
   if (fv_new_ == nullptr) {
     GenerateVector();
     if (turb_flag > 1) {
-      fv_ = new std::complex<Real>*[3];
-      for (int nv=0; nv<3; nv++) fv_[nv] = new std::complex<Real>[pfb->cnt_];
+      fv_new_ = new std::complex<Real>*[3];
+      for (int nv=0; nv<3; nv++) fv_new_[nv] = new std::complex<Real>[pfb->cnt_];
     }
   } else {
     Real OUdt = pm->dt;
