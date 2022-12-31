@@ -77,10 +77,6 @@ friend class OutputType;
            AthenaArray<Real>& par, int p1, int nprop);
   void AssignParticlesToMeshAux(
            const AthenaArray<Real>& par, int p1, int ma1, int nprop);
-  void InterpolateMeshAndAssignParticles(
-           const AthenaArray<Real>& meshsrc, int ms1,
-           AthenaArray<Real>& pardst, int pd1, int ni,
-           const AthenaArray<Real>& parsrc, int ps1, int ma1, int na);
   void DepositMeshAux(AthenaArray<Real>& u, int ma1, int mb1, int nprop);
 
  private:

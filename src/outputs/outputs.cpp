@@ -918,7 +918,7 @@ void Outputs::MakeOutputs(Mesh *pm, ParameterInput *pin, bool wtflag) {
         (wtflag && ptype->output_params.file_type == "rst")) {
       if (first && (ptype->output_params.file_type != "hst" || wtflag)) {
         pm->ApplyUserWorkBeforeOutput(pin);
-        if (pm->particle) Particles::FindDensityOnMesh(pm, true);
+        if (pm->particle) Particles::FindDensityOnMesh(pm, true); // (SMOON) Is this neccessary?
         first = false;
       }
       ptype->WriteOutputFile(pm, pin, wtflag);

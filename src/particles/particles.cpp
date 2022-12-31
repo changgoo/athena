@@ -138,6 +138,7 @@ void Particles::PostInitialize(Mesh *pm, ParameterInput *pin) {
 //! \brief finds particle mesh densities for all particle containers.
 //!
 //! If include_momentum is true, the momentum density field is also computed.
+//(SMOON) Is this function necessary? all these calculations are done in the time integrator task list.
 
 void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
   // Assign particle properties to mesh and send boundary.
@@ -153,7 +154,7 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
     for (Particles *ppar : pmb->ppar) {
       ppar->FindLocalDensityOnMesh(include_momentum);
       ppar->ppm->pmbvar->SendBoundaryBuffers();
-    }
+    } // (SMOON) This seems to be redundant with TimeIntegratorTaskList::SendParticleMesh
   }
 
   for (int b = 0; b < nblocks; ++b) {
