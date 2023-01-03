@@ -1,15 +1,17 @@
 import numpy as np
 import pandas as pd
 import os
+
 class timing_reader(object):
-    def __init__(self,base,pid):
+    def __init__(self, base, problem_id):
         """ Timing reader class
 
         Parameters
         ----------
-        base : string, base directory name
-
-        pid : string, problem id
+        base : str
+            base directory name
+        problem_id : str
+            problem id
 
         Methods
         -------
@@ -17,14 +19,17 @@ class timing_reader(object):
         load_loop_time
         load_timing
         """
-        self.base=base
-        self.pid=pid
-        self.fdict=dict()
-        lt = '{}{}.loop_time.txt'.format(base,pid)
-        tt = '{}{}.task_time.txt'.format(base,pid)
-        if os.path.isfile(lt): self.fdict['loop_time']=lt
-        if os.path.isfile(tt): self.fdict['task_time']=tt
 
+        self.base = base
+        self.problem_id = problem_id
+        self.fdict = dict()
+        lt = os.path.join(base,'{}.loop_time.txt'.format(problem_id))
+        tt = os.path.join(base,'{}.task_time.txt'.format(problem_id))
+
+        if os.path.isfile(lt):
+            self.fdict['loop_time'] = lt
+        if os.path.isfile(tt):
+            self.fdict['task_time'] = tt
 
     def load_task_time(self,groups=None):
         """Read .task_time.txt file
@@ -32,8 +37,8 @@ class timing_reader(object):
         Parameters
         ----------
         groups : list, e.g., ['Hydro','Primitives','UserWork']
-                 if provided, group tasks that have the same string in the list
-                 everything else will be summed and stored in 'Others'
+            if provided, group tasks that have the same string in the list everything else
+            will be summed and stored in 'Others'
 
         Returns
         -------
@@ -99,6 +104,7 @@ class timing_reader(object):
 
         for k in timing:
             timing[k] = np.array(timing[k])
+
         return pd.DataFrame(timing)
 
 
@@ -136,6 +142,7 @@ class timing_reader(object):
             info = from_one_line(l)
             for k,v in info.items():
                 timing[k].append(v)
+
         return pd.DataFrame(timing).rename(columns=dict(time='All'))
 
 
