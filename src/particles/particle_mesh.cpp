@@ -222,9 +222,9 @@ void ParticleMesh::InterpolateMeshToParticles(
 void ParticleMesh::AssignParticlesToMeshAux(
          const AthenaArray<Real>& par, int p1, int ma1, int nprop) {
   // Zero out meshaux.
-  std::fill(&weight(0,0,0), &weight(0,0,0) + ncells_, 0.0);
-  std::fill(&meshaux(ma1,0,0,0), &meshaux(ma1+nprop,0,0,0), 0.0);
-
+  Real *pfirst = &meshaux(ma1,0,0,0);
+  int size = nprop*meshaux.GetDim3()*meshaux.GetDim2()*meshaux.GetDim1();
+  std::fill(pfirst, pfirst + size, 0.0);
   // Allocate space for SIMD.
   Real **w1 __attribute__((aligned(CACHELINE_BYTES))) = new Real*[npc1_];
   Real **w2 __attribute__((aligned(CACHELINE_BYTES))) = new Real*[npc2_];
@@ -288,6 +288,7 @@ void ParticleMesh::AssignParticlesToMeshAux(
         for (int ipc2 = 0; ipc2 < npc2_; ++ipc2) {
 #pragma loop count (NPC)
           for (int ipc1 = 0; ipc1 < npc1_; ++ipc1) {
+            // weight of the particle at this cell
             Real w = w1[ipc1][kk] * w2[ipc2][kk] * w3[ipc3][kk];
 
             // Record the weights.
