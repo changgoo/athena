@@ -28,14 +28,14 @@ static Real _WeightFunction(Real dxi);
 //! \brief adds one auxiliary to the mesh and returns the index.
 
 int ParticleMesh::AddMeshAux() {
-  return nmeshaux++;
+  return nmeshaux_++;
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn ParticleMesh::ParticleMesh(Particles *ppar, int nmeshaux)
+//! \fn ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb)
 //! \brief constructs a new ParticleMesh instance.
 
-ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : nmeshaux(0), idens(-1),
+ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : nmeshaux_(0), idens(-1),
   imom1(-1), imom2(-1), imom3(-1), updated(false),
   is(pmb->is), ie(pmb->ie), js(pmb->js), je(pmb->je), ks(pmb->ks), ke(pmb->ke),
   active1_(ppar->active1_), active2_(ppar->active2_), active3_(ppar->active3_),
@@ -46,25 +46,26 @@ ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : nmeshaux(0), idens
   ncells_(nx1_ * nx2_ * nx3_),
   npc1_(active1_ ? NPC : 1), npc2_(active2_ ? NPC : 1), npc3_(active3_ ? NPC : 1),
   my_ipar_(ppar->my_ipar_), ppar_(ppar), pmb_(pmb), pmesh_(ppar->pmy_mesh) {
-  // Add density in meshaux.
+  // Add density and momentum in meshaux.
   idens = AddMeshAux();
-
-  // Add momentum in meshaux
   imom1 = AddMeshAux();
   imom2 = AddMeshAux();
   imom3 = AddMeshAux();
 
-  meshaux.NewAthenaArray(nmeshaux, nx3_, nx2_, nx1_);
-  coarse_meshaux_.NewAthenaArray(nmeshaux, pmb->ncc3, pmb->ncc2, pmb->ncc1);
+  meshaux_.NewAthenaArray(nmeshaux_, nx3_, nx2_, nx1_);
+  coarse_meshaux_.NewAthenaArray(nmeshaux_, pmb->ncc3, pmb->ncc2, pmb->ncc1);
 
   // Get a shorthand to density.
-  dens.InitWithShallowSlice(meshaux, 4, idens, 1);
+  dens_.InitWithShallowSlice(meshaux_, 4, idens, 1);
+  mom1_.InitWithShallowSlice(meshaux_, 4, imom1, 1);
+  mom2_.InitWithShallowSlice(meshaux_, 4, imom2, 1);
+  mom3_.InitWithShallowSlice(meshaux_, 4, imom3, 1);
 
   // Enroll CellCenteredBoundaryVariable object
   AthenaArray<Real> empty_flux[3]=
     {AthenaArray<Real>(),AthenaArray<Real>(), AthenaArray<Real>()};
 
-  pmbvar = new ParticleMeshBoundaryVariable(pmb, &meshaux, &coarse_meshaux_,
+  pmbvar = new ParticleMeshBoundaryVariable(pmb, &meshaux_, &coarse_meshaux_,
                                             empty_flux, this);
   pmbvar->bvar_index = pmb_->pbval->bvars.size();
   pmb_->pbval->bvars.push_back(pmbvar);
@@ -81,7 +82,7 @@ ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : nmeshaux(0), idens
 
 ParticleMesh::~ParticleMesh() {
   // Destroy the particle meshblock.
-  meshaux.DeleteAthenaArray();
+  meshaux_.DeleteAthenaArray();
 }
 
 //--------------------------------------------------------------------------------------
@@ -93,8 +94,35 @@ Real ParticleMesh::FindMaximumDensity() const {
   for (int k = ks; k <= ke; ++k)
     for (int j = js; j <= je; ++j)
       for (int i = is; i <= ie; ++i)
-        dmax = std::max(dmax, dens(k,j,i));
+        dmax = std::max(dmax, dens_(k,j,i));
   return dmax;
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn AthenaArray<Real> ParticleMesh::GetVelocityField()
+//! \brief returns the mass-weighted mean particle velocity at each cell
+//!
+//! \note
+//!   Precondition:
+//!   The particle properties on mesh must be assigned using the class method
+//!   Particles::FindDensityOnMesh().
+// TODO(SMOON) can't it be controled using the variable "updated"?
+// Need to look into time integrator task list and main.
+
+AthenaArray<Real> ParticleMesh::GetVelocityField() const {
+  AthenaArray<Real> vel(3, nx3_, nx2_, nx1_);
+  for (int k = ks; k <= ke; ++k) {
+    for (int j = js; j <= je; ++j) {
+      for (int i = is; i <= ie; ++i) {
+        Real rho = dens_(k,j,i);
+        rho = (rho > 0.0) ? rho : 1.0;
+        vel(0,k,j,i) = mom1(k,j,i) / rho;
+        vel(1,k,j,i) = mom2(k,j,i) / rho;
+        vel(2,k,j,i) = mom3(k,j,i) / rho;
+      }
+    }
+  }
+  return vel;
 }
 
 //--------------------------------------------------------------------------------------
@@ -221,8 +249,8 @@ void ParticleMesh::InterpolateMeshToParticles(
 void ParticleMesh::DepositParticlesToMeshAux(
          const AthenaArray<Real>& par, int p1, int ma1, int nprop) {
   // Zero out meshaux.
-  Real *pfirst = &meshaux(ma1,0,0,0);
-  int size = nprop*meshaux.GetDim3()*meshaux.GetDim2()*meshaux.GetDim1();
+  Real *pfirst = &meshaux_(ma1,0,0,0);
+  int size = nprop*meshaux_.GetDim3()*meshaux_.GetDim2()*meshaux_.GetDim1();
   std::fill(pfirst, pfirst + size, 0.0);
   // Allocate space for SIMD.
   Real **w1 __attribute__((aligned(CACHELINE_BYTES))) = new Real*[npc1_];
@@ -292,7 +320,7 @@ void ParticleMesh::DepositParticlesToMeshAux(
             Real vol = pc->GetCellVolume(imb3+ipc3,imb2+ipc2,imb1+ipc1);
             // Assign particles to meshaux.
             for (int n = 0; n < nprop; ++n)
-              meshaux(ma1+n,imb3+ipc3,imb2+ipc2,imb1+ipc1) += w * ps[n] / vol;
+              meshaux_(ma1+n,imb3+ipc3,imb2+ipc2,imb1+ipc1) += w * ps[n] / vol;
           }
         }
       }
@@ -326,7 +354,7 @@ void ParticleMesh::DepositMeshAux(AthenaArray<Real>& u, int ma1, int mb1, int np
     for (int k = ks; k <= ke; ++k)
       for (int j = js; j <= je; ++j)
         for (int i = is; i <= ie; ++i)
-          u(mb1+n,k,j,i) += meshaux(ma1+n,k,j,i) / pc->GetCellVolume(k,j,i);
+          u(mb1+n,k,j,i) += meshaux_(ma1+n,k,j,i) / pc->GetCellVolume(k,j,i);
 }
 
 //--------------------------------------------------------------------------------------

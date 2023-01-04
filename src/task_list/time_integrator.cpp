@@ -2330,7 +2330,10 @@ TaskStatus TimeIntegratorTaskList::SetBoundariesParticleMesh(MeshBlock *pmb, int
   for (Particles *ppar : pmb->ppar) {
     if (ppar->ppm->updated) {
       ppar->ppm->pmbvar->SetBoundaries();
-      if (!pmb->pmy_mesh->shear_periodic) ppar->ppm->updated=false;
+      // TODO (SMOON) currently, updated=false when solving Poisson because of this line,
+      // although the PM quantities are still consistent with Particle positions until
+      // new particle integration. Proper position of updated=false might be moved.
+      if (!pmb->pmy_mesh->shear_periodic) ppar->ppm->updated = false;
     }
     ppar->DepositPMtoMesh(stage);
   }
@@ -2358,6 +2361,9 @@ TaskStatus TimeIntegratorTaskList::ReceiveParticleMeshShear(MeshBlock *pmb, int 
     for (Particles *ppar : pmb->ppar) {
       if (ppar->ppm->updated) {
         ppar->ppm->pmbvar->SetShearingBoxBoundaryBuffers();
+       // TODO (SMOON) currently, updated=false when solving Poisson because of this line,
+       // although the PM quantities are still consistent with Particle positions until
+       // new particle integration. Proper position of updated=false might be moved.
         ppar->ppm->updated = false;
       }
     }

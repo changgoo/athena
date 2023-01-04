@@ -772,12 +772,14 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
   // particle velocity field
   if (output_params.variable.compare("vp") == 0 ||
       output_params.variable.compare("prim") == 0) {
+    // TODO (SMOON) change to standard vector loop
+    // need to access my_ipar_
     for (int ipar = 0; ipar<Particles::num_particles; ++ipar) {
       pod = new OutputData;
       pod->type = "VECTORS";
       pod->name = "vp";
       pod->name += std::to_string(ipar);
-      pod->data = pmb->ppar[ipar]->GetVelocityField();
+      pod->data = pmb->ppar[ipar]->ppm->GetVelocityField();
       AppendOutputDataNode(pod);
       num_vars_ += 3;
     }
@@ -791,7 +793,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
       pod->type = "SCALARS";
       pod->name = "rhop";
       pod->name += std::to_string(ipar);
-      pod->data = pmb->ppar[ipar]->GetMassDensity();
+      pod->data = pmb->ppar[ipar]->ppm->GetMassDensity();
       AppendOutputDataNode(pod);
       num_vars_++;
     }

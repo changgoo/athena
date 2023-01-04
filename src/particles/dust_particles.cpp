@@ -51,9 +51,9 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParame
     idpx2 = imom2;
     idpx3 = imom3;
 
-    dpx1.InitWithShallowSlice(ppm->meshaux, 4, idpx1, 1);
-    dpx2.InitWithShallowSlice(ppm->meshaux, 4, idpx2, 1);
-    dpx3.InitWithShallowSlice(ppm->meshaux, 4, idpx3, 1);
+    dpx1 = ppm->GetMomentumDensityX1(); // TODO (SMOON) Is ppm->updated?
+    dpx2 = ppm->GetMomentumDensityX2();
+    dpx3 = ppm->GetMomentumDensityX3();
   }
 
   AssignShorthands();
@@ -92,13 +92,14 @@ Real DustParticles::NewBlockTimeStep() {
     // Find the maximum local solid-to-gas density ratio.
     Coordinates *pc = pmy_block->pcoord;
     Hydro *phydro = pmy_block->phydro;
+    const AthenaArray<Real> &rhop = ppm->GetMassDensity();
     const int is = ppm->is, js = ppm->js, ks = ppm->ks;
     const int ie = ppm->ie, je = ppm->je, ke = ppm->ke;
     for (int k = ks; k <= ke; ++k) {
       for (int j = js; j <= je; ++j) {
         for (int i = is; i <= ie; ++i) {
           // TODO (SMOON) Is FindLocalDensity called before NewBlockTimeStep?
-          Real epsilon = ppm->dens(k,j,i) / phydro->u(IDN,k,j,i);
+          Real epsilon = rhop(k,j,i) / phydro->u(IDN,k,j,i);
           epsmax = std::max(epsmax, epsilon);
         }
       }

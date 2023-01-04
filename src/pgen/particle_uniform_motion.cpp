@@ -232,7 +232,7 @@ Real DeltaRho(MeshBlock *pmb, int iout) {
   } else {
     rho.NewAthenaArray(pmb->ncells3, pmb->ncells2, pmb->ncells1);
     for (int ipar=0; ipar<Particles::num_particles; ++ipar) {
-      AthenaArray<Real> rhop(pmb->ppar[ipar]->GetMassDensity());
+      AthenaArray<Real> rhop(pmb->ppar[ipar]->ppm->GetMassDensity());
       for (int k=ks; k<=ke; ++k)
         for (int j=js; j<=je; ++j)
           for (int i=is; i<=ie; ++i)
@@ -268,7 +268,7 @@ Real TotalMass(MeshBlock *pmb, int iout) {
   int ipar = iout-2;
   Particles *ppar = pmb->ppar[ipar];
 
-  AthenaArray<Real> rhop(ppar->GetMassDensity());
+  AthenaArray<Real> rhop(ppar->ppm->GetMassDensity());
   for (int k=ks; k<=ke; ++k) {
     for (int j=js; j<=je; ++j) {
       pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);

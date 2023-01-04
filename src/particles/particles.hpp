@@ -93,8 +93,6 @@ friend class ParticleMesh;
   void DepositPMtoMesh(int stage);
   virtual void FindLocalDensityOnMesh(bool include_momentum);
 
-  AthenaArray<Real> GetMassDensity() const { return ppm->dens; }; // TODO (SMOON) make ppm->dens private?
-  AthenaArray<Real> GetVelocityField() const;
   std::size_t GetSizeInBytes();
   bool IsGravity() { return isgravity_; }
   bool CheckInMeshBlock(Real x1, Real x2, Real x3);

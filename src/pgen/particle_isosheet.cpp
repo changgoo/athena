@@ -166,7 +166,7 @@ Real DeltaRho(MeshBlock *pmb, int iout) {
   AthenaArray<Real> vol(pmb->ncells1);
   AthenaArray<Real> rho;
   rho.InitWithShallowSlice(pmb->phydro->u,4,IDN,1);
-  AthenaArray<Real> rhop(pmb->ppar[0]->GetMassDensity());
+  AthenaArray<Real> rhop(pmb->ppar[0]->ppm->GetMassDensity());
   for (int k=ks; k<=ke; ++k) {
     Real x3 = pmb->pcoord->x3v(k);
     for (int j=js; j<=je; ++j) {

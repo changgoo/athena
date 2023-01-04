@@ -50,27 +50,25 @@ friend class OutputType;
   explicit ParticleMesh(Particles *ppar, MeshBlock *pmb);
   ~ParticleMesh();
 
-  // Accessor
+  // Interface
   Real FindMaximumDensity() const;
-
-  // methods
-  int AddMeshAux();
+  AthenaArray<Real> GetMassDensity() const { return dens_; };
+  AthenaArray<Real> GetMomentumDensityX1() const { return mom1_; };
+  AthenaArray<Real> GetMomentumDensityX2() const { return mom2_; };
+  AthenaArray<Real> GetMomentumDensityX3() const { return mom3_; };
+  AthenaArray<Real> GetVelocityField() const;
 
   ParticleMeshBoundaryVariable *pmbvar;
 
-  int nmeshaux;  //!> number of auxiliaries to the meshblock
-  int idens;   //!> index to density in meshaux
-  int imom1, imom2, imom3;   //!> index to momentum vector in meshaux
-
   bool updated; //!> flag whether pm is recacluated
 
- protected:
-  // Instance variables
-  AthenaArray<Real> meshaux, coarse_meshaux_;   //!> auxiliaries to the meshblock
-  int is, ie, js, je, ks, ke;  // beginning and ending indices
-  AthenaArray<Real> dens;    //!> shorthand to density in meshaux
+  // ParticleMeshBoundaryVariable needs access to these indices; hence public.
+  int imom1, imom2, imom3;   //!> index to momentum vector in meshaux
+  int idens;   //!> index to density in meshaux
 
+ protected:
   // Instance methods
+  int AddMeshAux();
   void InterpolateMeshToParticles(
            const AthenaArray<Real>& meshsrc, int ms1,
            AthenaArray<Real>& par, int p1, int nprop);
@@ -85,10 +83,15 @@ friend class OutputType;
   int nx1_, nx2_, nx3_;               // number of cells in meshaux in each dimension
   int ncells_;                        // total number of cells in meshaux
   int npc1_, npc2_, npc3_;            // size of a particle cloud
+  int is, ie, js, je, ks, ke;  // beginning and ending indices
+  int nmeshaux_;  //!> number of auxiliaries to the meshblock
 
   int my_ipar_;                //!> index to my particle container
   Particles *ppar_;            //!> ptr to my Particles instance
   MeshBlock *pmb_;             //!> ptr to my MeshBlock
   Mesh *pmesh_;                //!> ptr to my Mesh
+
+  AthenaArray<Real> meshaux_, coarse_meshaux_;   //!> auxiliaries to the meshblock
+  AthenaArray<Real> dens_, mom1_, mom2_, mom3_;    //!> shorthand to density and momentum
 };
 #endif  // PARTICLES_PARTICLE_MESH_HPP_
