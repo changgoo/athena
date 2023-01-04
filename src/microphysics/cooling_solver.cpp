@@ -75,6 +75,9 @@ void CoolingSolver::CoolingSourceTerm(MeshBlock *pmb, const Real t, const Real d
   Real temp_floor = pcf->Get_Tfloor(); // temperature floor
   Real gm1 = pcf->gamma_adi-1; // gamma-1
 
+  
+  const bool bookkeeping = pcool->bookkeeping;
+  
   for (int k = ks; k <= ke; ++k) {
     for (int j = js; j <= je; ++j) {
 #pragma omp simd
@@ -97,19 +100,15 @@ void CoolingSolver::CoolingSourceTerm(MeshBlock *pmb, const Real t, const Real d
         if (press_after < press_floor) delta_press_floor += press_floor-press_after;
         Real press_next = std::max(press_after,press_floor);
 
-        if (pcool->bookkeeping) {
-          if (pmb->pmy_mesh->time_integrator == "vl2") {
-            pcool->edot(k,j,i) = delta_press/gm1/dt;
-            pcool->edot_floor(k,j,i) = delta_press_floor/gm1/dt;
-          } else if (pmb->pmy_mesh->time_integrator == "rk2") {
-            pcool->edot(k,j,i) += 0.5*delta_press/gm1/dt;
-            pcool->edot_floor(k,j,i) += 0.5*delta_press_floor/gm1/dt;
-          }
-        }
-
         Real delta_e = (press_next-press)/gm1;
         // change internal energy
         cons(IEN,k,j,i) += delta_e;
+
+        if (bookkeeping) {
+          pcool->edot(k,j,i) += delta_press*factor;
+          pcool->edot_floor(k,j,i) += delta_press_floor*factor;
+        }
+
       }
     }
   }
