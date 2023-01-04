@@ -474,21 +474,17 @@ void Particles::AddOneParticle(Real x1, Real x2, Real x3,
 
 AthenaArray<Real> Particles::GetVelocityField() const {
   AthenaArray<Real> vel(3, ppm->nx3_, ppm->nx2_, ppm->nx1_);
-  for (int k = ppm->ks; k <= ppm->ke; ++k)
-    for (int j = ppm->js; j <= ppm->je; ++j)
+  for (int k = ppm->ks; k <= ppm->ke; ++k) {
+    for (int j = ppm->js; j <= ppm->je; ++j) {
       for (int i = ppm->is; i <= ppm->ie; ++i) {
-        Real rho;
-        if (imass == -1) {
-          rho = ppm->weight(k,j,i);
-        } else {
-          rho = ppm->density(k,j,i);
-        }
+        Real rho = ppm->dens(k,j,i);
         rho = (rho > 0.0) ? rho : 1.0;
-
         vel(0,k,j,i) = ppm->meshaux(imom1,k,j,i) / rho;
         vel(1,k,j,i) = ppm->meshaux(imom2,k,j,i) / rho;
         vel(2,k,j,i) = ppm->meshaux(imom3,k,j,i) / rho;
       }
+    }
+  }
   return vel;
 }
 
@@ -773,15 +769,8 @@ Real Particles::NewBlockTimeStep() {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void Particles::FindLocalDensityOnMesh(Mesh *pm, bool include_momentum)
-//! \brief finds the number density of particles on the mesh.
-//!
-//!   If include_momentum is true, the momentum density field is also computed,
-//!   assuming mass of each particle is unity.
-//! \note
-//!   Postcondition: ppm->weight becomes the density in each cell, and
-//!   if include_momentum is true, ppm->meshaux(imom1:imom3,:,:,:)
-//!   becomes the momentum density.
+//! \fn void Particles::FindLocalDensityOnMesh(bool include_momentum)
+//! \brief finds the mass and momentum density of particles on the mesh.
 
 void Particles::FindLocalDensityOnMesh(bool include_momentum) {
   Coordinates *pc(pmy_block->pcoord);
@@ -796,11 +785,11 @@ void Particles::FindLocalDensityOnMesh(bool include_momentum) {
     for (int k = 0; k < npar; ++k)
       pc->CartesianToMeshCoordsVector(xp(k), yp(k), zp(k),
         mass*vpx(k), mass*vpy(k), mass*vpz(k), mom1(k), mom2(k), mom3(k));
-    ppm->DepositParticlesToMeshAux(parprop, 0, ppm->iweight, 4);
+    ppm->DepositParticlesToMeshAux(parprop, 0, ppm->idens, 4);
   } else {
     AthenaArray<Real> parprop(npar);
     std::fill(&parprop(0), &parprop(0) + parprop.GetDim1(), mass);
-    ppm->DepositParticlesToMeshAux(parprop, 0, ppm->iweight, 1);
+    ppm->DepositParticlesToMeshAux(parprop, 0, ppm->idens, 1);
   }
 
   // set flag to trigger PM communications

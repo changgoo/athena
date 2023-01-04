@@ -35,8 +35,8 @@ int ParticleMesh::AddMeshAux() {
 //! \fn ParticleMesh::ParticleMesh(Particles *ppar, int nmeshaux)
 //! \brief constructs a new ParticleMesh instance.
 
-ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : nmeshaux(0), iweight(-1),
-  imom1(-1), imom2(-1), imom3(-1), imass(-1), updated(false),
+ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : nmeshaux(0), idens(-1),
+  imom1(-1), imom2(-1), imom3(-1), updated(false),
   is(pmb->is), ie(pmb->ie), js(pmb->js), je(pmb->je), ks(pmb->ks), ke(pmb->ke),
   active1_(ppar->active1_), active2_(ppar->active2_), active3_(ppar->active3_),
   dxi1_(active1_ ? RINF : 0),
@@ -46,9 +46,8 @@ ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : nmeshaux(0), iweig
   ncells_(nx1_ * nx2_ * nx3_),
   npc1_(active1_ ? NPC : 1), npc2_(active2_ ? NPC : 1), npc3_(active3_ ? NPC : 1),
   my_ipar_(ppar->my_ipar_), ppar_(ppar), pmb_(pmb), pmesh_(ppar->pmy_mesh) {
-  // Add weight in meshaux.
-  iweight = AddMeshAux();
-  if (ppar_->imass != -1) imass = AddMeshAux();
+  // Add density in meshaux.
+  idens = AddMeshAux();
 
   // Add momentum in meshaux
   imom1 = AddMeshAux();
@@ -58,9 +57,8 @@ ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : nmeshaux(0), iweig
   meshaux.NewAthenaArray(nmeshaux, nx3_, nx2_, nx1_);
   coarse_meshaux_.NewAthenaArray(nmeshaux, pmb->ncc3, pmb->ncc2, pmb->ncc1);
 
-  // Get a shorthand to weights.
-  weight.InitWithShallowSlice(meshaux, 4, iweight, 1);
-  if (ppar_->imass != -1) density.InitWithShallowSlice(meshaux, 4, imass, 1);
+  // Get a shorthand to density.
+  dens.InitWithShallowSlice(meshaux, 4, idens, 1);
 
   // Enroll CellCenteredBoundaryVariable object
   AthenaArray<Real> empty_flux[3]=
@@ -87,16 +85,16 @@ ParticleMesh::~ParticleMesh() {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn Real ParticleMesh::FindMaximumWeight()
-//! \brief returns the maximum weight in the meshblock.
+//! \fn Real ParticleMesh::FindMaximumDensity()
+//! \brief returns the maximum density in the meshblock.
 
-Real ParticleMesh::FindMaximumWeight() const {
-  Real wmax = 0.0;
+Real ParticleMesh::FindMaximumDensity() const {
+  Real dmax = 0.0;
   for (int k = ks; k <= ke; ++k)
     for (int j = js; j <= je; ++j)
       for (int i = is; i <= ie; ++i)
-        wmax = std::max(wmax, weight(k,j,i));
-  return wmax;
+        dmax = std::max(dmax, dens(k,j,i));
+  return dmax;
 }
 
 //--------------------------------------------------------------------------------------

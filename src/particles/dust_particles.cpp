@@ -94,14 +94,15 @@ Real DustParticles::NewBlockTimeStep() {
     Hydro *phydro = pmy_block->phydro;
     const int is = ppm->is, js = ppm->js, ks = ppm->ks;
     const int ie = ppm->ie, je = ppm->je, ke = ppm->ke;
-    for (int k = ks; k <= ke; ++k)
-      for (int j = js; j <= je; ++j)
+    for (int k = ks; k <= ke; ++k) {
+      for (int j = js; j <= je; ++j) {
         for (int i = is; i <= ie; ++i) {
-          Real epsilon = ppm->weight(k,j,i) / (
-                         pc->GetCellVolume(k,j,i) * phydro->u(IDN,k,j,i));
+          // TODO (SMOON) Is FindLocalDensity called before NewBlockTimeStep?
+          Real epsilon = ppm->dens(k,j,i) / phydro->u(IDN,k,j,i);
           epsmax = std::max(epsmax, epsilon);
         }
-    epsmax *= mass;
+      }
+    }
   }
 
   // Return the drag timescale.

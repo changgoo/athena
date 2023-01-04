@@ -51,7 +51,7 @@ friend class OutputType;
   ~ParticleMesh();
 
   // Accessor
-  Real FindMaximumWeight() const;
+  Real FindMaximumDensity() const;
 
   // methods
   int AddMeshAux();
@@ -59,9 +59,8 @@ friend class OutputType;
   ParticleMeshBoundaryVariable *pmbvar;
 
   int nmeshaux;  //!> number of auxiliaries to the meshblock
-  int iweight;   //!> index to weight in meshaux
+  int idens;   //!> index to density in meshaux
   int imom1, imom2, imom3;   //!> index to momentum vector in meshaux
-  int imass; //!> index to mass density in meshaux
 
   bool updated; //!> flag whether pm is recacluated
 
@@ -69,7 +68,7 @@ friend class OutputType;
   // Instance variables
   AthenaArray<Real> meshaux, coarse_meshaux_;   //!> auxiliaries to the meshblock
   int is, ie, js, je, ks, ke;  // beginning and ending indices
-  AthenaArray<Real> weight, density;    //!> shorthand to weight in meshaux
+  AthenaArray<Real> dens;    //!> shorthand to density in meshaux
 
   // Instance methods
   void InterpolateMeshToParticles(

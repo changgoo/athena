@@ -280,35 +280,27 @@ void StarParticles::SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsr
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void StarParticles::FindLocalDensityOnMesh(Mesh *pm, bool include_momentum)
-//! \brief finds the number/mass density of particles on the mesh.
-//!
-//!   If include_momentum is true, the momentum density field is also computed,
-//!   assuming mass of each particle is unity.
-//! \note
-//!   Postcondition: ppm->weight becomes the density in each cell, and
-//!   if include_momentum is true, ppm->meshaux(imom1:imom3,:,:,:)
-//!   becomes the momentum density.
+//! \fn void StarParticles::FindLocalDensityOnMesh(bool include_momentum)
+//! \brief finds the mass and momentum density of particles on the mesh.
 
 void StarParticles::FindLocalDensityOnMesh(bool include_momentum) {
   Coordinates *pc(pmy_block->pcoord);
 
   if (include_momentum) {
     AthenaArray<Real> parprop, mom1, mom2, mom3, mpar;
-    parprop.NewAthenaArray(5, npar);
-    std::fill(&parprop(0,0), &parprop(0,0) + parprop.GetDim1(), 1.0);
-    mpar.InitWithShallowSlice(parprop, 2, 1, 1);
-    mom1.InitWithShallowSlice(parprop, 2, 2, 1);
-    mom2.InitWithShallowSlice(parprop, 2, 3, 1);
-    mom3.InitWithShallowSlice(parprop, 2, 4, 1);
+    parprop.NewAthenaArray(4, npar);
+    mpar.InitWithShallowSlice(parprop, 2, 0, 1);
+    mom1.InitWithShallowSlice(parprop, 2, 1, 1);
+    mom2.InitWithShallowSlice(parprop, 2, 2, 1);
+    mom3.InitWithShallowSlice(parprop, 2, 3, 1);
     for (int k = 0; k < npar; ++k) {
       pc->CartesianToMeshCoordsVector(xp(k), yp(k), zp(k),
         mp(k)*vpx(k), mp(k)*vpy(k), mp(k)*vpz(k), mom1(k), mom2(k), mom3(k));
       mpar(k) = mp(k);
     }
-    ppm->DepositParticlesToMeshAux(parprop, 0, ppm->iweight, 5);
+    ppm->DepositParticlesToMeshAux(parprop, 0, ppm->idens, 4);
   } else {
-    ppm->DepositParticlesToMeshAux(mp, 0, ppm->iweight, 2);
+    ppm->DepositParticlesToMeshAux(mp, 0, ppm->idens, 1);
   }
 
   // set flag to trigger PM communications

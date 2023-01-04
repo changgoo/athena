@@ -755,18 +755,19 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
     }
   } // endif (MAGNETIC_FIELDS_ENABLED)
 
-  // particle number density
-  if (output_params.variable.compare("np") == 0) {
-    for (int ipar = 0; ipar<Particles::num_particles; ++ipar) {
-      pod = new OutputData;
-      pod->type = "SCALARS";
-      pod->name = "np";
-      pod->name += std::to_string(ipar);
-      pod->data.InitWithShallowSlice(pmb->ppar[ipar]->ppm->weight, 4, 0, 1);
-      AppendOutputDataNode(pod);
-      num_vars_++;
-    }
-  }
+//  // particle number density
+//  TODO (SMOON) maybe want to add number density property in meshaux
+//  if (output_params.variable.compare("np") == 0) {
+//    for (int ipar = 0; ipar<Particles::num_particles; ++ipar) {
+//      pod = new OutputData;
+//      pod->type = "SCALARS";
+//      pod->name = "np";
+//      pod->name += std::to_string(ipar);
+//      pod->data.InitWithShallowSlice(pmb->ppar[ipar]->ppm->weight, 4, 0, 1);
+//      AppendOutputDataNode(pod);
+//      num_vars_++;
+//    }
+//  }
 
   // particle velocity field
   if (output_params.variable.compare("vp") == 0 ||

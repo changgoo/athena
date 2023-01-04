@@ -91,9 +91,9 @@ friend class ParticleMesh;
   Real NewBlockTimeStep(); // TODO must be virtual
 
   void DepositPMtoMesh(int stage);
-  virtual void FindLocalDensityOnMesh(bool include_momentum); // TODO (SMOON) This should not need to be virtual
+  virtual void FindLocalDensityOnMesh(bool include_momentum);
 
-  virtual AthenaArray<Real> GetMassDensity() const; // TODO (SMOON) This should not need to be virtual
+  AthenaArray<Real> GetMassDensity() const { return ppm->dens; }; // TODO (SMOON) make ppm->dens private?
   AthenaArray<Real> GetVelocityField() const;
   std::size_t GetSizeInBytes();
   bool IsGravity() { return isgravity_; }
@@ -269,14 +269,6 @@ friend class ParticleMesh;
 };
 
 //--------------------------------------------------------------------------------------
-//! \fn Real Particles::GetMassDensity()
-//! \brief returns the mass density on the mesh..
-
-inline AthenaArray<Real> Particles::GetMassDensity() const {
-  return ppm->weight;
-}
-
-//--------------------------------------------------------------------------------------
 //! \class DustParticles
 //! \brief defines the class for dust particles that interact with the gas via drag
 //!        force.
@@ -376,7 +368,6 @@ friend class MeshBlock;
 
   void AddOneParticle(Real mass, Real x1, Real x2, Real x3,
                       Real v1, Real v2, Real v3);
-  AthenaArray<Real> GetMassDensity() const override;
   void FindLocalDensityOnMesh(bool include_momentum) override;
 
  private:
@@ -405,13 +396,5 @@ friend class MeshBlock;
   AthenaArray<Real> mp, mzp, tage;        // shorthand for real properties
   AthenaArray<Real> fgas;                     // shorthand for aux properties
 };
-
-//--------------------------------------------------------------------------------------
-//! \fn Real StarParticles::GetMassDensity()
-//! \brief returns the mass density on the mesh.
-
-inline AthenaArray<Real> StarParticles::GetMassDensity() const {
-  return ppm->density;
-}
 
 #endif  // PARTICLES_PARTICLES_HPP_
