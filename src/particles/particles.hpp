@@ -168,8 +168,6 @@ friend class ParticleMesh;
 
   int ixi1, ixi2, ixi3;     // indices for position indices
 
-  int imom1, imom2, imom3;  // indices for momentum components on mesh
-
   int imass, ish; // (TODO) imass must be a property of derived particles
   int igx, igy, igz; // indices for gravity force
 
@@ -306,12 +304,10 @@ friend class MeshBlock;
   bool variable_taus;  //!> whether or not the stopping time is variable
 
   int iwx, iwy, iwz;         // indices for working arrays
-  int idpx1, idpx2, idpx3;   // indices for momentum change
   int itaus;                 //!> index for stopping time
 
   Real taus0;  //!> constant/default stopping time (in code units)
   AthenaArray<Real> wx, wy, wz;        // shorthand for working arrays
-  AthenaArray<Real> dpx1, dpx2, dpx3;  // shorthand for momentum change
   AthenaArray<Real> taus;              // shorthand for stopping time
 };
 

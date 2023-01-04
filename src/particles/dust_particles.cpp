@@ -22,8 +22,7 @@
 
 DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp)
   : Particles(pmb, pin, pp), backreaction(false), dragforce(true), variable_taus(false),
-  iwx(-1), iwy(-1), iwz(-1), idpx1(-1), idpx2(-1), idpx3(-1),
-  itaus(-1), taus0(0.0) {
+  iwx(-1), iwy(-1), iwz(-1), itaus(-1), taus0(0.0) {
   // Add working array at particles for gas velocity/particle momentum change.
   iwx = AddWorkingArray();
   iwy = AddWorkingArray();
@@ -48,16 +47,6 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParame
 //  if (!backreaction) isgravity_ = false;
 
   Particles::AllocateMemory();
-
-  if (backreaction) {
-    idpx1 = imom1;
-    idpx2 = imom2;
-    idpx3 = imom3;
-
-    dpx1 = ppm->GetMomentumDensityX1(); // TODO(SMOON) Is ppm->updated?
-    dpx2 = ppm->GetMomentumDensityX2();
-    dpx3 = ppm->GetMomentumDensityX3();
-  }
 
   AssignShorthands();
 }
@@ -245,7 +234,7 @@ void DustParticles::ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& mes
         mass * wx(k), mass * wy(k), mass * wz(k), wx(k), wy(k), wz(k));
 
   // Assign the momentum change onto mesh.
-  ppm->DepositParticlesToMeshAux(work, iwx, idpx1, 3);
+  ppm->DepositParticlesToMeshAux(work, iwx, ppm->imom1, 3);
 }
 
 //--------------------------------------------------------------------------------------
@@ -257,5 +246,5 @@ void DustParticles::DepositToMesh(
          Real t, Real dt, const AthenaArray<Real>& meshsrc, AthenaArray<Real>& meshdst) {
   if (dragforce && backreaction)
     // Deposit particle momentum changes to the gas.
-    ppm->DepositMeshAux(meshdst, idpx1, IM1, 3);
+    ppm->DepositMeshAux(meshdst, ppm->imom1, IM1, 3);
 }
