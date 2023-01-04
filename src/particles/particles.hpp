@@ -99,7 +99,7 @@ friend class ParticleMesh;
   void UnpackParticlesForRestart(char *mbdata, std::size_t &os);
   void PackParticlesForRestart(char *&pdata);
 
-  void AddHistoryOutput(Real data_sum[], int pos);
+  virtual void AddHistoryOutput(Real data_sum[], int pos);
   void OutputParticles(bool header); // individual particle history
   void OutputParticles(bool header, int kid);
   void OutputOneParticle(std::ostream &os, int k, bool header);
@@ -363,6 +363,7 @@ friend class MeshBlock;
   void AddOneParticle(Real mass, Real x1, Real x2, Real x3,
                       Real v1, Real v2, Real v3);
   void FindLocalDensityOnMesh(bool include_momentum) override;
+  void AddHistoryOutput(Real data_sum[], int pos) override;
 
  private:
   // Methods (implementation)

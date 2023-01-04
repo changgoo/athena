@@ -193,7 +193,7 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
 
 void Particles::GetHistoryOutputNames(std::string output_names[], int ipar) {
   std::string head = "p";
-  head.append(std::to_string(ipar));
+  head.append(std::to_string(ipar)); // TODO(SMOON) how about partype instead of ipar?
   output_names[0] = head + "-n";
   output_names[1] = head + "-v1";
   output_names[2] = head + "-v2";
@@ -418,10 +418,7 @@ void Particles::AddHistoryOutput(Real data_sum[], int pos) {
     sum[3] += vp1 * vp1;
     sum[4] += vp2 * vp2;
     sum[5] += vp3 * vp3;
-    if (imass != -1)
-      sum[6] += realprop(imass,k);
-    else
-      sum[6] += mass;
+    sum[6] += mass;
   }
 
   // Assign the values to output variables.

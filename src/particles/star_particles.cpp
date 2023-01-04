@@ -92,6 +92,39 @@ void StarParticles::AddOneParticle(Real mass, Real x1, Real x2, Real x3,
 }
 
 //--------------------------------------------------------------------------------------
+//! \fn void StarParticles::FindHistoryOutput(Real data_sum[], int pos)
+//! \brief finds the data sums of history output from particles in my process and assign
+//!   them to data_sum beginning at index pos.
+
+void StarParticles::AddHistoryOutput(Real data_sum[], int pos) {
+  const int NSUM = NHISTORY - 1;
+
+  // Initiate the summations.
+  std::int64_t np = 0;
+  std::vector<Real> sum(NSUM, 0.0);
+
+  Real vp1, vp2, vp3;
+  np += npar;
+
+  for (int k = 0; k < npar; ++k) {
+    pmy_block->pcoord->CartesianToMeshCoordsVector(xp(k), yp(k), zp(k),
+        vpx(k), vpy(k), vpz(k), vp1, vp2, vp3);
+    sum[0] += vp1;
+    sum[1] += vp2;
+    sum[2] += vp3;
+    sum[3] += vp1 * vp1;
+    sum[4] += vp2 * vp2;
+    sum[5] += vp3 * vp3;
+    sum[6] += realprop(imass,k);
+  }
+
+  // Assign the values to output variables.
+  data_sum[pos] += static_cast<Real>(np);
+  for (int i = 0; i < NSUM; ++i)
+    data_sum[pos+i+1] += sum[i];
+}
+
+//--------------------------------------------------------------------------------------
 //! \fn void StarParticles::Integrate(int step)
 //! \brief updates all particle positions and velocities from t to t + dt.
 //!
