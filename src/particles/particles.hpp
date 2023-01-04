@@ -75,7 +75,7 @@ friend class ParticleMesh;
   // Destructor
   virtual ~Particles();
 
-  // Methods (interface)
+  // Static functions
   static void AMRCoarseToFine(Particles *pparc, Particles *pparf, MeshBlock* pmbf);
   static void AMRFineToCoarse(Particles *pparc, Particles *pparf);
   static void Initialize(Mesh *pm, ParameterInput *pin);
@@ -85,13 +85,13 @@ friend class ParticleMesh;
   static void GetHistoryOutputNames(std::string output_names[], int ipar);
   static std::int64_t GetTotalNumber(Mesh *pm);
 
+  // Methods (interface)
   void AddOneParticle(Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
   void RemoveOneParticle(int k);
-  virtual void Integrate(int step); // TODO(SMOON) (template method pattern is appropriate here)
-  Real NewBlockTimeStep(); // TODO must be virtual
-
-  void DepositPMtoMesh(int stage);
   virtual void FindLocalDensityOnMesh(bool include_momentum);
+  void DepositPMtoMesh(int stage);
+  virtual void Integrate(int step); // TODO(SMOON) (template method pattern is appropriate here)
+  virtual Real NewBlockTimeStep();
 
   std::size_t GetSizeInBytes();
   bool IsGravity() { return isgravity_; }
@@ -288,7 +288,7 @@ friend class MeshBlock;
   bool GetDragForce() { return dragforce; }
   bool GetVariableTaus() { return variable_taus; }
   Real GetStoppingTime() { return taus0; }
-  Real NewBlockTimeStep(); // TODO(SMOON) This must override the base version
+  Real NewBlockTimeStep() override;
 
  private:
   // Methods (implementation)
