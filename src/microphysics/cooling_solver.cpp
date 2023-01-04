@@ -73,11 +73,11 @@ void CoolingSolver::CoolingSourceTerm(MeshBlock *pmb, const Real t, const Real d
 
   Real dt_mhd = pmb->pmy_mesh->dt;
   Real temp_floor = pcf->Get_Tfloor(); // temperature floor
-  Real gm1 = pcf->gamma_adi-1; // gamma-1
+  Real igm1 = 1.0/(pcf->gamma_adi-1); // 1 / (gamma - 1)
+  Real igm1_dt_mhd = 1.0/(pcf->gamma_adi-1)/dt_mhd;
 
-  
   const bool bookkeeping = pcool->bookkeeping;
-  
+
   for (int k = ks; k <= ke; ++k) {
     for (int j = js; j <= je; ++j) {
 #pragma omp simd
@@ -94,19 +94,20 @@ void CoolingSolver::CoolingSourceTerm(MeshBlock *pmb, const Real t, const Real d
 
         // solve cooling
         Real press_after = pcool->Solver(press_before,rho,dt);
+        // Real press_after = pcool->CoolingExplicitSubcycling(dt,press_before,rho);
         delta_press = press_after-press_before; // save difference due to cooling
 
         // apply floor after solving the cooling
         if (press_after < press_floor) delta_press_floor += press_floor-press_after;
         Real press_next = std::max(press_after,press_floor);
 
-        Real delta_e = (press_next-press)/gm1;
+        Real delta_e = (press_next-press)*igm1;
         // change internal energy
         cons(IEN,k,j,i) += delta_e;
 
         if (bookkeeping) {
-          pcool->edot(k,j,i) += delta_press*factor;
-          pcool->edot_floor(k,j,i) += delta_press_floor*factor;
+          pcool->edot(k,j,i) += delta_press*igm1_dt_mhd;
+          pcool->edot_floor(k,j,i) += delta_press_floor*igm1_dt_mhd;
         }
 
       }
@@ -223,7 +224,8 @@ void CoolingSolver::OperatorSplitSolver(MeshBlock *pmb) {
 
   Real dt_mhd = pmb->pmy_mesh->dt;
   Real temp_floor = pcf->Get_Tfloor(); // temperature floor
-  Real gm1 = pcf->gamma_adi-1; // gamma-1
+  Real igm1 = 1/(pcf->gamma_adi-1); // 1 / (gamma - 1)
+  Real igm1_dt_mhd = 1/(pcf->gamma_adi-1)/dt_mhd;
 
   for (int k = kl; k <= ku; ++k) {
     for (int j = jl; j <= ju; ++j) {
@@ -236,7 +238,7 @@ void CoolingSolver::OperatorSplitSolver(MeshBlock *pmb) {
         Real& w_d  = pmb->phydro->w(IDN,k,j,i);
         Real& w_p  = pmb->phydro->w(IPR,k,j,i);
         // find non-thermal part of energy to keep it the same
-        Real e_non_thermal = u_e - w_p/gm1;
+        Real e_non_thermal = u_e - w_p*igm1;
 
         Real delta_press=0.0, delta_press_floor=0.0;
         // apply floor before solving the cooling
@@ -253,12 +255,12 @@ void CoolingSolver::OperatorSplitSolver(MeshBlock *pmb) {
         Real press_next = std::max(press_after,press_floor);
 
         if (bookkeeping) {
-          edot(k,j,i) = delta_press/gm1/dt_mhd;
-          edot_floor(k,j,i) = delta_press_floor/gm1/dt_mhd;
+          edot(k,j,i) = delta_press*igm1_dt_mhd;
+          edot_floor(k,j,i) = delta_press_floor*igm1_dt_mhd;
         }
 
         // apply floor if cooled too much
-        Real u_after = press_next/gm1;
+        Real u_after = press_next*igm1;
 
         // change internal energy
         u_e = u_after + e_non_thermal;

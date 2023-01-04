@@ -130,9 +130,6 @@ void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   AllocateUserOutputVariables(num_user_variables);
 
   // initialize arrays for bookkeeping
-  // pcool->edot.NewAthenaArray(ncells3,ncells2,ncells1);
-  // pcool->edot_floor.NewAthenaArray(ncells3,ncells2,ncells1);
-  // pcool->efloor.NewAthenaArray(ncells3,ncells2,ncells1);
   // shallow copy existing arrays
   pcool->edot.InitWithShallowSlice(user_out_var,4,0,1);
   pcool->edot_floor.InitWithShallowSlice(user_out_var,4,1,1);
