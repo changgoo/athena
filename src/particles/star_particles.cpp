@@ -294,23 +294,22 @@ void StarParticles::FindLocalDensityOnMesh(bool include_momentum) {
   Coordinates *pc(pmy_block->pcoord);
 
   if (include_momentum) {
-    AthenaArray<Real> vp, vp1, vp2, vp3, mpar;
-    vp.NewAthenaArray(4, npar);
-    mpar.InitWithShallowSlice(vp, 2, 0, 1);
-    vp1.InitWithShallowSlice(vp, 2, 1, 1);
-    vp2.InitWithShallowSlice(vp, 2, 2, 1);
-    vp3.InitWithShallowSlice(vp, 2, 3, 1);
+    AthenaArray<Real> parprop, mom1, mom2, mom3, mpar;
+    parprop.NewAthenaArray(5, npar);
+    std::fill(&parprop(0,0), &parprop(0,0) + parprop.GetDim1(), 1.0);
+    mpar.InitWithShallowSlice(parprop, 2, 1, 1);
+    mom1.InitWithShallowSlice(parprop, 2, 2, 1);
+    mom2.InitWithShallowSlice(parprop, 2, 3, 1);
+    mom3.InitWithShallowSlice(parprop, 2, 4, 1);
     for (int k = 0; k < npar; ++k) {
       pc->CartesianToMeshCoordsVector(xp(k), yp(k), zp(k),
-        mp(k)*vpx(k), mp(k)*vpy(k), mp(k)*vpz(k), vp1(k), vp2(k), vp3(k));
+        mp(k)*vpx(k), mp(k)*vpy(k), mp(k)*vpz(k), mom1(k), mom2(k), mom3(k));
       mpar(k) = mp(k);
     }
-    ppm->AssignParticlesToMeshAux(vp, 0, ppm->imass, 4);
+    ppm->AssignParticlesToMeshAux(parprop, 0, ppm->iweight, 5);
   } else {
-    ppm->AssignParticlesToMeshAux(mp, 0, ppm->imass, 1);
+    ppm->AssignParticlesToMeshAux(mp, 0, ppm->iweight, 2);
   }
-
-  ConvertToDensity(include_momentum);
 
   // set flag to trigger PM communications
   ppm->updated = true;

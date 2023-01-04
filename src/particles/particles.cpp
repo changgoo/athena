@@ -787,63 +787,25 @@ void Particles::FindLocalDensityOnMesh(bool include_momentum) {
   Coordinates *pc(pmy_block->pcoord);
 
   if (include_momentum) {
-    AthenaArray<Real> vp, vp1, vp2, vp3;
-    vp.NewAthenaArray(3, npar);
-    vp1.InitWithShallowSlice(vp, 2, 0, 1);
-    vp2.InitWithShallowSlice(vp, 2, 1, 1);
-    vp3.InitWithShallowSlice(vp, 2, 2, 1);
+    AthenaArray<Real> parprop, mom1, mom2, mom3;
+    parprop.NewAthenaArray(4, npar);
+    std::fill(&parprop(0,0), &parprop(0,0) + parprop.GetDim1(), mass);
+    mom1.InitWithShallowSlice(parprop, 2, 1, 1);
+    mom2.InitWithShallowSlice(parprop, 2, 2, 1);
+    mom3.InitWithShallowSlice(parprop, 2, 3, 1);
     for (int k = 0; k < npar; ++k)
       pc->CartesianToMeshCoordsVector(xp(k), yp(k), zp(k),
-        vpx(k), vpy(k), vpz(k), vp1(k), vp2(k), vp3(k));
-    ppm->AssignParticlesToMeshAux(vp, 0, ppm->imom1, 3);
+        mass*vpx(k), mass*vpy(k), mass*vpz(k), mom1(k), mom2(k), mom3(k));
+    ppm->AssignParticlesToMeshAux(parprop, 0, ppm->iweight, 4);
   } else {
-    ppm->AssignParticlesToMeshAux(realprop, 0, ppm->iweight, 0);
+    AthenaArray<Real> parprop(npar);
+    std::fill(&parprop(0), &parprop(0) + parprop.GetDim1(), mass);
+    ppm->AssignParticlesToMeshAux(parprop, 0, ppm->iweight, 1);
   }
-  ConvertToDensity(include_momentum);
 
   // set flag to trigger PM communications
   ppm->updated = true;
   ppm->pmbvar->var_buf.ZeroClear();
-}
-//--------------------------------------------------------------------------------------
-//! \fn void Particles::ConvertToDensity(bool include_momentum)
-//! \brief finds the number density of particles on the mesh.
-//!
-//!   If include_momentum is true, the momentum density field is also computed,
-//!   assuming mass of each particle is unity.
-//! \note
-//!   Postcondition: ppm->weight becomes the density in each cell, and
-//!   if include_momentum is true, ppm->meshaux(imom1:imom3,:,:,:)
-//!   becomes the momentum density.
-
-void Particles::ConvertToDensity(bool include_momentum) {
-  Coordinates *pc(pmy_block->pcoord);
-  // Convert to densities.
-  int is = active1_ ? ppm->is-NGHOST: ppm->is, ie = active1_ ? ppm->ie+NGHOST: ppm->ie;
-  int js = active2_ ? ppm->js-NGHOST: ppm->js, je = active2_ ? ppm->je+NGHOST: ppm->je;
-  int ks = active3_ ? ppm->ks-NGHOST: ppm->ks, ke = active3_ ? ppm->ke+NGHOST: ppm->ke;
-  if (include_momentum) {
-    for (int k = ks; k <= ke; ++k)
-      for (int j = js; j <= je; ++j)
-        for (int i = is; i <= ie; ++i) {
-          Real vol(pc->GetCellVolume(k,j,i));
-          Real rhop(mass/vol); // mass = 1.0 if imass != -1
-          ppm->weight(k,j,i) *= rhop;
-          ppm->meshaux(ppm->imom1,k,j,i) *= rhop;
-          ppm->meshaux(ppm->imom2,k,j,i) *= rhop;
-          ppm->meshaux(ppm->imom3,k,j,i) *= rhop;
-          if (ppm->imass != -1) ppm->density(k,j,i) *= rhop;
-        }
-  } else {
-    for (int k = ks; k <= ke; ++k)
-      for (int j = js; j <= je; ++j)
-        for (int i = is; i <= ie; ++i) {
-          Real vol(pc->GetCellVolume(k,j,i));
-          Real rhop(mass/vol); // mass = 1.0 if imass != -1
-          ppm->weight(k,j,i) *= rhop;
-          if (ppm->imass != -1) ppm->density(k,j,i) *= rhop;
-        }
-  }
 }
 
 //--------------------------------------------------------------------------------------

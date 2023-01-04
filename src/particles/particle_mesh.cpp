@@ -218,7 +218,7 @@ void ParticleMesh::InterpolateMeshToParticles(
 //       const AthenaArray<Real>& par, int p1, int ma1, int nprop)
 //! \brief assigns par (realprop, auxprop, or work in Particles class) from property
 //!        index p1 to p1+nprop-1 onto meshaux from property index ma1 and up.
-
+// TODO change name to DepositParticlesToMesh
 void ParticleMesh::AssignParticlesToMeshAux(
          const AthenaArray<Real>& par, int p1, int ma1, int nprop) {
   // Zero out meshaux.
@@ -238,6 +238,7 @@ void ParticleMesh::AssignParticlesToMeshAux(
   int imb1v[SIMD_WIDTH] __attribute__((aligned(CACHELINE_BYTES)));
   int imb2v[SIMD_WIDTH] __attribute__((aligned(CACHELINE_BYTES)));
   int imb3v[SIMD_WIDTH] __attribute__((aligned(CACHELINE_BYTES)));
+  Coordinates *pc = pmb_->pcoord;
 
   // Loop over each particle.
   int npar = ppar_->npar;
@@ -288,19 +289,14 @@ void ParticleMesh::AssignParticlesToMeshAux(
         for (int ipc2 = 0; ipc2 < npc2_; ++ipc2) {
 #pragma loop count (NPC)
           for (int ipc1 = 0; ipc1 < npc1_; ++ipc1) {
-            // weight of the particle at this cell
             Real w = w1[ipc1][kk] * w2[ipc2][kk] * w3[ipc3][kk];
-
-            // Record the weights.
-            weight(imb3+ipc3,imb2+ipc2,imb1+ipc1) += w;
-
+            Real vol = pc->GetCellVolume(imb3+ipc3,imb2+ipc2,imb1+ipc1);
             // Assign particles to meshaux.
             for (int n = 0; n < nprop; ++n)
-              meshaux(ma1+n,imb3+ipc3,imb2+ipc2,imb1+ipc1) += w * ps[n];
+              meshaux(ma1+n,imb3+ipc3,imb2+ipc2,imb1+ipc1) += w * ps[n] / vol;
           }
         }
       }
-
       delete [] ps;
     }
   }

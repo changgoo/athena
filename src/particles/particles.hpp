@@ -145,7 +145,6 @@ friend class ParticleMesh;
   int AddWorkingArray();
 
   void UpdateCapacity(int new_nparmax);  //!> Change the capacity of particle arrays
-  void ConvertToDensity(bool include_momentum);
   void SaveStatus(); // x->x0, v->v0
 
 
