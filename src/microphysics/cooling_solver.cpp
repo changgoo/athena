@@ -123,7 +123,7 @@ void CoolingSolver::CoolingSourceTerm(MeshBlock *pmb, const Real t, const Real d
 //========================================================================================
 CoolingSolver::CoolingSolver(MeshBlock *pmb, ParameterInput *pin) :
   cfl_cool(pin->GetReal("cooling", "cfl_cool")),
-  cfl_op_cool(pin->GetOrAddReal("cooling","cfl_op_cool",-1)),
+  cfl_cool_sub(pin->GetOrAddReal("cooling","cfl_cool_sub",0.1)),
   op_flag(false), bookkeeping(false),
   coolftn(pin->GetOrAddString("cooling", "coolftn", "tigress")),
   cooling(pin->GetOrAddString("cooling", "cooling", "none")),
@@ -132,15 +132,15 @@ CoolingSolver::CoolingSolver(MeshBlock *pmb, ParameterInput *pin) :
   if (cooling.compare("op_split") == 0) {
     op_flag = true;
     if (nsub_max_ == -1) {
-      nsub_max_ = static_cast<int>(CoolingSolver::cfl_cool/CoolingSolver::cfl_op_cool)*10;
+      nsub_max_ = static_cast<int>(CoolingSolver::cfl_cool/CoolingSolver::cfl_cool_sub)*10;
       std::cout << "[CoolingSolver] nsub_max_ is set to " << nsub_max_ << std::endl;
     }
-    // error if op cooling solver is used but cfl_op_cool > 1
-    if (cfl_op_cool > 1) {
+    // error if op cooling solver is used but cfl_cool_sub > 1
+    if (cfl_cool_sub > 1) {
       std::stringstream msg;
       msg << "### FATAL ERROR in CoolingSolver" << std::endl
-          << "Cooling will be solved by operator split method but cfl_op_cool = "
-          << CoolingSolver::cfl_op_cool << " > 1" << std::endl;
+          << "Cooling will be solved by operator split method but cfl_cool_sub = "
+          << CoolingSolver::cfl_cool_sub << " > 1" << std::endl;
       ATHENA_ERROR(msg);
     }
   } else if (cooling.compare("enroll") == 0) {
@@ -276,7 +276,7 @@ Real CoolingSolver::CoolingExplicitSubcycling(Real tend, Real press, const Real 
   Real dt_net, dt_sub;
   int icount = 0;
   while ((icount<nsub_max_) && (tnow<tend)) {
-    dt_net = std::abs(pcf->CoolingTime(rho, press))*cfl_op_cool;
+    dt_net = std::abs(pcf->CoolingTime(rho, press))*cfl_cool_sub;
     dt_sub = std::min(std::min(tend,dt_net),tleft);
     press = Solver(press,rho,dt_sub);
 

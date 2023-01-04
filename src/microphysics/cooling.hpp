@@ -37,10 +37,10 @@ class CoolingSolver {
 
   CoolingFunctionBase *pcf;
   Units *punit;
-  Real cfl_cool, cfl_op_cool;
+  Real cfl_cool, cfl_cool_sub;
   AthenaArray<Real> edot, edot_floor;
 
-  bool op_flag,bookkeeping;
+  bool op_flag, bookkeeping;
   std::string cooling, solver, coolftn;
 
  private:
