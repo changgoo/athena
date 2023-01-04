@@ -241,6 +241,7 @@ class Mesh {
   const bool adaptive, multilevel;
   const int orbital_advection;       // order of the orbital splitting method
   const bool shear_periodic;         // flag of shear periodic b.c.
+  const bool cooling;
   const FluidFormulation fluid_setup;
   Real start_time, time, tlim, dtlim;
   Real dt, dt_hyperbolic, dt_parabolic, dt_user, cfl_number;
@@ -253,7 +254,6 @@ class Mesh {
   int nbtotal, nblocal, nbnew, nbdel;
   std::vector<ParticleParameters> particle_params;
   bool particle, particle_gravity;
-  bool cooling;
 
   int step_since_lb;
   int gflag;
