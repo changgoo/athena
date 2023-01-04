@@ -57,6 +57,7 @@ class CoolingFunctionBase {
   ~CoolingFunctionBase();
 
   void Initialize(Real mu, Real muH);
+#pragma omp declare simd simdlen(SIMD_WIDTH) notinbranch uniform(this)
   Real CoolingTime(const Real rho, const Real Press);
   Real NetCoolingTime(const Real rho, const Real Press);
 
@@ -155,8 +156,10 @@ class TigressClassic : public CoolingFunctionBase {
   explicit TigressClassic(ParameterInput *pin);
   // ~TigressClassic() override { delete punit; }
 
+#pragma omp declare simd simdlen(SIMD_WIDTH) notinbranch uniform(this)
   Real Lambda_T(const Real rho, const Real Press) override;
   Real dlnL_dlnT(const Real rho, const Real Press) override;
+#pragma omp declare simd simdlen(SIMD_WIDTH) notinbranch uniform(this)
   Real Gamma_T(const Real rho, const Real Press) override;
   Real Get_mu(const Real rho, const Real Press) override;
   Real Get_muH() override { return muH; }
@@ -164,6 +167,7 @@ class TigressClassic : public CoolingFunctionBase {
   void SetHeatRatio(Real hr) { heat_ratio = hr; }
 
   Real GetHeatRatio() { return heat_ratio;}
+#pragma omp declare simd simdlen(SIMD_WIDTH) notinbranch uniform(this)
   Real GetTemperature(const Real rho, const Real Press) override;
 
  private:
@@ -174,6 +178,7 @@ class TigressClassic : public CoolingFunctionBase {
   const Real mumin=0.6182, mumax=1.295;
 
   // specific functions for interpolation
+#pragma omp declare simd simdlen(SIMD_WIDTH) notinbranch uniform(this)
   int get_Tidx(const Real temp);
 
   // tables

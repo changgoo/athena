@@ -77,6 +77,7 @@ void CoolingSolver::CoolingSourceTerm(MeshBlock *pmb, const Real t, const Real d
 
   for (int k = ks; k <= ke; ++k) {
     for (int j = js; j <= je; ++j) {
+#pragma omp simd
       for (int i = is; i <= ie; ++i) {
         // Extract rho and P from previous steps
         const Real press = prim(IPR,k,j,i);
@@ -227,6 +228,7 @@ void CoolingSolver::OperatorSplitSolver(MeshBlock *pmb) {
 
   for (int k = kl; k <= ku; ++k) {
     for (int j = jl; j <= ju; ++j) {
+#pragma omp simd
       for (int i = il; i <= iu; ++i) {
         // both u and w are updated by integrator
         Real& u_d  = pmb->phydro->u(IDN,k,j,i);
