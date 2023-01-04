@@ -87,7 +87,7 @@ friend class ParticleMesh;
 
   void AddOneParticle(Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
   void RemoveOneParticle(int k);
-  virtual void Integrate(int step); // TODO (SMOON) (template method pattern is appropriate here)
+  virtual void Integrate(int step); // TODO(SMOON) (template method pattern is appropriate here)
   Real NewBlockTimeStep(); // TODO must be virtual
 
   void DepositPMtoMesh(int stage);
@@ -131,7 +131,7 @@ friend class ParticleMesh;
 
  protected:
   // Protected interfaces (to be used by derived classes)
-  // TODO (SMOON) avoid call super using template method
+  // TODO(SMOON) avoid call super using template method
   virtual void AssignShorthands();  //!> Needs to be called everytime
                                     //!> intprop, realprop, & auxprop are resized
                                     //!> Be sure to call back when derived.
@@ -178,9 +178,8 @@ friend class ParticleMesh;
   int npar;     //!> number of particles
   int nparmax;  //!> maximum number of particles per meshblock
   int my_ipar_;
-  bool isgravity_; //!> flag for gravity // TODO (SMOON) This must be private; we have Getter.
   bool parhstout_; //!> flag for individual particle history output
-  Real mass;   //!> common mass of particle TODO (SMOON) This must be a property of derived particles, because there could be massless particles (e.g., tracers).
+  Real mass;   //!> common mass of particle TODO(SMOON) This must be a property of derived particles, because there could be massless particles (e.g., tracers).
   Real cfl_par;  //!> CFL number for particles
 
                                // Data attached to the particles:
@@ -215,7 +214,7 @@ friend class ParticleMesh;
 
   // Methods (implementation)
   // Need to be implemented in derived classes
-  // TODO (SMOON) Functions such as SourceTerms, EulerStep, BorisKick, ... needs to be
+  // TODO(SMOON) Functions such as SourceTerms, EulerStep, BorisKick, ... needs to be
   // inside the implementation of template function Integrate(). This needs some consistent name
   // convention.
   // for example, the interface looks like
@@ -251,6 +250,7 @@ friend class ParticleMesh;
   static std::vector<int> idmax;
 
   // Data members
+  bool isgravity_; //!> flag for gravity
   bool active1_, active2_, active3_;  // active dimensions
   int my_particle_num_;
 
@@ -282,13 +282,13 @@ friend class MeshBlock;
   ~DustParticles();
 
   // Methods (interface)
-  void SetOneParticleMass(Real new_mass); // TODO (SMOON) remove duplication
+  void SetOneParticleMass(Real new_mass); // TODO(SMOON) remove duplication
   Real GetOneParticleMass() { return mass; }
   bool GetBackReaction() { return backreaction; }
   bool GetDragForce() { return dragforce; }
   bool GetVariableTaus() { return variable_taus; }
   Real GetStoppingTime() { return taus0; }
-  Real NewBlockTimeStep(); // TODO (SMOON) This must override the base version
+  Real NewBlockTimeStep(); // TODO(SMOON) This must override the base version
 
  private:
   // Methods (implementation)
@@ -330,8 +330,8 @@ friend class MeshBlock;
   ~TracerParticles();
 
   // Methods (interface)
-  void SetOneParticleMass(Real new_mass); // TODO (SMOON) remove duplication
-  Real GetOneParticleMass() { return mass; } // TODO (SMOON) tracer has mass??
+  void SetOneParticleMass(Real new_mass); // TODO(SMOON) remove duplication
+  Real GetOneParticleMass() { return mass; } // TODO(SMOON) tracer has mass??
 
  private:
   // Methods (implementation)
@@ -388,7 +388,7 @@ friend class MeshBlock;
 
   // Data members
   Real dt_old;
-  // TODO (SMOON) index and variable name are inconsistent
+  // TODO(SMOON) index and variable name are inconsistent
   int imetal, iage; // indices for additional Real properties
   int igas;                // indices for additional Aux properties
   AthenaArray<Real> mp, mzp, tage;        // shorthand for real properties

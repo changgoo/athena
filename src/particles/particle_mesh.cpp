@@ -73,7 +73,7 @@ ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : nmeshaux_(0), iden
   // if that particle exert gravity. Otherwise, add it to the list for
   // outputs.
   pmb_->pbval->bvars_pm.push_back(pmbvar);
-  if (ppar_->isgravity_) pmb_->pbval->bvars_pm_grav.push_back(pmbvar);
+  if (ppar_->IsGravity()) pmb_->pbval->bvars_pm_grav.push_back(pmbvar);
 }
 
 //--------------------------------------------------------------------------------------
@@ -116,9 +116,9 @@ AthenaArray<Real> ParticleMesh::GetVelocityField() const {
       for (int i = is; i <= ie; ++i) {
         Real rho = dens_(k,j,i);
         rho = (rho > 0.0) ? rho : 1.0;
-        vel(0,k,j,i) = mom1(k,j,i) / rho;
-        vel(1,k,j,i) = mom2(k,j,i) / rho;
-        vel(2,k,j,i) = mom3(k,j,i) / rho;
+        vel(0,k,j,i) = mom1_(k,j,i) / rho;
+        vel(1,k,j,i) = mom2_(k,j,i) / rho;
+        vel(2,k,j,i) = mom3_(k,j,i) / rho;
       }
     }
   }

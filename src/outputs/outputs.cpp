@@ -756,7 +756,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
   } // endif (MAGNETIC_FIELDS_ENABLED)
 
 //  // particle number density
-//  TODO (SMOON) maybe want to add number density property in meshaux
+//  TODO(SMOON) maybe want to add number density property in meshaux
 //  if (output_params.variable.compare("np") == 0) {
 //    for (int ipar = 0; ipar<Particles::num_particles; ++ipar) {
 //      pod = new OutputData;
@@ -772,7 +772,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
   // particle velocity field
   if (output_params.variable.compare("vp") == 0 ||
       output_params.variable.compare("prim") == 0) {
-    // TODO (SMOON) change to standard vector loop
+    // TODO(SMOON) change to standard vector loop
     // need to access my_ipar_
     for (int ipar = 0; ipar<Particles::num_particles; ++ipar) {
       pod = new OutputData;

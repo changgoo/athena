@@ -42,7 +42,10 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParame
   backreaction = pin->GetOrAddBoolean(input_block_name, "backreaction", false);
   if (taus0 == 0.0) backreaction = false;
 
-  if (!backreaction) isgravity_ = false;
+ // TODO(SMOON): It is user's responsibility to set isgravity_ through input file.
+ // Temporarily commenting out the below line; this may be replaced by exception
+ // throwing when (!backreaction && isgravity_)
+//  if (!backreaction) isgravity_ = false;
 
   Particles::AllocateMemory();
 
@@ -51,7 +54,7 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParame
     idpx2 = imom2;
     idpx3 = imom3;
 
-    dpx1 = ppm->GetMomentumDensityX1(); // TODO (SMOON) Is ppm->updated?
+    dpx1 = ppm->GetMomentumDensityX1(); // TODO(SMOON) Is ppm->updated?
     dpx2 = ppm->GetMomentumDensityX2();
     dpx3 = ppm->GetMomentumDensityX3();
   }
@@ -98,7 +101,7 @@ Real DustParticles::NewBlockTimeStep() {
     for (int k = ks; k <= ke; ++k) {
       for (int j = js; j <= je; ++j) {
         for (int i = is; i <= ie; ++i) {
-          // TODO (SMOON) Is FindLocalDensity called before NewBlockTimeStep?
+          // TODO(SMOON) Is FindLocalDensity called before NewBlockTimeStep?
           Real epsilon = rhop(k,j,i) / phydro->u(IDN,k,j,i);
           epsmax = std::max(epsmax, epsilon);
         }

@@ -284,6 +284,7 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
   active2_ = pmy_mesh->mesh_size.nx2 > 1;
   active3_ = pmy_mesh->mesh_size.nx3 > 1;
 
+  // TODO(SMOON) is this if statement needed?
   if (SELF_GRAVITY_ENABLED) isgravity_ = pp->gravity;
 
   // read shearing box parameters from input block
