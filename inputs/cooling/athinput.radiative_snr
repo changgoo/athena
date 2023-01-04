@@ -57,7 +57,7 @@ nx3        = 32
 <hydro>
 gamma           = 1.666666666667 # gamma = C_p/C_v
 iso_sound_speed = 0.4082482905   # equivalent to sqrt(gamma*p/d) for p=0.1, d=1
-neighbor_flooring = false
+neighbor_flooring = true
 
 <cooling>
 cooling       = enroll           # [none, enroll, op_split]
