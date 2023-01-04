@@ -240,7 +240,7 @@ void DustParticles::ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& mes
         mass * wx(k), mass * wy(k), mass * wz(k), wx(k), wy(k), wz(k));
 
   // Assign the momentum change onto mesh.
-  ppm->AssignParticlesToMeshAux(work, iwx, idpx1, 3);
+  ppm->DepositParticlesToMeshAux(work, iwx, idpx1, 3);
 }
 
 //--------------------------------------------------------------------------------------

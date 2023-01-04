@@ -306,9 +306,9 @@ void StarParticles::FindLocalDensityOnMesh(bool include_momentum) {
         mp(k)*vpx(k), mp(k)*vpy(k), mp(k)*vpz(k), mom1(k), mom2(k), mom3(k));
       mpar(k) = mp(k);
     }
-    ppm->AssignParticlesToMeshAux(parprop, 0, ppm->iweight, 5);
+    ppm->DepositParticlesToMeshAux(parprop, 0, ppm->iweight, 5);
   } else {
-    ppm->AssignParticlesToMeshAux(mp, 0, ppm->iweight, 2);
+    ppm->DepositParticlesToMeshAux(mp, 0, ppm->iweight, 2);
   }
 
   // set flag to trigger PM communications

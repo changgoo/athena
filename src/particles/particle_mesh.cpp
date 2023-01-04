@@ -214,12 +214,13 @@ void ParticleMesh::InterpolateMeshToParticles(
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void ParticleMesh::AssignParticlesToMeshAux(
+//! \fn void ParticleMesh::DepositParticlesToMeshAux(
 //       const AthenaArray<Real>& par, int p1, int ma1, int nprop)
-//! \brief assigns par (realprop, auxprop, or work in Particles class) from property
+//! \brief Deposit particle properties into Mesh.
+//
+//         Assigns par (realprop, auxprop, or work in Particles class) from property
 //!        index p1 to p1+nprop-1 onto meshaux from property index ma1 and up.
-// TODO change name to DepositParticlesToMesh
-void ParticleMesh::AssignParticlesToMeshAux(
+void ParticleMesh::DepositParticlesToMeshAux(
          const AthenaArray<Real>& par, int p1, int ma1, int nprop) {
   // Zero out meshaux.
   Real *pfirst = &meshaux(ma1,0,0,0);

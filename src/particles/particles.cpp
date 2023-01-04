@@ -796,11 +796,11 @@ void Particles::FindLocalDensityOnMesh(bool include_momentum) {
     for (int k = 0; k < npar; ++k)
       pc->CartesianToMeshCoordsVector(xp(k), yp(k), zp(k),
         mass*vpx(k), mass*vpy(k), mass*vpz(k), mom1(k), mom2(k), mom3(k));
-    ppm->AssignParticlesToMeshAux(parprop, 0, ppm->iweight, 4);
+    ppm->DepositParticlesToMeshAux(parprop, 0, ppm->iweight, 4);
   } else {
     AthenaArray<Real> parprop(npar);
     std::fill(&parprop(0), &parprop(0) + parprop.GetDim1(), mass);
-    ppm->AssignParticlesToMeshAux(parprop, 0, ppm->iweight, 1);
+    ppm->DepositParticlesToMeshAux(parprop, 0, ppm->iweight, 1);
   }
 
   // set flag to trigger PM communications
