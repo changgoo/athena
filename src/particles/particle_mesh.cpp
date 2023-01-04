@@ -45,7 +45,7 @@ ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : nmeshaux_(0), iden
   nx1_(pmb->ncells1), nx2_(pmb->ncells2), nx3_(pmb->ncells3),
   ncells_(nx1_ * nx2_ * nx3_),
   npc1_(active1_ ? NPC : 1), npc2_(active2_ ? NPC : 1), npc3_(active3_ ? NPC : 1),
-  my_ipar_(ppar->my_ipar_), ppar_(ppar), pmb_(pmb), pmesh_(ppar->pmy_mesh) {
+  ppar_(ppar), pmb_(pmb), pmesh_(ppar->pmy_mesh) {
   // Add density and momentum in meshaux.
   idens = AddMeshAux();
   imom1 = AddMeshAux();

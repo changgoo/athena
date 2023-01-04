@@ -95,6 +95,7 @@ friend class ParticleMesh;
 
   std::size_t GetSizeInBytes();
   bool IsGravity() { return isgravity_; }
+
   bool CheckInMeshBlock(Real x1, Real x2, Real x3);
   void UnpackParticlesForRestart(char *mbdata, std::size_t &os);
   void PackParticlesForRestart(char *&pdata);
@@ -128,6 +129,7 @@ friend class ParticleMesh;
   // number of particle containers
   static int num_particles, num_particles_grav, num_particles_output;
   ParticleMesh *ppm;  //!> ptr to particle-mesh
+  const int ipar;
 
  protected:
   // Protected interfaces (to be used by derived classes)
@@ -175,7 +177,6 @@ friend class ParticleMesh;
   // std::uint64_t nparmax;  //!> maximum number of particles per meshblock
   int npar;     //!> number of particles
   int nparmax;  //!> maximum number of particles per meshblock
-  int my_ipar_;
   bool parhstout_; //!> flag for individual particle history output
   Real mass;   //!> common mass of particle TODO(SMOON) This must be a property of derived particles, because there could be massless particles (e.g., tracers).
   Real cfl_par;  //!> CFL number for particles
@@ -250,7 +251,6 @@ friend class ParticleMesh;
   // Data members
   bool isgravity_; //!> flag for gravity
   bool active1_, active2_, active3_;  // active dimensions
-  int my_particle_num_;
 
   // MeshBlock-to-MeshBlock communication:
   BoundaryValues *pbval_;                            //!> ptr to my BoundaryValues

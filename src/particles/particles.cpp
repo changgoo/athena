@@ -231,7 +231,7 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
   ixi1(-1), ixi2(-1), ixi3(-1), imass(-1), ish(-1),
   igx(-1), igy(-1), igz(-1),
   npar(0), nparmax(1),
-  my_ipar_(pp->ipar), isgravity_(false), parhstout_(false), mass(1.0) {
+  ipar(pp->ipar), isgravity_(false), parhstout_(false), mass(1.0) {
   // Add particle ID.
   ipid = AddIntProperty();
   intfieldname.push_back("pid");
@@ -939,7 +939,7 @@ void Particles::OutputParticles(bool header, int kid) {
     if (pid(k) != kid) continue;
 
     // Create the filename.
-    fname << file_basename << ".pid" << pid(k) << ".par" << my_ipar_ << ".csv";
+    fname << file_basename << ".pid" << pid(k) << ".par" << ipar << ".csv";
 
     // Open the file for write.
     if (header)

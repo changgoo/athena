@@ -86,7 +86,6 @@ friend class OutputType;
   int is, ie, js, je, ks, ke;  // beginning and ending indices
   int nmeshaux_;  //!> number of auxiliaries to the meshblock
 
-  int my_ipar_;                //!> index to my particle container
   Particles *ppar_;            //!> ptr to my Particles instance
   MeshBlock *pmb_;             //!> ptr to my MeshBlock
   Mesh *pmesh_;                //!> ptr to my Mesh

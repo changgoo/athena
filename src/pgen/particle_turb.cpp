@@ -75,15 +75,15 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   }
 
   if (pmy_mesh->particle) {
-    for (int ipar = 0; ipar < Particles::num_particles; ++ipar) {
+    for (Particles *ppar : ppar) {
       // Only assign particles either side of x
       // ipar == 0 for x<0
       // ipar == 1 for x>0
-      Real xp1min = pin->GetReal(ppar[ipar]->input_block_name,"x1min");
-      Real xp1max = pin->GetReal(ppar[ipar]->input_block_name,"x1max");
+      Real xp1min = pin->GetReal(ppar->input_block_name,"x1min");
+      Real xp1max = pin->GetReal(ppar->input_block_name,"x1max");
       // Find the total number of particles in each direction.
       RegionSize& mesh_size = pmy_mesh->mesh_size;
-      Real np_per_cell = pin->GetOrAddReal(ppar[ipar]->input_block_name, "np_per_cell",1);
+      Real np_per_cell = pin->GetOrAddReal(ppar->input_block_name, "np_per_cell",1);
       int npx1 = (block_size.nx1 > 1) ? static_cast<int>(mesh_size.nx1*np_per_cell) : 1;
       int npx2 = (block_size.nx2 > 1) ? static_cast<int>(mesh_size.nx2*np_per_cell) : 1;
       int npx3 = (block_size.nx3 > 1) ? static_cast<int>(mesh_size.nx3*np_per_cell) : 1;
@@ -94,10 +94,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       Real dx1 = mesh_size.x1len / npx1,
            dx2 = mesh_size.x2len / npx2,
            dx3 = mesh_size.x3len / npx3;
-      if (DustParticles *pp = dynamic_cast<DustParticles*>(ppar[ipar])) {
-        Real dtog = pin->GetOrAddReal(ppar[ipar]->input_block_name,"dtog",1);
+      if (DustParticles *pp = dynamic_cast<DustParticles*>(ppar)) {
+        Real dtog = pin->GetOrAddReal(ppar->input_block_name,"dtog",1);
         pp->SetOneParticleMass(dtog * d0 * vol / (npx1 * npx2 * npx3));
-      } else if (TracerParticles *pp = dynamic_cast<TracerParticles*>(ppar[ipar])) {
+      } else if (TracerParticles *pp = dynamic_cast<TracerParticles*>(ppar)) {
         pp->SetOneParticleMass(d0 * vol / (npx1 * npx2 * npx3));
       }
 
@@ -106,8 +106,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           npx2_loc = static_cast<int>(std::round(block_size.x2len / dx2)),
           npx3_loc = static_cast<int>(std::round(block_size.x3len / dx3));
       int npar = npx1_loc * npx2_loc * npx3_loc;
-      if (npar > ppar[ipar]->nparmax)
-        ppar[ipar]->UpdateCapacity(npar);
+      if (npar > ppar->nparmax)
+        ppar->UpdateCapacity(npar);
 
       // Assign the particles.
       // Ramdomizing position. Or velocity perturbation
@@ -127,25 +127,25 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           for (int i = 0; i < npx1_loc; ++i) {
             Real xp1 = block_size.x1min + (i + 0.5) * dx1;
             if ((xp1>xp1min) && (xp1<xp1max)) {
-              ppar[ipar]->xp(ipid) = xp1 + dx1 * (udist(rng_generator) - 0.5);
-              ppar[ipar]->yp(ipid) = yp1 + dx2 * (udist(rng_generator) - 0.5);
-              ppar[ipar]->zp(ipid) = zp1;
+              ppar->xp(ipid) = xp1 + dx1 * (udist(rng_generator) - 0.5);
+              ppar->yp(ipid) = yp1 + dx2 * (udist(rng_generator) - 0.5);
+              ppar->zp(ipid) = zp1;
               if (mesh_size.nx3 > 1)
-                ppar[ipar]->zp(ipid) += dx3 * (udist(rng_generator) - 0.5);
+                ppar->zp(ipid) += dx3 * (udist(rng_generator) - 0.5);
 
-              ppar[ipar]->vpx(ipid) = 0.0;
-              ppar[ipar]->vpy(ipid) = 0.0;
-              ppar[ipar]->vpz(ipid) = 0.0;
+              ppar->vpx(ipid) = 0.0;
+              ppar->vpy(ipid) = 0.0;
+              ppar->vpz(ipid) = 0.0;
               ++ipid;
             }
           }
         }
       }
 
-      ppar[ipar]->npar = ipid;
+      ppar->npar = ipid;
 
       // Initialize the stopping time.
-      if (DustParticles *pp = dynamic_cast<DustParticles*>(ppar[ipar])) {
+      if (DustParticles *pp = dynamic_cast<DustParticles*>(ppar)) {
         if (pp->GetVariableTaus()) {
           Real taus0 = pp->GetStoppingTime();
           for (int k = 0; k < npar; ++k)
