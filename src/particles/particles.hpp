@@ -87,7 +87,8 @@ friend class ParticleMesh;
   static void AMRFineToCoarse(Particles *pparc, Particles *pparf);
   static void Initialize(Mesh *pm, ParameterInput *pin);
   static void PostInitialize(Mesh *pm, ParameterInput *pin);
-  static void FindDensityOnMesh(Mesh *pm, bool include_momentum); // TODO(SMOON) bad function name; should be moved to ParticleMesh
+  // TODO(SMOON) bad function name; should be moved to ParticleMesh
+  static void FindDensityOnMesh(Mesh *pm, bool include_momentum);
   static void FormattedTableOutput(Mesh *pm, OutputParameters op);
   static void GetHistoryOutputNames(std::string output_names[], int ipar);
   static std::int64_t GetTotalNumber(Mesh *pm);
@@ -97,9 +98,11 @@ friend class ParticleMesh;
   void SetOneParticleMass(Real new_mass); // TODO(SMOON) retire this function; better to
                                           // set particle mass in AddOneParticle
   void RemoveOneParticle(int k);
-  virtual void FindLocalDensityOnMesh(bool include_momentum); // TODO(SMOON) this should be moved to ParticleMesh
+  // TODO(SMOON) this should be moved to ParticleMesh
+  virtual void FindLocalDensityOnMesh(bool include_momentum);
   void DepositPMtoMesh(int stage); // TODO(SMOON) should be moved to ParticleMesh
-  virtual void Integrate(int step); // TODO(SMOON) (template method pattern is appropriate here)
+  // TODO(SMOON) (template method pattern is appropriate here)
+  virtual void Integrate(int step);
   virtual Real NewBlockTimeStep();
 
   std::size_t GetSizeInBytes(); // TODO(SMOON) const function
@@ -112,8 +115,10 @@ friend class ParticleMesh;
   virtual void AddHistoryOutput(Real data_sum[], int pos);
   void OutputParticles(bool header); // individual particle history;
   void OutputParticles(bool header, int kid);
-  void OutputOneParticle(std::ostream &os, int k, bool header); // TODO(SMOON) must be private
-  void ToggleParHstOutFlag(); // TODO(SMOON) may not be needed; why not just make it default?
+  // TODO(SMOON) must be private
+  void OutputOneParticle(std::ostream &os, int k, bool header);
+  // TODO(SMOON) may not be needed; why not just make it default?
+  void ToggleParHstOutFlag();
 
   // ************************** //
   // Boundary communication API //
@@ -227,8 +232,8 @@ friend class ParticleMesh;
   // Methods (implementation)
   // Need to be implemented in derived classes
   // TODO(SMOON) Functions such as SourceTerms, EulerStep, BorisKick, ... needs to be
-  // inside the implementation of template function Integrate(). This needs some consistent name
-  // convention.
+  // inside the implementation of template function Integrate(). This needs some
+  // consistent name convention.
   // for example, the interface looks like
   // Integrate () {
   //   Kick()

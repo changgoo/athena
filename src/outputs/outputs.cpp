@@ -756,7 +756,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
   } // endif (MAGNETIC_FIELDS_ENABLED)
 
 //  // particle number density
-//  TODO(SMOON) maybe want to add number density property in meshaux
+// TODO(SMOON) maybe want to add number density property in meshaux
 //  if (output_params.variable.compare("np") == 0) {
 //    for (int ipar = 0; ipar<Particles::num_particles; ++ipar) {
 //      pod = new OutputData;
@@ -919,7 +919,7 @@ void Outputs::MakeOutputs(Mesh *pm, ParameterInput *pin, bool wtflag) {
         (wtflag && ptype->output_params.file_type == "rst")) {
       if (first && (ptype->output_params.file_type != "hst" || wtflag)) {
         pm->ApplyUserWorkBeforeOutput(pin);
-        if (pm->particle) Particles::FindDensityOnMesh(pm, true); // (SMOON) Is this neccessary?
+        if (pm->particle) Particles::FindDensityOnMesh(pm, true);
         first = false;
       }
       ptype->WriteOutputFile(pm, pin, wtflag);

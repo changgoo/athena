@@ -41,9 +41,9 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParame
   backreaction = pin->GetOrAddBoolean(input_block_name, "backreaction", false);
   if (taus0 == 0.0) backreaction = false;
 
- // TODO(SMOON): It is user's responsibility to set isgravity_ through input file.
- // Temporarily commenting out the below line; this may be replaced by exception
- // throwing when (!backreaction && isgravity_)
+  // TODO(SMOON): It is user's responsibility to set isgravity_ through input file.
+  // Temporarily commenting out the below line; this may be replaced by exception
+  // throwing when (!backreaction && isgravity_)
 //  if (!backreaction) isgravity_ = false;
 
   Particles::AllocateMemory();

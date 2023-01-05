@@ -52,10 +52,10 @@ friend class OutputType;
 
   // Interface
   Real FindMaximumDensity() const;
-  AthenaArray<Real> GetMassDensity() const { return dens_; };
-  AthenaArray<Real> GetMomentumDensityX1() const { return mom1_; };
-  AthenaArray<Real> GetMomentumDensityX2() const { return mom2_; };
-  AthenaArray<Real> GetMomentumDensityX3() const { return mom3_; };
+  AthenaArray<Real> GetMassDensity() const { return dens_; }
+  AthenaArray<Real> GetMomentumDensityX1() const { return mom1_; }
+  AthenaArray<Real> GetMomentumDensityX2() const { return mom2_; }
+  AthenaArray<Real> GetMomentumDensityX3() const { return mom3_; }
   AthenaArray<Real> GetVelocityField() const;
 
   ParticleMeshBoundaryVariable *pmbvar;

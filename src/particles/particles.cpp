@@ -138,10 +138,6 @@ void Particles::PostInitialize(Mesh *pm, ParameterInput *pin) {
 //! \brief finds particle mesh densities for all particle containers.
 //!
 //! If include_momentum is true, the momentum density field is also computed.
-// SMOON: Is this function necessary? all these calculations are done in the time integrator task list.
-// Well, the FindLocalDensity call in the time integrator only computes density, not momentum;
-// If you want to output particle momentum on mesh, you need to call this with include_momentum=true,
-// as it is currently done.
 
 void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
   // Assign particle properties to mesh and send boundary.
