@@ -35,8 +35,8 @@ int ParticleMesh::AddMeshAux() {
 //! \fn ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb)
 //! \brief constructs a new ParticleMesh instance.
 
-ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : nmeshaux_(0), idens(-1),
-  imom1(-1), imom2(-1), imom3(-1), updated(false),
+ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : updated(false),
+  imom1(-1), imom2(-1), imom3(-1), idens(-1), nmeshaux_(0),
   is(pmb->is), ie(pmb->ie), js(pmb->js), je(pmb->je), ks(pmb->ks), ke(pmb->ke),
   active1_(ppar->active1_), active2_(ppar->active2_), active3_(ppar->active3_),
   dxi1_(active1_ ? RINF : 0),

@@ -220,12 +220,12 @@ std::int64_t Particles::GetTotalNumber(Mesh *pm) {
 //! \brief constructs a Particles instance.
 
 Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp) :
-  input_block_name(pp->block_name), partype(pp->partype),
+  ipar(pp->ipar), input_block_name(pp->block_name), partype(pp->partype),
   nint(0), nreal(0), naux(0), nwork(0),
   ipid(-1), ixp(-1), iyp(-1), izp(-1), ivpx(-1), ivpy(-1), ivpz(-1),
   ixp0(-1), iyp0(-1), izp0(-1), ivpx0(-1), ivpy0(-1), ivpz0(-1),
   ixi1(-1), ixi2(-1), ixi3(-1), igx(-1), igy(-1), igz(-1), ish(-1),
-  npar(0), nparmax(1), ipar(pp->ipar), isgravity_(false), parhstout_(false), mass(1.0) {
+  npar(0), nparmax(1), parhstout_(false), mass(1.0), isgravity_(false) {
   // Add particle ID.
   ipid = AddIntProperty();
   intfieldname.push_back("pid");

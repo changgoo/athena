@@ -77,13 +77,13 @@ friend class OutputType;
   void DepositMeshAux(AthenaArray<Real>& u, int ma1, int mb1, int nprop);
 
   // Instance Variables
+  int nmeshaux_;  //!> number of auxiliaries to the meshblock
+  int is, ie, js, je, ks, ke;  // beginning and ending indices
   bool active1_, active2_, active3_;  // active dimensions
   Real dxi1_, dxi2_, dxi3_;           // range of influence from a particle cloud
   int nx1_, nx2_, nx3_;               // number of cells in meshaux in each dimension
   int ncells_;                        // total number of cells in meshaux
   int npc1_, npc2_, npc3_;            // size of a particle cloud
-  int is, ie, js, je, ks, ke;  // beginning and ending indices
-  int nmeshaux_;  //!> number of auxiliaries to the meshblock
 
   Particles *ppar_;            //!> ptr to my Particles instance
   MeshBlock *pmb_;             //!> ptr to my MeshBlock
