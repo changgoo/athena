@@ -66,7 +66,7 @@ friend class OutputType;
   int imom1, imom2, imom3;   //!> index to momentum vector in meshaux
   int idens;   //!> index to density in meshaux
 
- protected:
+ private:
   // Instance methods
   int AddMeshAux();
   void InterpolateMeshToParticles(
@@ -76,7 +76,6 @@ friend class OutputType;
            const AthenaArray<Real>& par, int p1, int ma1, int nprop);
   void DepositMeshAux(AthenaArray<Real>& u, int ma1, int mb1, int nprop);
 
- private:
   // Instance Variables
   bool active1_, active2_, active3_;  // active dimensions
   Real dxi1_, dxi2_, dxi3_;           // range of influence from a particle cloud

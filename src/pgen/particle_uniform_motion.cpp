@@ -35,7 +35,7 @@
 #include <omp.h>
 #endif
 
-Real d0;
+Real d0, mass;
 Real DeltaRho(MeshBlock *pmb, int iout);
 Real TotalMass(MeshBlock *pmb, int iout);
 bool InBoundary(Real x, Real y, Real z, Real x1min, Real x1max,
@@ -121,15 +121,14 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     std::uniform_real_distribution<Real> udist(0.0,1.0); // uniform in [0,1)
     rng_generator.seed(rseed);
 
+    int npartot = pin->GetInteger("problem","npartot");
     for (Particles *ppar : ppars) {
-      int npartot = pin->GetInteger("problem","npartot");
 
       // Update capacity of particle container
       // ppar->UpdateCapacity(static_cast<int>(npartot/Globals::nranks));
 
       // Assign the particles.
       RegionSize& mesh_size = pmy_mesh->mesh_size;
-      Real mass;
       Real radius = pin->GetOrAddReal(ppar->input_block_name,"radius",-1);
       if (radius == -1) {
         // Assign particles in each container to different regions
@@ -158,7 +157,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
             pp->AddOneParticle(mass,x,y,z,vx0,vy,0.0);
           } else if (TracerParticles *pp = dynamic_cast<TracerParticles*>(ppar)) {
             pp->AddOneParticle(x,y,z,vx0,vy,0.0);
-            pp->SetOneParticleMass(mass);
           } else {
             std::stringstream msg;
             msg << "### FATAL ERROR in ProblemGenerator " << std::endl
@@ -192,7 +190,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
             pp->AddOneParticle(mass,x,y,z,vx0,vy,0.0);
           } else if (TracerParticles *pp = dynamic_cast<TracerParticles*>(ppar)) {
             pp->AddOneParticle(x,y,z,vx0,vy,0.0);
-            pp->SetOneParticleMass(mass);
           } else {
             std::stringstream msg;
             msg << "### FATAL ERROR in ProblemGenerator " << std::endl
@@ -233,6 +230,12 @@ Real DeltaRho(MeshBlock *pmb, int iout) {
     rho.NewAthenaArray(pmb->ncells3, pmb->ncells2, pmb->ncells1);
     for (Particles *ppar : pmb->ppars) {
       AthenaArray<Real> rhop(ppar->ppm->GetMassDensity());
+      if (TracerParticles *pp = dynamic_cast<TracerParticles*>(ppar)) {
+        for (int k=ks; k<=ke; ++k)
+          for (int j=js; j<=je; ++j)
+            for (int i=is; i<=ie; ++i)
+              rhop(k,j,i) *= mass;
+      }
       for (int k=ks; k<=ke; ++k)
         for (int j=js; j<=je; ++j)
           for (int i=is; i<=ie; ++i)
@@ -259,7 +262,7 @@ Real DeltaRho(MeshBlock *pmb, int iout) {
 //! \brief Total particle mass from particles and partcle mesh
 //========================================================================================
 Real TotalMass(MeshBlock *pmb, int iout) {
-  Real mass{0};
+  Real mtot{0};
   int is=pmb->is, ie=pmb->ie;
   int js=pmb->js, je=pmb->je;
   int ks=pmb->ks, ke=pmb->ke;
@@ -269,16 +272,22 @@ Real TotalMass(MeshBlock *pmb, int iout) {
   Particles *ppar = pmb->ppars[ipar];
 
   AthenaArray<Real> rhop(ppar->ppm->GetMassDensity());
+  if (TracerParticles *pp = dynamic_cast<TracerParticles*>(ppar)) {
+    for (int k=ks; k<=ke; ++k)
+      for (int j=js; j<=je; ++j)
+        for (int i=is; i<=ie; ++i)
+          rhop(k,j,i) *= mass;
+  }
   for (int k=ks; k<=ke; ++k) {
     for (int j=js; j<=je; ++j) {
       pmb->pcoord->CellVolume(k, j, pmb->is, pmb->ie, vol);
       for (int i=is; i<=ie; ++i) {
-        mass += rhop(k,j,i)*vol(i);
+        mtot += rhop(k,j,i)*vol(i);
       }
     }
   }
 
-  return mass;
+  return mtot;
 }
 
 //--------------------------------------------------------------------------------------

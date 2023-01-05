@@ -97,8 +97,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       if (DustParticles *pp = dynamic_cast<DustParticles*>(ppar)) {
         Real dtog = pin->GetOrAddReal(ppar->input_block_name,"dtog",1);
         pp->SetOneParticleMass(dtog * d0 * vol / (npx1 * npx2 * npx3));
-      } else if (TracerParticles *pp = dynamic_cast<TracerParticles*>(ppar)) {
-        pp->SetOneParticleMass(d0 * vol / (npx1 * npx2 * npx3));
       }
 
       // Determine number of particles in the block.

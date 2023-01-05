@@ -169,16 +169,16 @@ friend class ParticleMesh;
   int ivpx0, ivpy0, ivpz0;  // indices for beginning velocity components
 
   int ixi1, ixi2, ixi3;     // indices for position indices
-
-  int imass, ish; // (TODO) imass must be a property of derived particles
   int igx, igy, igz; // indices for gravity force
+
+  int ish;
 
   // std::uint64_t npar;     //!> number of particles
   // std::uint64_t nparmax;  //!> maximum number of particles per meshblock
   int npar;     //!> number of particles
   int nparmax;  //!> maximum number of particles per meshblock
   bool parhstout_; //!> flag for individual particle history output
-  Real mass;   //!> common mass of particle TODO(SMOON) This must be a property of derived particles, because there could be massless particles (e.g., tracers).
+  Real mass;   //!> common mass of particle
   Real cfl_par;  //!> CFL number for particles
 
                                // Data attached to the particles:
@@ -280,7 +280,7 @@ friend class MeshBlock;
   ~DustParticles();
 
   // Methods (interface)
-  void SetOneParticleMass(Real new_mass); // TODO(SMOON) remove duplication
+  void SetOneParticleMass(Real new_mass);
   Real GetOneParticleMass() { return mass; }
   bool GetBackReaction() { return backreaction; }
   bool GetDragForce() { return dragforce; }
@@ -326,8 +326,6 @@ friend class MeshBlock;
   ~TracerParticles();
 
   // Methods (interface)
-  void SetOneParticleMass(Real new_mass); // TODO(SMOON) remove duplication
-  Real GetOneParticleMass() { return mass; } // TODO(SMOON) tracer has mass??
 
  private:
   // Methods (implementation)
@@ -386,7 +384,7 @@ friend class MeshBlock;
   // Data members
   Real dt_old;
   // TODO(SMOON) index and variable name are inconsistent
-  int imetal, iage; // indices for additional Real properties
+  int imass, imetal, iage; // indices for additional Real properties
   int igas;                // indices for additional Aux properties
   AthenaArray<Real> mp, mzp, tage;        // shorthand for real properties
   AthenaArray<Real> fgas;                     // shorthand for aux properties

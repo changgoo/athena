@@ -21,7 +21,7 @@
 //! \brief constructs a StarParticles instance.
 
 StarParticles::StarParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp)
-  : Particles(pmb, pin, pp), imetal(-1), iage(-1), igas(-1) {
+  : Particles(pmb, pin, pp), imass(-1), imetal(-1), iage(-1), igas(-1) {
   // Add particle mass, metal mass
   imass = AddRealProperty();
   imetal = AddRealProperty();
