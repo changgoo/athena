@@ -106,6 +106,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     pp->UpdateCapacity(npar);
 
   // Assign the particles.
+  // TODO(SMOON) Add particles using AddOneParticle interface.
+  // Encapsulate xp, yp, ...
   int ipar = 0;
   for (int k = 0; k < npx3_loc; ++k) {
     Real zp1 = block_size.x3min + (k + 0.5) * dx3;
@@ -125,6 +127,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   }
 
   // Initialize the stopping time.
+  // TODO(SMOON) this must be done in AddOneParticle
   if (pp->GetVariableTaus()) {
     Real taus0 = pp->GetStoppingTime();
     for (int k = 0; k < npar; ++k)

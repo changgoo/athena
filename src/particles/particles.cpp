@@ -157,7 +157,7 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
     for (Particles *ppar : pmb->ppars) {
       ppar->FindLocalDensityOnMesh(include_momentum);
       ppar->ppm->pmbvar->SendBoundaryBuffers();
-    } // (SMOON) This seems to be redundant with TimeIntegratorTaskList::SendParticleMesh
+    } // SMOON: This seems to be redundant with TimeIntegratorTaskList::SendParticleMesh
   }
 
   for (int b = 0; b < nblocks; ++b) {

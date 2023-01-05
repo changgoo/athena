@@ -116,6 +116,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       std::uniform_real_distribution<Real> udist(0.0,1.0); // uniform in [0,1)
       rng_generator.seed(rseed);
 
+      // TODO(SMOON) Add particles using AddOneParticle interface.
+      // Encapsulate xp, yp, ...
       // Real ph = udist(rng_generator)*TWO_PI;
       int ipid = 0;
       for (int k = 0; k < npx3_loc; ++k) {
@@ -143,6 +145,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       ppar->npar = ipid;
 
       // Initialize the stopping time.
+      // TODO(SMOON) this must be done in AddOneParticle
       if (DustParticles *pp = dynamic_cast<DustParticles*>(ppar)) {
         if (pp->GetVariableTaus()) {
           Real taus0 = pp->GetStoppingTime();

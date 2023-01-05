@@ -61,7 +61,10 @@ struct ParticleParameters {
 
 class Particles {
 friend class MeshBlock;  // Make writing initial conditions possible.
-friend class OutputType;
+                        // TODO(SMOON) No! This terribly breaks encapsulation.
+                        // Use AddOneParticle interface to write initial conditions.
+                        // MeshBlock should not be a friend of Particles.
+friend class OutputType; // TODO(SMOON) OutputType need not be a friend, too.
 friend class ParticleGravity;
 friend class ParticleMesh;
 
@@ -76,11 +79,15 @@ friend class ParticleMesh;
   virtual ~Particles();
 
   // Static functions
+  // TODO(SMOON) some of these could be changed to member function
+  // TODO(SMOON) if they are helper functions, take them out of the
+  //             class for better readerbility, since they are not
+  //             a part of the interface
   static void AMRCoarseToFine(Particles *pparc, Particles *pparf, MeshBlock* pmbf);
   static void AMRFineToCoarse(Particles *pparc, Particles *pparf);
   static void Initialize(Mesh *pm, ParameterInput *pin);
   static void PostInitialize(Mesh *pm, ParameterInput *pin);
-  static void FindDensityOnMesh(Mesh *pm, bool include_momentum);
+  static void FindDensityOnMesh(Mesh *pm, bool include_momentum); // TODO(SMOON) bad function name; should be moved to ParticleMesh
   static void FormattedTableOutput(Mesh *pm, OutputParameters op);
   static void GetHistoryOutputNames(std::string output_names[], int ipar);
   static std::int64_t GetTotalNumber(Mesh *pm);
@@ -88,24 +95,27 @@ friend class ParticleMesh;
   // Methods (interface)
   void AddOneParticle(Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
   void RemoveOneParticle(int k);
-  virtual void FindLocalDensityOnMesh(bool include_momentum);
-  void DepositPMtoMesh(int stage);
+  virtual void FindLocalDensityOnMesh(bool include_momentum); // TODO(SMOON) this should be moved to ParticleMesh
+  void DepositPMtoMesh(int stage); // TODO(SMOON) should be moved to ParticleMesh
   virtual void Integrate(int step); // TODO(SMOON) (template method pattern is appropriate here)
   virtual Real NewBlockTimeStep();
 
-  std::size_t GetSizeInBytes();
+  std::size_t GetSizeInBytes(); // TODO(SMOON) const function
   bool IsGravity() { return isgravity_; }
 
-  bool CheckInMeshBlock(Real x1, Real x2, Real x3);
+  bool CheckInMeshBlock(Real x1, Real x2, Real x3); // TODO(SMOON) This must be protected
   void UnpackParticlesForRestart(char *mbdata, std::size_t &os);
   void PackParticlesForRestart(char *&pdata);
 
   virtual void AddHistoryOutput(Real data_sum[], int pos);
-  void OutputParticles(bool header); // individual particle history
+  void OutputParticles(bool header); // individual particle history;
   void OutputParticles(bool header, int kid);
-  void OutputOneParticle(std::ostream &os, int k, bool header);
-  void ToggleParHstOutFlag();
+  void OutputOneParticle(std::ostream &os, int k, bool header); // TODO(SMOON) must be private
+  void ToggleParHstOutFlag(); // TODO(SMOON) may not be needed; why not just make it default?
 
+  // ************************** //
+  // Boundary communication API //
+  // ************************** //
   void ClearBoundary();
   void ClearNeighbors();
   void LinkNeighbors(MeshBlockTree &tree, int64_t nrbx1, int64_t nrbx2, int64_t nrbx3,
@@ -117,7 +127,7 @@ friend class ParticleMesh;
                              enum BoundaryStatus& bstatus);
 #endif
   void SendToNeighbors();
-  void SetPositionIndices();
+  void SetPositionIndices(); // TODO(SMOON) Flatten this function and move to protected
   bool ReceiveFromNeighbors();
   void StartReceivingParticlesShear();
   void SendParticlesShear();
@@ -280,8 +290,9 @@ friend class MeshBlock;
   ~DustParticles();
 
   // Methods (interface)
-  void SetOneParticleMass(Real new_mass);
-  Real GetOneParticleMass() { return mass; }
+  void SetOneParticleMass(Real new_mass); // TODO(SMOON) retire this function; better to
+                                          // set particle mass in AddOneParticle
+  Real GetOneParticleMass() { return mass; } // TODO(SMOON) remove unnecessary getters
   bool GetBackReaction() { return backreaction; }
   bool GetDragForce() { return dragforce; }
   bool GetVariableTaus() { return variable_taus; }
