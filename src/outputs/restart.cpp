@@ -194,7 +194,7 @@ void RestartOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool force_wr
     }
 
     // particles:
-    for (Particles *ppar : pmb->ppar)
+    for (Particles *ppar : pmb->ppars)
       ppar->PackParticlesForRestart(pdata);
 
     // CR variables:

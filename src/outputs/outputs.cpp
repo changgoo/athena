@@ -763,7 +763,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
 //      pod->type = "SCALARS";
 //      pod->name = "np";
 //      pod->name += std::to_string(ipar);
-//      pod->data.InitWithShallowSlice(pmb->ppar[ipar]->ppm->weight, 4, 0, 1);
+//      pod->data.InitWithShallowSlice(pmb->ppars[ipar]->ppm->weight, 4, 0, 1);
 //      AppendOutputDataNode(pod);
 //      num_vars_++;
 //    }
@@ -772,7 +772,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
   // particle velocity field
   if (output_params.variable.compare("vp") == 0 ||
       output_params.variable.compare("prim") == 0) {
-    for (Particles *ppar : pmb->ppar) {
+    for (Particles *ppar : pmb->ppars) {
       pod = new OutputData;
       pod->type = "VECTORS";
       pod->name = "vp";
@@ -786,7 +786,7 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
   // particle mass density
   if (output_params.variable.compare("rhop") == 0 ||
       output_params.variable.compare("prim") == 0) {
-    for (Particles *ppar : pmb->ppar) {
+    for (Particles *ppar : pmb->ppars) {
       pod = new OutputData;
       pod->type = "SCALARS";
       pod->name = "rhop";

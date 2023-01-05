@@ -195,8 +195,8 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
             << "partype=" << pp.partype << " is not supported " << std::endl;
         ATHENA_ERROR(msg);
       }
-      ppar.push_back(newppar);
-      if (newppar->IsGravity()) ppar_grav.push_back(newppar);
+      ppars.push_back(newppar);
+      if (newppar->IsGravity()) ppars_grav.push_back(newppar);
       pbval->AdvanceCounterPhysID(CellCenteredBoundaryVariable::max_phys_id);
     }
   }
@@ -340,8 +340,8 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
             << "partype=" << pp.partype << " is not supported " << std::endl;
         ATHENA_ERROR(msg);
       }
-      ppar.push_back(newppar);
-      if (newppar->IsGravity()) ppar_grav.push_back(newppar);
+      ppars.push_back(newppar);
+      if (newppar->IsGravity()) ppars_grav.push_back(newppar);
       pbval->AdvanceCounterPhysID(CellCenteredBoundaryVariable::max_phys_id);
     }
   }
@@ -377,7 +377,7 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
     os += pfield->b.x3f.GetSizeInBytes();
   }
 
-  for (Particles *ppar : ppar)
+  for (Particles *ppar : ppars)
     ppar->UnpackParticlesForRestart(mbdata, os);
 
   if(CR_ENABLED) {
@@ -418,7 +418,7 @@ MeshBlock::~MeshBlock() {
   if (MAGNETIC_FIELDS_ENABLED) delete pfield;
   delete peos;
 
-  for (Particles *ppar : ppar)
+  for (Particles *ppar : ppars)
     delete ppar;
 
   delete porb;
@@ -522,7 +522,7 @@ std::size_t MeshBlock::GetBlockSizeInBytes() {
   if (MAGNETIC_FIELDS_ENABLED)
     size += (pfield->b.x1f.GetSizeInBytes() + pfield->b.x2f.GetSizeInBytes()
              + pfield->b.x3f.GetSizeInBytes());
-  for (Particles *ppar : ppar)
+  for (Particles *ppar : ppars)
     size += ppar->GetSizeInBytes();
   if (CR_ENABLED)
     size += pcr->u_cr.GetSizeInBytes();

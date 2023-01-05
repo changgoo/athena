@@ -90,14 +90,14 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   }
 
   if (pmy_mesh->particle) {
-    if (!(ppar[0]->partype.compare("star") == 0)) {
+    if (!(ppars[0]->partype.compare("star") == 0)) {
       std::stringstream msg;
       msg << "### FATAL ERROR in function [MeshBlock::ProblemGenerator]" << std::endl
           << "Only star particle is allowed. " << std::endl;
       ATHENA_ERROR(msg);
     }
 
-    StarParticles *pp = dynamic_cast<StarParticles*>(ppar[0]);
+    StarParticles *pp = dynamic_cast<StarParticles*>(ppars[0]);
 
     // Find the total number of particles in each direction.
     RegionSize& mesh_size = pmy_mesh->mesh_size;

@@ -271,7 +271,7 @@ void Particles::SendToNeighbors() {
         continue;
       }
       // Use the target receive buffer.
-      ppb = &pn->pmb->ppar[ipar]->recv_[pnb->targetid];
+      ppb = &pn->pmb->ppars[ipar]->recv_[pnb->targetid];
     } else {
 #ifdef MPI_PARALLEL
       // Use the send buffer.
@@ -291,7 +291,7 @@ void Particles::SendToNeighbors() {
     NeighborBlock& nb = pbval_->neighbor[i];
     int dst = nb.snb.rank;
     if (dst == Globals::my_rank) {
-      Particles *ppar = pmy_mesh->FindMeshBlock(nb.snb.gid)->ppar[ipar];
+      Particles *ppar = pmy_mesh->FindMeshBlock(nb.snb.gid)->ppars[ipar];
       ppar->bstatus_[nb.targetid] =
           (ppar->recv_[nb.targetid].npar > 0) ? BoundaryStatus::arrived
                                               : BoundaryStatus::completed;
@@ -668,7 +668,7 @@ void Particles::SendParticlesShear() {
       }
       MeshBlock *ptarget_block = pmy_mesh->FindMeshBlock(snb.gid);
       // Use the target receive buffer.
-      ppb = &ptarget_block->ppar[ipar]->recv_sh_[shid];
+      ppb = &ptarget_block->ppars[ipar]->recv_sh_[shid];
     } else {
 #ifdef MPI_PARALLEL
       // Use the send buffer.
@@ -689,7 +689,7 @@ void Particles::SendParticlesShear() {
         if (snb.rank == Globals::my_rank) {
           // neighbor is on the same processor
           // set the BoundaryStatus flag on the destination buffer
-          Particles *ppar = pmy_mesh->FindMeshBlock(snb.gid)->ppar[ipar];
+          Particles *ppar = pmy_mesh->FindMeshBlock(snb.gid)->ppars[ipar];
           ppar->bstatus_recv_sh_[n+upper*4] =
               (ppar->recv_sh_[n+upper*4].npar > 0) ? BoundaryStatus::arrived
                                                    : BoundaryStatus::completed;

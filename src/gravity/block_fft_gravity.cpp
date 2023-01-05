@@ -451,7 +451,7 @@ void BlockFFTGravity::Solve(int stage) {
   // BlockFFT assume nblocal = 1 so that no need to loop over meshblocks
   if (is_particle_gravity) {
     rhosum.NewAthenaArray(pmy_block_->ncells3, pmy_block_->ncells2, pmy_block_->ncells1);
-    for (Particles *ppar : pmy_block_->ppar_grav) {
+    for (Particles *ppar : pmy_block_->ppars_grav) {
       AthenaArray<Real> rhop(ppar->ppm->GetMassDensity());
       for (int k = pmy_block_->ks; k <= pmy_block_->ke; ++k)
         for (int j = pmy_block_->js; j <= pmy_block_->je; ++j)

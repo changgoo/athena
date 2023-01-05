@@ -41,14 +41,14 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     ATHENA_ERROR(msg);
   }
 
-  if (!(ppar[0]->partype.compare("dust") == 0)) {
+  if (!(ppars[0]->partype.compare("dust") == 0)) {
     std::stringstream msg;
     msg << "### FATAL ERROR in function [MeshBlock::ProblemGenerator]" << std::endl
         << "Only dust particle is allowed. " << std::endl;
     ATHENA_ERROR(msg);
   }
 
-  DustParticles *pp = dynamic_cast<DustParticles*>(ppar[0]);
+  DustParticles *pp = dynamic_cast<DustParticles*>(ppars[0]);
 
   // Get the (uniform) velocity of the gas.
   Real ux0, uy0, uz0;

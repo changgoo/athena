@@ -112,14 +112,14 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
   // initialize particle
   if (pmy_mesh->particle) {
-    if (!(ppar[0]->partype.compare("star") == 0)) {
+    if (!(ppars[0]->partype.compare("star") == 0)) {
       std::stringstream msg;
       msg << "### FATAL ERROR in function [MeshBlock::ProblemGenerator]" << std::endl
           << "Only star particle is allowed. " << std::endl;
       ATHENA_ERROR(msg);
     }
 
-    StarParticles *pp = dynamic_cast<StarParticles*>(ppar[0]);
+    StarParticles *pp = dynamic_cast<StarParticles*>(ppars[0]);
 
     Real x1 = pin->GetOrAddReal(pp->input_block_name, "x1", 1.0);
     Real m1 = pin->GetOrAddReal(pp->input_block_name, "m1", 1.0);
@@ -171,7 +171,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 void Mesh::UserWorkInLoop() {
   for (int b = 0; b < nblocal; ++b) { // output particle history
     MeshBlock *pmb(my_blocks(b));
-    for (Particles *ppar : pmb->ppar) ppar->OutputParticles(false);
+    for (Particles *ppar : pmb->ppars) ppar->OutputParticles(false);
   }
 }
 
@@ -189,7 +189,7 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
 
 void MeshBlock::UserWorkInLoop() {
   const Coordinates *pc = pcoord;
-  StarParticles *pp = dynamic_cast<StarParticles*>(ppar[0]);
+  StarParticles *pp = dynamic_cast<StarParticles*>(ppars[0]);
   for (int k=0; k<pp->npar; ++k) {
     Real x1, x2, x3;
     pc->CartesianToMeshCoords(pp->xp0(k), pp->yp0(k), pp->zp0(k), x1, x2, x3);

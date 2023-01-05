@@ -121,7 +121,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     std::uniform_real_distribution<Real> udist(0.0,1.0); // uniform in [0,1)
     rng_generator.seed(rseed);
 
-    for (Particles *ppar : ppar) {
+    for (Particles *ppar : ppars) {
       int npartot = pin->GetInteger("problem","npartot");
 
       // Update capacity of particle container
@@ -231,7 +231,7 @@ Real DeltaRho(MeshBlock *pmb, int iout) {
     rho.InitWithShallowSlice(pmb->phydro->u,4,IDN,1);
   } else {
     rho.NewAthenaArray(pmb->ncells3, pmb->ncells2, pmb->ncells1);
-    for (Particles *ppar : pmb->ppar) {
+    for (Particles *ppar : pmb->ppars) {
       AthenaArray<Real> rhop(ppar->ppm->GetMassDensity());
       for (int k=ks; k<=ke; ++k)
         for (int j=js; j<=je; ++j)
@@ -266,7 +266,7 @@ Real TotalMass(MeshBlock *pmb, int iout) {
   AthenaArray<Real> vol(pmb->ncells1);
 
   int ipar = iout-2;
-  Particles *ppar = pmb->ppar[ipar];
+  Particles *ppar = pmb->ppars[ipar];
 
   AthenaArray<Real> rhop(ppar->ppm->GetMassDensity());
   for (int k=ks; k<=ke; ++k) {

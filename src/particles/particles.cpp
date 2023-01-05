@@ -124,12 +124,12 @@ void Particles::PostInitialize(Mesh *pm, ParameterInput *pin) {
 
   // Set position indices.
   for (int b = 0; b < pm->nblocal; ++b)
-    for (Particles *ppar : pm->my_blocks(b)->ppar)
+    for (Particles *ppar : pm->my_blocks(b)->ppars)
       ppar->SetPositionIndices();
 
   // Print particle csv
   for (int b = 0; b < pm->nblocal; ++b)
-    for (Particles *ppar : pm->my_blocks(b)->ppar)
+    for (Particles *ppar : pm->my_blocks(b)->ppars)
       if (ppar->parhstout_) ppar->OutputParticles(true);
 }
 
@@ -154,7 +154,7 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
     }
     pmb->pbval->StartReceivingSubset(BoundaryCommSubset::pm,
                                      pmb->pbval->bvars_pm);
-    for (Particles *ppar : pmb->ppar) {
+    for (Particles *ppar : pmb->ppars) {
       ppar->FindLocalDensityOnMesh(include_momentum);
       ppar->ppm->pmbvar->SendBoundaryBuffers();
     } // (SMOON) This seems to be redundant with TimeIntegratorTaskList::SendParticleMesh
@@ -162,7 +162,7 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
 
   for (int b = 0; b < nblocks; ++b) {
     MeshBlock *pmb(pm->my_blocks(b));
-    for (Particles *ppar : pmb->ppar) {
+    for (Particles *ppar : pmb->ppars) {
       ppar->ppm->pmbvar->ReceiveAndSetBoundariesWithWait();
       if (pm->shear_periodic)
         ppar->ppm->pmbvar->SendShearingBoxBoundaryBuffers();
@@ -172,7 +172,7 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
   if (pm->shear_periodic) {
     for (int b = 0; b < nblocks; ++b) {
       MeshBlock *pmb(pm->my_blocks(b));
-      for (Particles *ppar : pmb->ppar) {
+      for (Particles *ppar : pmb->ppars) {
         ppar->ppm->pmbvar->ReceiveAndSetShearingBoxBoundariesWithWait();
         ppar->ppm->pmbvar->SetShearingBoxBoundaryBuffers();
       }
@@ -183,7 +183,7 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
     MeshBlock *pmb(pm->my_blocks(b));
     pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::pm,
                                     pmb->pbval->bvars_pm);
-    for (Particles *ppar : pmb->ppar) ppar->ppm->updated=false;
+    for (Particles *ppar : pmb->ppars) ppar->ppm->updated=false;
   }
 }
 
@@ -211,7 +211,7 @@ void Particles::GetHistoryOutputNames(std::string output_names[], int ipar) {
 std::int64_t Particles::GetTotalNumber(Mesh *pm) {
   std::int64_t npartot(0);
   for (int b = 0; b < pm->nblocal; ++b)
-    for (Particles *ppar : pm->my_blocks(b)->ppar)
+    for (Particles *ppar : pm->my_blocks(b)->ppars)
       npartot += ppar->npar;
 #ifdef MPI_PARALLEL
   MPI_Allreduce(MPI_IN_PLACE, &npartot, 1, MPI_LONG, MPI_SUM, my_comm);
@@ -526,7 +526,7 @@ void Particles::ProcessNewParticles(Mesh *pmesh, int ipar) {
   std::vector<int> nnewpar(nbtotal, 0);
   for (int b = 0; b < nblocks; ++b) {
     const MeshBlock *pmb(pmesh->my_blocks(b));
-    nnewpar[pmb->gid] = pmb->ppar[ipar]->CountNewParticles();
+    nnewpar[pmb->gid] = pmb->ppars[ipar]->CountNewParticles();
   }
 #ifdef MPI_PARALLEL
   MPI_Allreduce(MPI_IN_PLACE, &nnewpar[0], nbtotal, MPI_INT, MPI_MAX, my_comm);
@@ -540,7 +540,7 @@ void Particles::ProcessNewParticles(Mesh *pmesh, int ipar) {
   for (int b = 0; b < nblocks; ++b) {
     const MeshBlock *pmb(pmesh->my_blocks(b));
     int newid_start = idmax[ipar] + (pmb->gid > 0 ? nnewpar[pmb->gid - 1] : 0);
-    pmb->ppar[ipar]->SetNewParticleID(newid_start);
+    pmb->ppars[ipar]->SetNewParticleID(newid_start);
   }
   idmax[ipar] += nnewpar[nbtotal - 1];
 }
@@ -847,7 +847,7 @@ void Particles::FormattedTableOutput(Mesh *pm, OutputParameters op) {
       // Loop over MeshBlocks
       for (int b = 0; b < pm->nblocal; ++b) {
         const MeshBlock *pmb(pm->my_blocks(b));
-        const Particles *ppar(pmb->ppar[ipar]);
+        const Particles *ppar(pmb->ppars[ipar]);
 
         // Create the filename.
         fname << op.file_basename

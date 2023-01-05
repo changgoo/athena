@@ -75,7 +75,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   }
 
   if (pmy_mesh->particle) {
-    for (Particles *ppar : ppar) {
+    for (Particles *ppar : ppars) {
       // Only assign particles either side of x
       // ipar == 0 for x<0
       // ipar == 1 for x>0
