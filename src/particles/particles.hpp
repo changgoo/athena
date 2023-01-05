@@ -94,12 +94,10 @@ friend class ParticleMesh;
   static std::int64_t GetTotalNumber(Mesh *pm);
 
   // Methods (interface)
-  void AddOneParticle(Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
-  void SetOneParticleMass(Real new_mass); // TODO(SMOON) retire this function; better to
-                                          // set particle mass in AddOneParticle
+  virtual void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
   void RemoveOneParticle(int k);
   // TODO(SMOON) this should be moved to ParticleMesh
-  virtual void FindLocalDensityOnMesh(bool include_momentum);
+  void FindLocalDensityOnMesh(bool include_momentum);
   void DepositPMtoMesh(int stage); // TODO(SMOON) should be moved to ParticleMesh
   // TODO(SMOON) (template method pattern is appropriate here)
   virtual void Integrate(int step);
@@ -108,11 +106,12 @@ friend class ParticleMesh;
   std::size_t GetSizeInBytes(); // TODO(SMOON) const function
   bool IsGravity() { return isgravity_; }
 
-  bool CheckInMeshBlock(Real x1, Real x2, Real x3); // TODO(SMOON) This must be protected
+  // ************************** //
+  // Input/Output API //
+  // ************************** //
   void UnpackParticlesForRestart(char *mbdata, std::size_t &os);
   void PackParticlesForRestart(char *&pdata);
-
-  virtual void AddHistoryOutput(Real data_sum[], int pos);
+  void AddHistoryOutput(Real data_sum[], int pos);
   void OutputParticles(bool header); // individual particle history;
   void OutputParticles(bool header, int kid);
   // TODO(SMOON) must be private
@@ -162,6 +161,7 @@ friend class ParticleMesh;
   int AddWorkingArray();
 
   void UpdateCapacity(int new_nparmax);  //!> Change the capacity of particle arrays
+  bool CheckInMeshBlock(Real x1, Real x2, Real x3);
   void SaveStatus(); // x->x0, v->v0
 
 
@@ -179,6 +179,7 @@ friend class ParticleMesh;
   int nint_buf, nreal_buf; //!> number of properties for buffer
 
   int ipid;                 //!> index for the particle ID
+  int imass;                // index for the particle mass
   int ixp, iyp, izp;        // indices for the position components
   int ivpx, ivpy, ivpz;     // indices for the velocity components
 
@@ -196,7 +197,6 @@ friend class ParticleMesh;
   int npar;     //!> number of particles
   int nparmax;  //!> maximum number of particles per meshblock
   bool parhstout_; //!> flag for individual particle history output
-  Real mass;
   Real cfl_par;  //!> CFL number for particles
 
                                // Data attached to the particles:
@@ -211,6 +211,7 @@ friend class ParticleMesh;
   ParticleGravity *ppgrav; //!> ptr to particle-gravity
                                        // Shorthands:
   AthenaArray<int> pid;                //!>   particle ID
+  AthenaArray<Real> mass;              //   particle mass
   AthenaArray<Real> xp, yp, zp;        //   position
   AthenaArray<Real> vpx, vpy, vpz;     //   velocity
   AthenaArray<Real> xi1, xi2, xi3;     //   position indices in local meshblock
@@ -373,11 +374,7 @@ friend class MeshBlock;
 
   // Methods (interface)
   void Integrate(int step) override;
-
-  void AddOneParticle(Real mass, Real x1, Real x2, Real x3,
-                      Real v1, Real v2, Real v3);
-  void FindLocalDensityOnMesh(bool include_momentum) override;
-  void AddHistoryOutput(Real data_sum[], int pos) override;
+  void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3) override;
 
  private:
   // Methods (implementation)
@@ -400,9 +397,9 @@ friend class MeshBlock;
   // Data members
   Real dt_old;
   // TODO(SMOON) index and variable name are inconsistent
-  int imass, imetal, iage; // indices for additional Real properties
+  int imetal, iage; // indices for additional Real properties
   int igas;                // indices for additional Aux properties
-  AthenaArray<Real> mp, mzp, tage;        // shorthand for real properties
+  AthenaArray<Real> mzp, tage;        // shorthand for real properties
   AthenaArray<Real> fgas;                     // shorthand for aux properties
 };
 

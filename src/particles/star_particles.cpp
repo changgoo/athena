@@ -21,11 +21,9 @@
 //! \brief constructs a StarParticles instance.
 
 StarParticles::StarParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp)
-  : Particles(pmb, pin, pp), imass(-1), imetal(-1), iage(-1), igas(-1) {
-  // Add particle mass, metal mass
-  imass = AddRealProperty();
+  : Particles(pmb, pin, pp), imetal(-1), iage(-1), igas(-1) {
+  // Add metal mass
   imetal = AddRealProperty();
-  realfieldname.push_back("mass");
   realfieldname.push_back("metal");
 
   // Add particle age
@@ -58,7 +56,6 @@ StarParticles::~StarParticles() {
 
 void StarParticles::AssignShorthands() {
   Particles::AssignShorthands();
-  mp.InitWithShallowSlice(realprop, 2, imass, 1);
   mzp.InitWithShallowSlice(realprop, 2, imetal, 1);
   tage.InitWithShallowSlice(realprop, 2, iage, 1);
 
@@ -69,12 +66,12 @@ void StarParticles::AssignShorthands() {
 //! \fn void StarParticles::AddOneParticle()
 //! \brief add one particle if position is within the mesh block
 
-void StarParticles::AddOneParticle(Real mass, Real x1, Real x2, Real x3,
+void StarParticles::AddOneParticle(Real mp, Real x1, Real x2, Real x3,
   Real v1, Real v2, Real v3) {
-  if (Particles::CheckInMeshBlock(x1,x2,x3)) {
-    if (npar == nparmax) Particles::UpdateCapacity(npar*2);
+  if (CheckInMeshBlock(x1,x2,x3)) {
+    if (npar == nparmax) UpdateCapacity(npar*2);
     pid(npar) = -1;
-    mp(npar) = mass;
+    mass(npar) = mp;
     xp(npar) = x1;
     yp(npar) = x2;
     zp(npar) = x3;
@@ -83,45 +80,12 @@ void StarParticles::AddOneParticle(Real mass, Real x1, Real x2, Real x3,
     vpz(npar) = v3;
 
     // initialize other properties
-    mzp(npar) = mass;
+    mzp(npar) = mp;
     tage(npar) = 0.0;
     fgas(npar) = 0.0;
 
     npar++;
   }
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn void StarParticles::FindHistoryOutput(Real data_sum[], int pos)
-//! \brief finds the data sums of history output from particles in my process and assign
-//!   them to data_sum beginning at index pos.
-
-void StarParticles::AddHistoryOutput(Real data_sum[], int pos) {
-  const int NSUM = NHISTORY - 1;
-
-  // Initiate the summations.
-  std::int64_t np = 0;
-  std::vector<Real> sum(NSUM, 0.0);
-
-  Real vp1, vp2, vp3;
-  np += npar;
-
-  for (int k = 0; k < npar; ++k) {
-    pmy_block->pcoord->CartesianToMeshCoordsVector(xp(k), yp(k), zp(k),
-        vpx(k), vpy(k), vpz(k), vp1, vp2, vp3);
-    sum[0] += vp1;
-    sum[1] += vp2;
-    sum[2] += vp3;
-    sum[3] += vp1 * vp1;
-    sum[4] += vp2 * vp2;
-    sum[5] += vp3 * vp3;
-    sum[6] += realprop(imass,k);
-  }
-
-  // Assign the values to output variables.
-  data_sum[pos] += static_cast<Real>(np);
-  for (int i = 0; i < NSUM; ++i)
-    data_sum[pos+i+1] += sum[i];
 }
 
 //--------------------------------------------------------------------------------------
@@ -310,35 +274,6 @@ void StarParticles::SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsr
   if (pmy_mesh->shear_periodic) ExertTidalForce(t,dt);
   if (SELF_GRAVITY_ENABLED) ppgrav->ExertGravitationalForce(dt);
   return;
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn void StarParticles::FindLocalDensityOnMesh(bool include_momentum)
-//! \brief finds the mass and momentum density of particles on the mesh.
-
-void StarParticles::FindLocalDensityOnMesh(bool include_momentum) {
-  Coordinates *pc(pmy_block->pcoord);
-
-  if (include_momentum) {
-    AthenaArray<Real> parprop, mom1, mom2, mom3, mpar;
-    parprop.NewAthenaArray(4, npar);
-    mpar.InitWithShallowSlice(parprop, 2, 0, 1);
-    mom1.InitWithShallowSlice(parprop, 2, 1, 1);
-    mom2.InitWithShallowSlice(parprop, 2, 2, 1);
-    mom3.InitWithShallowSlice(parprop, 2, 3, 1);
-    for (int k = 0; k < npar; ++k) {
-      pc->CartesianToMeshCoordsVector(xp(k), yp(k), zp(k),
-        mp(k)*vpx(k), mp(k)*vpy(k), mp(k)*vpz(k), mom1(k), mom2(k), mom3(k));
-      mpar(k) = mp(k);
-    }
-    ppm->DepositParticlesToMeshAux(parprop, 0, ppm->idens, 4);
-  } else {
-    ppm->DepositParticlesToMeshAux(mp, 0, ppm->idens, 1);
-  }
-
-  // set flag to trigger PM communications
-  ppm->updated = true;
-  ppm->pmbvar->var_buf.ZeroClear();
 }
 
 //--------------------------------------------------------------------------------------

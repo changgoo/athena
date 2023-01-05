@@ -193,7 +193,7 @@ void MeshBlock::UserWorkInLoop() {
   for (int k=0; k<pp->npar; ++k) {
     Real x1, x2, x3;
     pc->CartesianToMeshCoords(pp->xp0(k), pp->yp0(k), pp->zp0(k), x1, x2, x3);
-    Real Ek = 0.5*pp->mp(k)*(SQR(pp->vpx0(k)) + SQR(pp->vpy0(k)) + SQR(pp->vpz0(k)));
+    Real Ek = 0.5*pp->mass(k)*(SQR(pp->vpx0(k)) + SQR(pp->vpy0(k)) + SQR(pp->vpz0(k)));
     Real phi;
     if (pmy_mesh->shear_periodic) {
       phi = -pp->qshear_*SQR(pp->Omega_0_*x1);

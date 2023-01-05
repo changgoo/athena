@@ -122,6 +122,16 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     rng_generator.seed(rseed);
 
     for (Particles *ppar : ppars) {
+      if ((!((ppar->partype).compare("star") == 0))&&
+          (!((ppar->partype).compare("tracer") == 0))) {
+        std::stringstream msg;
+        msg << "### FATAL ERROR in ProblemGenerator " << std::endl
+            << " partype: " << ppar->partype
+            << " is not supported" << std::endl;
+        ATHENA_ERROR(msg);
+        return;
+      }
+
       int npartot = pin->GetInteger("problem","npartot");
 
       // Update capacity of particle container
@@ -153,20 +163,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
             z = udist(rng_generator)*mesh_size.x3len + mesh_size.x3min;
           }
           Real vy = vy0;
-          if (!porb->orbital_advection_defined) vy -= qshear*Omega0*x;
-          if (StarParticles *pp = dynamic_cast<StarParticles*>(ppar)) {
-            pp->AddOneParticle(mass,x,y,z,vx0,vy,0.0);
-          } else if (TracerParticles *pp = dynamic_cast<TracerParticles*>(ppar)) {
-            pp->AddOneParticle(x,y,z,vx0,vy,0.0);
-            pp->SetOneParticleMass(mass);
-          } else {
-            std::stringstream msg;
-            msg << "### FATAL ERROR in ProblemGenerator " << std::endl
-                << " partype: " << ppar->partype
-                << " is not supported" << std::endl;
-            ATHENA_ERROR(msg);
-            return;
+          if (!porb->orbital_advection_defined) {
+            vy -= qshear*Omega0*x;
           }
+          ppar->AddOneParticle(mass,x,y,z,vx0,vy,0.0);
         }
       } else {
         // Assign particles within a cylinder
@@ -187,20 +187,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
             r = std::sqrt(x*x+y*y+z*z);
           }
           Real vy = vy0;
-          if(!porb->orbital_advection_defined) vy -= qshear*Omega0*x;
-          if (StarParticles *pp = dynamic_cast<StarParticles*>(ppar)) {
-            pp->AddOneParticle(mass,x,y,z,vx0,vy,0.0);
-          } else if (TracerParticles *pp = dynamic_cast<TracerParticles*>(ppar)) {
-            pp->AddOneParticle(x,y,z,vx0,vy,0.0);
-            pp->SetOneParticleMass(mass);
-          } else {
-            std::stringstream msg;
-            msg << "### FATAL ERROR in ProblemGenerator " << std::endl
-                << " partype: " << ppar->partype
-                << " is not supported" << std::endl;
-            ATHENA_ERROR(msg);
-            return;
+          if(!porb->orbital_advection_defined) {
+            vy -= qshear*Omega0*x;
           }
+          ppar->AddOneParticle(mass,x,y,z,vx0,vy,0.0);
         }
       }
 

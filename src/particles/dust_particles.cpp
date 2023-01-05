@@ -28,9 +28,6 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParame
   iwy = AddWorkingArray();
   iwz = AddWorkingArray();
 
-  // Define mass.
-  mass = pin->GetOrAddReal(input_block_name, "mass", 1.0);
-
   // Define stopping time.
   variable_taus = pin->GetOrAddBoolean(input_block_name, "variable_taus", variable_taus);
   taus0 = pin->GetOrAddReal(input_block_name, "taus0", taus0);
@@ -223,7 +220,7 @@ void DustParticles::ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& mes
     //! \todo (ccyang):
     //! - using (xp0, yp0, zp0) is a temporary hack.
     pc->CartesianToMeshCoordsVector(xp0(k), yp0(k), zp0(k),
-        mass * wx(k), mass * wy(k), mass * wz(k), wx(k), wy(k), wz(k));
+        mass(k)*wx(k), mass(k)*wy(k), mass(k)*wz(k), wx(k), wy(k), wz(k));
 
   // Assign the momentum change onto mesh.
   ppm->DepositParticlesToMeshAux(work, iwx, ppm->imom1, 3);

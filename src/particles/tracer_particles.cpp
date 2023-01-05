@@ -28,9 +28,6 @@ TracerParticles::TracerParticles(MeshBlock *pmb, ParameterInput *pin,
   iwy = AddWorkingArray();
   iwz = AddWorkingArray();
 
-  // Define mass.
-  mass = pin->GetOrAddReal(input_block_name, "mass", 1.0);
-
   // allocate memory
   Particles::AllocateMemory();
 

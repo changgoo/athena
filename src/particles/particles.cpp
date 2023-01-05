@@ -222,13 +222,18 @@ std::int64_t Particles::GetTotalNumber(Mesh *pm) {
 Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp) :
   ipar(pp->ipar), input_block_name(pp->block_name), partype(pp->partype),
   nint(0), nreal(0), naux(0), nwork(0),
-  ipid(-1), ixp(-1), iyp(-1), izp(-1), ivpx(-1), ivpy(-1), ivpz(-1),
+  ipid(-1), imass(-1), ixp(-1), iyp(-1), izp(-1), ivpx(-1), ivpy(-1), ivpz(-1),
   ixp0(-1), iyp0(-1), izp0(-1), ivpx0(-1), ivpy0(-1), ivpz0(-1),
   ixi1(-1), ixi2(-1), ixi3(-1), igx(-1), igy(-1), igz(-1), ish(-1),
-  npar(0), nparmax(1), parhstout_(false), mass(1.0), isgravity_(pp->gravity) {
+  npar(0), nparmax(1), parhstout_(false), isgravity_(false) {
+
   // Add particle ID.
   ipid = AddIntProperty();
   intfieldname.push_back("pid");
+
+  // Add particle mass
+  imass = AddRealProperty();
+  realfieldname.push_back("mass");
 
   // Add particle position.
   ixp = AddRealProperty();
@@ -352,14 +357,6 @@ Particles::~Particles() {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void Particles::SetOneParticleMass(Real new_mass)
-//! \brief sets the mass of each particle.
-
-void Particles::SetOneParticleMass(Real new_mass) {
-  pinput->SetReal(input_block_name, "mass", mass = new_mass);
-}
-
-//--------------------------------------------------------------------------------------
 //! \fn void Particles::AllocateMemory()
 //! \brief memory allocation will be done at the end of derived class initialization
 void Particles::AllocateMemory() {
@@ -394,7 +391,7 @@ void Particles::AllocateMemory() {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void Particles::FindHistoryOutput(Real data_sum[], int pos)
+//! \fn void Particles::AddHistoryOutput(Real data_sum[], int pos)
 //! \brief finds the data sums of history output from particles in my process and assign
 //!   them to data_sum beginning at index pos.
 
@@ -417,7 +414,7 @@ void Particles::AddHistoryOutput(Real data_sum[], int pos) {
     sum[3] += vp1 * vp1;
     sum[4] += vp2 * vp2;
     sum[5] += vp3 * vp3;
-    sum[6] += mass;
+    sum[6] += mass(k);
   }
 
   // Assign the values to output variables.
@@ -445,11 +442,12 @@ bool Particles::CheckInMeshBlock(Real x1, Real x2, Real x3) {
 //! \fn void Particles::AddOneParticle()
 //! \brief add one particle if position is within the mesh block
 
-void Particles::AddOneParticle(Real x1, Real x2, Real x3,
+void Particles::AddOneParticle(Real mp, Real x1, Real x2, Real x3,
   Real v1, Real v2, Real v3) {
   if (CheckInMeshBlock(x1,x2,x3)) {
     if (npar == nparmax) UpdateCapacity(npar*2);
     pid(npar) = -1;
+    mass(npar) = mp;
     xp(npar) = x1;
     yp(npar) = x2;
     zp(npar) = x3;
@@ -671,6 +669,8 @@ int Particles::AddWorkingArray() {
 void Particles::AssignShorthands() {
   pid.InitWithShallowSlice(intprop, 2, ipid, 1);
 
+  mass.InitWithShallowSlice(realprop, 2, imass, 1);
+
   xp.InitWithShallowSlice(realprop, 2, ixp, 1);
   yp.InitWithShallowSlice(realprop, 2, iyp, 1);
   zp.InitWithShallowSlice(realprop, 2, izp, 1);
@@ -748,20 +748,20 @@ void Particles::FindLocalDensityOnMesh(bool include_momentum) {
   Coordinates *pc(pmy_block->pcoord);
 
   if (include_momentum) {
-    AthenaArray<Real> parprop, mom1, mom2, mom3;
+    AthenaArray<Real> parprop, mom1, mom2, mom3, mpar;
     parprop.NewAthenaArray(4, npar);
-    std::fill(&parprop(0,0), &parprop(0,0) + parprop.GetDim1(), mass);
+    mpar.InitWithShallowSlice(parprop, 2, 0, 1);
     mom1.InitWithShallowSlice(parprop, 2, 1, 1);
     mom2.InitWithShallowSlice(parprop, 2, 2, 1);
     mom3.InitWithShallowSlice(parprop, 2, 3, 1);
-    for (int k = 0; k < npar; ++k)
+    for (int k = 0; k < npar; ++k) {
       pc->CartesianToMeshCoordsVector(xp(k), yp(k), zp(k),
-        mass*vpx(k), mass*vpy(k), mass*vpz(k), mom1(k), mom2(k), mom3(k));
+        mass(k)*vpx(k), mass(k)*vpy(k), mass(k)*vpz(k), mom1(k), mom2(k), mom3(k));
+      mpar(k) = mass(k);
+    }
     ppm->DepositParticlesToMeshAux(parprop, 0, ppm->idens, 4);
   } else {
-    AthenaArray<Real> parprop(npar);
-    std::fill(&parprop(0), &parprop(0) + parprop.GetDim1(), mass);
-    ppm->DepositParticlesToMeshAux(parprop, 0, ppm->idens, 1);
+    ppm->DepositParticlesToMeshAux(mass, 0, ppm->idens, 1);
   }
 
   // set flag to trigger PM communications

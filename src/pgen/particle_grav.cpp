@@ -132,10 +132,11 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       Real x2 = r*std::sin(phi)*sinth;
       Real x3 = r*costh;
       // if inside the mesh block
+      // TODO(SMOON) use AddOneParticle
       if ((x1>=block_size.x1min) && (x1<block_size.x1max) &&
           (x2>=block_size.x2min) && (x2<block_size.x2max) &&
           (x3>=block_size.x3min) && (x3<block_size.x3max)) {
-        pp->mp(ipid) = m0;
+        pp->mass(ipid) = m0;
         pp->mzp(ipid) = m0;
         pp->tage(ipid) = 0.0;
 

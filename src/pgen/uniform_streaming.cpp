@@ -48,7 +48,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     ATHENA_ERROR(msg);
   }
 
-  DustParticles *pp = dynamic_cast<DustParticles*>(ppars[0]);
+  DustParticles *ppar = dynamic_cast<DustParticles*>(ppars[0]);
 
   // Get the (uniform) velocity of the gas.
   Real ux0, uy0, uz0;
@@ -95,42 +95,35 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real dx1 = mesh_size.x1len / npx1,
        dx2 = mesh_size.x2len / npx2,
        dx3 = mesh_size.x3len / npx3;
-  pp->SetOneParticleMass(dtog * vol / (npx1 * npx2 * npx3));
+  Real mpar = dtog * vol / (npx1 * npx2 * npx3);
 
   // Determine number of particles in the block.
   int npx1_loc = static_cast<int>(std::round(block_size.x1len / dx1)),
       npx2_loc = static_cast<int>(std::round(block_size.x2len / dx2)),
       npx3_loc = static_cast<int>(std::round(block_size.x3len / dx3));
-  int npar = pp->npar = npx1_loc * npx2_loc * npx3_loc;
-  if (npar > pp->nparmax)
-    pp->UpdateCapacity(npar);
+  int npar = ppar->npar = npx1_loc * npx2_loc * npx3_loc;
+  if (npar > ppar->nparmax)
+    ppar->UpdateCapacity(npar);
 
   // Assign the particles.
   // TODO(SMOON) Add particles using AddOneParticle interface.
   // Encapsulate xp, yp, ...
-  int ipar = 0;
   for (int k = 0; k < npx3_loc; ++k) {
     Real zp1 = block_size.x3min + (k + 0.5) * dx3;
     for (int j = 0; j < npx2_loc; ++j) {
       Real yp1 = block_size.x2min + (j + 0.5) * dx2;
       for (int i = 0; i < npx1_loc; ++i) {
         Real xp1 = block_size.x1min + (i + 0.5) * dx1;
-        pp->xp(ipar) = xp1;
-        pp->yp(ipar) = yp1;
-        pp->zp(ipar) = zp1;
-        pp->vpx(ipar) = vpx0;
-        pp->vpy(ipar) = vpy0;
-        pp->vpz(ipar) = vpz0;
-        ++ipar;
+        ppar->AddOneParticle(mpar, xp1, yp1, zp1, vpx0, vpy0, vpz0);
       }
     }
   }
 
   // Initialize the stopping time.
   // TODO(SMOON) this must be done in AddOneParticle
-  if (pp->GetVariableTaus()) {
-    Real taus0 = pp->GetStoppingTime();
+  if (ppar->GetVariableTaus()) {
+    Real taus0 = ppar->GetStoppingTime();
     for (int k = 0; k < npar; ++k)
-      pp->taus(k) = taus0;
+      ppar->taus(k) = taus0;
   }
 }
