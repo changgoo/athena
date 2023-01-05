@@ -94,6 +94,8 @@ friend class ParticleMesh;
 
   // Methods (interface)
   void AddOneParticle(Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
+  void SetOneParticleMass(Real new_mass); // TODO(SMOON) retire this function; better to
+                                          // set particle mass in AddOneParticle
   void RemoveOneParticle(int k);
   virtual void FindLocalDensityOnMesh(bool include_momentum); // TODO(SMOON) this should be moved to ParticleMesh
   void DepositPMtoMesh(int stage); // TODO(SMOON) should be moved to ParticleMesh
@@ -179,6 +181,7 @@ friend class ParticleMesh;
   int ivpx0, ivpy0, ivpz0;  // indices for beginning velocity components
 
   int ixi1, ixi2, ixi3;     // indices for position indices
+
   int igx, igy, igz; // indices for gravity force
 
   int ish;
@@ -188,7 +191,7 @@ friend class ParticleMesh;
   int npar;     //!> number of particles
   int nparmax;  //!> maximum number of particles per meshblock
   bool parhstout_; //!> flag for individual particle history output
-  Real mass;   //!> common mass of particle
+  Real mass;
   Real cfl_par;  //!> CFL number for particles
 
                                // Data attached to the particles:
@@ -290,9 +293,6 @@ friend class MeshBlock;
   ~DustParticles();
 
   // Methods (interface)
-  void SetOneParticleMass(Real new_mass); // TODO(SMOON) retire this function; better to
-                                          // set particle mass in AddOneParticle
-  Real GetOneParticleMass() { return mass; } // TODO(SMOON) remove unnecessary getters
   bool GetBackReaction() { return backreaction; }
   bool GetDragForce() { return dragforce; }
   bool GetVariableTaus() { return variable_taus; }

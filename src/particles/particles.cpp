@@ -359,6 +359,14 @@ Particles::~Particles() {
 }
 
 //--------------------------------------------------------------------------------------
+//! \fn void Particles::SetOneParticleMass(Real new_mass)
+//! \brief sets the mass of each particle.
+
+void Particles::SetOneParticleMass(Real new_mass) {
+  pinput->SetReal(input_block_name, "mass", mass = new_mass);
+}
+
+//--------------------------------------------------------------------------------------
 //! \fn void Particles::AllocateMemory()
 //! \brief memory allocation will be done at the end of derived class initialization
 void Particles::AllocateMemory() {

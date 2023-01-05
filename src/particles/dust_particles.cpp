@@ -61,14 +61,6 @@ DustParticles::~DustParticles() {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void DustParticles::SetOneParticleMass(Real new_mass)
-//! \brief sets the mass of each particle.
-
-void DustParticles::SetOneParticleMass(Real new_mass) {
-  pinput->SetReal(input_block_name, "mass", mass = new_mass);
-}
-
-//--------------------------------------------------------------------------------------
 //! \fn Real DustParticles::NewBlockTimeStep();
 //! \brief returns the time step required by particles in the block.
 
