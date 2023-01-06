@@ -67,12 +67,11 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 }
 
 void Mesh::UserWorkInLoop() {
-  Particles::FindDensityOnMesh(this, false);
 //   // output history of selected particle(s)
 //   for (int b = 0; b < nblocal; ++b) {
 //     MeshBlock *pmb(my_blocks(b));
-//     for (int ipar=0; ipar<Particles::num_particles; ++ipar) {
-//       pmb->ppar[ipar]->OutputParticles((ncycle == 0),1234);
+//     for (Particles *ppar : pmb->ppar) {
+//       ppar->OutputParticles((ncycle == 0),1234);
 //     }
 //   }
 }
