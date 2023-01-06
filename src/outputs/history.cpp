@@ -224,8 +224,8 @@ void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
   for (int b=0; b<pm->nblocal; ++b) {
     pmb = pm->my_blocks(b);
     for (Particles *ppar : pmb->ppars) {
-    int prev_out = (NHYDRO) + 3 + (NGRAV) + (NFIELD) + (NSCALARS) +
-                    (Particles::NHISTORY)*(ppar->ipar);
+      int prev_out = (NHYDRO) + 3 + (NGRAV) + (NFIELD) + (NSCALARS)
+                    + (Particles::NHISTORY)*(ppar->ipar);
       ppar->AddHistoryOutput(hst_data.get(),prev_out);
     }
   }
