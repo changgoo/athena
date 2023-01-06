@@ -76,6 +76,12 @@ void CoolingSolver::CoolingSourceTerm(MeshBlock *pmb, const Real t, const Real d
   Real igm1_idt = 1.0/(pcf->gamma_adi-1)/dt;
 
   const bool bookkeeping = pcool->bookkeeping;
+  // This constant coefficient corresponds to
+  // \gamma_1 = {0,1} for vl2
+  // \gamma_1 = {1/2,1/2} for rk2
+  // (Eqs 13 and 14 in Stone et al. 2020).
+  // For vl2, the bookkeeping in stage1 is reset to zero in StartupTaskList,
+  // so it is okay to set (erroneously) \gamma_1 = {1,1}.
   Real factor;
   if (bookkeeping) {
     if (pmb->pmy_mesh->time_integrator == "vl2") {
