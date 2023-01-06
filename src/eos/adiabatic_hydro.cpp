@@ -24,12 +24,12 @@
 
 EquationOfState::EquationOfState(MeshBlock *pmb, ParameterInput *pin) :
     pmy_block_(pmb),
+    beta(1.0), bookkeeping(false),
     neighbor_flooring_{pin->GetOrAddBoolean("hydro", "neighbor_flooring", false)},
     gamma_{pin->GetReal("hydro", "gamma")},
     density_floor_{pin->GetOrAddReal("hydro", "dfloor", std::sqrt(1024*float_min))},
     pressure_floor_{pin->GetOrAddReal("hydro", "pfloor", std::sqrt(1024*float_min))},
-    scalar_floor_{pin->GetOrAddReal("hydro", "sfloor", std::sqrt(1024*float_min))},
-    beta(1.0), bookkeeping(false) {}
+    scalar_floor_{pin->GetOrAddReal("hydro", "sfloor", std::sqrt(1024*float_min))} {}
 
 //----------------------------------------------------------------------------------------
 //! \fn void EquationOfState::ConservedToPrimitive(AthenaArray<Real> &cons,
