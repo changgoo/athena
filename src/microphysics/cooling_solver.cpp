@@ -82,7 +82,7 @@ void CoolingSolver::CoolingSourceTerm(MeshBlock *pmb, const Real t, const Real d
   // (Eqs 13 and 14 in Stone et al. 2020).
   // For vl2, the bookkeeping in stage1 is reset to zero in StartupTaskList,
   // so it is okay to set (erroneously) \gamma_1 = {1,1}.
-  Real factor;
+  Real factor = 1.0;
   if (bookkeeping) {
     if (pmb->pmy_mesh->time_integrator == "vl2") {
       factor = 1.0;
@@ -273,7 +273,7 @@ void CoolingSolver::OperatorSplitSolver(MeshBlock *pmb) {
 //========================================================================================
 Real CoolingSolver::CoolingExplicitSubcycling(Real tend, Real press, const Real rho) {
   Real tnow = 0., tleft = tend;
-  Real dt_net, dt_sub;
+  Real dt_net = tend, dt_sub;
   int icount = 0;
   while ((icount<nsub_max_) && (tnow<tend)) {
     dt_net = std::abs(pcf->CoolingTime(rho, press))*cfl_cool_sub;
