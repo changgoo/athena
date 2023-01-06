@@ -664,6 +664,9 @@ void Particles::AssignShorthands() {
   xi1_.InitWithShallowSlice(work, 2, ixi1, 1);
   xi2_.InitWithShallowSlice(work, 2, ixi2, 1);
   xi3_.InitWithShallowSlice(work, 2, ixi3, 1);
+
+  // Assign remaining shorthands for derived particles
+  DoAssignShorthands();
 }
 
 //--------------------------------------------------------------------------------------

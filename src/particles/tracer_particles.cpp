@@ -28,10 +28,9 @@ TracerParticles::TracerParticles(MeshBlock *pmb, ParameterInput *pin,
   iwy = AddWorkingArray();
   iwz = AddWorkingArray();
 
-  // allocate memory
+  // Allocate memory and assign shorthands (shallow slices).
+  // Every derived Particles need to call these two functions.
   AllocateMemory();
-
-  // Assign shorthands (need to do this for every constructor of a derived class)
   AssignShorthands();
 }
 
@@ -65,11 +64,10 @@ void TracerParticles::AddOneParticle(Real mp, Real x1, Real x2, Real x3,
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void TracerParticles::AssignShorthands()
+//! \fn void TracerParticles::DoAssignShorthands()
 //! \brief assigns shorthands by shallow coping slices of the data.
 
-void TracerParticles::AssignShorthands() {
-  Particles::AssignShorthands();
+void TracerParticles::DoAssignShorthands() {
   wx.InitWithShallowSlice(work, 2, iwx, 1);
   wy.InitWithShallowSlice(work, 2, iwy, 1);
   wz.InitWithShallowSlice(work, 2, iwz, 1);

@@ -34,10 +34,9 @@ StarParticles::StarParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParame
   ifgas = AddAuxProperty();
   auxpropname.push_back("fgas");
 
-  // allocate memory
+  // Allocate memory and assign shorthands (shallow slices).
+  // Every derived Particles need to call these two functions.
   AllocateMemory();
-
-  // Assign shorthands (need to do this for every constructor of a derived class)
   AssignShorthands();
 }
 
@@ -51,11 +50,10 @@ StarParticles::~StarParticles() {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void StarParticles::AssignShorthands()
+//! \fn void StarParticles::DoAssignShorthands()
 //! \brief assigns shorthands by shallow coping slices of the data.
 
-void StarParticles::AssignShorthands() {
-  Particles::AssignShorthands();
+void StarParticles::DoAssignShorthands() {
   metal.InitWithShallowSlice(realprop, 2, imetal, 1);
   age.InitWithShallowSlice(realprop, 2, iage, 1);
 

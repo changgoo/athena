@@ -43,8 +43,9 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParame
   // throwing when (!backreaction && isgravity_)
 //  if (!backreaction) isgravity_ = false;
 
+  // Allocate memory and assign shorthands (shallow slices).
+  // Every derived Particles need to call these two functions.
   AllocateMemory();
-
   AssignShorthands();
 }
 
@@ -136,11 +137,10 @@ Real DustParticles::NewBlockTimeStep() {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void DustParticles::AssignShorthands()
+//! \fn void DustParticles::DoAssignShorthands()
 //! \brief assigns shorthands by shallow coping slices of the data.
 
-void DustParticles::AssignShorthands() {
-  Particles::AssignShorthands();
+void DustParticles::DoAssignShorthands() {
   wx.InitWithShallowSlice(work, 2, iwx, 1);
   wy.InitWithShallowSlice(work, 2, iwy, 1);
   wz.InitWithShallowSlice(work, 2, iwz, 1);

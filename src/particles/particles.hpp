@@ -153,11 +153,10 @@ friend class ParticleMesh;
 
  protected:
   // Protected interfaces (to be used by derived classes)
-  // TODO(SMOON) avoid call super using template method
-  virtual void AssignShorthands();  //!> Needs to be called everytime
-                                    //!> intprop, realprop, & auxprop are resized
-                                    //!> Be sure to call back when derived.
-  void AllocateMemory();    //!> Needs to be called in the derived class init
+  // SMOON: A possibility of forgetting to call these two functions may indicate
+  // an antipattern.
+  void AssignShorthands(); //!> Needs to be called in the derived class constructor
+  void AllocateMemory();   //!> Needs to be called in the derived class constructor
   int AddIntProperty();
   int AddRealProperty();
   int AddAuxProperty();
@@ -215,6 +214,7 @@ friend class ParticleMesh;
   //   Kick()
   // }
   // Where the actual implementation of Kick would be either EulerStep or BorisKick, etc.
+  virtual void DoAssignShorthands()=0;
   virtual void SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc)=0;
   virtual void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc)=0;
   virtual void ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc)=0;
@@ -308,7 +308,7 @@ class DustParticles : public Particles {
 
  private:
   // Methods (implementation)
-  void AssignShorthands() override;
+  void DoAssignShorthands() override;
   void SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
   void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
   void ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
@@ -347,7 +347,7 @@ class TracerParticles : public Particles {
 
  private:
   // Methods (implementation)
-  void AssignShorthands() override;
+  void DoAssignShorthands() override;
   void SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
   void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
   void ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
@@ -376,7 +376,7 @@ class StarParticles : public Particles {
 
  private:
   // Methods (implementation)
-  void AssignShorthands() override;
+  void DoAssignShorthands() override;
   void SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
   void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
   void ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
