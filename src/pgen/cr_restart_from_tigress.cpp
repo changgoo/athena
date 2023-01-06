@@ -119,13 +119,21 @@ static Real hst_Injected_CRenergy(MeshBlock *pmb, int iout) {
 }
 
 void Mesh::InitUserMeshData(ParameterInput *pin) {
-  pcool = new CoolingSolver(pin);
-  // Enroll source function
-  if (!pcool->op_flag) {
-    EnrollUserExplicitSourceFunction(&CoolingSolver::CoolingEuler);
-    std::cout << "Cooling solver is enrolled" << std::endl;
+  if (cooling) {
+    std::string cooling_type = pin->GetString("cooling", "cooling");
+    if (cooling_type.compare("enroll") == 0) {
+      EnrollUserExplicitSourceFunction(&CoolingSolver::CoolingSourceTerm);
+      if (Globals::my_rank == 0)
+        std::cout << "Cooling solver is enrolled" << std::endl;
+    } else if (cooling_type.compare("op_split") == 0) {
+      if (Globals::my_rank == 0)
+        std::cout << "Cooling solver is set to operator split" << std::endl;
+    }
   } else {
-    std::cout << "Cooling solver is set to operator split" << std::endl;
+    std::stringstream msg;
+    msg << "### FATAL ERROR in ProblemGenerator" << std::endl
+        << "Cooling must be turned on" << std::endl;
+    ATHENA_ERROR(msg);
   }
 
   // Enroll timestep so that dt <= min t_cool
