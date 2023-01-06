@@ -137,7 +137,7 @@ friend class ParticleMesh;
   static void AMRCoarseToFine(Particles *pparc, Particles *pparf, MeshBlock* pmbf);
   static void AMRFineToCoarse(Particles *pparc, Particles *pparf);
   // TODO(SMOON) bad function name?
-  static void FindDensityOnMesh(Mesh *pm, bool include_momentum);
+  static void ComputePMDensityAndCommunicate(Mesh *pm, bool include_momentum);
   static void Initialize(Mesh *pm, ParameterInput *pin);
   static void PostInitialize(Mesh *pm, ParameterInput *pin);
   static void FormattedTableOutput(Mesh *pm, OutputParameters op);
@@ -157,7 +157,7 @@ friend class ParticleMesh;
   virtual void AssignShorthands();  //!> Needs to be called everytime
                                     //!> intprop, realprop, & auxprop are resized
                                     //!> Be sure to call back when derived.
-  virtual void AllocateMemory();    //!> Needs to be called in the derived class init
+  void AllocateMemory();    //!> Needs to be called in the derived class init
   int AddIntProperty();
   int AddRealProperty();
   int AddAuxProperty();
@@ -179,7 +179,6 @@ friend class ParticleMesh;
   int npar_;     //!> number of particles
   int nparmax_;  //!> maximum number of particles per meshblock
   Real cfl_par_;  //!> CFL number for particles
-  std::vector<std::string> intfieldname, realfieldname, auxfieldname;
 
   ParticleGravity *ppgrav; //!> ptr to particle-gravity
   MeshBlock* pmy_block;  //!> MeshBlock pointer
@@ -196,6 +195,7 @@ friend class ParticleMesh;
   // e.g.) use mass_(k) instead of realprop(imass, k)
   // Auxiliary properties (auxprop) is communicated when particles moving to
   // another meshblock. Working arrays (work) is not communicated.
+  std::vector<std::string> intpropname, realpropname, auxpropname;
   AthenaArray<int> intprop;
   AthenaArray<Real> realprop, auxprop, work;
 

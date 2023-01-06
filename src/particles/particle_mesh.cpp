@@ -79,10 +79,10 @@ ParticleMesh::~ParticleMesh() {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void ParticleMesh::FindLocalDensityOnMesh(bool include_momentum)
+//! \fn void ParticleMesh::ComputePMDensity(bool include_momentum)
 //! \brief finds the mass and momentum density of particles on the mesh.
 
-void ParticleMesh::FindLocalDensityOnMesh(bool include_momentum) {
+void ParticleMesh::ComputePMDensity(bool include_momentum) {
   Coordinates *pc(pmb_->pcoord);
 
   if (include_momentum) {
@@ -421,12 +421,12 @@ Real _WeightFunction(Real dxi) {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum)
+//! \fn void Particles::ComputePMDensityAndCommunicate(Mesh *pm, bool include_momentum)
 //! \brief finds particle mesh densities for all particle containers.
 //!
 //! If include_momentum is true, the momentum density field is also computed.
 
-void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
+void Particles::ComputePMDensityAndCommunicate(Mesh *pm, bool include_momentum) {
   // Assign particle properties to mesh and send boundary.
   int nblocks(pm->nblocal);
 
@@ -438,7 +438,7 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
     pmb->pbval->StartReceivingSubset(BoundaryCommSubset::pm,
                                      pmb->pbval->bvars_pm);
     for (Particles *ppar : pmb->ppars) {
-      ppar->ppm->FindLocalDensityOnMesh(include_momentum);
+      ppar->ppm->ComputePMDensity(include_momentum);
       ppar->ppm->pmbvar->SendBoundaryBuffers();
     }
   }

@@ -24,18 +24,18 @@ StarParticles::StarParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParame
   : Particles(pmb, pin, pp), imetal(-1), iage(-1), ifgas(-1) {
   // Add metal mass
   imetal = AddRealProperty();
-  realfieldname.push_back("metal");
+  realpropname.push_back("metal");
 
   // Add particle age
   iage = AddRealProperty();
-  realfieldname.push_back("age");
+  realpropname.push_back("age");
 
   // Add gas fraction as aux peroperty
   ifgas = AddAuxProperty();
-  auxfieldname.push_back("fgas");
+  auxpropname.push_back("fgas");
 
   // allocate memory
-  Particles::AllocateMemory();
+  AllocateMemory();
 
   // Assign shorthands (need to do this for every constructor of a derived class)
   AssignShorthands();

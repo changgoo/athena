@@ -51,7 +51,7 @@ friend class OutputType;
   ~ParticleMesh();
 
   // Interface
-  void FindLocalDensityOnMesh(bool include_momentum);
+  void ComputePMDensity(bool include_momentum=false);
   void DepositPMtoMesh(int stage);
   Real FindMaximumDensity() const;
   AthenaArray<Real> GetMassDensity() const { return dens_; }

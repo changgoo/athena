@@ -43,7 +43,7 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParame
   // throwing when (!backreaction && isgravity_)
 //  if (!backreaction) isgravity_ = false;
 
-  Particles::AllocateMemory();
+  AllocateMemory();
 
   AssignShorthands();
 }

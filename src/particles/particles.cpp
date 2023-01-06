@@ -54,43 +54,43 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
 
   // Add particle ID.
   ipid = AddIntProperty();
-  intfieldname.push_back("pid");
+  intpropname.push_back("pid");
 
   // Add particle mass
   imass = AddRealProperty();
-  realfieldname.push_back("mass");
+  realpropname.push_back("mass");
 
   // Add particle position.
   ixp = AddRealProperty();
   iyp = AddRealProperty();
   izp = AddRealProperty();
-  realfieldname.push_back("x1");
-  realfieldname.push_back("x2");
-  realfieldname.push_back("x3");
+  realpropname.push_back("x1");
+  realpropname.push_back("x2");
+  realpropname.push_back("x3");
 
   // Add particle velocity.
   ivpx = AddRealProperty();
   ivpy = AddRealProperty();
   ivpz = AddRealProperty();
-  realfieldname.push_back("v1");
-  realfieldname.push_back("v2");
-  realfieldname.push_back("v3");
+  realpropname.push_back("v1");
+  realpropname.push_back("v2");
+  realpropname.push_back("v3");
 
   // Add old particle position.
   ixp0 = AddAuxProperty();
   iyp0 = AddAuxProperty();
   izp0 = AddAuxProperty();
-  auxfieldname.push_back("x10");
-  auxfieldname.push_back("x20");
-  auxfieldname.push_back("x30");
+  auxpropname.push_back("x10");
+  auxpropname.push_back("x20");
+  auxpropname.push_back("x30");
 
   // Add old particle velocity.
   ivpx0 = AddAuxProperty();
   ivpy0 = AddAuxProperty();
   ivpz0 = AddAuxProperty();
-  auxfieldname.push_back("v10");
-  auxfieldname.push_back("v20");
-  auxfieldname.push_back("v30");
+  auxpropname.push_back("v10");
+  auxpropname.push_back("v20");
+  auxpropname.push_back("v30");
 
   // Add particle position indices.
   ixi1 = AddWorkingArray();
@@ -141,7 +141,7 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
 
     // aux array for shear boundary flag
     ish = AddAuxProperty();
-    auxfieldname.push_back("ish");
+    auxpropname.push_back("ish");
   }
 
   // Actual memory allocation and shorthand assignment will be done in the derived class
@@ -156,16 +156,16 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
 Particles::~Particles() {
   // Delete integer properties.
   intprop.DeleteAthenaArray();
-  intfieldname.clear();
+  intpropname.clear();
 
   // Delete real properties.
   realprop.DeleteAthenaArray();
-  realfieldname.clear();
+  realpropname.clear();
 
   // Delete auxiliary properties.
   if (naux > 0) {
     auxprop.DeleteAthenaArray();
-    auxfieldname.clear();
+    auxpropname.clear();
   }
 
   // Delete working arrays.
@@ -699,11 +699,11 @@ void Particles::OutputOneParticle(std::ostream &os, int k, bool header) {
   if (header) {
     os << "time,dt";
     for (int ip = 0; ip < nint; ++ip)
-      os << "," << intfieldname[ip];
+      os << "," << intpropname[ip];
     for (int ip = 0; ip < nreal; ++ip)
-      os << "," << realfieldname[ip];
+      os << "," << realpropname[ip];
     for (int ip = 0; ip < naux; ++ip)
-      os << "," << auxfieldname[ip];
+      os << "," << auxpropname[ip];
     os << std::endl;
   }
 
@@ -852,9 +852,9 @@ void Particles::FormattedTableOutput(Mesh *pm, OutputParameters op) {
         // Write header.
         os << "# ";
         for (int ip = 0; ip < ppar->nint; ++ip)
-          os << ppar->intfieldname[ip] << "  ";
+          os << ppar->intpropname[ip] << "  ";
         for (int ip = 0; ip < ppar->nreal; ++ip)
-          os << ppar->realfieldname[ip] << "  ";
+          os << ppar->realpropname[ip] << "  ";
         os << std::endl;
 
         // Write the particle data in the meshblock.

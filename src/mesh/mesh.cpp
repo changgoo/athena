@@ -1452,7 +1452,7 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
     }
 
     // find PM density for the first time
-    if (particle) Particles::FindDensityOnMesh(this, true);
+    if (particle) Particles::ComputePMDensityAndCommunicate(this, true);
 
     // solve gravity for the first time
     if (SELF_GRAVITY_ENABLED == 1)

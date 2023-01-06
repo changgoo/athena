@@ -29,7 +29,7 @@ TracerParticles::TracerParticles(MeshBlock *pmb, ParameterInput *pin,
   iwz = AddWorkingArray();
 
   // allocate memory
-  Particles::AllocateMemory();
+  AllocateMemory();
 
   // Assign shorthands (need to do this for every constructor of a derived class)
   AssignShorthands();
