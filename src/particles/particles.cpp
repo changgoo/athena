@@ -124,12 +124,12 @@ void Particles::PostInitialize(Mesh *pm, ParameterInput *pin) {
 
   // Set position indices.
   for (int b = 0; b < pm->nblocal; ++b)
-    for (Particles *ppar : pm->my_blocks(b)->ppar)
+    for (Particles *ppar : pm->my_blocks(b)->ppars)
       ppar->SetPositionIndices();
 
   // Print particle csv
   for (int b = 0; b < pm->nblocal; ++b)
-    for (Particles *ppar : pm->my_blocks(b)->ppar)
+    for (Particles *ppar : pm->my_blocks(b)->ppars)
       if (ppar->parhstout_) ppar->OutputParticles(true);
 }
 
@@ -150,7 +150,7 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
     }
     pmb->pbval->StartReceivingSubset(BoundaryCommSubset::pm,
                                      pmb->pbval->bvars_pm);
-    for (Particles *ppar : pmb->ppar) {
+    for (Particles *ppar : pmb->ppars) {
       ppar->FindLocalDensityOnMesh(include_momentum);
       ppar->ppm->pmbvar->SendBoundaryBuffers();
     }
@@ -158,7 +158,7 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
 
   for (int b = 0; b < nblocks; ++b) {
     MeshBlock *pmb(pm->my_blocks(b));
-    for (Particles *ppar : pmb->ppar) {
+    for (Particles *ppar : pmb->ppars) {
       ppar->ppm->pmbvar->ReceiveAndSetBoundariesWithWait();
       if (pm->shear_periodic)
         ppar->ppm->pmbvar->SendShearingBoxBoundaryBuffers();
@@ -168,7 +168,7 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
   if (pm->shear_periodic) {
     for (int b = 0; b < nblocks; ++b) {
       MeshBlock *pmb(pm->my_blocks(b));
-      for (Particles *ppar : pmb->ppar) {
+      for (Particles *ppar : pmb->ppars) {
         ppar->ppm->pmbvar->ReceiveAndSetShearingBoxBoundariesWithWait();
         ppar->ppm->pmbvar->SetShearingBoxBoundaryBuffers();
       }
@@ -179,7 +179,7 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
     MeshBlock *pmb(pm->my_blocks(b));
     pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::pm,
                                     pmb->pbval->bvars_pm);
-    for (Particles *ppar : pmb->ppar) ppar->ppm->updated=false;
+    for (Particles *ppar : pmb->ppars) ppar->ppm->updated=false;
   }
 }
 
@@ -189,7 +189,7 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
 
 void Particles::GetHistoryOutputNames(std::string output_names[], int ipar) {
   std::string head = "p";
-  head.append(std::to_string(ipar));
+  head.append(std::to_string(ipar)); // TODO(SMOON) how about partype instead of ipar?
   output_names[0] = head + "-n";
   output_names[1] = head + "-v1";
   output_names[2] = head + "-v2";
@@ -207,7 +207,7 @@ void Particles::GetHistoryOutputNames(std::string output_names[], int ipar) {
 std::int64_t Particles::GetTotalNumber(Mesh *pm) {
   std::int64_t npartot(0);
   for (int b = 0; b < pm->nblocal; ++b)
-    for (Particles *ppar : pm->my_blocks(b)->ppar)
+    for (Particles *ppar : pm->my_blocks(b)->ppars)
       npartot += ppar->npar;
 #ifdef MPI_PARALLEL
   MPI_Allreduce(MPI_IN_PLACE, &npartot, 1, MPI_LONG, MPI_SUM, my_comm);
@@ -220,14 +220,12 @@ std::int64_t Particles::GetTotalNumber(Mesh *pm) {
 //! \brief constructs a Particles instance.
 
 Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp) :
-  input_block_name(pp->block_name), partype(pp->partype),
+  ipar(pp->ipar), input_block_name(pp->block_name), partype(pp->partype),
   nint(0), nreal(0), naux(0), nwork(0),
   ipid(-1), ixp(-1), iyp(-1), izp(-1), ivpx(-1), ivpy(-1), ivpz(-1),
   ixp0(-1), iyp0(-1), izp0(-1), ivpx0(-1), ivpy0(-1), ivpz0(-1),
-  ixi1(-1), ixi2(-1), ixi3(-1), imom1(-1), imom2(-1), imom3(-1), imass(-1), ish(-1),
-  igx(-1), igy(-1), igz(-1),
-  npar(0), nparmax(1),
-  my_ipar_(pp->ipar), isgravity_(false), parhstout_(false), mass(1.0) {
+  ixi1(-1), ixi2(-1), ixi3(-1), igx(-1), igy(-1), igz(-1), ish(-1),
+  npar(0), nparmax(1), parhstout_(false), mass(1.0), isgravity_(pp->gravity) {
   // Add particle ID.
   ipid = AddIntProperty();
   intfieldname.push_back("pid");
@@ -282,8 +280,6 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
   active1_ = pmy_mesh->mesh_size.nx1 > 1;
   active2_ = pmy_mesh->mesh_size.nx2 > 1;
   active3_ = pmy_mesh->mesh_size.nx3 > 1;
-
-  if (SELF_GRAVITY_ENABLED) isgravity_ = pp->gravity;
 
   // read shearing box parameters from input block
   if (pmy_mesh->shear_periodic) {
@@ -356,6 +352,14 @@ Particles::~Particles() {
 }
 
 //--------------------------------------------------------------------------------------
+//! \fn void Particles::SetOneParticleMass(Real new_mass)
+//! \brief sets the mass of each particle.
+
+void Particles::SetOneParticleMass(Real new_mass) {
+  pinput->SetReal(input_block_name, "mass", mass = new_mass);
+}
+
+//--------------------------------------------------------------------------------------
 //! \fn void Particles::AllocateMemory()
 //! \brief memory allocation will be done at the end of derived class initialization
 void Particles::AllocateMemory() {
@@ -365,9 +369,6 @@ void Particles::AllocateMemory() {
 
   // Allocate mesh auxiliaries.
   ppm = new ParticleMesh(this, pmy_block);
-  imom1 = ppm->imom1;
-  imom2 = ppm->imom2;
-  imom3 = ppm->imom3;
 
   // Allocate particle gravity
   if (isgravity_) {
@@ -416,10 +417,7 @@ void Particles::AddHistoryOutput(Real data_sum[], int pos) {
     sum[3] += vp1 * vp1;
     sum[4] += vp2 * vp2;
     sum[5] += vp3 * vp3;
-    if (imass != -1)
-      sum[6] += realprop(imass,k);
-    else
-      sum[6] += mass;
+    sum[6] += mass;
   }
 
   // Assign the values to output variables.
@@ -460,35 +458,6 @@ void Particles::AddOneParticle(Real x1, Real x2, Real x3,
     vpz(npar) = v3;
     npar++;
   }
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn AthenaArray<Real> Particles::GetVelocityField()
-//! \brief returns the particle velocity on the mesh.
-//!
-//! \note
-//!   Precondition:
-//!   The particle properties on mesh must be assigned using the class method
-//!   Particles::FindDensityOnMesh().
-
-AthenaArray<Real> Particles::GetVelocityField() const {
-  AthenaArray<Real> vel(3, ppm->nx3_, ppm->nx2_, ppm->nx1_);
-  for (int k = ppm->ks; k <= ppm->ke; ++k)
-    for (int j = ppm->js; j <= ppm->je; ++j)
-      for (int i = ppm->is; i <= ppm->ie; ++i) {
-        Real rho;
-        if (imass == -1) {
-          rho = ppm->weight(k,j,i);
-        } else {
-          rho = ppm->density(k,j,i);
-        }
-        rho = (rho > 0.0) ? rho : 1.0;
-
-        vel(0,k,j,i) = ppm->meshaux(imom1,k,j,i) / rho;
-        vel(1,k,j,i) = ppm->meshaux(imom2,k,j,i) / rho;
-        vel(2,k,j,i) = ppm->meshaux(imom3,k,j,i) / rho;
-      }
-  return vel;
 }
 
 //--------------------------------------------------------------------------------------
@@ -556,7 +525,7 @@ void Particles::ProcessNewParticles(Mesh *pmesh, int ipar) {
   std::vector<int> nnewpar(nbtotal, 0);
   for (int b = 0; b < nblocks; ++b) {
     const MeshBlock *pmb(pmesh->my_blocks(b));
-    nnewpar[pmb->gid] = pmb->ppar[ipar]->CountNewParticles();
+    nnewpar[pmb->gid] = pmb->ppars[ipar]->CountNewParticles();
   }
 #ifdef MPI_PARALLEL
   MPI_Allreduce(MPI_IN_PLACE, &nnewpar[0], nbtotal, MPI_INT, MPI_MAX, my_comm);
@@ -570,7 +539,7 @@ void Particles::ProcessNewParticles(Mesh *pmesh, int ipar) {
   for (int b = 0; b < nblocks; ++b) {
     const MeshBlock *pmb(pmesh->my_blocks(b));
     int newid_start = idmax[ipar] + (pmb->gid > 0 ? nnewpar[pmb->gid - 1] : 0);
-    pmb->ppar[ipar]->SetNewParticleID(newid_start);
+    pmb->ppars[ipar]->SetNewParticleID(newid_start);
   }
   idmax[ipar] += nnewpar[nbtotal - 1];
 }
@@ -772,77 +741,32 @@ Real Particles::NewBlockTimeStep() {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void Particles::FindLocalDensityOnMesh(Mesh *pm, bool include_momentum)
-//! \brief finds the number density of particles on the mesh.
-//!
-//!   If include_momentum is true, the momentum density field is also computed,
-//!   assuming mass of each particle is unity.
-//! \note
-//!   Postcondition: ppm->weight becomes the density in each cell, and
-//!   if include_momentum is true, ppm->meshaux(imom1:imom3,:,:,:)
-//!   becomes the momentum density.
+//! \fn void Particles::FindLocalDensityOnMesh(bool include_momentum)
+//! \brief finds the mass and momentum density of particles on the mesh.
 
 void Particles::FindLocalDensityOnMesh(bool include_momentum) {
   Coordinates *pc(pmy_block->pcoord);
 
   if (include_momentum) {
-    AthenaArray<Real> vp, vp1, vp2, vp3;
-    vp.NewAthenaArray(3, npar);
-    vp1.InitWithShallowSlice(vp, 2, 0, 1);
-    vp2.InitWithShallowSlice(vp, 2, 1, 1);
-    vp3.InitWithShallowSlice(vp, 2, 2, 1);
+    AthenaArray<Real> parprop, mom1, mom2, mom3;
+    parprop.NewAthenaArray(4, npar);
+    std::fill(&parprop(0,0), &parprop(0,0) + parprop.GetDim1(), mass);
+    mom1.InitWithShallowSlice(parprop, 2, 1, 1);
+    mom2.InitWithShallowSlice(parprop, 2, 2, 1);
+    mom3.InitWithShallowSlice(parprop, 2, 3, 1);
     for (int k = 0; k < npar; ++k)
       pc->CartesianToMeshCoordsVector(xp(k), yp(k), zp(k),
-        vpx(k), vpy(k), vpz(k), vp1(k), vp2(k), vp3(k));
-    ppm->AssignParticlesToMeshAux(vp, 0, ppm->imom1, 3);
+        mass*vpx(k), mass*vpy(k), mass*vpz(k), mom1(k), mom2(k), mom3(k));
+    ppm->DepositParticlesToMeshAux(parprop, 0, ppm->idens, 4);
   } else {
-    ppm->AssignParticlesToMeshAux(realprop, 0, ppm->iweight, 0);
+    AthenaArray<Real> parprop(npar);
+    std::fill(&parprop(0), &parprop(0) + parprop.GetDim1(), mass);
+    ppm->DepositParticlesToMeshAux(parprop, 0, ppm->idens, 1);
   }
-  ConvertToDensity(include_momentum);
 
   // set flag to trigger PM communications
   ppm->updated = true;
   ppm->pmbvar->var_buf.ZeroClear();
-}
-//--------------------------------------------------------------------------------------
-//! \fn void Particles::ConvertToDensity(bool include_momentum)
-//! \brief finds the number density of particles on the mesh.
-//!
-//!   If include_momentum is true, the momentum density field is also computed,
-//!   assuming mass of each particle is unity.
-//! \note
-//!   Postcondition: ppm->weight becomes the density in each cell, and
-//!   if include_momentum is true, ppm->meshaux(imom1:imom3,:,:,:)
-//!   becomes the momentum density.
-
-void Particles::ConvertToDensity(bool include_momentum) {
-  Coordinates *pc(pmy_block->pcoord);
-  // Convert to densities.
-  int is = active1_ ? ppm->is-NGHOST: ppm->is, ie = active1_ ? ppm->ie+NGHOST: ppm->ie;
-  int js = active2_ ? ppm->js-NGHOST: ppm->js, je = active2_ ? ppm->je+NGHOST: ppm->je;
-  int ks = active3_ ? ppm->ks-NGHOST: ppm->ks, ke = active3_ ? ppm->ke+NGHOST: ppm->ke;
-  if (include_momentum) {
-    for (int k = ks; k <= ke; ++k)
-      for (int j = js; j <= je; ++j)
-        for (int i = is; i <= ie; ++i) {
-          Real vol(pc->GetCellVolume(k,j,i));
-          Real rhop(mass/vol); // mass = 1.0 if imass != -1
-          ppm->weight(k,j,i) *= rhop;
-          ppm->meshaux(ppm->imom1,k,j,i) *= rhop;
-          ppm->meshaux(ppm->imom2,k,j,i) *= rhop;
-          ppm->meshaux(ppm->imom3,k,j,i) *= rhop;
-          if (ppm->imass != -1) ppm->density(k,j,i) *= rhop;
-        }
-  } else {
-    for (int k = ks; k <= ke; ++k)
-      for (int j = js; j <= je; ++j)
-        for (int i = is; i <= ie; ++i) {
-          Real vol(pc->GetCellVolume(k,j,i));
-          Real rhop(mass/vol); // mass = 1.0 if imass != -1
-          ppm->weight(k,j,i) *= rhop;
-          if (ppm->imass != -1) ppm->density(k,j,i) *= rhop;
-        }
-  }
 }
 
 //--------------------------------------------------------------------------------------
@@ -922,7 +846,7 @@ void Particles::FormattedTableOutput(Mesh *pm, OutputParameters op) {
       // Loop over MeshBlocks
       for (int b = 0; b < pm->nblocal; ++b) {
         const MeshBlock *pmb(pm->my_blocks(b));
-        const Particles *ppar(pmb->ppar[ipar]);
+        const Particles *ppar(pmb->ppars[ipar]);
 
         // Create the filename.
         fname << op.file_basename
@@ -1014,7 +938,7 @@ void Particles::OutputParticles(bool header, int kid) {
     if (pid(k) != kid) continue;
 
     // Create the filename.
-    fname << file_basename << ".pid" << pid(k) << ".par" << my_ipar_ << ".csv";
+    fname << file_basename << ".pid" << pid(k) << ".par" << ipar << ".csv";
 
     // Open the file for write.
     if (header)

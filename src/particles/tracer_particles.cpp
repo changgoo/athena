@@ -48,14 +48,6 @@ TracerParticles::~TracerParticles() {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void TracerParticles::SetOneParticleMass(Real new_mass)
-//! \brief sets the mass of each particle.
-
-void TracerParticles::SetOneParticleMass(Real new_mass) {
-  pinput->SetReal(input_block_name, "mass", mass = new_mass);
-}
-
-//--------------------------------------------------------------------------------------
 //! \fn void TracerParticles::AssignShorthands()
 //! \brief assigns shorthands by shallow coping slices of the data.
 

@@ -21,7 +21,7 @@
 //! \brief constructs a StarParticles instance.
 
 StarParticles::StarParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp)
-  : Particles(pmb, pin, pp), imetal(-1), iage(-1), igas(-1) {
+  : Particles(pmb, pin, pp), imass(-1), imetal(-1), iage(-1), igas(-1) {
   // Add particle mass, metal mass
   imass = AddRealProperty();
   imetal = AddRealProperty();
@@ -89,6 +89,39 @@ void StarParticles::AddOneParticle(Real mass, Real x1, Real x2, Real x3,
 
     npar++;
   }
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void StarParticles::FindHistoryOutput(Real data_sum[], int pos)
+//! \brief finds the data sums of history output from particles in my process and assign
+//!   them to data_sum beginning at index pos.
+
+void StarParticles::AddHistoryOutput(Real data_sum[], int pos) {
+  const int NSUM = NHISTORY - 1;
+
+  // Initiate the summations.
+  std::int64_t np = 0;
+  std::vector<Real> sum(NSUM, 0.0);
+
+  Real vp1, vp2, vp3;
+  np += npar;
+
+  for (int k = 0; k < npar; ++k) {
+    pmy_block->pcoord->CartesianToMeshCoordsVector(xp(k), yp(k), zp(k),
+        vpx(k), vpy(k), vpz(k), vp1, vp2, vp3);
+    sum[0] += vp1;
+    sum[1] += vp2;
+    sum[2] += vp3;
+    sum[3] += vp1 * vp1;
+    sum[4] += vp2 * vp2;
+    sum[5] += vp3 * vp3;
+    sum[6] += realprop(imass,k);
+  }
+
+  // Assign the values to output variables.
+  data_sum[pos] += static_cast<Real>(np);
+  for (int i = 0; i < NSUM; ++i)
+    data_sum[pos+i+1] += sum[i];
 }
 
 //--------------------------------------------------------------------------------------
@@ -280,37 +313,28 @@ void StarParticles::SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsr
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void StarParticles::FindLocalDensityOnMesh(Mesh *pm, bool include_momentum)
-//! \brief finds the number/mass density of particles on the mesh.
-//!
-//!   If include_momentum is true, the momentum density field is also computed,
-//!   assuming mass of each particle is unity.
-//! \note
-//!   Postcondition: ppm->weight becomes the density in each cell, and
-//!   if include_momentum is true, ppm->meshaux(imom1:imom3,:,:,:)
-//!   becomes the momentum density.
+//! \fn void StarParticles::FindLocalDensityOnMesh(bool include_momentum)
+//! \brief finds the mass and momentum density of particles on the mesh.
 
 void StarParticles::FindLocalDensityOnMesh(bool include_momentum) {
   Coordinates *pc(pmy_block->pcoord);
 
   if (include_momentum) {
-    AthenaArray<Real> vp, vp1, vp2, vp3, mpar;
-    vp.NewAthenaArray(4, npar);
-    mpar.InitWithShallowSlice(vp, 2, 0, 1);
-    vp1.InitWithShallowSlice(vp, 2, 1, 1);
-    vp2.InitWithShallowSlice(vp, 2, 2, 1);
-    vp3.InitWithShallowSlice(vp, 2, 3, 1);
+    AthenaArray<Real> parprop, mom1, mom2, mom3, mpar;
+    parprop.NewAthenaArray(4, npar);
+    mpar.InitWithShallowSlice(parprop, 2, 0, 1);
+    mom1.InitWithShallowSlice(parprop, 2, 1, 1);
+    mom2.InitWithShallowSlice(parprop, 2, 2, 1);
+    mom3.InitWithShallowSlice(parprop, 2, 3, 1);
     for (int k = 0; k < npar; ++k) {
       pc->CartesianToMeshCoordsVector(xp(k), yp(k), zp(k),
-        mp(k)*vpx(k), mp(k)*vpy(k), mp(k)*vpz(k), vp1(k), vp2(k), vp3(k));
+        mp(k)*vpx(k), mp(k)*vpy(k), mp(k)*vpz(k), mom1(k), mom2(k), mom3(k));
       mpar(k) = mp(k);
     }
-    ppm->AssignParticlesToMeshAux(vp, 0, ppm->imass, 4);
+    ppm->DepositParticlesToMeshAux(parprop, 0, ppm->idens, 4);
   } else {
-    ppm->AssignParticlesToMeshAux(mp, 0, ppm->imass, 1);
+    ppm->DepositParticlesToMeshAux(mp, 0, ppm->idens, 1);
   }
-
-  ConvertToDensity(include_momentum);
 
   // set flag to trigger PM communications
   ppm->updated = true;

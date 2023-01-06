@@ -252,7 +252,7 @@ void ParticleMeshBoundaryVariable::ShearQuantities(AthenaArray<Real> &shear_cc_,
   for (int k=kl; k<=ku; k++) {
     for (int i=0; i<NGHOST; i++) {
       for (int j=jl; j<=ju; j++) {
-        shear_cc_(ppm_->imom2,k,i,j) += sign[upper]*qomL*shear_cc_(ppm_->iweight,k,i,j);
+        shear_cc_(ppm_->imom2,k,i,j) += sign[upper]*qomL*shear_cc_(ppm_->idens,k,i,j);
       }
     }
   }

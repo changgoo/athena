@@ -76,8 +76,8 @@ void FFTGravityDriver::Solve(int stage, int mode) {
     in.InitWithShallowSlice(pmb->phydro->u,4,IDN,1);
     if (pmy_mesh_->particle_gravity) {
       AthenaArray<Real> rhosum(in);
-      for (Particles *ppar : pmb->ppar_grav) {
-        AthenaArray<Real> rhop(ppar->GetMassDensity());
+      for (Particles *ppar : pmb->ppars_grav) {
+        AthenaArray<Real> rhop(ppar->ppm->GetMassDensity());
         for (int k = pmb->ks; k <= pmb->ke; ++k)
           for (int j = pmb->js; j <= pmb->je; ++j)
             for (int i = pmb->is; i <= pmb->ie; ++i)

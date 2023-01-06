@@ -61,25 +61,16 @@ struct ParticleParameters {
 
 class Particles {
 friend class MeshBlock;  // Make writing initial conditions possible.
-friend class OutputType;
+                        // TODO(SMOON) No! This terribly breaks encapsulation.
+                        // Use AddOneParticle interface to write initial conditions.
+                        // MeshBlock should not be a friend of Particles.
+friend class OutputType; // TODO(SMOON) OutputType need not be a friend, too.
 friend class ParticleGravity;
 friend class ParticleMesh;
 
  public:
-  // Class methods
-  static void AMRCoarseToFine(Particles *pparc, Particles *pparf, MeshBlock* pmbf);
-  static void AMRFineToCoarse(Particles *pparc, Particles *pparf);
-  static void Initialize(Mesh *pm, ParameterInput *pin);
-  static void PostInitialize(Mesh *pm, ParameterInput *pin);
-  static void FindDensityOnMesh(Mesh *pm, bool include_momentum);
-  static void FormattedTableOutput(Mesh *pm, OutputParameters op);
-  static void GetHistoryOutputNames(std::string output_names[], int ipar);
-  static std::int64_t GetTotalNumber(Mesh *pm);
-
   // Class constant
   static const int NHISTORY = 8;  //!> number of variables in history output
-  // number of particle containers
-  static int num_particles, num_particles_grav, num_particles_output;
 
   // Constructor
   Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp);
@@ -87,24 +78,55 @@ friend class ParticleMesh;
   // Destructor
   virtual ~Particles();
 
-  // virtual public methods that can be overriden
-  virtual AthenaArray<Real> GetMassDensity() const;
-  virtual void Integrate(int step);
+  // Static functions
+  // TODO(SMOON) some of these could be changed to member function
+  // TODO(SMOON) if they are helper functions, take them out of the
+  //             class for better readerbility, since they are not
+  //             a part of the interface
+  static void AMRCoarseToFine(Particles *pparc, Particles *pparf, MeshBlock* pmbf);
+  static void AMRFineToCoarse(Particles *pparc, Particles *pparf);
+  static void Initialize(Mesh *pm, ParameterInput *pin);
+  static void PostInitialize(Mesh *pm, ParameterInput *pin);
+  // TODO(SMOON) bad function name; should be moved to ParticleMesh
+  static void FindDensityOnMesh(Mesh *pm, bool include_momentum);
+  static void FormattedTableOutput(Mesh *pm, OutputParameters op);
+  static void GetHistoryOutputNames(std::string output_names[], int ipar);
+  static std::int64_t GetTotalNumber(Mesh *pm);
 
-  // Accessor
-  Real GetMaximumWeight() const;
-  AthenaArray<Real> GetVelocityField() const;
+  // Methods (interface)
+  void AddOneParticle(Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
+  void SetOneParticleMass(Real new_mass); // TODO(SMOON) retire this function; better to
+                                          // set particle mass in AddOneParticle
+  void RemoveOneParticle(int k);
+  // TODO(SMOON) this should be moved to ParticleMesh
+  virtual void FindLocalDensityOnMesh(bool include_momentum);
+  void DepositPMtoMesh(int stage); // TODO(SMOON) should be moved to ParticleMesh
+  // TODO(SMOON) (template method pattern is appropriate here)
+  virtual void Integrate(int step);
+  virtual Real NewBlockTimeStep();
+
+  std::size_t GetSizeInBytes(); // TODO(SMOON) const function
   bool IsGravity() { return isgravity_; }
 
-  // Instance methods
-  bool CheckInMeshBlock(Real x1, Real x2, Real x3);
-  void AddHistoryOutput(Real data_sum[], int pos);
+  bool CheckInMeshBlock(Real x1, Real x2, Real x3); // TODO(SMOON) This must be protected
+  void UnpackParticlesForRestart(char *mbdata, std::size_t &os);
+  void PackParticlesForRestart(char *&pdata);
+
+  virtual void AddHistoryOutput(Real data_sum[], int pos);
+  void OutputParticles(bool header); // individual particle history;
+  void OutputParticles(bool header, int kid);
+  // TODO(SMOON) must be private
+  void OutputOneParticle(std::ostream &os, int k, bool header);
+  // TODO(SMOON) may not be needed; why not just make it default?
+  void ToggleParHstOutFlag();
+
+  // ************************** //
+  // Boundary communication API //
+  // ************************** //
   void ClearBoundary();
   void ClearNeighbors();
   void LinkNeighbors(MeshBlockTree &tree, int64_t nrbx1, int64_t nrbx2, int64_t nrbx3,
                      int root_level);
-  void AddOneParticle(Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
-  void RemoveOneParticle(int k);
   void LoadParticleBuffer(ParticleBuffer *ppb, int k);
 #ifdef MPI_PARALLEL
   void SendParticleBuffer(ParticleBuffer& send, int dst);
@@ -112,38 +134,42 @@ friend class ParticleMesh;
                              enum BoundaryStatus& bstatus);
 #endif
   void SendToNeighbors();
-  void SetPositionIndices();
+  void SetPositionIndices(); // TODO(SMOON) Flatten this function and move to protected
   bool ReceiveFromNeighbors();
-
   void StartReceivingParticlesShear();
   void SendParticlesShear();
   int FindTargetGidAlongX2(Real x2);
   void ClearBoundaryShear();
   bool ReceiveFromNeighborsShear();
 
-  void DepositPMtoMesh(int stage);
-
-  Real NewBlockTimeStep();
-  virtual void FindLocalDensityOnMesh(bool include_momentum);
-
-  // output individual particle history
-  void OutputParticles(bool header);
-  void OutputParticles(bool header, int kid);
-  void OutputOneParticle(std::ostream &os, int k, bool header);
-  void ToggleParHstOutFlag();
-
-  std::size_t GetSizeInBytes();
-  void UnpackParticlesForRestart(char *mbdata, std::size_t &os);
-  void PackParticlesForRestart(char *&pdata);
-
+  // Data members
+  // number of particle containers
+  static int num_particles, num_particles_grav, num_particles_output;
   ParticleMesh *ppm;  //!> ptr to particle-mesh
+  const int ipar;
 
  protected:
+  // Protected interfaces (to be used by derived classes)
+  // TODO(SMOON) avoid call super using template method
+  virtual void AssignShorthands();  //!> Needs to be called everytime
+                                    //!> intprop, realprop, & auxprop are resized
+                                    //!> Be sure to call back when derived.
+  virtual void AllocateMemory();    //!> Needs to be called in the derived class init
+
+  int AddIntProperty();
+  int AddRealProperty();
+  int AddAuxProperty();
+  int AddWorkingArray();
+
+  void UpdateCapacity(int new_nparmax);  //!> Change the capacity of particle arrays
+  void SaveStatus(); // x->x0, v->v0
+
+
   // Class variables
   static bool initialized;  //!> whether or not the class is initialized
   static ParameterInput *pinput;
 
-  // Instance variables
+  // Data members
   std::string input_block_name, partype;
 
   int nint;          //!> numbers of integer particle properties
@@ -161,35 +187,16 @@ friend class ParticleMesh;
 
   int ixi1, ixi2, ixi3;     // indices for position indices
 
-  int imom1, imom2, imom3;  // indices for momentum components on mesh
-
-  int imass, ish;
   int igx, igy, igz; // indices for gravity force
 
-  // Instance methods
-  virtual void AssignShorthands();  //!> Needs to be called everytime
-                                    //!> intprop, realprop, & auxprop are resized
-                                    //!> Be sure to call back when derived.
-  virtual void AllocateMemory();    //!> Needs to be called in the derived class init
+  int ish;
 
-  int AddIntProperty();
-  int AddRealProperty();
-  int AddAuxProperty();
-  int AddWorkingArray();
-
-  void UpdateCapacity(int new_nparmax);  //!> Change the capacity of particle arrays
-  void ConvertToDensity(bool include_momentum);
-  void SaveStatus(); // x->x0, v->v0
-
-  // Instance variables
   // std::uint64_t npar;     //!> number of particles
   // std::uint64_t nparmax;  //!> maximum number of particles per meshblock
   int npar;     //!> number of particles
   int nparmax;  //!> maximum number of particles per meshblock
-  int my_ipar_;
-  bool isgravity_; //!> flag for gravity
   bool parhstout_; //!> flag for individual particle history output
-  Real mass;   //!> common mass of particle
+  Real mass;
   Real cfl_par;  //!> CFL number for particles
 
                                // Data attached to the particles:
@@ -222,8 +229,18 @@ friend class ParticleMesh;
   // Class method
   static void ProcessNewParticles(Mesh *pmesh, int ipar);
 
-  // Instance methods
-  // pure virtual methods
+  // Methods (implementation)
+  // Need to be implemented in derived classes
+  // TODO(SMOON) Functions such as SourceTerms, EulerStep, BorisKick, ... needs to be
+  // inside the implementation of template function Integrate(). This needs some
+  // consistent name convention.
+  // for example, the interface looks like
+  // Integrate () {
+  //   Kick()
+  //   Drift()
+  //   Kick()
+  // }
+  // Where the actual implementation of Kick would be either EulerStep or BorisKick, etc.
   virtual void SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc)=0;
   virtual void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc)=0;
   virtual void ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc)=0;
@@ -249,9 +266,9 @@ friend class ParticleMesh;
   // Class variable
   static std::vector<int> idmax;
 
-  // Instance variables
+  // Data members
+  bool isgravity_; //!> flag for gravity
   bool active1_, active2_, active3_;  // active dimensions
-  int my_particle_num_;
 
   // MeshBlock-to-MeshBlock communication:
   BoundaryValues *pbval_;                            //!> ptr to my BoundaryValues
@@ -266,22 +283,6 @@ friend class ParticleMesh;
 };
 
 //--------------------------------------------------------------------------------------
-//! \fn Real Particles::GetMaximumWeight()
-//! \brief returns the maximum weight on the mesh.
-
-inline Real Particles::GetMaximumWeight() const {
-  return ppm->FindMaximumWeight();
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn Real Particles::GetMaximumWeight()
-//! \brief returns the maximum weight on the mesh.
-
-inline AthenaArray<Real> Particles::GetMassDensity() const {
-  return ppm->weight;
-}
-
-//--------------------------------------------------------------------------------------
 //! \class DustParticles
 //! \brief defines the class for dust particles that interact with the gas via drag
 //!        force.
@@ -290,34 +291,21 @@ class DustParticles : public Particles {
 friend class MeshBlock;
 
  public:
-  void SetOneParticleMass(Real new_mass);
-  bool GetBackReaction() { return backreaction; }
-  bool GetDragForce() { return dragforce; }
-  bool GetVariableTaus() { return variable_taus; }
-  Real GetOneParticleMass() { return mass; }
-  Real GetStoppingTime() { return taus0; }
-
-  //!Constructor
+  // Constructor
   DustParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp);
 
   // Destructor
   ~DustParticles();
 
-  // Instance method
-  Real NewBlockTimeStep();
+  // Methods (interface)
+  bool GetBackReaction() { return backreaction; }
+  bool GetDragForce() { return dragforce; }
+  bool GetVariableTaus() { return variable_taus; }
+  Real GetStoppingTime() { return taus0; }
+  Real NewBlockTimeStep() override;
 
  private:
-  bool backreaction;   //!> turn on/off back reaction
-  bool dragforce;      //!> turn on/off drag force
-  bool variable_taus;  //!> whether or not the stopping time is variable
-
-  int iwx, iwy, iwz;         // indices for working arrays
-  int idpx1, idpx2, idpx3;   // indices for momentum change
-  int itaus;                 //!> index for stopping time
-
-  Real taus0;  //!> constant/default stopping time (in code units)
-
-  // Instance methods.
+  // Methods (implementation)
   void AssignShorthands() override;
   void SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
   void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
@@ -326,9 +314,16 @@ friend class MeshBlock;
                      AthenaArray<Real>& meshdst) override;
   void UserStoppingTime(Real t, Real dt, const AthenaArray<Real>& meshsrc);
 
-  // Instance variables
+  // Data members
+  bool backreaction;   //!> turn on/off back reaction
+  bool dragforce;      //!> turn on/off drag force
+  bool variable_taus;  //!> whether or not the stopping time is variable
+
+  int iwx, iwy, iwz;         // indices for working arrays
+  int itaus;                 //!> index for stopping time
+
+  Real taus0;  //!> constant/default stopping time (in code units)
   AthenaArray<Real> wx, wy, wz;        // shorthand for working arrays
-  AthenaArray<Real> dpx1, dpx2, dpx3;  // shorthand for momentum change
   AthenaArray<Real> taus;              // shorthand for stopping time
 };
 
@@ -340,20 +335,16 @@ class TracerParticles : public Particles {
 friend class MeshBlock;
 
  public:
-  //!Constructor
+  // Constructor
   TracerParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp);
 
   // Destructor
   ~TracerParticles();
 
-  // Instance method
-  void SetOneParticleMass(Real new_mass);
-  Real GetOneParticleMass() { return mass; }
+  // Methods (interface)
 
  private:
-  int iwx, iwy, iwz;         // indices for working arrays
-
-  // Instance methods.
+  // Methods (implementation)
   void AssignShorthands() override;
   void SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
   void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
@@ -361,7 +352,8 @@ friend class MeshBlock;
   void DepositToMesh(Real t, Real dt, const AthenaArray<Real>& meshsrc,
                      AthenaArray<Real>& meshdst) override;
 
-  // Instance variables
+  // Data members
+  int iwx, iwy, iwz;         // indices for working arrays
   AthenaArray<Real> wx, wy, wz;        // shorthand for working arrays
 };
 
@@ -373,25 +365,22 @@ class StarParticles : public Particles {
 friend class MeshBlock;
 
  public:
-  //!Constructor
+  // Constructor
   StarParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp);
 
   // Destructor
   ~StarParticles();
 
-  // override integrator
+  // Methods (interface)
   void Integrate(int step) override;
 
   void AddOneParticle(Real mass, Real x1, Real x2, Real x3,
                       Real v1, Real v2, Real v3);
-  AthenaArray<Real> GetMassDensity() const override;
   void FindLocalDensityOnMesh(bool include_momentum) override;
+  void AddHistoryOutput(Real data_sum[], int pos) override;
 
  private:
-  Real dt_old;
-  int imetal, iage; // indices for additional Real properties
-  int igas;                // indices for additional Aux properties
-  // Instance methods.
+  // Methods (implementation)
   void AssignShorthands() override;
   void SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
   void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
@@ -408,17 +397,13 @@ friend class MeshBlock;
   void PointMass(Real t, Real dt, Real gm);
   void ConstantAcceleration(Real t, Real dt, Real g1, Real g2, Real g3);
 
-  // Instance variables
+  // Data members
+  Real dt_old;
+  // TODO(SMOON) index and variable name are inconsistent
+  int imass, imetal, iage; // indices for additional Real properties
+  int igas;                // indices for additional Aux properties
   AthenaArray<Real> mp, mzp, tage;        // shorthand for real properties
   AthenaArray<Real> fgas;                     // shorthand for aux properties
 };
-
-//--------------------------------------------------------------------------------------
-//! \fn Real Particles::GetMaximumWeight()
-//! \brief returns the maximum weight on the mesh.
-
-inline AthenaArray<Real> StarParticles::GetMassDensity() const {
-  return ppm->density;
-}
 
 #endif  // PARTICLES_PARTICLES_HPP_

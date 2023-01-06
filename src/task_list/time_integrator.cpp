@@ -1701,7 +1701,7 @@ void TimeIntegratorTaskList::StartupTaskList(MeshBlock *pmb, int stage) {
     pmb->pbval->StartReceivingSubset(BoundaryCommSubset::pm_grav,
                                      pmb->pbval->bvars_pm_grav);
     if (SHEAR_PERIODIC)
-      for (Particles *ppar : pmb->ppar) ppar->StartReceivingParticlesShear();
+      for (Particles *ppar : pmb->ppars) ppar->StartReceivingParticlesShear();
   } else {
     pmb->pbval->StartReceivingSubset(BoundaryCommSubset::orbital,
                                      pmb->pbval->bvars_main_int);
@@ -1725,7 +1725,7 @@ TaskStatus TimeIntegratorTaskList::ClearAllBoundary(MeshBlock *pmb, int stage) {
                                     pmb->pbval->bvars_main_int);
     pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::pm_grav,
                                     pmb->pbval->bvars_pm_grav);
-    for (Particles *ppar : pmb->ppar) ppar->ClearBoundary();
+    for (Particles *ppar : pmb->ppars) ppar->ClearBoundary();
   } else {
     pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::orbital,
                                     pmb->pbval->bvars_main_int);
@@ -2258,7 +2258,7 @@ TaskStatus TimeIntegratorTaskList::ReceiveEMFShear(MeshBlock *pmb, int stage) {
 
 TaskStatus TimeIntegratorTaskList::IntegrateParticles(MeshBlock *pmb, int stage) {
   if (integrator == "vl2") {
-    for (Particles *ppar : pmb->ppar)
+    for (Particles *ppar : pmb->ppars)
       ppar->Integrate(stage);
     return TaskStatus::next;
   }
@@ -2266,14 +2266,14 @@ TaskStatus TimeIntegratorTaskList::IntegrateParticles(MeshBlock *pmb, int stage)
 }
 
 TaskStatus TimeIntegratorTaskList::SendParticles(MeshBlock *pmb, int stage) {
-  for (Particles *ppar : pmb->ppar)
+  for (Particles *ppar : pmb->ppars)
     ppar->SendToNeighbors();
   return TaskStatus::success;
 }
 
 TaskStatus TimeIntegratorTaskList::ReceiveParticles(MeshBlock *pmb, int stage) {
   bool ret_all(true), ret(false);
-  for (Particles *ppar : pmb->ppar) {
+  for (Particles *ppar : pmb->ppars) {
     ret = ppar->ReceiveFromNeighbors();
     ret_all = (ret_all && ret);
   }
@@ -2285,13 +2285,13 @@ TaskStatus TimeIntegratorTaskList::ReceiveParticles(MeshBlock *pmb, int stage) {
 }
 
 TaskStatus TimeIntegratorTaskList::SendParticlesShear(MeshBlock *pmb, int stage) {
-  for (Particles *ppar : pmb->ppar) ppar->SendParticlesShear();
+  for (Particles *ppar : pmb->ppars) ppar->SendParticlesShear();
   return TaskStatus::success;
 }
 
 TaskStatus TimeIntegratorTaskList::ReceiveParticlesShear(MeshBlock *pmb, int stage) {
   bool ret_all(true), ret(false);
-  for (Particles *ppar : pmb->ppar) {
+  for (Particles *ppar : pmb->ppars) {
     ret = ppar->ReceiveFromNeighborsShear();
     ret_all = (ret_all && ret);
   }
@@ -2303,7 +2303,7 @@ TaskStatus TimeIntegratorTaskList::ReceiveParticlesShear(MeshBlock *pmb, int sta
 }
 
 TaskStatus TimeIntegratorTaskList::SendParticleMesh(MeshBlock *pmb, int stage) {
-  for (Particles *ppar : pmb->ppar) {
+  for (Particles *ppar : pmb->ppars) {
     if (ppar->IsGravity())
       ppar->FindLocalDensityOnMesh(false);
     if (ppar->ppm->updated) ppar->ppm->pmbvar->SendBoundaryBuffers();
@@ -2313,7 +2313,7 @@ TaskStatus TimeIntegratorTaskList::SendParticleMesh(MeshBlock *pmb, int stage) {
 
 TaskStatus TimeIntegratorTaskList::ReceiveParticleMesh(MeshBlock *pmb, int stage) {
   bool ret_all(true), ret(false);
-  for (Particles *ppar : pmb->ppar) {
+  for (Particles *ppar : pmb->ppars) {
     if (ppar->ppm->updated)
       ret = ppar->ppm->pmbvar->ReceiveBoundaryBuffers();
     else
@@ -2327,10 +2327,13 @@ TaskStatus TimeIntegratorTaskList::ReceiveParticleMesh(MeshBlock *pmb, int stage
 }
 
 TaskStatus TimeIntegratorTaskList::SetBoundariesParticleMesh(MeshBlock *pmb, int stage) {
-  for (Particles *ppar : pmb->ppar) {
+  for (Particles *ppar : pmb->ppars) {
     if (ppar->ppm->updated) {
       ppar->ppm->pmbvar->SetBoundaries();
-      if (!pmb->pmy_mesh->shear_periodic) ppar->ppm->updated=false;
+      // TODO(SMOON) currently, updated=false when solving Poisson because of this line,
+      // although the PM quantities are still consistent with Particle positions until
+      // new particle integration. Proper position of updated=false might be moved.
+      if (!pmb->pmy_mesh->shear_periodic) ppar->ppm->updated = false;
     }
     ppar->DepositPMtoMesh(stage);
   }
@@ -2338,7 +2341,7 @@ TaskStatus TimeIntegratorTaskList::SetBoundariesParticleMesh(MeshBlock *pmb, int
 }
 
 TaskStatus TimeIntegratorTaskList::SendParticleMeshShear(MeshBlock *pmb, int stage) {
-  for (Particles *ppar : pmb->ppar) {
+  for (Particles *ppar : pmb->ppars) {
     if (ppar->ppm->updated)
       ppar->ppm->pmbvar->SendShearingBoxBoundaryBuffers();
   }
@@ -2347,7 +2350,7 @@ TaskStatus TimeIntegratorTaskList::SendParticleMeshShear(MeshBlock *pmb, int sta
 
 TaskStatus TimeIntegratorTaskList::ReceiveParticleMeshShear(MeshBlock *pmb, int stage) {
   bool ret_all(true), ret(false);
-  for (Particles *ppar : pmb->ppar) {
+  for (Particles *ppar : pmb->ppars) {
     if (ppar->ppm->updated)
       ret = ppar->ppm->pmbvar->ReceiveShearingBoxBoundaryBuffers();
     else
@@ -2355,9 +2358,12 @@ TaskStatus TimeIntegratorTaskList::ReceiveParticleMeshShear(MeshBlock *pmb, int 
     ret_all = (ret_all & ret);
   }
   if (ret_all) {
-    for (Particles *ppar : pmb->ppar) {
+    for (Particles *ppar : pmb->ppars) {
       if (ppar->ppm->updated) {
         ppar->ppm->pmbvar->SetShearingBoxBoundaryBuffers();
+       // TODO(SMOON) currently, updated=false when solving Poisson because of this line,
+       // although the PM quantities are still consistent with Particle positions until
+       // new particle integration. Proper position of updated=false might be moved.
         ppar->ppm->updated = false;
       }
     }
