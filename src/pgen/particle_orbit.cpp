@@ -236,7 +236,7 @@ Real ParticleEnergy(MeshBlock *pmb, int iout) {
 void StarParticles::UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
   const Coordinates *pc = pmy_block->pcoord;
   for (int k = 0; k < npar_; ++k) {
-    if (tage(k) > 0) { // first kick (from n-1/2 to n) is skipped for the new particles
+    if (age(k) > 0) { // first kick (from n-1/2 to n) is skipped for the new particles
       Real x1, x2, x3;
       pc->CartesianToMeshCoords(xp_(k), yp_(k), zp_(k), x1, x2, x3);
 

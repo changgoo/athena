@@ -21,7 +21,7 @@
 //! \brief constructs a StarParticles instance.
 
 StarParticles::StarParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp)
-  : Particles(pmb, pin, pp), imetal(-1), iage(-1), igas(-1) {
+  : Particles(pmb, pin, pp), imetal(-1), iage(-1), ifgas(-1) {
   // Add metal mass
   imetal = AddRealProperty();
   realfieldname.push_back("metal");
@@ -31,7 +31,7 @@ StarParticles::StarParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParame
   realfieldname.push_back("age");
 
   // Add gas fraction as aux peroperty
-  igas = AddAuxProperty();
+  ifgas = AddAuxProperty();
   auxfieldname.push_back("fgas");
 
   // allocate memory
@@ -56,10 +56,10 @@ StarParticles::~StarParticles() {
 
 void StarParticles::AssignShorthands() {
   Particles::AssignShorthands();
-  mzp.InitWithShallowSlice(realprop, 2, imetal, 1);
-  tage.InitWithShallowSlice(realprop, 2, iage, 1);
+  metal.InitWithShallowSlice(realprop, 2, imetal, 1);
+  age.InitWithShallowSlice(realprop, 2, iage, 1);
 
-  fgas.InitWithShallowSlice(auxprop, 2, igas, 1);
+  fgas.InitWithShallowSlice(auxprop, 2, ifgas, 1);
 }
 
 //--------------------------------------------------------------------------------------
@@ -80,8 +80,8 @@ void StarParticles::AddOneParticle(Real mp, Real x1, Real x2, Real x3,
     vpz_(npar_) = v3;
 
     // initialize other properties
-    mzp(npar_) = mp;
-    tage(npar_) = 0.0;
+    metal(npar_) = mp;
+    age(npar_) = 0.0;
     fgas(npar_) = 0.0;
 
     npar_++;
@@ -145,7 +145,7 @@ void StarParticles::Integrate(int stage) {
 
 void StarParticles::Age(Real t, Real dt) {
   // aging particles
-  for (int k = 0; k < npar_; ++k) tage(k) += dt;
+  for (int k = 0; k < npar_; ++k) age(k) += dt;
 }
 
 //--------------------------------------------------------------------------------------
@@ -190,7 +190,7 @@ void StarParticles::BorisKick(Real t, Real dt) {
   Real hf1 = (1-hOmdt2)/(1+hOmdt2), hf2 = 2*hOmdt/(1+hOmdt2);
   for (int k = 0; k < npar_; ++k) {
     Real vpxm = vpx_(k), vpym = vpy_(k);
-    if (tage(k) == 0) { // for the new particles
+    if (age(k) == 0) { // for the new particles
       vpx_(k) = hf1*vpxm + hf2*vpym;
       vpy_(k) = -hf2*vpxm + hf1*vpym;
     } else {
@@ -211,7 +211,7 @@ void StarParticles::BorisKick(Real t, Real dt) {
 void StarParticles::ExertTidalForce(Real t, Real dt) {
   Real acc0 = 2*qshear_*SQR(Omega_0_);
   for (int k = 0; k < npar_; ++k) {
-    Real acc = tage(k) > 0 ? acc0*dt*xp_(k) : 0.;
+    Real acc = age(k) > 0 ? acc0*dt*xp_(k) : 0.;
     vpx_(k) += acc;
   }
 }
@@ -224,7 +224,7 @@ void StarParticles::ExertTidalForce(Real t, Real dt) {
 void StarParticles::PointMass(Real t, Real dt, Real gm) {
   const Coordinates *pc = pmy_block->pcoord;
   for (int k = 0; k < npar_; ++k) {
-    if (tage(k) > 0) {
+    if (age(k) > 0) {
       Real x1, x2, x3;
       pc->CartesianToMeshCoords(xp_(k), yp_(k), zp_(k), x1, x2, x3);
 
@@ -245,7 +245,7 @@ void StarParticles::PointMass(Real t, Real dt, Real gm) {
 
 void StarParticles::ConstantAcceleration(Real t, Real dt, Real g1, Real g2, Real g3) {
   for (int k = 0; k < npar_; ++k) {
-    if (tage(k) > 0) { // first kick (from n-1/2 to n) is skipped for the new particles
+    if (age(k) > 0) { // first kick (from n-1/2 to n) is skipped for the new particles
       vpx_(k) += dt*g1;
       vpy_(k) += dt*g2;
       vpz_(k) += dt*g3;

@@ -262,7 +262,9 @@ friend class ParticleMesh;
   int ixi1, ixi2, ixi3;     // indices for position indices
 
   int igx, igy, igz; // indices for gravity force
-
+  // TODO(SMOON) auxprop(ish,:) is actually an integer flag, but type-casted
+  // into Real because it it stored in auxprop. It does not make sence that
+  // "auxprop" must be Real. After all, why do we need seperate auxprop?
   int ish;
 
   bool parhstout_; //!> flag for individual particle history output
@@ -390,11 +392,8 @@ class StarParticles : public Particles {
 
   // Data members
   Real dt_old;
-  // TODO(SMOON) index and variable name are inconsistent
-  int imetal, iage; // indices for additional Real properties
-  int igas;                // indices for additional Aux properties
-  AthenaArray<Real> mzp, tage;        // shorthand for real properties
-  AthenaArray<Real> fgas;                     // shorthand for aux properties
+  int imetal, iage, ifgas;            // indices for:
+  AthenaArray<Real> metal, age, fgas; // metal mass, age, and gas fraction
 };
 
 #endif  // PARTICLES_PARTICLES_HPP_
