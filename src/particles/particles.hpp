@@ -349,8 +349,6 @@ class TracerParticles : public Particles {
   void SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
   void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
   void ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
-  void DepositToMesh(Real t, Real dt, const AthenaArray<Real>& meshsrc,
-                     AthenaArray<Real>& meshdst) override;
 
   // Data members
   int iwx, iwy, iwz;         // indices for working arrays
@@ -380,8 +378,6 @@ class StarParticles : public Particles {
   void SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
   void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
   void ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
-  void DepositToMesh(Real t, Real dt, const AthenaArray<Real>& meshsrc,
-                     AthenaArray<Real>& meshdst) override;
 
   void Kick(Real t, Real dt, const AthenaArray<Real>& meshsrc);
   void Drift(Real t, Real dt);
