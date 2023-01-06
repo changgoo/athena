@@ -67,10 +67,10 @@ void ParticleGravity::InterpolateGravitationalForce() {
 //! \brief exerts the gravitational force on each particle.
 void ParticleGravity::ExertGravitationalForce(Real dt) {
   // Add the force.
-  for (int k = 0; k < pmy_par->npar; ++k) {
-    pmy_par->vpx(k) += dt * pmy_par->work(igx,k);
-    pmy_par->vpy(k) += dt * pmy_par->work(igy,k);
-    pmy_par->vpz(k) += dt * pmy_par->work(igz,k);
+  for (int k = 0; k < pmy_par->npar_; ++k) {
+    pmy_par->vpx_(k) += dt * pmy_par->work(igx,k);
+    pmy_par->vpy_(k) += dt * pmy_par->work(igy,k);
+    pmy_par->vpz_(k) += dt * pmy_par->work(igz,k);
   }
 }
 

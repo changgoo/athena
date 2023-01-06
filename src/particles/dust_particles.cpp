@@ -58,6 +58,50 @@ DustParticles::~DustParticles() {
 }
 
 //--------------------------------------------------------------------------------------
+//! \fn void DustParticles::AddOneParticle()
+//! \brief add one particle if position is within the mesh block
+
+void DustParticles::AddOneParticle(Real mp, Real x1, Real x2, Real x3,
+  Real v1, Real v2, Real v3) {
+  if (CheckInMeshBlock(x1,x2,x3)) {
+    if (npar_ == nparmax_) UpdateCapacity(npar_*2);
+    pid_(npar_) = -1;
+    mass_(npar_) = mp;
+    xp_(npar_) = x1;
+    yp_(npar_) = x2;
+    zp_(npar_) = x3;
+    vpx_(npar_) = v1;
+    vpy_(npar_) = v2;
+    vpz_(npar_) = v3;
+    npar_++;
+  }
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void DustParticles::AddOneParticle()
+//! \brief add one particle if position is within the mesh block
+
+void DustParticles::AddOneParticle(Real mp, Real x1, Real x2, Real x3,
+  Real v1, Real v2, Real v3, Real taus) {
+  if (CheckInMeshBlock(x1,x2,x3)) {
+    if (npar_ == nparmax_) UpdateCapacity(npar_*2);
+    pid_(npar_) = -1;
+    mass_(npar_) = mp;
+    xp_(npar_) = x1;
+    yp_(npar_) = x2;
+    zp_(npar_) = x3;
+    vpx_(npar_) = v1;
+    vpy_(npar_) = v2;
+    vpz_(npar_) = v3;
+
+    // initialize other properties
+    taus_(npar_) = taus;
+
+    npar_++;
+  }
+}
+
+//--------------------------------------------------------------------------------------
 //! \fn Real DustParticles::NewBlockTimeStep();
 //! \brief returns the time step required by particles in the block.
 
@@ -88,7 +132,7 @@ Real DustParticles::NewBlockTimeStep() {
   }
 
   // Return the drag timescale.
-  return std::min(dt, static_cast<Real>(cfl_par * taus0 / (1.0 + epsmax)));
+  return std::min(dt, static_cast<Real>(cfl_par_ * taus0 / (1.0 + epsmax)));
 }
 
 //--------------------------------------------------------------------------------------
@@ -100,7 +144,7 @@ void DustParticles::AssignShorthands() {
   wx.InitWithShallowSlice(work, 2, iwx, 1);
   wy.InitWithShallowSlice(work, 2, iwy, 1);
   wz.InitWithShallowSlice(work, 2, iwz, 1);
-  if (variable_taus) taus.InitWithShallowSlice(auxprop, 2, itaus, 1);
+  if (variable_taus) taus_.InitWithShallowSlice(auxprop, 2, itaus, 1);
 }
 
 //--------------------------------------------------------------------------------------
@@ -114,11 +158,11 @@ void DustParticles::SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsr
 
     // Transform the gas velocity into Cartesian.
     const Coordinates *pc = pmy_block->pcoord;
-    for (int k = 0; k < npar; ++k) {
+    for (int k = 0; k < npar_; ++k) {
       Real x1, x2, x3;
       //! \todo (ccyang):
       //! - using (xp0, yp0, zp0) is a temporary hack.
-      pc->CartesianToMeshCoords(xp0(k), yp0(k), zp0(k), x1, x2, x3);
+      pc->CartesianToMeshCoords(xp0_(k), yp0_(k), zp0_(k), x1, x2, x3);
       pc->MeshCoordsToCartesianVector(x1, x2, x3, wx(k), wy(k), wz(k),
                                                   wx(k), wy(k), wz(k));
     }
@@ -127,55 +171,55 @@ void DustParticles::SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsr
     if (variable_taus) {
       // Variable stopping time
       UserStoppingTime(t, dt, meshsrc);
-      for (int k = 0; k < npar; ++k) {
+      for (int k = 0; k < npar_; ++k) {
         //! \todo (ccyang):
         //! - This is a temporary hack; to be fixed.
-        Real tmpx = vpx(k), tmpy = vpy(k), tmpz = vpz(k);
+        Real tmpx = vpx_(k), tmpy = vpy_(k), tmpz = vpz_(k);
         //
-        Real c = dt / taus(k);
-        wx(k) = c * (vpx(k) - wx(k));
-        wy(k) = c * (vpy(k) - wy(k));
-        wz(k) = c * (vpz(k) - wz(k));
-        vpx(k) = vpx0(k) - wx(k);
-        vpy(k) = vpy0(k) - wy(k);
-        vpz(k) = vpz0(k) - wz(k);
+        Real c = dt / taus_(k);
+        wx(k) = c * (vpx_(k) - wx(k));
+        wy(k) = c * (vpy_(k) - wy(k));
+        wz(k) = c * (vpz_(k) - wz(k));
+        vpx_(k) = vpx0_(k) - wx(k);
+        vpy_(k) = vpy0_(k) - wy(k);
+        vpz_(k) = vpz0_(k) - wz(k);
         //
-        vpx0(k) = tmpx; vpy0(k) = tmpy; vpz0(k) = tmpz;
+        vpx0_(k) = tmpx; vpy0_(k) = tmpy; vpz0_(k) = tmpz;
         //
       }
     } else if (taus0 > 0.0) {
       // Constant stopping time
       Real c = dt / taus0;
-      for (int k = 0; k < npar; ++k) {
+      for (int k = 0; k < npar_; ++k) {
         //! \todo (ccyang):
         //! - This is a temporary hack; to be fixed.
-        Real tmpx = vpx(k), tmpy = vpy(k), tmpz = vpz(k);
+        Real tmpx = vpx_(k), tmpy = vpy_(k), tmpz = vpz_(k);
         //
-        wx(k) = c * (vpx(k) - wx(k));
-        wy(k) = c * (vpy(k) - wy(k));
-        wz(k) = c * (vpz(k) - wz(k));
-        vpx(k) = vpx0(k) - wx(k);
-        vpy(k) = vpy0(k) - wy(k);
-        vpz(k) = vpz0(k) - wz(k);
+        wx(k) = c * (vpx_(k) - wx(k));
+        wy(k) = c * (vpy_(k) - wy(k));
+        wz(k) = c * (vpz_(k) - wz(k));
+        vpx_(k) = vpx0_(k) - wx(k);
+        vpy_(k) = vpy0_(k) - wy(k);
+        vpz_(k) = vpz0_(k) - wz(k);
         //
-        vpx0(k) = tmpx; vpy0(k) = tmpy; vpz0(k) = tmpz;
+        vpx0_(k) = tmpx; vpy0_(k) = tmpy; vpz0_(k) = tmpz;
         //
       }
     } else if (taus0 == 0.0) {
       // Tracer particles
-      for (int k = 0; k < npar; ++k) {
-        vpx(k) = wx(k);
-        vpy(k) = wy(k);
-        vpz(k) = wz(k);
+      for (int k = 0; k < npar_; ++k) {
+        vpx_(k) = wx(k);
+        vpy_(k) = wy(k);
+        vpz_(k) = wz(k);
       }
     }
   } else {
-    for (int k = 0; k < npar; ++k) {
+    for (int k = 0; k < npar_; ++k) {
       //! \todo (ccyang):
       //! - This is a temporary hack; to be fixed.
-      Real tmpx = vpx(k), tmpy = vpy(k), tmpz = vpz(k);
-      vpx(k) = vpx0(k); vpy(k) = vpy0(k); vpz(k) = vpz0(k);
-      vpx0(k) = tmpx; vpy0(k) = tmpy; vpz0(k) = tmpz;
+      Real tmpx = vpx_(k), tmpy = vpy_(k), tmpz = vpz_(k);
+      vpx_(k) = vpx0_(k); vpy_(k) = vpy0_(k); vpz_(k) = vpz0_(k);
+      vpx0_(k) = tmpx; vpy0_(k) = tmpy; vpz0_(k) = tmpz;
     }
   }
 
@@ -216,11 +260,11 @@ void DustParticles::ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& mes
 
   // Transform the momentum change in mesh coordinates.
   const Coordinates *pc = pmy_block->pcoord;
-  for (int k = 0; k < npar; ++k)
+  for (int k = 0; k < npar_; ++k)
     //! \todo (ccyang):
     //! - using (xp0, yp0, zp0) is a temporary hack.
-    pc->CartesianToMeshCoordsVector(xp0(k), yp0(k), zp0(k),
-        mass(k)*wx(k), mass(k)*wy(k), mass(k)*wz(k), wx(k), wy(k), wz(k));
+    pc->CartesianToMeshCoordsVector(xp0_(k), yp0_(k), zp0_(k),
+        mass_(k)*wx(k), mass_(k)*wy(k), mass_(k)*wz(k), wx(k), wy(k), wz(k));
 
   // Assign the momentum change onto mesh.
   ppm->DepositParticlesToMeshAux(work, iwx, ppm->imom1, 3);

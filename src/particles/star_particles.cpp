@@ -69,22 +69,22 @@ void StarParticles::AssignShorthands() {
 void StarParticles::AddOneParticle(Real mp, Real x1, Real x2, Real x3,
   Real v1, Real v2, Real v3) {
   if (CheckInMeshBlock(x1,x2,x3)) {
-    if (npar == nparmax) UpdateCapacity(npar*2);
-    pid(npar) = -1;
-    mass(npar) = mp;
-    xp(npar) = x1;
-    yp(npar) = x2;
-    zp(npar) = x3;
-    vpx(npar) = v1;
-    vpy(npar) = v2;
-    vpz(npar) = v3;
+    if (npar_ == nparmax_) UpdateCapacity(npar_*2);
+    pid_(npar_) = -1;
+    mass_(npar_) = mp;
+    xp_(npar_) = x1;
+    yp_(npar_) = x2;
+    zp_(npar_) = x3;
+    vpx_(npar_) = v1;
+    vpy_(npar_) = v2;
+    vpz_(npar_) = v3;
 
     // initialize other properties
-    mzp(npar) = mp;
-    tage(npar) = 0.0;
-    fgas(npar) = 0.0;
+    mzp(npar_) = mp;
+    tage(npar_) = 0.0;
+    fgas(npar_) = 0.0;
 
-    npar++;
+    npar_++;
   }
 }
 
@@ -103,8 +103,8 @@ void StarParticles::Integrate(int stage) {
   // Determine the integration cofficients.
   switch (stage) {
   case 1:
-    t = pmy_mesh->time;
-    dt = pmy_mesh->dt; // t^(n+1)-t^n;
+    t = pmy_mesh_->time;
+    dt = pmy_mesh_->dt; // t^(n+1)-t^n;
     dth = 0.5*(dt + dt_old); // t^(n+1/2)-t^(n-1/2)
 
     // Calculate force on particles at t = t^n
@@ -122,7 +122,7 @@ void StarParticles::Integrate(int stage) {
     // aging first to distinguish new particle
     Age(t,dt);
     // Boris push for velocity dependent terms: Coriolis force
-    if (pmy_mesh->shear_periodic) BorisKick(t,dth);
+    if (pmy_mesh_->shear_periodic) BorisKick(t,dth);
     // kick by another 0.5*dth
     Kick(t,0.5*dth,pmy_block->phydro->w);
     // drift from t^n to t^n+1
@@ -145,7 +145,7 @@ void StarParticles::Integrate(int stage) {
 
 void StarParticles::Age(Real t, Real dt) {
   // aging particles
-  for (int k = 0; k < npar; ++k) tage(k) += dt;
+  for (int k = 0; k < npar_; ++k) tage(k) += dt;
 }
 
 //--------------------------------------------------------------------------------------
@@ -154,10 +154,10 @@ void StarParticles::Age(Real t, Real dt) {
 
 void StarParticles::Drift(Real t, Real dt) {
   // drift position
-  for (int k = 0; k < npar; ++k) {
-    xp(k) = xp0(k) + dt * vpx(k);
-    yp(k) = yp0(k) + dt * vpy(k);
-    zp(k) = zp0(k) + dt * vpz(k);
+  for (int k = 0; k < npar_; ++k) {
+    xp_(k) = xp0_(k) + dt * vpx_(k);
+    yp_(k) = yp0_(k) + dt * vpy_(k);
+    zp_(k) = zp0_(k) + dt * vpz_(k);
   }
 }
 
@@ -188,14 +188,14 @@ void StarParticles::BorisKick(Real t, Real dt) {
   Real Omdt2 = SQR(Omdt), hOmdt2 = 0.25*Omdt2;
   Real f1 = (1-Omdt2)/(1+Omdt2), f2 = 2*Omdt/(1+Omdt2);
   Real hf1 = (1-hOmdt2)/(1+hOmdt2), hf2 = 2*hOmdt/(1+hOmdt2);
-  for (int k = 0; k < npar; ++k) {
-    Real vpxm = vpx(k), vpym = vpy(k);
+  for (int k = 0; k < npar_; ++k) {
+    Real vpxm = vpx_(k), vpym = vpy_(k);
     if (tage(k) == 0) { // for the new particles
-      vpx(k) = hf1*vpxm + hf2*vpym;
-      vpy(k) = -hf2*vpxm + hf1*vpym;
+      vpx_(k) = hf1*vpxm + hf2*vpym;
+      vpy_(k) = -hf2*vpxm + hf1*vpym;
     } else {
-      vpx(k) = f1*vpxm + f2*vpym;
-      vpy(k) = -f2*vpxm + f1*vpym;
+      vpx_(k) = f1*vpxm + f2*vpym;
+      vpy_(k) = -f2*vpxm + f1*vpym;
     }
   }
 }
@@ -210,9 +210,9 @@ void StarParticles::BorisKick(Real t, Real dt) {
 
 void StarParticles::ExertTidalForce(Real t, Real dt) {
   Real acc0 = 2*qshear_*SQR(Omega_0_);
-  for (int k = 0; k < npar; ++k) {
-    Real acc = tage(k) > 0 ? acc0*dt*xp(k) : 0.;
-    vpx(k) += acc;
+  for (int k = 0; k < npar_; ++k) {
+    Real acc = tage(k) > 0 ? acc0*dt*xp_(k) : 0.;
+    vpx_(k) += acc;
   }
 }
 
@@ -223,18 +223,18 @@ void StarParticles::ExertTidalForce(Real t, Real dt) {
 
 void StarParticles::PointMass(Real t, Real dt, Real gm) {
   const Coordinates *pc = pmy_block->pcoord;
-  for (int k = 0; k < npar; ++k) {
+  for (int k = 0; k < npar_; ++k) {
     if (tage(k) > 0) {
       Real x1, x2, x3;
-      pc->CartesianToMeshCoords(xp(k), yp(k), zp(k), x1, x2, x3);
+      pc->CartesianToMeshCoords(xp_(k), yp_(k), zp_(k), x1, x2, x3);
 
       Real r = std::sqrt(x1*x1 + x2*x2 + x3*x3); // m0 is at (0,0,0)
       Real acc = -gm/(r*r); // G=1
       Real ax = acc*x1/r, ay = acc*x2/r, az = acc*x3/r;
 
-      vpx(k) += dt*ax;
-      vpy(k) += dt*ay;
-      vpz(k) += dt*az;
+      vpx_(k) += dt*ax;
+      vpy_(k) += dt*ay;
+      vpz_(k) += dt*az;
     }
   }
 }
@@ -244,11 +244,11 @@ void StarParticles::PointMass(Real t, Real dt, Real gm) {
 //! \brief constant acceleration
 
 void StarParticles::ConstantAcceleration(Real t, Real dt, Real g1, Real g2, Real g3) {
-  for (int k = 0; k < npar; ++k) {
+  for (int k = 0; k < npar_; ++k) {
     if (tage(k) > 0) { // first kick (from n-1/2 to n) is skipped for the new particles
-      vpx(k) += dt*g1;
-      vpy(k) += dt*g2;
-      vpz(k) += dt*g3;
+      vpx_(k) += dt*g1;
+      vpy_(k) += dt*g2;
+      vpz_(k) += dt*g3;
     }
   }
 }
@@ -271,7 +271,7 @@ void StarParticles::SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsr
   if (g1 != 0.0 || g2 != 0.0 || g3 != 0.0)
     ConstantAcceleration(t,dt,g1,g2,g3);
 
-  if (pmy_mesh->shear_periodic) ExertTidalForce(t,dt);
+  if (pmy_mesh_->shear_periodic) ExertTidalForce(t,dt);
   if (SELF_GRAVITY_ENABLED) ppgrav->ExertGravitationalForce(dt);
   return;
 }

@@ -60,11 +60,6 @@ struct ParticleParameters {
 //! \brief defines the base class for all implementations of particles.
 
 class Particles {
-friend class MeshBlock;  // Make writing initial conditions possible.
-                        // TODO(SMOON) No! This terribly breaks encapsulation.
-                        // Use AddOneParticle interface to write initial conditions.
-                        // MeshBlock should not be a friend of Particles.
-friend class OutputType; // TODO(SMOON) OutputType need not be a friend, too.
 friend class ParticleGravity;
 friend class ParticleMesh;
 
@@ -94,7 +89,14 @@ friend class ParticleMesh;
   static std::int64_t GetTotalNumber(Mesh *pm);
 
   // Methods (interface)
-  virtual void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
+  // TODO(SMOON) Potentially better approach might be not overriding AddOneParticle at all
+  // In principle, the one who creates a particle will always know which particle they
+  // want to create. Therefore, it may be more natural to <dynamic_cast> Particle to a
+  // specific derived Particles and call the exact version; the idea is that, because
+  // we know which Particle the base pointer points to when creating a particle,
+  // the particle creation function does not have to be polymorphic.
+  virtual void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3) {}
+  virtual void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3, Real taus) {}
   void RemoveOneParticle(int k);
   // TODO(SMOON) this should be moved to ParticleMesh
   void FindLocalDensityOnMesh(bool include_momentum);
@@ -103,8 +105,18 @@ friend class ParticleMesh;
   virtual void Integrate(int step);
   virtual Real NewBlockTimeStep();
 
-  std::size_t GetSizeInBytes(); // TODO(SMOON) const function
-  bool IsGravity() { return isgravity_; }
+  std::size_t GetSizeInBytes() const;
+  bool IsGravity() const { return isgravity_; }
+  int GetNumPar() const { return npar_; }
+  // Read-only accessors to the particle properties
+  const AthenaArray<int>& pid() const { return pid_; }
+  const AthenaArray<Real>& mass() const { return mass_; }
+  const AthenaArray<Real>& xp0() const { return xp0_; }
+  const AthenaArray<Real>& yp0() const { return yp0_; }
+  const AthenaArray<Real>& zp0() const { return zp0_; }
+  const AthenaArray<Real>& vpx0() const { return vpx0_; }
+  const AthenaArray<Real>& vpy0() const { return vpy0_; }
+  const AthenaArray<Real>& vpz0() const { return vpz0_; }
 
   // ************************** //
   // Input/Output API //
@@ -114,8 +126,6 @@ friend class ParticleMesh;
   void AddHistoryOutput(Real data_sum[], int pos);
   void OutputParticles(bool header); // individual particle history;
   void OutputParticles(bool header, int kid);
-  // TODO(SMOON) must be private
-  void OutputOneParticle(std::ostream &os, int k, bool header);
   // TODO(SMOON) may not be needed; why not just make it default?
   void ToggleParHstOutFlag();
 
@@ -145,7 +155,8 @@ friend class ParticleMesh;
   // number of particle containers
   static int num_particles, num_particles_grav, num_particles_output;
   ParticleMesh *ppm;  //!> ptr to particle-mesh
-  const int ipar;
+  const int ipar;     // index of this Particle in ppars vector
+  std::string input_block_name, partype; // TODO(SMOON) input_block_name bad design?
 
  protected:
   // Protected interfaces (to be used by derived classes)
@@ -154,77 +165,46 @@ friend class ParticleMesh;
                                     //!> intprop, realprop, & auxprop are resized
                                     //!> Be sure to call back when derived.
   virtual void AllocateMemory();    //!> Needs to be called in the derived class init
-
   int AddIntProperty();
   int AddRealProperty();
   int AddAuxProperty();
   int AddWorkingArray();
-
   void UpdateCapacity(int new_nparmax);  //!> Change the capacity of particle arrays
   bool CheckInMeshBlock(Real x1, Real x2, Real x3);
   void SaveStatus(); // x->x0, v->v0
 
-
-  // Class variables
-  static bool initialized;  //!> whether or not the class is initialized
-  static ParameterInput *pinput;
-
   // Data members
-  std::string input_block_name, partype;
+  // Shallow slices of the actual data container (intprop, realprop, auxprop, work)
+  AthenaArray<int> pid_;                  //!> particle ID
+  AthenaArray<Real> mass_;                //!> mass
+  AthenaArray<Real> xp_, yp_, zp_;        //!> position
+  AthenaArray<Real> vpx_, vpy_, vpz_;     //!> velocity
+  AthenaArray<Real> xi1_, xi2_, xi3_;     //!> position indices in local meshblock
+  AthenaArray<Real> xp0_, yp0_, zp0_;     //!> beginning position (SMOON: What is this?)
+  AthenaArray<Real> vpx0_, vpy0_, vpz0_;  //!> beginning velocity (SMOON: What is this?)
 
-  int nint;          //!> numbers of integer particle properties
-  int nreal;         //!> numbers of real particle properties
-  int naux;          //!> number of auxiliary particle properties
-  int nwork;         //!> number of working arrays for particles
-  int nint_buf, nreal_buf; //!> number of properties for buffer
-
-  int ipid;                 //!> index for the particle ID
-  int imass;                // index for the particle mass
-  int ixp, iyp, izp;        // indices for the position components
-  int ivpx, ivpy, ivpz;     // indices for the velocity components
-
-  int ixp0, iyp0, izp0;     // indices for beginning position components
-  int ivpx0, ivpy0, ivpz0;  // indices for beginning velocity components
-
-  int ixi1, ixi2, ixi3;     // indices for position indices
-
-  int igx, igy, igz; // indices for gravity force
-
-  int ish;
-
-  // std::uint64_t npar;     //!> number of particles
-  // std::uint64_t nparmax;  //!> maximum number of particles per meshblock
-  int npar;     //!> number of particles
-  int nparmax;  //!> maximum number of particles per meshblock
-  bool parhstout_; //!> flag for individual particle history output
-  Real cfl_par;  //!> CFL number for particles
-
-                               // Data attached to the particles:
-  AthenaArray<int> intprop;    //!>   integer properties
-  AthenaArray<Real> realprop;  //!>   real properties
-  AthenaArray<Real> auxprop;   //!>   auxiliary properties (communicated when
-                               //!>     particles moving to another meshblock)
-  AthenaArray<Real> work;      //!>   working arrays (not communicated)
-
+  int npar_;     //!> number of particles
+  int nparmax_;  //!> maximum number of particles per meshblock
+  Real cfl_par_;  //!> CFL number for particles
   std::vector<std::string> intfieldname, realfieldname, auxfieldname;
 
   ParticleGravity *ppgrav; //!> ptr to particle-gravity
-                                       // Shorthands:
-  AthenaArray<int> pid;                //!>   particle ID
-  AthenaArray<Real> mass;              //   particle mass
-  AthenaArray<Real> xp, yp, zp;        //   position
-  AthenaArray<Real> vpx, vpy, vpz;     //   velocity
-  AthenaArray<Real> xi1, xi2, xi3;     //   position indices in local meshblock
-  AthenaArray<Real> xp0, yp0, zp0;     //   beginning position
-  AthenaArray<Real> vpx0, vpy0, vpz0;  //   beginning velocity
-
   MeshBlock* pmy_block;  //!> MeshBlock pointer
-  Mesh* pmy_mesh;        //!> Mesh pointer
+  Mesh* pmy_mesh_;        //!> Mesh pointer
 
   // shearing box parameters
-  Real Omega_0_, qshear_, qomL;
+  Real Omega_0_, qshear_, qomL_;
   int ShBoxCoord_;
   bool orbital_advection_defined_;
+
+  // The actual data storage of all particle properties
+  // Note to developers:
+  // Direct access to these containers is discouraged; use shorthands instead.
+  // e.g.) use mass_(k) instead of realprop(imass, k)
+  // Auxiliary properties (auxprop) is communicated when particles moving to
+  // another meshblock. Working arrays (work) is not communicated.
+  AthenaArray<int> intprop;
+  AthenaArray<Real> realprop, auxprop, work;
 
  private:
   // Class method
@@ -263,11 +243,36 @@ friend class ParticleMesh;
   struct Neighbor* FindTargetNeighbor(
       int ox1, int ox2, int ox3, int xi1, int xi2, int xi3);
   void ApplyBoundaryConditionsShear(int k, Real &x1, Real &x2, Real &x3);
+  void OutputOneParticle(std::ostream &os, int k, bool header);
 
   // Class variable
   static std::vector<int> idmax;
+  static bool initialized;  //!> whether or not the class is initialized
+  static ParameterInput *pinput;
 
   // Data members
+
+  int nint;          //!> numbers of integer particle properties
+  int nreal;         //!> numbers of real particle properties
+  int naux;          //!> number of auxiliary particle properties
+  int nwork;         //!> number of working arrays for particles
+  int nint_buf, nreal_buf; //!> number of properties for buffer
+
+  int ipid;                 //!> index for the particle ID
+  int imass;                // index for the particle mass
+  int ixp, iyp, izp;        // indices for the position components
+  int ivpx, ivpy, ivpz;     // indices for the velocity components
+
+  int ixp0, iyp0, izp0;     // indices for beginning position components
+  int ivpx0, ivpy0, ivpz0;  // indices for beginning velocity components
+
+  int ixi1, ixi2, ixi3;     // indices for position indices
+
+  int igx, igy, igz; // indices for gravity force
+
+  int ish;
+
+  bool parhstout_; //!> flag for individual particle history output
   bool isgravity_; //!> flag for gravity
   bool active1_, active2_, active3_;  // active dimensions
 
@@ -289,7 +294,6 @@ friend class ParticleMesh;
 //!        force.
 
 class DustParticles : public Particles {
-friend class MeshBlock;
 
  public:
   // Constructor
@@ -299,10 +303,12 @@ friend class MeshBlock;
   ~DustParticles();
 
   // Methods (interface)
-  bool GetBackReaction() { return backreaction; }
-  bool GetDragForce() { return dragforce; }
-  bool GetVariableTaus() { return variable_taus; }
-  Real GetStoppingTime() { return taus0; }
+  void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3) override;
+  void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3, Real taus) override;
+  bool GetBackReaction() const { return backreaction; }
+  bool GetDragForce() const { return dragforce; }
+  bool IsVariableTaus() const { return variable_taus; }
+  Real GetStoppingTime() const { return taus0; }
   Real NewBlockTimeStep() override;
 
  private:
@@ -325,7 +331,7 @@ friend class MeshBlock;
 
   Real taus0;  //!> constant/default stopping time (in code units)
   AthenaArray<Real> wx, wy, wz;        // shorthand for working arrays
-  AthenaArray<Real> taus;              // shorthand for stopping time
+  AthenaArray<Real> taus_;              // shorthand for stopping time
 };
 
 //--------------------------------------------------------------------------------------
@@ -333,7 +339,6 @@ friend class MeshBlock;
 //! \brief defines the class for velocity Tracer particles
 
 class TracerParticles : public Particles {
-friend class MeshBlock;
 
  public:
   // Constructor
@@ -343,6 +348,7 @@ friend class MeshBlock;
   ~TracerParticles();
 
   // Methods (interface)
+  void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3) override;
 
  private:
   // Methods (implementation)
@@ -363,7 +369,6 @@ friend class MeshBlock;
 //! \brief defines the class for Star particles
 
 class StarParticles : public Particles {
-friend class MeshBlock;
 
  public:
   // Constructor

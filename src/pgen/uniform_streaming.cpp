@@ -101,29 +101,21 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   int npx1_loc = static_cast<int>(std::round(block_size.x1len / dx1)),
       npx2_loc = static_cast<int>(std::round(block_size.x2len / dx2)),
       npx3_loc = static_cast<int>(std::round(block_size.x3len / dx3));
-  int npar = ppar->npar = npx1_loc * npx2_loc * npx3_loc;
-  if (npar > ppar->nparmax)
-    ppar->UpdateCapacity(npar);
 
   // Assign the particles.
-  // TODO(SMOON) Add particles using AddOneParticle interface.
-  // Encapsulate xp, yp, ...
   for (int k = 0; k < npx3_loc; ++k) {
     Real zp1 = block_size.x3min + (k + 0.5) * dx3;
     for (int j = 0; j < npx2_loc; ++j) {
       Real yp1 = block_size.x2min + (j + 0.5) * dx2;
       for (int i = 0; i < npx1_loc; ++i) {
         Real xp1 = block_size.x1min + (i + 0.5) * dx1;
-        ppar->AddOneParticle(mpar, xp1, yp1, zp1, vpx0, vpy0, vpz0);
+        if (ppar->IsVariableTaus()) {
+          Real taus0 = ppar->GetStoppingTime();
+          ppar->AddOneParticle(mpar, xp1, yp1, zp1, vpx0, vpy0, vpz0, taus0);
+        } else {
+          ppar->AddOneParticle(mpar, xp1, yp1, zp1, vpx0, vpy0, vpz0);
+        }
       }
     }
-  }
-
-  // Initialize the stopping time.
-  // TODO(SMOON) this must be done in AddOneParticle
-  if (ppar->GetVariableTaus()) {
-    Real taus0 = ppar->GetStoppingTime();
-    for (int k = 0; k < npar; ++k)
-      ppar->taus(k) = taus0;
   }
 }

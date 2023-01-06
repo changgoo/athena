@@ -134,9 +134,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
       int npartot = pin->GetInteger("problem","npartot");
 
-      // Update capacity of particle container
-      // ppar->UpdateCapacity(static_cast<int>(npartot/Globals::nranks));
-
       // Assign the particles.
       RegionSize& mesh_size = pmy_mesh->mesh_size;
       Real mass;
@@ -194,10 +191,12 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         }
       }
 
-      if (ppar->npar > 0)
-        std::cout << " ipar: " << ppar->ipar << " type: " << ppar->partype
-                  << " nparmax: " << ppar->nparmax
-                  << " npar: " << ppar->npar << " mass: " << mass << std::endl;
+      // TODO(SMOON) better not to access private members; if needed, implement
+      // something like Particles::PrintDiagnostics()
+//      if (ppar->npar_ > 0)
+//        std::cout << " ipar: " << ppar->ipar << " type: " << ppar->partype
+//                  << " nparmax: " << ppar->nparmax_
+//                  << " npar: " << ppar->npar_ << " mass: " << mass << std::endl;
 
       // calculate PM density every substeps (for history dumps)
       // ppar->pm_stages[0] = true;

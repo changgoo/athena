@@ -45,7 +45,7 @@ ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : updated(false),
   nx1_(pmb->ncells1), nx2_(pmb->ncells2), nx3_(pmb->ncells3),
   ncells_(nx1_ * nx2_ * nx3_),
   npc1_(active1_ ? NPC : 1), npc2_(active2_ ? NPC : 1), npc3_(active3_ ? NPC : 1),
-  ppar_(ppar), pmb_(pmb), pmesh_(ppar->pmy_mesh) {
+  ppar_(ppar), pmb_(pmb), pmesh_(ppar->pmy_mesh_) {
   // Add density and momentum in meshaux.
   idens = AddMeshAux();
   imom1 = AddMeshAux();
@@ -161,14 +161,14 @@ void ParticleMesh::InterpolateMeshToParticles(
   int imb3v[SIMD_WIDTH] __attribute__((aligned(CACHELINE_BYTES)));
 
   // Loop over each particle.
-  int npar = ppar_->npar;
+  int npar = ppar_->npar_;
   for (int k = 0; k < npar; k += SIMD_WIDTH) {
 #pragma omp simd simdlen(SIMD_WIDTH)
     for (int kk = 0; kk < std::min(SIMD_WIDTH, npar-k); ++kk) {
       int kkk = k + kk;
 
       // Find the domain the particle influences.
-      Real xi1 = ppar_->xi1(kkk), xi2 = ppar_->xi2(kkk), xi3 = ppar_->xi3(kkk);
+      Real xi1 = ppar_->xi1_(kkk), xi2 = ppar_->xi2_(kkk), xi3 = ppar_->xi3_(kkk);
       int imb1 = static_cast<int>(xi1 - dxi1_),
           imb2 = static_cast<int>(xi2 - dxi2_),
           imb3 = static_cast<int>(xi3 - dxi3_);
@@ -268,14 +268,14 @@ void ParticleMesh::DepositParticlesToMeshAux(
   Coordinates *pc = pmb_->pcoord;
 
   // Loop over each particle.
-  int npar = ppar_->npar;
+  int npar = ppar_->npar_;
   for (int k = 0; k < npar; k += SIMD_WIDTH) {
 #pragma omp simd simdlen(SIMD_WIDTH)
     for (int kk = 0; kk < std::min(SIMD_WIDTH, npar-k); ++kk) {
       int kkk = k + kk;
 
       // Find the domain the particle influences.
-      Real xi1 = ppar_->xi1(kkk), xi2 = ppar_->xi2(kkk), xi3 = ppar_->xi3(kkk);
+      Real xi1 = ppar_->xi1_(kkk), xi2 = ppar_->xi2_(kkk), xi3 = ppar_->xi3_(kkk);
       int imb1 = static_cast<int>(xi1 - dxi1_),
           imb2 = static_cast<int>(xi2 - dxi2_),
           imb3 = static_cast<int>(xi3 - dxi3_);

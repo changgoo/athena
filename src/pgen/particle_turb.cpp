@@ -99,7 +99,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         Real dtog = pin->GetOrAddReal(ppar->input_block_name,"dtog",1);
         mpar = dtog * d0 * vol / (npx1 * npx2 * npx3);
       } else if (TracerParticles *pp = dynamic_cast<TracerParticles*>(ppar)) {
-        mpar = d0 * vol / (npx1 * npx2 * npx3)
+        mpar = d0 * vol / (npx1 * npx2 * npx3);
       }
 
       // Determine number of particles in the block.
@@ -107,8 +107,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           npx2_loc = static_cast<int>(std::round(block_size.x2len / dx2)),
           npx3_loc = static_cast<int>(std::round(block_size.x3len / dx3));
       int npar = npx1_loc * npx2_loc * npx3_loc;
-      if (npar > ppar->nparmax)
-        ppar->UpdateCapacity(npar);
 
       // Assign the particles.
       // Ramdomizing position. Or velocity perturbation
@@ -119,7 +117,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       std::uniform_real_distribution<Real> udist(0.0,1.0); // uniform in [0,1)
       rng_generator.seed(rseed);
 
-      // Encapsulate xp, yp, ...
       // Real ph = udist(rng_generator)*TWO_PI;
       for (int k = 0; k < npx3_loc; ++k) {
         Real zp1 = block_size.x3min + (k + 0.5) * dx3;
@@ -133,19 +130,16 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
               Real zp = zp1;
               if (mesh_size.nx3 > 1)
                 zp += dx3 * (udist(rng_generator) - 0.5);
-              ppar->AddOneParticle(mpar, xp, yp, zp, 0.0, 0.0, 0.0);
+              if (DustParticles *pp = dynamic_cast<DustParticles*>(ppar)) {
+                if (pp->IsVariableTaus()) {
+                  Real taus0 = pp->GetStoppingTime();
+                  pp->AddOneParticle(mpar, xp, yp, zp, 0.0, 0.0, 0.0, taus0);
+                }
+              } else {
+                ppar->AddOneParticle(mpar, xp, yp, zp, 0.0, 0.0, 0.0);
+              }
             }
           }
-        }
-      }
-
-      // Initialize the stopping time.
-      // TODO(SMOON) this must be done in AddOneParticle
-      if (DustParticles *pp = dynamic_cast<DustParticles*>(ppar)) {
-        if (pp->GetVariableTaus()) {
-          Real taus0 = pp->GetStoppingTime();
-          for (int k = 0; k < npar; ++k)
-            pp->taus(k) = taus0;
         }
       }
     }
