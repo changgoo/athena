@@ -354,7 +354,7 @@ void ParticleMesh::DepositMeshAux(AthenaArray<Real>& u, int ma1, int mb1, int np
     for (int k = ks; k <= ke; ++k)
       for (int j = js; j <= je; ++j)
         for (int i = is; i <= ie; ++i)
-          u(mb1+n,k,j,i) += meshaux_(ma1+n,k,j,i) / pc->GetCellVolume(k,j,i);
+          u(mb1+n,k,j,i) += meshaux_(ma1+n,k,j,i);
 }
 
 //--------------------------------------------------------------------------------------
