@@ -58,6 +58,8 @@ class TurbulenceDriver;
 class OrbitalAdvection;
 class BlockFFTGravity;
 class CoolingSolver;
+class CoolingFunctionBase;
+class Units;
 
 FluidFormulation GetFluidFormulation(const std::string& input_string);
 
@@ -241,7 +243,6 @@ class Mesh {
   const bool adaptive, multilevel;
   const int orbital_advection;       // order of the orbital splitting method
   const bool shear_periodic;         // flag of shear periodic b.c.
-  const bool cooling;
   const FluidFormulation fluid_setup;
   Real start_time, time, tlim, dtlim;
   Real dt, dt_hyperbolic, dt_parabolic, dt_user, cfl_number;
@@ -254,6 +255,7 @@ class Mesh {
   int nbtotal, nblocal, nbnew, nbdel;
   std::vector<ParticleParameters> particle_params;
   bool particle, particle_gravity;
+  const bool cooling;
 
   int step_since_lb;
   int gflag;
@@ -264,6 +266,9 @@ class Mesh {
 
   FFTGravityDriver *pfgrd;
   MGGravityDriver *pmgrd;
+
+  CoolingFunctionBase *pcf;
+  Units *punit;
 
   AthenaArray<Real> *ruser_mesh_data;
   AthenaArray<int> *iuser_mesh_data;

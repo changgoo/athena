@@ -151,8 +151,8 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 
 void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   if(CR_ENABLED) {
-    Units *punit = pcool->pcf->punit;
-    pcr->punit = pcool->pcf->punit;
+    Units *punit = pcool->punit;
+    pcr->punit = pcool->punit;
     CalculateInjectionRate(pin,this,pcr->CRInjectionRate);
     pcr->EnrollUserCRSource(Source_CR);
     pcr->EnrollTemperatureFunction(TempCalculation);
@@ -234,7 +234,7 @@ void CalculateInjectionRate(ParameterInput *pin, MeshBlock *pmb,
   tot_InjectionRate = 0.;
   Real InjectionRate;
   Real InjectionRate_in_code;
-  Units *punit = pcool->pcf->punit;
+  Units *punit = pcool->punit;
   for(size_t s=0; s<Nstars; ++s) {
     // convert the star age from code units in Myr
     Real tstar = pList[s].mage / punit->Myr_in_code;
@@ -1307,7 +1307,7 @@ Real set_CR_Luminosity(Real tage) {
   Real dage = 0.2; //Myr
   int const Narray = 201;
   Real N_SNe, CR_Lum;
-  Real SN_energy = pcool->pcf->punit->Bethe_in_code;
+  Real SN_energy = pcool->punit->Bethe_in_code;
   Real CR_eff = 0.1;
 
   // SNRate for Msun cluster per Myr (Starburst99)

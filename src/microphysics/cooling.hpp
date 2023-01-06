@@ -21,9 +21,11 @@
 
 class CoolingFunctionBase;
 
+CoolingFunctionBase* InitializeCoolingFunction(ParameterInput *pin);
+
 class CoolingSolver {
  public:
-  explicit CoolingSolver(MeshBlock *pmb, ParameterInput *pin);
+  explicit CoolingSolver(MeshBlock *pmb, ParameterInput *pin, CoolingFunctionBase *pcf_);
   ~CoolingSolver();
 
   static void CoolingSourceTerm(MeshBlock *pmb, const Real t, const Real dt,
@@ -113,8 +115,8 @@ class PiecewiseLinearFits : public CoolingFunctionBase {
 
  private:
   std::string coolftn_name;
-  Real mu,muH;
   Real T_PE,Gamma0;
+  Real mu,muH;
   // fitting parameters
   static constexpr int nfit_cool = 12;
   Real T_cooling_curve[nfit_cool] =

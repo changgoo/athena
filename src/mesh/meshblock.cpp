@@ -209,7 +209,7 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
 
   // CoolingSolver: constructor depends on EOS
   if (pm->cooling) {
-    pcool = new CoolingSolver(this, pin);
+    pcool = new CoolingSolver(this, pin, pm->pcf);
   }
 
   // OrbitalAdvection: constructor depends on Coordinates, Hydro, Field, PassiveScalars.
@@ -359,7 +359,7 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
 
   // CoolingSolver: constructor depends on EOS
   if (pm->cooling) {
-    pcool = new CoolingSolver(this, pin);
+    pcool = new CoolingSolver(this, pin, pm->pcf);
   }
 
   // OrbitalAdvection: constructor depends on Coordinates, Hydro, Field, PassiveScalars.
