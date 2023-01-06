@@ -2335,7 +2335,7 @@ TaskStatus TimeIntegratorTaskList::SetBoundariesParticleMesh(MeshBlock *pmb, int
       // new particle integration. Proper position of updated=false might be moved.
       if (!pmb->pmy_mesh->shear_periodic) ppar->ppm->updated = false;
     }
-    ppar->DepositPMtoMesh(stage);
+    ppar->ppm->DepositPMtoMesh(stage);
   }
   return TaskStatus::success;
 }

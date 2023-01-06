@@ -123,14 +123,3 @@ void TracerParticles::ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& m
   // Nothing to do for tracers
   return;
 }
-
-//--------------------------------------------------------------------------------------
-//! \fn void TracerParticles::DepositToMesh(Real t, Real dt,
-//!              const AthenaArray<Real>& meshsrc, AthenaArray<Real>& meshdst);
-//! \brief Deposits meshaux to Mesh.
-
-void TracerParticles::DepositToMesh(
-         Real t, Real dt, const AthenaArray<Real>& meshsrc, AthenaArray<Real>& meshdst) {
-  // Nothing to do for tracers
-  return;
-}

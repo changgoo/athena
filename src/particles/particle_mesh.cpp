@@ -16,6 +16,7 @@
 #include "../athena.hpp"
 #include "../coordinates/coordinates.hpp"
 #include "../globals.hpp"
+#include "../hydro/hydro.hpp"
 #include "../utils/buffer_utils.hpp"
 #include "particle_mesh.hpp"
 #include "particles.hpp"
@@ -135,8 +136,6 @@ void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
   }
 }
 
-
-
 //--------------------------------------------------------------------------------------
 //! \fn void ParticleMesh::FindLocalDensityOnMesh(bool include_momentum)
 //! \brief finds the mass and momentum density of particles on the mesh.
@@ -165,6 +164,29 @@ void ParticleMesh::FindLocalDensityOnMesh(bool include_momentum) {
   // set flag to trigger PM communications
   updated = true;
   pmbvar->var_buf.ZeroClear();
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn ParticleMesh::DepositPMtoMesh()
+//! \brief deposit PM momentum to hydro vars
+//!
+//! this has to be tested
+void ParticleMesh::DepositPMtoMesh(int stage) {
+  // Deposit ParticleMesh meshaux to MeshBlock.
+  Hydro *phydro = pmb_->phydro;
+  Real t = pmesh_->time, dt = pmesh_->dt;
+
+  switch (stage) {
+  case 1:
+    dt = 0.5 * dt;
+    break;
+
+  case 2:
+    t += 0.5 * dt;
+    break;
+  }
+
+  ppar_->DepositToMesh(t, dt, phydro->w, phydro->u);
 }
 
 //--------------------------------------------------------------------------------------

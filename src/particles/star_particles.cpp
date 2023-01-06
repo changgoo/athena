@@ -294,14 +294,3 @@ void StarParticles::ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& mes
   // Nothing to do for stars
   return;
 }
-
-//--------------------------------------------------------------------------------------
-//! \fn void StarParticles::DepositToMesh(Real t, Real dt,
-//!              const AthenaArray<Real>& meshsrc, AthenaArray<Real>& meshdst);
-//! \brief Deposits meshaux to Mesh.
-
-void StarParticles::DepositToMesh(
-         Real t, Real dt, const AthenaArray<Real>& meshsrc, AthenaArray<Real>& meshdst) {
-  // Nothing to do for stars
-  return;
-}

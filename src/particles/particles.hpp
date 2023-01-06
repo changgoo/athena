@@ -99,7 +99,6 @@ friend class ParticleMesh;
   virtual void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3) {}
   virtual void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3, Real taus) {}
   void RemoveOneParticle(int k);
-  void DepositPMtoMesh(int stage); // TODO(SMOON) should be moved to ParticleMesh
   // TODO(SMOON) (template method pattern is appropriate here)
   virtual void Integrate(int step);
   virtual Real NewBlockTimeStep();
@@ -225,7 +224,7 @@ friend class ParticleMesh;
   virtual void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc)=0;
   virtual void ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc)=0;
   virtual void DepositToMesh(Real t, Real dt, const AthenaArray<Real>& meshsrc,
-                             AthenaArray<Real>& meshdst)=0;
+                             AthenaArray<Real>& meshdst) {};
 
   int CountNewParticles() const;
   void ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3);
