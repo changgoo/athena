@@ -41,131 +41,6 @@ MPI_Comm Particles::my_comm = MPI_COMM_NULL;
 #endif
 
 //--------------------------------------------------------------------------------------
-//! \fn Particles::Initialize(Mesh *pm, ParameterInput *pin)
-//! \brief initializes the class.
-
-void Particles::Initialize(Mesh *pm, ParameterInput *pin) {
-  if (initialized) return;
-
-  InputBlock *pib = pin->pfirst_block;
-  // pm->particle_params.reserve(1);
-  // loop over input block names.  Find those that start with "particle", read parameters,
-  // and construct singly linked list of ParticleTypes.
-  while (pib != nullptr) {
-    if (pib->block_name.compare(0, 8, "particle") == 0) {
-      ParticleParameters pp;  // define temporary ParticleParameters struct
-
-      // extract integer number of particle block.  Save name and number
-      std::string parn = pib->block_name.substr(8); // 7 because counting starts at 0!
-      pp.block_number = atoi(parn.c_str());
-      pp.block_name.assign(pib->block_name);
-
-      // set particle type = [tracer, star, dust, none]
-      pp.partype = pin->GetString(pp.block_name, "type");
-      if (pp.partype.compare("none") != 0) { // skip input block if the type is none
-        if ((pp.partype.compare("dust") == 0) ||
-            (pp.partype.compare("tracer") == 0) ||
-            (pp.partype.compare("star") == 0)) {
-          pp.ipar = num_particles++;
-          idmax.push_back(0); // initialize idmax with 0
-          pp.table_output = pin->GetOrAddBoolean(pp.block_name,"output",false);
-          pp.gravity = pin->GetOrAddBoolean(pp.block_name,"gravity",false);
-          if (pp.table_output) num_particles_output++;
-          if (pp.gravity) num_particles_grav++;
-          pm->particle_params.push_back(pp);
-        } else { // unsupported particle type
-          std::stringstream msg;
-          msg << "### FATAL ERROR in Particle Initializer" << std::endl
-              << "Unrecognized particle type = '" << pp.partype
-              << "' in particle block '" << pp.block_name << "'" << std::endl;
-          ATHENA_ERROR(msg);
-        }
-      }
-    }
-    pib = pib->pnext;  // move to next input block name
-  }
-
-  if (num_particles > 0) {
-    pm->particle = true;
-
-    if (SELF_GRAVITY_ENABLED && (num_particles_grav > 0))
-      pm->particle_gravity = true;
-
-    if (Globals::my_rank == 0) {
-      std::cout << "Particles are initalized with "
-                << "N containers = " << num_particles << std::endl;
-      for (ParticleParameters ppnew : pm->particle_params)
-        std::cout << "  ipar = " << ppnew.ipar
-                  << "  partype = " << ppnew.partype
-                  << "  output = " << ppnew.table_output
-                  << "  block_name = " << ppnew.block_name
-                  << std::endl;
-    }
-    // Remember the pointer to input parameters.
-    pinput = pin;
-
-#ifdef MPI_PARALLEL
-    // Get my MPI communicator.
-    MPI_Comm_dup(MPI_COMM_WORLD, &my_comm);
-#endif
-  }
-
-  initialized = true;
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn Particles::PostInitialize(Mesh *pm, ParameterInput *pin)
-//! \brief preprocesses the class after problem generator and before the main loop.
-
-void Particles::PostInitialize(Mesh *pm, ParameterInput *pin) {
-  // Set particle IDs.
-  for (int ipar = 0; ipar < Particles::num_particles; ++ipar)
-    ProcessNewParticles(pm, ipar);
-
-  // Set position indices.
-  for (int b = 0; b < pm->nblocal; ++b)
-    for (Particles *ppar : pm->my_blocks(b)->ppars)
-      ppar->SetPositionIndices();
-
-  // Print particle csv
-  for (int b = 0; b < pm->nblocal; ++b)
-    for (Particles *ppar : pm->my_blocks(b)->ppars)
-      if (ppar->parhstout_) ppar->OutputParticles(true);
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn void Particles::GetHistoryOutputNames(std::string output_names[])
-//! \brief gets the names of the history output variables in history_output_names[].
-
-void Particles::GetHistoryOutputNames(std::string output_names[], int ipar) {
-  std::string head = "p";
-  head.append(std::to_string(ipar)); // TODO(SMOON) how about partype instead of ipar?
-  output_names[0] = head + "-n";
-  output_names[1] = head + "-v1";
-  output_names[2] = head + "-v2";
-  output_names[3] = head + "-v3";
-  output_names[4] = head + "-v1sq";
-  output_names[5] = head + "-v2sq";
-  output_names[6] = head + "-v3sq";
-  output_names[7] = head + "-m";
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn int Particles::GetTotalNumber(Mesh *pm)
-//! \brief returns total number of particles (from all processes).
-//! \todo This should separately count different types of particles
-std::int64_t Particles::GetTotalNumber(Mesh *pm) {
-  std::int64_t npartot(0);
-  for (int b = 0; b < pm->nblocal; ++b)
-    for (Particles *ppar : pm->my_blocks(b)->ppars)
-      npartot += ppar->npar_;
-#ifdef MPI_PARALLEL
-  MPI_Allreduce(MPI_IN_PLACE, &npartot, 1, MPI_LONG, MPI_SUM, my_comm);
-#endif
-  return npartot;
-}
-
-//--------------------------------------------------------------------------------------
 //! \fn Particles::Particles(MeshBlock *pmb, ParameterInput *pin)
 //! \brief constructs a Particles instance.
 
@@ -307,37 +182,137 @@ Particles::~Particles() {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void Particles::AllocateMemory()
-//! \brief memory allocation will be done at the end of derived class initialization
-void Particles::AllocateMemory() {
-  // Initiate ParticleBuffer class.
-  nint_buf = nint;
-  nreal_buf = nreal + naux;
+//! \fn void Particles::RemoveOneParticle(int k)
+//! \brief removes particle k in the block.
 
-  // Allocate mesh auxiliaries.
-  ppm = new ParticleMesh(this, pmy_block);
+void Particles::RemoveOneParticle(int k) {
+  if (0 <= k && k < npar_ && --npar_ != k) {
+    xi1_(k) = xi1_(npar_);
+    xi2_(k) = xi2_(npar_);
+    xi3_(k) = xi3_(npar_);
+    for (int j = 0; j < nint; ++j)
+      intprop(j,k) = intprop(j,npar_);
+    for (int j = 0; j < nreal; ++j)
+      realprop(j,k) = realprop(j,npar_);
+    for (int j = 0; j < naux; ++j)
+      auxprop(j,k) = auxprop(j,npar_);
+  }
+}
 
-  // Allocate particle gravity
-  if (isgravity_) {
-    // Add working arrays for gravity forces
-    igx = AddWorkingArray();
-    igy = AddWorkingArray();
-    igz = AddWorkingArray();
-    // Activate particle gravity.
-    ppgrav = new ParticleGravity(this);
+//--------------------------------------------------------------------------------------
+//! \fn void Particles::Integrate(int step)
+//! \brief updates all particle positions and velocities from t to t + dt.
+
+void Particles::Integrate(int stage) {
+  Real t = 0, dt = 0;
+
+  // Determine the integration cofficients.
+  switch (stage) {
+  case 1:
+    t = pmy_mesh_->time;
+    dt = 0.5 * pmy_mesh_->dt;
+    SaveStatus();
+    break;
+
+  case 2:
+    t = pmy_mesh_->time + 0.5 * pmy_mesh_->dt;
+    dt = pmy_mesh_->dt;
+    break;
   }
 
-  // Allocate integer properties.
-  intprop.NewAthenaArray(nint,nparmax_);
+  // Conduct one stage of the integration.
+  EulerStep(t, dt, pmy_block->phydro->w);
+  ReactToMeshAux(t, dt, pmy_block->phydro->w);
 
-  // Allocate integer properties.
-  realprop.NewAthenaArray(nreal,nparmax_);
+  // Update the position index.
+  SetPositionIndices();
+}
 
-  // Allocate auxiliary properties.
-  if (naux > 0) auxprop.NewAthenaArray(naux,nparmax_);
+//--------------------------------------------------------------------------------------
+//! \fn Real Particles::NewBlockTimeStep();
+//! \brief returns the time step required by particles in the block.
 
-  // Allocate working arrays.
-  if (nwork > 0) work.NewAthenaArray(nwork,nparmax_);
+Real Particles::NewBlockTimeStep() {
+  Coordinates *pc = pmy_block->pcoord;
+
+  // Find the maximum coordinate speed.
+  Real dt_inv2_max = 0.0;
+  for (int k = 0; k < npar_; ++k) {
+    Real dt_inv2 = 0.0, vpx1, vpx2, vpx3;
+    pc->CartesianToMeshCoordsVector(xp_(k), yp_(k), zp_(k), vpx_(k), vpy_(k), vpz_(k),
+                                    vpx1, vpx2, vpx3);
+    dt_inv2 += active1_ ? std::pow(vpx1 / pc->dx1f(static_cast<int>(xi1_(k))), 2) : 0;
+    dt_inv2 += active2_ ? std::pow(vpx2 / pc->dx2f(static_cast<int>(xi2_(k))), 2) : 0;
+    dt_inv2 += active3_ ? std::pow(vpx3 / pc->dx3f(static_cast<int>(xi3_(k))), 2) : 0;
+    dt_inv2_max = std::max(dt_inv2_max, dt_inv2);
+  }
+
+  // Return the time step constrained by the coordinate speed.
+  return dt_inv2_max > 0.0 ? cfl_par_ / std::sqrt(dt_inv2_max)
+                           : std::numeric_limits<Real>::max();
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn std::size_t Particles::GetSizeInBytes()
+//! \brief returns the data size in bytes in the meshblock.
+
+std::size_t Particles::GetSizeInBytes() const {
+  std::size_t size = sizeof(npar_);
+  if (npar_ > 0) size += npar_ * (nint * sizeof(int) + nreal * sizeof(Real));
+  return size;
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn Particles::UnpackParticlesForRestart()
+//! \brief reads the particle data from the restart file.
+
+void Particles::UnpackParticlesForRestart(char *mbdata, std::size_t &os) {
+  // Read number of particles.
+  std::memcpy(&npar_, &(mbdata[os]), sizeof(npar_));
+  os += sizeof(npar_);
+  if (nparmax_ < npar_)
+    UpdateCapacity(npar_);
+
+  if (npar_ > 0) {
+    // Read integer properties.
+    std::size_t size = npar_ * sizeof(int);
+    for (int k = 0; k < nint; ++k) {
+      std::memcpy(&(intprop(k,0)), &(mbdata[os]), size);
+      os += size;
+    }
+
+    // Read real properties.
+    size = npar_ * sizeof(Real);
+    for (int k = 0; k < nreal; ++k) {
+      std::memcpy(&(realprop(k,0)), &(mbdata[os]), size);
+      os += size;
+    }
+  }
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn Particles::PackParticlesForRestart()
+//! \brief pack the particle data for restart dump.
+
+void Particles::PackParticlesForRestart(char *&pdata) {
+  // Write number of particles.
+  std::memcpy(pdata, &npar_, sizeof(npar_));
+  pdata += sizeof(npar_);
+
+  if (npar_ > 0) {
+    // Write integer properties.
+    std::size_t size = npar_ * sizeof(int);
+    for (int k = 0; k < nint; ++k) {
+      std::memcpy(pdata, &(intprop(k,0)), size);
+      pdata += size;
+    }
+    // Write real properties.
+    size = npar_ * sizeof(Real);
+    for (int k = 0; k < nreal; ++k) {
+      std::memcpy(pdata, &(realprop(k,0)), size);
+      pdata += size;
+    }
+  }
 }
 
 //--------------------------------------------------------------------------------------
@@ -374,6 +349,124 @@ void Particles::AddHistoryOutput(Real data_sum[], int pos) {
 }
 
 //--------------------------------------------------------------------------------------
+//! \fn Particles::OutputParticles()
+//! \brief outputs the particle data in tabulated format.
+void Particles::OutputParticles(bool header) {
+  std::stringstream fname, msg;
+  std::ofstream os;
+  std::string file_basename = pinput->GetString("job","problem_id");
+
+  for (int k = 0; k < npar_; ++k) {
+    // Create the filename.
+    fname << file_basename << ".par" << pid_(k) << ".csv";
+
+    // Open the file for write.
+    if (header)
+      os.open(fname.str().data(), std::ofstream::out);
+    else
+      os.open(fname.str().data(), std::ofstream::app);
+
+    if (!os.is_open()) {
+      msg << "### FATAL ERROR in function [Particles::OutputParticles]"
+          << std::endl << "Output file '" << fname.str() << "' could not be opened"
+          << std::endl;
+      ATHENA_ERROR(msg);
+    }
+
+    OutputOneParticle(os, k, header);
+
+    // Close the file
+    os.close();
+    // clear filename
+    fname.str("");
+  }
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn Particles::OutputParticles()
+//! \brief outputs the particle data in tabulated format.
+void Particles::OutputParticles(bool header, int kid) {
+  std::stringstream fname, msg;
+  std::ofstream os;
+  std::string file_basename = pinput->GetString("job","problem_id");
+
+  for (int k = 0; k < npar_; ++k) {
+    if (pid_(k) != kid) continue;
+
+    // Create the filename.
+    fname << file_basename << ".pid" << pid_(k) << ".par" << ipar << ".csv";
+
+    // Open the file for write.
+    if (header)
+      os.open(fname.str().data(), std::ofstream::out);
+    else
+      os.open(fname.str().data(), std::ofstream::app);
+
+    if (!os.is_open()) {
+      msg << "### FATAL ERROR in function [Particles::OutputParticles]"
+          << std::endl << "Output file '" << fname.str() << "' could not be opened"
+          << std::endl;
+      ATHENA_ERROR(msg);
+    }
+
+    OutputOneParticle(os, k, header);
+
+    // Close the file
+    os.close();
+    // clear filename
+    fname.str("");
+  }
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn Particles::ToggleParHstOutFlag()
+//! \brief turn on individual particle history outputs
+void Particles::ToggleParHstOutFlag() {
+  if (npar_ < 100) {
+    parhstout_ = true;
+  } else {
+    std::cout << "Warning [Particles]: npar = " << npar_ << " is too large to output"
+      << "all individual particles' history automatically."
+      << " Particle history output is turned off." << std::endl;
+    parhstout_ = false;
+  }
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void Particles::AllocateMemory()
+//! \brief memory allocation will be done at the end of derived class initialization
+void Particles::AllocateMemory() {
+  // Initiate ParticleBuffer class.
+  nint_buf = nint;
+  nreal_buf = nreal + naux;
+
+  // Allocate mesh auxiliaries.
+  ppm = new ParticleMesh(this, pmy_block);
+
+  // Allocate particle gravity
+  if (isgravity_) {
+    // Add working arrays for gravity forces
+    igx = AddWorkingArray();
+    igy = AddWorkingArray();
+    igz = AddWorkingArray();
+    // Activate particle gravity.
+    ppgrav = new ParticleGravity(this);
+  }
+
+  // Allocate integer properties.
+  intprop.NewAthenaArray(nint,nparmax_);
+
+  // Allocate integer properties.
+  realprop.NewAthenaArray(nreal,nparmax_);
+
+  // Allocate auxiliary properties.
+  if (naux > 0) auxprop.NewAthenaArray(naux,nparmax_);
+
+  // Allocate working arrays.
+  if (nwork > 0) work.NewAthenaArray(nwork,nparmax_);
+}
+
+//--------------------------------------------------------------------------------------
 //! \fn void Particles::CheckInMeshBlock()
 //! \brief check whether given position is within the meshblock assuming Cartesian
 
@@ -385,53 +478,6 @@ bool Particles::CheckInMeshBlock(Real x1, Real x2, Real x3) {
     return true;
   } else {
     return false;
-  }
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn void Particles::Integrate(int step)
-//! \brief updates all particle positions and velocities from t to t + dt.
-
-void Particles::Integrate(int stage) {
-  Real t = 0, dt = 0;
-
-  // Determine the integration cofficients.
-  switch (stage) {
-  case 1:
-    t = pmy_mesh_->time;
-    dt = 0.5 * pmy_mesh_->dt;
-    SaveStatus();
-    break;
-
-  case 2:
-    t = pmy_mesh_->time + 0.5 * pmy_mesh_->dt;
-    dt = pmy_mesh_->dt;
-    break;
-  }
-
-  // Conduct one stage of the integration.
-  EulerStep(t, dt, pmy_block->phydro->w);
-  ReactToMeshAux(t, dt, pmy_block->phydro->w);
-
-  // Update the position index.
-  SetPositionIndices();
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn void Particles::RemoveOneParticle(int k)
-//! \brief removes particle k in the block.
-
-void Particles::RemoveOneParticle(int k) {
-  if (0 <= k && k < npar_ && --npar_ != k) {
-    xi1_(k) = xi1_(npar_);
-    xi2_(k) = xi2_(npar_);
-    xi3_(k) = xi3_(npar_);
-    for (int j = 0; j < nint; ++j)
-      intprop(j,k) = intprop(j,npar_);
-    for (int j = 0; j < nreal; ++j)
-      realprop(j,k) = realprop(j,npar_);
-    for (int j = 0; j < naux; ++j)
-      auxprop(j,k) = auxprop(j,npar_);
   }
 }
 
@@ -647,90 +693,125 @@ void Particles::UpdateCapacity(int new_nparmax) {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn Real Particles::NewBlockTimeStep();
-//! \brief returns the time step required by particles in the block.
-
-Real Particles::NewBlockTimeStep() {
-  Coordinates *pc = pmy_block->pcoord;
-
-  // Find the maximum coordinate speed.
-  Real dt_inv2_max = 0.0;
-  for (int k = 0; k < npar_; ++k) {
-    Real dt_inv2 = 0.0, vpx1, vpx2, vpx3;
-    pc->CartesianToMeshCoordsVector(xp_(k), yp_(k), zp_(k), vpx_(k), vpy_(k), vpz_(k),
-                                    vpx1, vpx2, vpx3);
-    dt_inv2 += active1_ ? std::pow(vpx1 / pc->dx1f(static_cast<int>(xi1_(k))), 2) : 0;
-    dt_inv2 += active2_ ? std::pow(vpx2 / pc->dx2f(static_cast<int>(xi2_(k))), 2) : 0;
-    dt_inv2 += active3_ ? std::pow(vpx3 / pc->dx3f(static_cast<int>(xi3_(k))), 2) : 0;
-    dt_inv2_max = std::max(dt_inv2_max, dt_inv2);
+//! \fn Particles::OutputParticle()
+//! \brief outputs the particle data in tabulated format.
+void Particles::OutputOneParticle(std::ostream &os, int k, bool header) {
+  if (header) {
+    os << "time,dt";
+    for (int ip = 0; ip < nint; ++ip)
+      os << "," << intfieldname[ip];
+    for (int ip = 0; ip < nreal; ++ip)
+      os << "," << realfieldname[ip];
+    for (int ip = 0; ip < naux; ++ip)
+      os << "," << auxfieldname[ip];
+    os << std::endl;
   }
 
-  // Return the time step constrained by the coordinate speed.
-  return dt_inv2_max > 0.0 ? cfl_par_ / std::sqrt(dt_inv2_max)
-                           : std::numeric_limits<Real>::max();
+  // Write the time.
+  os << std::scientific << std::showpoint << std::setprecision(18);
+  os << pmy_mesh_->time << "," << pmy_mesh_->dt;
+
+  // Write the particle data in the meshblock.
+  for (int ip = 0; ip < nint; ++ip)
+    os << "," << intprop(ip,k);
+  for (int ip = 0; ip < nreal; ++ip)
+    os << "," << realprop(ip,k);
+  for (int ip = 0; ip < naux; ++ip)
+    os << "," << auxprop(ip,k);
+  os << std::endl;
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn std::size_t Particles::GetSizeInBytes()
-//! \brief returns the data size in bytes in the meshblock.
+//! \fn Particles::Initialize(Mesh *pm, ParameterInput *pin)
+//! \brief initializes the class.
 
-std::size_t Particles::GetSizeInBytes() const {
-  std::size_t size = sizeof(npar_);
-  if (npar_ > 0) size += npar_ * (nint * sizeof(int) + nreal * sizeof(Real));
-  return size;
+void Particles::Initialize(Mesh *pm, ParameterInput *pin) {
+  if (initialized) return;
+
+  InputBlock *pib = pin->pfirst_block;
+  // pm->particle_params.reserve(1);
+  // loop over input block names.  Find those that start with "particle", read parameters,
+  // and construct singly linked list of ParticleTypes.
+  while (pib != nullptr) {
+    if (pib->block_name.compare(0, 8, "particle") == 0) {
+      ParticleParameters pp;  // define temporary ParticleParameters struct
+
+      // extract integer number of particle block.  Save name and number
+      std::string parn = pib->block_name.substr(8); // 7 because counting starts at 0!
+      pp.block_number = atoi(parn.c_str());
+      pp.block_name.assign(pib->block_name);
+
+      // set particle type = [tracer, star, dust, none]
+      pp.partype = pin->GetString(pp.block_name, "type");
+      if (pp.partype.compare("none") != 0) { // skip input block if the type is none
+        if ((pp.partype.compare("dust") == 0) ||
+            (pp.partype.compare("tracer") == 0) ||
+            (pp.partype.compare("star") == 0)) {
+          pp.ipar = num_particles++;
+          idmax.push_back(0); // initialize idmax with 0
+          pp.table_output = pin->GetOrAddBoolean(pp.block_name,"output",false);
+          pp.gravity = pin->GetOrAddBoolean(pp.block_name,"gravity",false);
+          if (pp.table_output) num_particles_output++;
+          if (pp.gravity) num_particles_grav++;
+          pm->particle_params.push_back(pp);
+        } else { // unsupported particle type
+          std::stringstream msg;
+          msg << "### FATAL ERROR in Particle Initializer" << std::endl
+              << "Unrecognized particle type = '" << pp.partype
+              << "' in particle block '" << pp.block_name << "'" << std::endl;
+          ATHENA_ERROR(msg);
+        }
+      }
+    }
+    pib = pib->pnext;  // move to next input block name
+  }
+
+  if (num_particles > 0) {
+    pm->particle = true;
+
+    if (SELF_GRAVITY_ENABLED && (num_particles_grav > 0))
+      pm->particle_gravity = true;
+
+    if (Globals::my_rank == 0) {
+      std::cout << "Particles are initalized with "
+                << "N containers = " << num_particles << std::endl;
+      for (ParticleParameters ppnew : pm->particle_params)
+        std::cout << "  ipar = " << ppnew.ipar
+                  << "  partype = " << ppnew.partype
+                  << "  output = " << ppnew.table_output
+                  << "  block_name = " << ppnew.block_name
+                  << std::endl;
+    }
+    // Remember the pointer to input parameters.
+    pinput = pin;
+
+#ifdef MPI_PARALLEL
+    // Get my MPI communicator.
+    MPI_Comm_dup(MPI_COMM_WORLD, &my_comm);
+#endif
+  }
+
+  initialized = true;
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn Particles::UnpackParticlesForRestart()
-//! \brief reads the particle data from the restart file.
+//! \fn Particles::PostInitialize(Mesh *pm, ParameterInput *pin)
+//! \brief preprocesses the class after problem generator and before the main loop.
 
-void Particles::UnpackParticlesForRestart(char *mbdata, std::size_t &os) {
-  // Read number of particles.
-  std::memcpy(&npar_, &(mbdata[os]), sizeof(npar_));
-  os += sizeof(npar_);
-  if (nparmax_ < npar_)
-    UpdateCapacity(npar_);
+void Particles::PostInitialize(Mesh *pm, ParameterInput *pin) {
+  // Set particle IDs.
+  for (int ipar = 0; ipar < Particles::num_particles; ++ipar)
+    ProcessNewParticles(pm, ipar);
 
-  if (npar_ > 0) {
-    // Read integer properties.
-    std::size_t size = npar_ * sizeof(int);
-    for (int k = 0; k < nint; ++k) {
-      std::memcpy(&(intprop(k,0)), &(mbdata[os]), size);
-      os += size;
-    }
+  // Set position indices.
+  for (int b = 0; b < pm->nblocal; ++b)
+    for (Particles *ppar : pm->my_blocks(b)->ppars)
+      ppar->SetPositionIndices();
 
-    // Read real properties.
-    size = npar_ * sizeof(Real);
-    for (int k = 0; k < nreal; ++k) {
-      std::memcpy(&(realprop(k,0)), &(mbdata[os]), size);
-      os += size;
-    }
-  }
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn Particles::PackParticlesForRestart()
-//! \brief pack the particle data for restart dump.
-
-void Particles::PackParticlesForRestart(char *&pdata) {
-  // Write number of particles.
-  std::memcpy(pdata, &npar_, sizeof(npar_));
-  pdata += sizeof(npar_);
-
-  if (npar_ > 0) {
-    // Write integer properties.
-    std::size_t size = npar_ * sizeof(int);
-    for (int k = 0; k < nint; ++k) {
-      std::memcpy(pdata, &(intprop(k,0)), size);
-      pdata += size;
-    }
-    // Write real properties.
-    size = npar_ * sizeof(Real);
-    for (int k = 0; k < nreal; ++k) {
-      std::memcpy(pdata, &(realprop(k,0)), size);
-      pdata += size;
-    }
-  }
+  // Print particle csv
+  for (int b = 0; b < pm->nblocal; ++b)
+    for (Particles *ppar : pm->my_blocks(b)->ppars)
+      if (ppar->parhstout_) ppar->OutputParticles(true);
 }
 
 //--------------------------------------------------------------------------------------
@@ -794,114 +875,34 @@ void Particles::FormattedTableOutput(Mesh *pm, OutputParameters op) {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn Particles::OutputParticles()
-//! \brief outputs the particle data in tabulated format.
-void Particles::OutputParticles(bool header) {
-  std::stringstream fname, msg;
-  std::ofstream os;
-  std::string file_basename = pinput->GetString("job","problem_id");
+//! \fn void Particles::GetHistoryOutputNames(std::string output_names[])
+//! \brief gets the names of the history output variables in history_output_names[].
 
-  for (int k = 0; k < npar_; ++k) {
-    // Create the filename.
-    fname << file_basename << ".par" << pid_(k) << ".csv";
-
-    // Open the file for write.
-    if (header)
-      os.open(fname.str().data(), std::ofstream::out);
-    else
-      os.open(fname.str().data(), std::ofstream::app);
-
-    if (!os.is_open()) {
-      msg << "### FATAL ERROR in function [Particles::OutputParticles]"
-          << std::endl << "Output file '" << fname.str() << "' could not be opened"
-          << std::endl;
-      ATHENA_ERROR(msg);
-    }
-
-    OutputOneParticle(os, k, header);
-
-    // Close the file
-    os.close();
-    // clear filename
-    fname.str("");
-  }
+void Particles::GetHistoryOutputNames(std::string output_names[], int ipar) {
+  std::string head = "p";
+  head.append(std::to_string(ipar)); // TODO(SMOON) how about partype instead of ipar?
+  output_names[0] = head + "-n";
+  output_names[1] = head + "-v1";
+  output_names[2] = head + "-v2";
+  output_names[3] = head + "-v3";
+  output_names[4] = head + "-v1sq";
+  output_names[5] = head + "-v2sq";
+  output_names[6] = head + "-v3sq";
+  output_names[7] = head + "-m";
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn Particles::OutputParticles()
-//! \brief outputs the particle data in tabulated format.
-void Particles::OutputParticles(bool header, int kid) {
-  std::stringstream fname, msg;
-  std::ofstream os;
-  std::string file_basename = pinput->GetString("job","problem_id");
-
-  for (int k = 0; k < npar_; ++k) {
-    if (pid_(k) != kid) continue;
-
-    // Create the filename.
-    fname << file_basename << ".pid" << pid_(k) << ".par" << ipar << ".csv";
-
-    // Open the file for write.
-    if (header)
-      os.open(fname.str().data(), std::ofstream::out);
-    else
-      os.open(fname.str().data(), std::ofstream::app);
-
-    if (!os.is_open()) {
-      msg << "### FATAL ERROR in function [Particles::OutputParticles]"
-          << std::endl << "Output file '" << fname.str() << "' could not be opened"
-          << std::endl;
-      ATHENA_ERROR(msg);
-    }
-
-    OutputOneParticle(os, k, header);
-
-    // Close the file
-    os.close();
-    // clear filename
-    fname.str("");
-  }
+//! \fn int Particles::GetTotalNumber(Mesh *pm)
+//! \brief returns total number of particles (from all processes).
+//! \todo This should separately count different types of particles
+std::int64_t Particles::GetTotalNumber(Mesh *pm) {
+  std::int64_t npartot(0);
+  for (int b = 0; b < pm->nblocal; ++b)
+    for (Particles *ppar : pm->my_blocks(b)->ppars)
+      npartot += ppar->npar_;
+#ifdef MPI_PARALLEL
+  MPI_Allreduce(MPI_IN_PLACE, &npartot, 1, MPI_LONG, MPI_SUM, my_comm);
+#endif
+  return npartot;
 }
 
-//--------------------------------------------------------------------------------------
-//! \fn Particles::OutputParticle()
-//! \brief outputs the particle data in tabulated format.
-void Particles::OutputOneParticle(std::ostream &os, int k, bool header) {
-  if (header) {
-    os << "time,dt";
-    for (int ip = 0; ip < nint; ++ip)
-      os << "," << intfieldname[ip];
-    for (int ip = 0; ip < nreal; ++ip)
-      os << "," << realfieldname[ip];
-    for (int ip = 0; ip < naux; ++ip)
-      os << "," << auxfieldname[ip];
-    os << std::endl;
-  }
-
-  // Write the time.
-  os << std::scientific << std::showpoint << std::setprecision(18);
-  os << pmy_mesh_->time << "," << pmy_mesh_->dt;
-
-  // Write the particle data in the meshblock.
-  for (int ip = 0; ip < nint; ++ip)
-    os << "," << intprop(ip,k);
-  for (int ip = 0; ip < nreal; ++ip)
-    os << "," << realprop(ip,k);
-  for (int ip = 0; ip < naux; ++ip)
-    os << "," << auxprop(ip,k);
-  os << std::endl;
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn Particles::ToggleParHstOutFlag()
-//! \brief turn on individual particle history outputs
-void Particles::ToggleParHstOutFlag() {
-  if (npar_ < 100) {
-    parhstout_ = true;
-  } else {
-    std::cout << "Warning [Particles]: npar = " << npar_ << " is too large to output"
-      << "all individual particles' history automatically."
-      << " Particle history output is turned off." << std::endl;
-    parhstout_ = false;
-  }
-}

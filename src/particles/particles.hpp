@@ -73,23 +73,7 @@ friend class ParticleMesh;
   // Destructor
   virtual ~Particles();
 
-  // Static functions
-  // TODO(SMOON) some of these could be changed to member function
-  // TODO(SMOON) if they are helper functions, take them out of the
-  //             class for better readerbility, since they are not
-  //             a part of the interface
-  // SMOON: maybe we need Mesh-level pure abstract interface class.
-  static void AMRCoarseToFine(Particles *pparc, Particles *pparf, MeshBlock* pmbf);
-  static void AMRFineToCoarse(Particles *pparc, Particles *pparf);
-  // TODO(SMOON) bad function name?
-  static void FindDensityOnMesh(Mesh *pm, bool include_momentum);
-  static void Initialize(Mesh *pm, ParameterInput *pin);
-  static void PostInitialize(Mesh *pm, ParameterInput *pin);
-  static void FormattedTableOutput(Mesh *pm, OutputParameters op);
-  static void GetHistoryOutputNames(std::string output_names[], int ipar);
-  static std::int64_t GetTotalNumber(Mesh *pm);
-
-  // Methods (interface)
+  // Particle interface
   // TODO(SMOON) Potentially better approach might be not overriding AddOneParticle at all
   // In principle, the one who creates a particle will always know which particle they
   // want to create. Therefore, it may be more natural to <dynamic_cast> Particle to a
@@ -102,7 +86,6 @@ friend class ParticleMesh;
   // TODO(SMOON) (template method pattern is appropriate here)
   virtual void Integrate(int step);
   virtual Real NewBlockTimeStep();
-
   std::size_t GetSizeInBytes() const;
   bool IsGravity() const { return isgravity_; }
   int GetNumPar() const { return npar_; }
@@ -116,9 +99,7 @@ friend class ParticleMesh;
   const AthenaArray<Real>& vpy0() const { return vpy0_; }
   const AthenaArray<Real>& vpz0() const { return vpz0_; }
 
-  // ************************** //
-  // Input/Output API //
-  // ************************** //
+  // Input/Output interface
   void UnpackParticlesForRestart(char *mbdata, std::size_t &os);
   void PackParticlesForRestart(char *&pdata);
   void AddHistoryOutput(Real data_sum[], int pos);
@@ -127,9 +108,7 @@ friend class ParticleMesh;
   // TODO(SMOON) may not be needed; why not just make it default?
   void ToggleParHstOutFlag();
 
-  // ************************** //
-  // Boundary communication API //
-  // ************************** //
+  // Boundary communication interface
   void ClearBoundary();
   void ClearNeighbors();
   void LinkNeighbors(MeshBlockTree &tree, int64_t nrbx1, int64_t nrbx2, int64_t nrbx3,
@@ -148,6 +127,22 @@ friend class ParticleMesh;
   int FindTargetGidAlongX2(Real x2);
   void ClearBoundaryShear();
   bool ReceiveFromNeighborsShear();
+
+  // Static functions
+  // TODO(SMOON) some of these could be changed to member function
+  // TODO(SMOON) if they are helper functions, take them out of the
+  //             class for better readerbility, since they are not
+  //             a part of the interface
+  // SMOON: maybe we need Mesh-level pure abstract interface class.
+  static void AMRCoarseToFine(Particles *pparc, Particles *pparf, MeshBlock* pmbf);
+  static void AMRFineToCoarse(Particles *pparc, Particles *pparf);
+  // TODO(SMOON) bad function name?
+  static void FindDensityOnMesh(Mesh *pm, bool include_momentum);
+  static void Initialize(Mesh *pm, ParameterInput *pin);
+  static void PostInitialize(Mesh *pm, ParameterInput *pin);
+  static void FormattedTableOutput(Mesh *pm, OutputParameters op);
+  static void GetHistoryOutputNames(std::string output_names[], int ipar);
+  static std::int64_t GetTotalNumber(Mesh *pm);
 
   // Data members
   // number of particle containers

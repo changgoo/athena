@@ -25,14 +25,6 @@
 static Real _WeightFunction(Real dxi);
 
 //--------------------------------------------------------------------------------------
-//! \fn int ParticleMesh::AddMeshAux()
-//! \brief adds one auxiliary to the mesh and returns the index.
-
-int ParticleMesh::AddMeshAux() {
-  return nmeshaux_++;
-}
-
-//--------------------------------------------------------------------------------------
 //! \fn ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb)
 //! \brief constructs a new ParticleMesh instance.
 
@@ -84,56 +76,6 @@ ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : updated(false),
 ParticleMesh::~ParticleMesh() {
   // Destroy the particle meshblock.
   meshaux_.DeleteAthenaArray();
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum)
-//! \brief finds particle mesh densities for all particle containers.
-//!
-//! If include_momentum is true, the momentum density field is also computed.
-
-void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
-  // Assign particle properties to mesh and send boundary.
-  int nblocks(pm->nblocal);
-
-  for (int b = 0; b < nblocks; ++b) {
-    MeshBlock *pmb(pm->my_blocks(b));
-    if (pm->shear_periodic) {
-      pmb->pbval->ComputeShear(pm->time, pm->time);
-    }
-    pmb->pbval->StartReceivingSubset(BoundaryCommSubset::pm,
-                                     pmb->pbval->bvars_pm);
-    for (Particles *ppar : pmb->ppars) {
-      ppar->ppm->FindLocalDensityOnMesh(include_momentum);
-      ppar->ppm->pmbvar->SendBoundaryBuffers();
-    }
-  }
-
-  for (int b = 0; b < nblocks; ++b) {
-    MeshBlock *pmb(pm->my_blocks(b));
-    for (Particles *ppar : pmb->ppars) {
-      ppar->ppm->pmbvar->ReceiveAndSetBoundariesWithWait();
-      if (pm->shear_periodic)
-        ppar->ppm->pmbvar->SendShearingBoxBoundaryBuffers();
-    }
-  }
-
-  if (pm->shear_periodic) {
-    for (int b = 0; b < nblocks; ++b) {
-      MeshBlock *pmb(pm->my_blocks(b));
-      for (Particles *ppar : pmb->ppars) {
-        ppar->ppm->pmbvar->ReceiveAndSetShearingBoxBoundariesWithWait();
-        ppar->ppm->pmbvar->SetShearingBoxBoundaryBuffers();
-      }
-    }
-  }
-
-  for (int b = 0; b < nblocks; ++b) {
-    MeshBlock *pmb(pm->my_blocks(b));
-    pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::pm,
-                                    pmb->pbval->bvars_pm);
-    for (Particles *ppar : pmb->ppars) ppar->ppm->updated=false;
-  }
 }
 
 //--------------------------------------------------------------------------------------
@@ -227,6 +169,14 @@ AthenaArray<Real> ParticleMesh::GetVelocityField() const {
     }
   }
   return vel;
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn int ParticleMesh::AddMeshAux()
+//! \brief adds one auxiliary to the mesh and returns the index.
+
+int ParticleMesh::AddMeshAux() {
+  return nmeshaux_++;
 }
 
 //--------------------------------------------------------------------------------------
@@ -468,4 +418,54 @@ void ParticleMesh::DepositMeshAux(AthenaArray<Real>& u, int ma1, int mb1, int np
 Real _WeightFunction(Real dxi) {
   dxi = std::min(std::abs(dxi), static_cast<Real>(1.5));
   return dxi < 0.5 ? 0.75 - dxi * dxi : 0.5 * ((1.5 - dxi) * (1.5 - dxi));
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum)
+//! \brief finds particle mesh densities for all particle containers.
+//!
+//! If include_momentum is true, the momentum density field is also computed.
+
+void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
+  // Assign particle properties to mesh and send boundary.
+  int nblocks(pm->nblocal);
+
+  for (int b = 0; b < nblocks; ++b) {
+    MeshBlock *pmb(pm->my_blocks(b));
+    if (pm->shear_periodic) {
+      pmb->pbval->ComputeShear(pm->time, pm->time);
+    }
+    pmb->pbval->StartReceivingSubset(BoundaryCommSubset::pm,
+                                     pmb->pbval->bvars_pm);
+    for (Particles *ppar : pmb->ppars) {
+      ppar->ppm->FindLocalDensityOnMesh(include_momentum);
+      ppar->ppm->pmbvar->SendBoundaryBuffers();
+    }
+  }
+
+  for (int b = 0; b < nblocks; ++b) {
+    MeshBlock *pmb(pm->my_blocks(b));
+    for (Particles *ppar : pmb->ppars) {
+      ppar->ppm->pmbvar->ReceiveAndSetBoundariesWithWait();
+      if (pm->shear_periodic)
+        ppar->ppm->pmbvar->SendShearingBoxBoundaryBuffers();
+    }
+  }
+
+  if (pm->shear_periodic) {
+    for (int b = 0; b < nblocks; ++b) {
+      MeshBlock *pmb(pm->my_blocks(b));
+      for (Particles *ppar : pmb->ppars) {
+        ppar->ppm->pmbvar->ReceiveAndSetShearingBoxBoundariesWithWait();
+        ppar->ppm->pmbvar->SetShearingBoxBoundaryBuffers();
+      }
+    }
+  }
+
+  for (int b = 0; b < nblocks; ++b) {
+    MeshBlock *pmb(pm->my_blocks(b));
+    pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::pm,
+                                    pmb->pbval->bvars_pm);
+    for (Particles *ppar : pmb->ppars) ppar->ppm->updated=false;
+  }
 }
