@@ -225,7 +225,7 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
   ipid(-1), ixp(-1), iyp(-1), izp(-1), ivpx(-1), ivpy(-1), ivpz(-1),
   ixp0(-1), iyp0(-1), izp0(-1), ivpx0(-1), ivpy0(-1), ivpz0(-1),
   ixi1(-1), ixi2(-1), ixi3(-1), igx(-1), igy(-1), igz(-1), ish(-1),
-  npar(0), nparmax(1), parhstout_(false), mass(1.0), isgravity_(false) {
+  npar(0), nparmax(1), parhstout_(false), mass(1.0), isgravity_(pp->gravity) {
   // Add particle ID.
   ipid = AddIntProperty();
   intfieldname.push_back("pid");
@@ -280,9 +280,6 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
   active1_ = pmy_mesh->mesh_size.nx1 > 1;
   active2_ = pmy_mesh->mesh_size.nx2 > 1;
   active3_ = pmy_mesh->mesh_size.nx3 > 1;
-
-  // TODO(SMOON) is this if statement needed?
-  if (SELF_GRAVITY_ENABLED) isgravity_ = pp->gravity;
 
   // read shearing box parameters from input block
   if (pmy_mesh->shear_periodic) {
