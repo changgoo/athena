@@ -134,56 +134,6 @@ void Particles::PostInitialize(Mesh *pm, ParameterInput *pin) {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum)
-//! \brief finds particle mesh densities for all particle containers.
-//!
-//! If include_momentum is true, the momentum density field is also computed.
-
-void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
-  // Assign particle properties to mesh and send boundary.
-  int nblocks(pm->nblocal);
-
-  for (int b = 0; b < nblocks; ++b) {
-    MeshBlock *pmb(pm->my_blocks(b));
-    if (pm->shear_periodic) {
-      pmb->pbval->ComputeShear(pm->time, pm->time);
-    }
-    pmb->pbval->StartReceivingSubset(BoundaryCommSubset::pm,
-                                     pmb->pbval->bvars_pm);
-    for (Particles *ppar : pmb->ppars) {
-      ppar->FindLocalDensityOnMesh(include_momentum);
-      ppar->ppm->pmbvar->SendBoundaryBuffers();
-    }
-  }
-
-  for (int b = 0; b < nblocks; ++b) {
-    MeshBlock *pmb(pm->my_blocks(b));
-    for (Particles *ppar : pmb->ppars) {
-      ppar->ppm->pmbvar->ReceiveAndSetBoundariesWithWait();
-      if (pm->shear_periodic)
-        ppar->ppm->pmbvar->SendShearingBoxBoundaryBuffers();
-    }
-  }
-
-  if (pm->shear_periodic) {
-    for (int b = 0; b < nblocks; ++b) {
-      MeshBlock *pmb(pm->my_blocks(b));
-      for (Particles *ppar : pmb->ppars) {
-        ppar->ppm->pmbvar->ReceiveAndSetShearingBoxBoundariesWithWait();
-        ppar->ppm->pmbvar->SetShearingBoxBoundaryBuffers();
-      }
-    }
-  }
-
-  for (int b = 0; b < nblocks; ++b) {
-    MeshBlock *pmb(pm->my_blocks(b));
-    pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::pm,
-                                    pmb->pbval->bvars_pm);
-    for (Particles *ppar : pmb->ppars) ppar->ppm->updated=false;
-  }
-}
-
-//--------------------------------------------------------------------------------------
 //! \fn void Particles::GetHistoryOutputNames(std::string output_names[])
 //! \brief gets the names of the history output variables in history_output_names[].
 
@@ -718,35 +668,6 @@ Real Particles::NewBlockTimeStep() {
   // Return the time step constrained by the coordinate speed.
   return dt_inv2_max > 0.0 ? cfl_par_ / std::sqrt(dt_inv2_max)
                            : std::numeric_limits<Real>::max();
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn void Particles::FindLocalDensityOnMesh(bool include_momentum)
-//! \brief finds the mass and momentum density of particles on the mesh.
-
-void Particles::FindLocalDensityOnMesh(bool include_momentum) {
-  Coordinates *pc(pmy_block->pcoord);
-
-  if (include_momentum) {
-    AthenaArray<Real> parprop, mom1, mom2, mom3, mpar;
-    parprop.NewAthenaArray(4, npar_);
-    mpar.InitWithShallowSlice(parprop, 2, 0, 1);
-    mom1.InitWithShallowSlice(parprop, 2, 1, 1);
-    mom2.InitWithShallowSlice(parprop, 2, 2, 1);
-    mom3.InitWithShallowSlice(parprop, 2, 3, 1);
-    for (int k = 0; k < npar_; ++k) {
-      pc->CartesianToMeshCoordsVector(xp_(k), yp_(k), zp_(k),
-        mass_(k)*vpx_(k), mass_(k)*vpy_(k), mass_(k)*vpz_(k), mom1(k), mom2(k), mom3(k));
-      mpar(k) = mass_(k);
-    }
-    ppm->DepositParticlesToMeshAux(parprop, 0, ppm->idens, 4);
-  } else {
-    ppm->DepositParticlesToMeshAux(mass_, 0, ppm->idens, 1);
-  }
-
-  // set flag to trigger PM communications
-  ppm->updated = true;
-  ppm->pmbvar->var_buf.ZeroClear();
 }
 
 //--------------------------------------------------------------------------------------

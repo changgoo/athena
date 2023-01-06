@@ -78,12 +78,13 @@ friend class ParticleMesh;
   // TODO(SMOON) if they are helper functions, take them out of the
   //             class for better readerbility, since they are not
   //             a part of the interface
+  // SMOON: maybe we need Mesh-level pure abstract interface class.
   static void AMRCoarseToFine(Particles *pparc, Particles *pparf, MeshBlock* pmbf);
   static void AMRFineToCoarse(Particles *pparc, Particles *pparf);
+  // TODO(SMOON) bad function name?
+  static void FindDensityOnMesh(Mesh *pm, bool include_momentum);
   static void Initialize(Mesh *pm, ParameterInput *pin);
   static void PostInitialize(Mesh *pm, ParameterInput *pin);
-  // TODO(SMOON) bad function name; should be moved to ParticleMesh
-  static void FindDensityOnMesh(Mesh *pm, bool include_momentum);
   static void FormattedTableOutput(Mesh *pm, OutputParameters op);
   static void GetHistoryOutputNames(std::string output_names[], int ipar);
   static std::int64_t GetTotalNumber(Mesh *pm);
@@ -98,8 +99,6 @@ friend class ParticleMesh;
   virtual void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3) {}
   virtual void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3, Real taus) {}
   void RemoveOneParticle(int k);
-  // TODO(SMOON) this should be moved to ParticleMesh
-  void FindLocalDensityOnMesh(bool include_momentum);
   void DepositPMtoMesh(int stage); // TODO(SMOON) should be moved to ParticleMesh
   // TODO(SMOON) (template method pattern is appropriate here)
   virtual void Integrate(int step);

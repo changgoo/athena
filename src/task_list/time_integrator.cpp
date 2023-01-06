@@ -2305,7 +2305,7 @@ TaskStatus TimeIntegratorTaskList::ReceiveParticlesShear(MeshBlock *pmb, int sta
 TaskStatus TimeIntegratorTaskList::SendParticleMesh(MeshBlock *pmb, int stage) {
   for (Particles *ppar : pmb->ppars) {
     if (ppar->IsGravity())
-      ppar->FindLocalDensityOnMesh(false);
+      ppar->ppm->FindLocalDensityOnMesh(false);
     if (ppar->ppm->updated) ppar->ppm->pmbvar->SendBoundaryBuffers();
   }
   return TaskStatus::success;

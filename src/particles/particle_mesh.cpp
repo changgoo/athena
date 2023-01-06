@@ -86,6 +86,88 @@ ParticleMesh::~ParticleMesh() {
 }
 
 //--------------------------------------------------------------------------------------
+//! \fn void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum)
+//! \brief finds particle mesh densities for all particle containers.
+//!
+//! If include_momentum is true, the momentum density field is also computed.
+
+void Particles::FindDensityOnMesh(Mesh *pm, bool include_momentum) {
+  // Assign particle properties to mesh and send boundary.
+  int nblocks(pm->nblocal);
+
+  for (int b = 0; b < nblocks; ++b) {
+    MeshBlock *pmb(pm->my_blocks(b));
+    if (pm->shear_periodic) {
+      pmb->pbval->ComputeShear(pm->time, pm->time);
+    }
+    pmb->pbval->StartReceivingSubset(BoundaryCommSubset::pm,
+                                     pmb->pbval->bvars_pm);
+    for (Particles *ppar : pmb->ppars) {
+      ppar->ppm->FindLocalDensityOnMesh(include_momentum);
+      ppar->ppm->pmbvar->SendBoundaryBuffers();
+    }
+  }
+
+  for (int b = 0; b < nblocks; ++b) {
+    MeshBlock *pmb(pm->my_blocks(b));
+    for (Particles *ppar : pmb->ppars) {
+      ppar->ppm->pmbvar->ReceiveAndSetBoundariesWithWait();
+      if (pm->shear_periodic)
+        ppar->ppm->pmbvar->SendShearingBoxBoundaryBuffers();
+    }
+  }
+
+  if (pm->shear_periodic) {
+    for (int b = 0; b < nblocks; ++b) {
+      MeshBlock *pmb(pm->my_blocks(b));
+      for (Particles *ppar : pmb->ppars) {
+        ppar->ppm->pmbvar->ReceiveAndSetShearingBoxBoundariesWithWait();
+        ppar->ppm->pmbvar->SetShearingBoxBoundaryBuffers();
+      }
+    }
+  }
+
+  for (int b = 0; b < nblocks; ++b) {
+    MeshBlock *pmb(pm->my_blocks(b));
+    pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::pm,
+                                    pmb->pbval->bvars_pm);
+    for (Particles *ppar : pmb->ppars) ppar->ppm->updated=false;
+  }
+}
+
+
+
+//--------------------------------------------------------------------------------------
+//! \fn void ParticleMesh::FindLocalDensityOnMesh(bool include_momentum)
+//! \brief finds the mass and momentum density of particles on the mesh.
+
+void ParticleMesh::FindLocalDensityOnMesh(bool include_momentum) {
+  Coordinates *pc(pmb_->pcoord);
+
+  if (include_momentum) {
+    AthenaArray<Real> parprop, mom1, mom2, mom3, mpar;
+    parprop.NewAthenaArray(4, ppar_->npar_);
+    mpar.InitWithShallowSlice(parprop, 2, 0, 1);
+    mom1.InitWithShallowSlice(parprop, 2, 1, 1);
+    mom2.InitWithShallowSlice(parprop, 2, 2, 1);
+    mom3.InitWithShallowSlice(parprop, 2, 3, 1);
+    for (int k = 0; k < ppar_->npar_; ++k) {
+      pc->CartesianToMeshCoordsVector(ppar_->xp_(k), ppar_->yp_(k), ppar_->zp_(k),
+        ppar_->mass_(k)*ppar_->vpx_(k), ppar_->mass_(k)*ppar_->vpy_(k),
+        ppar_->mass_(k)*ppar_->vpz_(k), mom1(k), mom2(k), mom3(k));
+      mpar(k) = ppar_->mass_(k);
+    }
+    DepositParticlesToMeshAux(parprop, 0, idens, 4);
+  } else {
+    DepositParticlesToMeshAux(ppar_->mass_, 0, idens, 1);
+  }
+
+  // set flag to trigger PM communications
+  updated = true;
+  pmbvar->var_buf.ZeroClear();
+}
+
+//--------------------------------------------------------------------------------------
 //! \fn Real ParticleMesh::FindMaximumDensity()
 //! \brief returns the maximum density in the meshblock.
 

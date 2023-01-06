@@ -51,6 +51,7 @@ friend class OutputType;
   ~ParticleMesh();
 
   // Interface
+  void FindLocalDensityOnMesh(bool include_momentum);
   Real FindMaximumDensity() const;
   AthenaArray<Real> GetMassDensity() const { return dens_; }
   AthenaArray<Real> GetMomentumDensityX1() const { return mom1_; }
@@ -63,6 +64,7 @@ friend class OutputType;
   bool updated; //!> flag whether pm is recacluated
 
   // ParticleMeshBoundaryVariable needs access to these indices; hence public.
+  // TODO(SMOON) why don't you make it a friend then?
   int imom1, imom2, imom3;   //!> index to momentum vector in meshaux
   int idens;   //!> index to density in meshaux
 
