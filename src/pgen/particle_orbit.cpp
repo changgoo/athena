@@ -111,45 +111,44 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   }
 
   // initialize particle
-  Particles *ppar = ppars[0];
   if (pmy_mesh->particle) {
-    if (!((ppar->partype).compare("star") == 0)) {
+    if (pstarpar == nullptr) {
       std::stringstream msg;
       msg << "### FATAL ERROR in function [MeshBlock::ProblemGenerator]" << std::endl
-          << "Only star particle is allowed. " << std::endl;
+          << "This problem requires star particles." << std::endl;
       ATHENA_ERROR(msg);
     }
 
-    Real x1 = pin->GetOrAddReal(ppar->input_block_name, "x1", 1.0);
-    Real m1 = pin->GetOrAddReal(ppar->input_block_name, "m1", 1.0);
-    Real v1 = pin->GetOrAddReal(ppar->input_block_name, "v1", 1.0);
+    Real x1 = pin->GetOrAddReal(pstarpar->input_block_name, "x1", 1.0);
+    Real m1 = pin->GetOrAddReal(pstarpar->input_block_name, "m1", 1.0);
+    Real v1 = pin->GetOrAddReal(pstarpar->input_block_name, "v1", 1.0);
 
     if (pmy_mesh->particle_gravity) {
       // self-gravitating two-body problem
       // have to turn off gravity from gas (modify gravity/block_fft_gravity)
       // and to gas (modify hydro/srcterms/hydro_srcterms)
-      Real mratio = pin->GetOrAddReal(ppar->input_block_name, "mratio", 1.0);
+      Real mratio = pin->GetOrAddReal(pstarpar->input_block_name, "mratio", 1.0);
       Real m2 = mratio*m1;
       Real mu = m1*m2/(m1+m2);
       Real x2 = -x1/mratio;
       Real vcirc = std::sqrt((m1+m2)/(x1-x2));
       Real v1 = vcirc*m2/(m1+m2);
       Real v2 = -v1/mratio;
-      ppar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1,0.0);
-      ppar->AddOneParticle(m2,x2,0.0,0.0,0.0,v2,0.0);
+      pstarpar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1,0.0);
+      pstarpar->AddOneParticle(m2,x2,0.0,0.0,0.0,v2,0.0);
     } else {
       // simple particle orbit tests
       if (pmy_mesh->shear_periodic) {
         // epicyclic motions
         Real x0 = 0.5;
-        ppar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1,0.0);
-        ppar->AddOneParticle(m1,x0+x1,0.0,0.0,0.0,v1-x0,0.0);
+        pstarpar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1,0.0);
+        pstarpar->AddOneParticle(m1,x0+x1,0.0,0.0,0.0,v1-x0,0.0);
       } else {
         // kepler orbits
-        ppar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1,0.0);
-        ppar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*1.2,0.0);
-        ppar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*0.8,0.0);
-        ppar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*0.6,0.0);
+        pstarpar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1,0.0);
+        pstarpar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*1.2,0.0);
+        pstarpar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*0.8,0.0);
+        pstarpar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*0.6,0.0);
       }
     }
 
@@ -159,7 +158,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     //   for (int ip=1; ip<ppar->npar_; ++ip)
     //     ppar->OutputOneParticle(std::cout, ip, false);
     // }
-    ppar->ToggleParHstOutFlag();
+    pstarpar->ToggleParHstOutFlag();
   }
 }
 
@@ -187,9 +186,8 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
 //========================================================================================
 
 void MeshBlock::UserWorkInLoop() {
-  // TODO(SMOON) Rewrite this preserving encapsulation
   const Coordinates *pc = pcoord;
-  Particles *ppar = ppars[0];
+  Particles *ppar = pstarpar;
   const AthenaArray<int>& pid = ppar->pid();
   const AthenaArray<Real>& mass = ppar->mass();
   const AthenaArray<Real>& xp0 = ppar->xp0();

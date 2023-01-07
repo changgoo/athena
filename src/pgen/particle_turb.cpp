@@ -95,11 +95,16 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
            dx2 = mesh_size.x2len / npx2,
            dx3 = mesh_size.x3len / npx3;
       Real mpar;
-      if (DustParticles *pp = dynamic_cast<DustParticles*>(ppar)) {
+      if (ppar->partype == "dust") {
         Real dtog = pin->GetOrAddReal(ppar->input_block_name,"dtog",1);
         mpar = dtog * d0 * vol / (npx1 * npx2 * npx3);
-      } else if (TracerParticles *pp = dynamic_cast<TracerParticles*>(ppar)) {
+      } else if (ppar->partype == "tracer") {
         mpar = d0 * vol / (npx1 * npx2 * npx3);
+      } else {
+        std::stringstream msg;
+        msg << "### FATAL ERROR in function [MeshBlock::ProblemGenerator]" << std::endl
+            << "This problem requires dust or tracer particles" << std::endl;
+        ATHENA_ERROR(msg);
       }
 
       // Determine number of particles in the block.
@@ -128,15 +133,17 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
               Real xp = xp1 + dx1 * (udist(rng_generator) - 0.5);
               Real yp = yp1 + dx2 * (udist(rng_generator) - 0.5);
               Real zp = zp1;
-              if (mesh_size.nx3 > 1)
-                zp += dx3 * (udist(rng_generator) - 0.5);
-              if (DustParticles *pp = dynamic_cast<DustParticles*>(ppar)) {
-                if (pp->IsVariableTaus()) {
-                  Real taus0 = pp->GetStoppingTime();
-                  pp->AddOneParticle(mpar, xp, yp, zp, 0.0, 0.0, 0.0, taus0);
+              if (mesh_size.nx3 > 1) zp += dx3 * (udist(rng_generator) - 0.5);
+              if (ppar->partype == "dust") {
+                if (pdustpar->IsVariableTaus()) {
+                  Real taus0 = pdustpar->GetStoppingTime();
+                  pdustpar->AddOneParticle(mpar, xp, yp, zp, 0.0, 0.0, 0.0, taus0);
+                } else {
+                  // TODO(SMOON) How tau0 is determined when not explicitly set?
+                  pdustpar->AddOneParticle(mpar, xp, yp, zp, 0.0, 0.0, 0.0);
                 }
-              } else {
-                ppar->AddOneParticle(mpar, xp, yp, zp, 0.0, 0.0, 0.0);
+              } else if (ppar->partype == "tracer") {
+                ptracerpar->AddOneParticle(mpar, xp, yp, zp, 0.0, 0.0, 0.0);
               }
             }
           }

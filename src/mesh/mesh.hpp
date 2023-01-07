@@ -127,6 +127,9 @@ class MeshBlock {
   BlockFFTGravity *pfft;
   // pointer to particle classes
   std::vector<Particles *> ppars, ppars_grav;
+  StarParticles *pstarpar = nullptr;
+  DustParticles *pdustpar = nullptr;
+  TracerParticles *ptracerpar = nullptr;
 
   // functions
   std::size_t GetBlockSizeInBytes();

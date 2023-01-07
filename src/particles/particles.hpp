@@ -80,8 +80,6 @@ friend class ParticleMesh;
   // specific derived Particles and call the exact version; the idea is that, because
   // we know which Particle the base pointer points to when creating a particle,
   // the particle creation function does not have to be polymorphic.
-  virtual void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3) {}
-  virtual void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3, Real taus) {}
   void RemoveOneParticle(int k);
   // TODO(SMOON) (template method pattern is appropriate here)
   virtual void Integrate(int step);
@@ -298,8 +296,8 @@ class DustParticles : public Particles {
   ~DustParticles();
 
   // Methods (interface)
-  void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3) override;
-  void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3, Real taus) override;
+  void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
+  void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3, Real taus);
   bool GetBackReaction() const { return backreaction; }
   bool GetDragForce() const { return dragforce; }
   bool IsVariableTaus() const { return variable_taus; }
@@ -343,7 +341,7 @@ class TracerParticles : public Particles {
   ~TracerParticles();
 
   // Methods (interface)
-  void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3) override;
+  void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
 
  private:
   // Methods (implementation)
@@ -371,8 +369,8 @@ class StarParticles : public Particles {
   ~StarParticles();
 
   // Methods (interface)
+  void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
   void Integrate(int step) override;
-  void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3) override;
 
  private:
   // Methods (implementation)

@@ -185,10 +185,13 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
       Particles *newppar;
       if (pp.partype.compare("dust") == 0) {
         newppar = new DustParticles(this, pin, &pp);
+        pdustpar = dynamic_cast<DustParticles*>(newppar);
       } else if (pp.partype.compare("tracer") == 0) {
         newppar = new TracerParticles(this, pin, &pp);
+        ptracerpar = dynamic_cast<TracerParticles*>(newppar);
       } else if (pp.partype.compare("star") == 0) {
         newppar = new StarParticles(this, pin, &pp);
+        pstarpar = dynamic_cast<StarParticles*>(newppar);
       } else {
         std::stringstream msg;
         msg << "### FATAL ERROR in MeshBlock::MeshBlock" << std::endl

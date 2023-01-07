@@ -112,17 +112,16 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   if (pmy_mesh->particle && (rho0_star > 0.0)) {
     Real sigz = pin->GetReal("problem","sigma_star");
 
-    Particles *ppar = ppars[0];
-    if (!((ppar->partype).compare("star") == 0)) {
+    if (pstarpar == nullptr) {
       std::stringstream msg;
       msg << "### FATAL ERROR in function [MeshBlock::ProblemGenerator]" << std::endl
-          << "Only star particle is allowed. " << std::endl;
+          << "This problem requires star particles." << std::endl;
       ATHENA_ERROR(msg);
     }
 
     // Find the total number of particles in each direction.
     RegionSize& mesh_size = pmy_mesh->mesh_size;
-    int npartot = pin->GetInteger(ppar->input_block_name, "npartot");
+    int npartot = pin->GetInteger(pstarpar->input_block_name, "npartot");
 
     // Assign the particles.
     // Ramdomizing position. Or velocity perturbation
@@ -146,7 +145,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       Real x = udist(rng_generator)*mesh_size.x1len + mesh_size.x1min;
       Real y = udist(rng_generator)*mesh_size.x2len + mesh_size.x2min;
       Real z = z0*std::atanh(udist(rng_generator))*2.0*sgn;
-      ppar->AddOneParticle(mpar,x,y,z,vx,vy,vz);
+      pstarpar->AddOneParticle(mpar,x,y,z,vx,vy,vz);
     }
 
 //    std::cout << "[Problem IsoSheet] nparmax: " << ppar->nparmax_ << " npar: " << ppar->npar_
@@ -170,7 +169,7 @@ Real DeltaRho(MeshBlock *pmb, int iout) {
   AthenaArray<Real> vol(pmb->ncells1);
   AthenaArray<Real> rho;
   rho.InitWithShallowSlice(pmb->phydro->u,4,IDN,1);
-  AthenaArray<Real> rhop(pmb->ppars[0]->ppm->GetMassDensity());
+  AthenaArray<Real> rhop(pmb->pstarpar->ppm->GetMassDensity());
   for (int k=ks; k<=ke; ++k) {
     Real x3 = pmb->pcoord->x3v(k);
     for (int j=js; j<=je; ++j) {

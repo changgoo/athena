@@ -121,8 +121,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     rng_generator.seed(rseed);
 
     for (Particles *ppar : ppars) {
-      if ((!((ppar->partype).compare("star") == 0))&&
-          (!((ppar->partype).compare("tracer") == 0))) {
+      if ((ppar->partype != "star") && (ppar->partype != "tracer")) {
         std::stringstream msg;
         msg << "### FATAL ERROR in ProblemGenerator " << std::endl
             << " partype: " << ppar->partype
@@ -159,10 +158,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
             z = udist(rng_generator)*mesh_size.x3len + mesh_size.x3min;
           }
           Real vy = vy0;
-          if (!porb->orbital_advection_defined) {
-            vy -= qshear*Omega0*x;
-          }
-          ppar->AddOneParticle(mass,x,y,z,vx0,vy,0.0);
+          if (!porb->orbital_advection_defined) vy -= qshear*Omega0*x;
+          if (ppar->partype == "star") pstarpar->AddOneParticle(mass,x,y,z,vx0,vy,0.0);
+          if (ppar->partype == "tracer") ptracerpar->AddOneParticle(mass,x,y,z,vx0,vy,0.0);
         }
       } else {
         // Assign particles within a cylinder
@@ -183,10 +181,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
             r = std::sqrt(x*x+y*y+z*z);
           }
           Real vy = vy0;
-          if(!porb->orbital_advection_defined) {
-            vy -= qshear*Omega0*x;
-          }
-          ppar->AddOneParticle(mass,x,y,z,vx0,vy,0.0);
+          if (!porb->orbital_advection_defined) vy -= qshear*Omega0*x;
+          if (ppar->partype == "star") pstarpar->AddOneParticle(mass,x,y,z,vx0,vy,0.0);
+          if (ppar->partype == "tracer") ptracerpar->AddOneParticle(mass,x,y,z,vx0,vy,0.0);
         }
       }
 

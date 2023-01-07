@@ -90,17 +90,16 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   }
 
   if (pmy_mesh->particle) {
-    Particles *ppar = ppars[0];
-    if (!((ppar->partype).compare("star") == 0)) {
+    if (pstarpar == nullptr) {
       std::stringstream msg;
       msg << "### FATAL ERROR in function [MeshBlock::ProblemGenerator]" << std::endl
-          << "Only star particle is allowed. " << std::endl;
+          << "This problem requires star particles." << std::endl;
       ATHENA_ERROR(msg);
     }
 
     // Find the total number of particles in each direction.
     RegionSize& mesh_size = pmy_mesh->mesh_size;
-    Real npartot = pin->GetOrAddReal(ppar->input_block_name, "npartot",10000);
+    Real npartot = pin->GetOrAddReal(pstarpar->input_block_name, "npartot",10000);
     Real Mtot = pin->GetOrAddReal("problem", "Mtot", 1);
     Real a = pin->GetOrAddReal("problem", "a", 1);
     Real m0 = (1-fgas)*Mtot/npartot;
@@ -126,7 +125,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       Real x1 = r*std::cos(phi)*sinth;
       Real x2 = r*std::sin(phi)*sinth;
       Real x3 = r*costh;
-      ppar->AddOneParticle(m0, x0+x1, y0+x2, z0+x3, 0.0, 0.0, 0.0);
+      pstarpar->AddOneParticle(m0, x0+x1, y0+x2, z0+x3, 0.0, 0.0, 0.0);
     }
 
 //    std::cout << "npartot: " << npartot
