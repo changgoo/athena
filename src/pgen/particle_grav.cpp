@@ -128,8 +128,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       pstarpar->AddOneParticle(m0, x0+x1, y0+x2, z0+x3, 0.0, 0.0, 0.0);
     }
 
-//    std::cout << "npartot: " << npartot
-//              << " nparmax: " << ppar->nparmax_ << " npar: " << ppar->npar_ << std::endl;
+//   std::cout << "npartot: " << npartot
+//             << " nparmax: " << ppar->nparmax_ << " npar: " << ppar->npar_ << std::endl;
   }
 }
 

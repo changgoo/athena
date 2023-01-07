@@ -9,6 +9,7 @@
 //======================================================================================
 
 // C/C++ Standard Libraries
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -51,7 +52,7 @@ struct ParticleParameters {
   bool table_output, gravity;
   std::string block_name;
   std::string partype;
-
+  // TODO(SMOON) Add nhistory variable
   ParticleParameters() : block_number(0), ipar(-1), table_output(false), gravity(false) {}
 };
 
@@ -64,7 +65,8 @@ friend class ParticleGravity;
 friend class ParticleMesh;
 
  public:
-  // Class constant
+  // TODO(SMOON) this must be variable, initialized through ParticleParameters,
+  // because different particle species may have different number of history output.
   static const int NHISTORY = 8;  //!> number of variables in history output
 
   // Constructor
@@ -75,7 +77,7 @@ friend class ParticleMesh;
 
   // Particle interface
   void RemoveOneParticle(int k);
-  // TODO(SMOON) (template method pattern is appropriate here)
+  // TODO(SMOON) (template design pattern is appropriate here)
   // Functions such as SourceTerms, EulerStep, BorisKick, ... needs to be
   // inside the implementation of template function Integrate(). This needs some
   // consistent name convention.
@@ -107,7 +109,6 @@ friend class ParticleMesh;
   void AddHistoryOutput(Real data_sum[], int pos);
   void OutputParticles(bool header); // individual particle history;
   void OutputParticles(bool header, int kid);
-  // TODO(SMOON) may not be needed; why not just make it default?
   void ToggleParHstOutFlag();
 
   // Boundary communication interface (defined in particles_bvals.cpp)
@@ -130,10 +131,9 @@ friend class ParticleMesh;
   bool ReceiveFromNeighborsShear();
 
   // Static functions
-  // TODO(SMOON) some of these could be changed to member function
   // TODO(SMOON) if they are helper functions, take them out of the
   //             class for better readerbility, since they are not
-  //             a part of the interface
+  //             really a member of this object. Do they access data members?
   // SMOON: maybe we need Mesh-level pure abstract interface class.
   static void AMRCoarseToFine(Particles *pparc, Particles *pparf, MeshBlock* pmbf);
   static void AMRFineToCoarse(Particles *pparc, Particles *pparf);
@@ -209,7 +209,7 @@ friend class ParticleMesh;
   virtual void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc)=0;
   virtual void ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc)=0;
   virtual void DepositToMesh(Real t, Real dt, const AthenaArray<Real>& meshsrc,
-                             AthenaArray<Real>& meshdst) {};
+                             AthenaArray<Real>& meshdst) {}
   void UpdatePositionIndices(int npar,
                              const AthenaArray<Real>& xp,
                              const AthenaArray<Real>& yp,
@@ -221,9 +221,9 @@ friend class ParticleMesh;
   void SetNewParticleID(int id);
   Real CellCrossingTime();
   // hooks for further timestep constraints for derived particles
-  virtual Real OtherCharacteristicTime1() { return std::numeric_limits<Real>::max(); };
-  virtual Real OtherCharacteristicTime2() { return std::numeric_limits<Real>::max(); };
-  virtual Real OtherCharacteristicTime3() { return std::numeric_limits<Real>::max(); };
+  virtual Real OtherCharacteristicTime1() { return std::numeric_limits<Real>::max(); }
+  virtual Real OtherCharacteristicTime2() { return std::numeric_limits<Real>::max(); }
+  virtual Real OtherCharacteristicTime3() { return std::numeric_limits<Real>::max(); }
   void EulerStep(Real t, Real dt, const AthenaArray<Real>& meshsrc);
 
   // Input/Output
@@ -289,7 +289,6 @@ friend class ParticleMesh;
 //!        force.
 
 class DustParticles : public Particles {
-
  public:
   // Constructor
   DustParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp);
@@ -299,7 +298,8 @@ class DustParticles : public Particles {
 
   // Methods (interface)
   void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
-  void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3, Real taus);
+  void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3,
+                      Real taus);
   bool GetBackReaction() const { return backreaction; }
   bool GetDragForce() const { return dragforce; }
   bool IsVariableTaus() const { return variable_taus; }
@@ -334,7 +334,6 @@ class DustParticles : public Particles {
 //! \brief defines the class for velocity Tracer particles
 
 class TracerParticles : public Particles {
-
  public:
   // Constructor
   TracerParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp);
@@ -362,7 +361,6 @@ class TracerParticles : public Particles {
 //! \brief defines the class for Star particles
 
 class StarParticles : public Particles {
-
  public:
   // Constructor
   StarParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp);
@@ -372,6 +370,7 @@ class StarParticles : public Particles {
 
   // Methods (interface)
   void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
+  // TODO(SMOON) should be removed after applying template design pattern
   void Integrate(int step) override;
 
  private:

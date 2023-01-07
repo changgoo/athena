@@ -152,7 +152,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       }
     }
 
-//    std::cout << " nparmax: " << ppar->nparmax_ << " npar: " << ppar->npar_ << std::endl;
+//  std::cout << " nparmax: " << ppar->nparmax_ << " npar: " << ppar->npar_ << std::endl;
     // if (ppar->npar_>1) {
     //   ppar->OutputOneParticle(std::cout, 0, true);
     //   for (int ip=1; ip<ppar->npar_; ++ip)
