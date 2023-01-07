@@ -225,7 +225,7 @@ void Particles::Integrate(int stage) {
   ReactToMeshAux(t, dt, pmy_block->phydro->w);
 
   // Update the position index.
-  SetPositionIndices();
+  UpdatePositionIndices();
 }
 
 //--------------------------------------------------------------------------------------
@@ -482,11 +482,11 @@ bool Particles::CheckInMeshBlock(Real x1, Real x2, Real x3) {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void Particles::SetPositionIndices()
+//! \fn void Particles::UpdatePositionIndices()
 //! \brief updates position indices of particles.
 
-void Particles::SetPositionIndices() {
-  GetPositionIndices(npar_, xp_, yp_, zp_, xi1_, xi2_, xi3_);
+void Particles::UpdatePositionIndices() {
+  UpdatePositionIndices(npar_, xp_, yp_, zp_, xi1_, xi2_, xi3_);
 }
 
 //--------------------------------------------------------------------------------------
@@ -553,7 +553,7 @@ void Particles::EulerStep(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void Particles::GetPositionIndices(int npar,
+//! \fn void Particles::UpdatePositionIndices(int npar,
 //!                                        const AthenaArray<Real>& xp,
 //!                                        const AthenaArray<Real>& yp,
 //!                                        const AthenaArray<Real>& zp,
@@ -562,7 +562,7 @@ void Particles::EulerStep(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
 //!                                        AthenaArray<Real>& xi3)
 //! \brief finds the position indices of each particle with respect to the local grid.
 
-void Particles::GetPositionIndices(int npar,
+void Particles::UpdatePositionIndices(int npar,
                                    const AthenaArray<Real>& xp,
                                    const AthenaArray<Real>& yp,
                                    const AthenaArray<Real>& zp,
@@ -809,7 +809,7 @@ void Particles::PostInitialize(Mesh *pm, ParameterInput *pin) {
   // Set position indices.
   for (int b = 0; b < pm->nblocal; ++b)
     for (Particles *ppar : pm->my_blocks(b)->ppars)
-      ppar->SetPositionIndices();
+      ppar->UpdatePositionIndices();
 
   // Print particle csv
   for (int b = 0; b < pm->nblocal; ++b)

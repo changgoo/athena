@@ -128,7 +128,7 @@ void StarParticles::Integrate(int stage) {
 
     dt_old = dt; // save dt for the future use
     // Update the position index.
-    SetPositionIndices();
+    UpdatePositionIndices();
     break;
   case 2:
     // particle --> mesh

@@ -227,7 +227,7 @@ void Particles::SendToNeighbors() {
     // Check if a particle is outside the boundary.
     // (changgoo) not sure why indices have used instead of position
     // but must be equivalent
-    // since GetPositionIndices are called just before this function call
+    // since UpdatePositionIndices are called just before this function call
     int xi1i = static_cast<int>(xi1_(k)),
         xi2i = static_cast<int>(xi2_(k)),
         xi3i = static_cast<int>(xi3_(k));
@@ -551,7 +551,7 @@ void Particles::FlushReceiveBuffer(ParticleBuffer& recv) {
   xi1s.InitWithShallowSlice(xi1_, 1, npar_, nprecv);
   xi2s.InitWithShallowSlice(xi2_, 1, npar_, nprecv);
   xi3s.InitWithShallowSlice(xi3_, 1, npar_, nprecv);
-  GetPositionIndices(nprecv, xps, yps, zps, xi1s, xi2s, xi3s);
+  UpdatePositionIndices(nprecv, xps, yps, zps, xi1s, xi2s, xi3s);
 
   // Clear the receive buffers.
   npar_ += nprecv;

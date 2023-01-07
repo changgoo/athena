@@ -74,14 +74,18 @@ friend class ParticleMesh;
   virtual ~Particles();
 
   // Particle interface
-  // TODO(SMOON) Potentially better approach might be not overriding AddOneParticle at all
-  // In principle, the one who creates a particle will always know which particle they
-  // want to create. Therefore, it may be more natural to <dynamic_cast> Particle to a
-  // specific derived Particles and call the exact version; the idea is that, because
-  // we know which Particle the base pointer points to when creating a particle,
-  // the particle creation function does not have to be polymorphic.
   void RemoveOneParticle(int k);
   // TODO(SMOON) (template method pattern is appropriate here)
+  // Functions such as SourceTerms, EulerStep, BorisKick, ... needs to be
+  // inside the implementation of template function Integrate(). This needs some
+  // consistent name convention.
+  // for example, the interface looks like
+  // Integrate () {
+  //   Kick()
+  //   Drift()
+  //   Kick()
+  // }
+  // Where the actual implementation of Kick would be either EulerStep or BorisKick, etc.
   virtual void Integrate(int step);
   virtual Real NewBlockTimeStep();
   std::size_t GetSizeInBytes() const;
@@ -118,7 +122,6 @@ friend class ParticleMesh;
                              enum BoundaryStatus& bstatus);
 #endif
   void SendToNeighbors();
-  void SetPositionIndices(); // TODO(SMOON) Flatten this function and move to protected
   bool ReceiveFromNeighbors();
   void StartReceivingParticlesShear();
   void SendParticlesShear();
@@ -134,7 +137,6 @@ friend class ParticleMesh;
   // SMOON: maybe we need Mesh-level pure abstract interface class.
   static void AMRCoarseToFine(Particles *pparc, Particles *pparf, MeshBlock* pmbf);
   static void AMRFineToCoarse(Particles *pparc, Particles *pparf);
-  // TODO(SMOON) bad function name?
   static void ComputePMDensityAndCommunicate(Mesh *pm, bool include_momentum);
   static void Initialize(Mesh *pm, ParameterInput *pin);
   static void PostInitialize(Mesh *pm, ParameterInput *pin);
@@ -162,6 +164,9 @@ friend class ParticleMesh;
   void UpdateCapacity(int new_nparmax);  //!> Change the capacity of particle arrays
   bool CheckInMeshBlock(Real x1, Real x2, Real x3);
   void SaveStatus(); // x->x0, v->v0
+  // TODO(SMOON) this can be moved to private once Integrate is changed to
+  // template function.
+  void UpdatePositionIndices();
 
   // Data members
   // Shallow slices of the actual data container (intprop, realprop, auxprop, work)
@@ -202,16 +207,6 @@ friend class ParticleMesh;
 
   // Methods (implementation)
   // Need to be implemented in derived classes
-  // TODO(SMOON) Functions such as SourceTerms, EulerStep, BorisKick, ... needs to be
-  // inside the implementation of template function Integrate(). This needs some
-  // consistent name convention.
-  // for example, the interface looks like
-  // Integrate () {
-  //   Kick()
-  //   Drift()
-  //   Kick()
-  // }
-  // Where the actual implementation of Kick would be either EulerStep or BorisKick, etc.
   virtual void DoAssignShorthands()=0;
   virtual void SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc)=0;
   virtual void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc)=0;
@@ -223,13 +218,13 @@ friend class ParticleMesh;
   void ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3);
   void EulerStep(Real t, Real dt, const AthenaArray<Real>& meshsrc);
   void FlushReceiveBuffer(ParticleBuffer& recv);
-  void GetPositionIndices(int npar,
-                          const AthenaArray<Real>& xp,
-                          const AthenaArray<Real>& yp,
-                          const AthenaArray<Real>& zp,
-                          AthenaArray<Real>& xi1,
-                          AthenaArray<Real>& xi2,
-                          AthenaArray<Real>& xi3);
+  void UpdatePositionIndices(int npar,
+                             const AthenaArray<Real>& xp,
+                             const AthenaArray<Real>& yp,
+                             const AthenaArray<Real>& zp,
+                             AthenaArray<Real>& xi1,
+                             AthenaArray<Real>& xi2,
+                             AthenaArray<Real>& xi3);
   void SetNewParticleID(int id);
   struct Neighbor* FindTargetNeighbor(
       int ox1, int ox2, int ox3, int xi1, int xi2, int xi3);
