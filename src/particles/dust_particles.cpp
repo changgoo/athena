@@ -21,22 +21,26 @@
 //! \brief constructs a DustParticles instance.
 
 DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp)
-  : Particles(pmb, pin, pp), backreaction(false), dragforce(true), variable_taus(false),
-  iwx(-1), iwy(-1), iwz(-1), itaus(-1), taus0(0.0) {
+  : Particles(pmb, pin, pp),
+  backreaction{pin->GetOrAddBoolean(input_block_name, "backreaction", false)},
+  variable_taus{pin->GetOrAddBoolean(input_block_name, "variable_taus", false)},
+  iwx(-1), iwy(-1), iwz(-1), itaus(-1),
+  taus0{pin->GetOrAddReal(input_block_name, "taus0", 0.0)} {
   // Add working array at particles for gas velocity/particle momentum change.
   iwx = AddWorkingArray();
   iwy = AddWorkingArray();
   iwz = AddWorkingArray();
 
   // Define stopping time.
-  variable_taus = pin->GetOrAddBoolean(input_block_name, "variable_taus", variable_taus);
-  taus0 = pin->GetOrAddReal(input_block_name, "taus0", taus0);
   if (variable_taus) itaus = AddAuxProperty();
 
-  // Turn on/off back reaction.
-  dragforce = taus0 >= 0.0;
-  backreaction = pin->GetOrAddBoolean(input_block_name, "backreaction", false);
-  if (taus0 == 0.0) backreaction = false;
+  dragforce = (taus0 >= 0.0);
+  if ((taus0 == 0.0) && backreaction) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in function [DustParticles::DustParticles]" << std::endl
+        << "backreaction must be turned off when stopping time is zero" << std::endl;
+    ATHENA_ERROR(msg);
+  }
 
   // TODO(SMOON): It is user's responsibility to set isgravity_ through input file.
   // Temporarily commenting out the below line; this may be replaced by exception
@@ -224,6 +228,7 @@ void DustParticles::SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsr
   }
 
   if (SELF_GRAVITY_ENABLED && backreaction) {
+    // SMOON: Why backreaction matters here?
     // Add gravitational force from the Poisson solution.
     ppgrav->FindGravitationalForce(pmy_block->pgrav->phi);
     ppgrav->InterpolateGravitationalForce();
