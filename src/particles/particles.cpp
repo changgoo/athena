@@ -233,23 +233,12 @@ void Particles::Integrate(int stage) {
 //! \brief returns the time step required by particles in the block.
 
 Real Particles::NewBlockTimeStep() {
-  Coordinates *pc = pmy_block->pcoord;
-
-  // Find the maximum coordinate speed.
-  Real dt_inv2_max = 0.0;
-  for (int k = 0; k < npar_; ++k) {
-    Real dt_inv2 = 0.0, vpx1, vpx2, vpx3;
-    pc->CartesianToMeshCoordsVector(xp_(k), yp_(k), zp_(k), vpx_(k), vpy_(k), vpz_(k),
-                                    vpx1, vpx2, vpx3);
-    dt_inv2 += active1_ ? std::pow(vpx1 / pc->dx1f(static_cast<int>(xi1_(k))), 2) : 0;
-    dt_inv2 += active2_ ? std::pow(vpx2 / pc->dx2f(static_cast<int>(xi2_(k))), 2) : 0;
-    dt_inv2 += active3_ ? std::pow(vpx3 / pc->dx3f(static_cast<int>(xi3_(k))), 2) : 0;
-    dt_inv2_max = std::max(dt_inv2_max, dt_inv2);
-  }
-
-  // Return the time step constrained by the coordinate speed.
-  return dt_inv2_max > 0.0 ? cfl_par_ / std::sqrt(dt_inv2_max)
-                           : std::numeric_limits<Real>::max();
+  Real dt = std::numeric_limits<Real>::max();
+  dt = std::min(dt, CellCrossingTime());
+  dt = std::min(dt, OtherCharacteristicTime1());
+  dt = std::min(dt, OtherCharacteristicTime2());
+  dt = std::min(dt, OtherCharacteristicTime3());
+  return cfl_par_*dt;
 }
 
 //--------------------------------------------------------------------------------------
@@ -433,6 +422,37 @@ void Particles::ToggleParHstOutFlag() {
 }
 
 //--------------------------------------------------------------------------------------
+//! \fn void Particles::AssignShorthands()
+//! \brief assigns shorthands by shallow copying slices of the data.
+
+void Particles::AssignShorthands() {
+  pid_.InitWithShallowSlice(intprop, 2, ipid, 1);
+
+  mass_.InitWithShallowSlice(realprop, 2, imass, 1);
+
+  xp_.InitWithShallowSlice(realprop, 2, ixp, 1);
+  yp_.InitWithShallowSlice(realprop, 2, iyp, 1);
+  zp_.InitWithShallowSlice(realprop, 2, izp, 1);
+  vpx_.InitWithShallowSlice(realprop, 2, ivpx, 1);
+  vpy_.InitWithShallowSlice(realprop, 2, ivpy, 1);
+  vpz_.InitWithShallowSlice(realprop, 2, ivpz, 1);
+
+  xp0_.InitWithShallowSlice(auxprop, 2, ixp0, 1);
+  yp0_.InitWithShallowSlice(auxprop, 2, iyp0, 1);
+  zp0_.InitWithShallowSlice(auxprop, 2, izp0, 1);
+  vpx0_.InitWithShallowSlice(auxprop, 2, ivpx0, 1);
+  vpy0_.InitWithShallowSlice(auxprop, 2, ivpy0, 1);
+  vpz0_.InitWithShallowSlice(auxprop, 2, ivpz0, 1);
+
+  xi1_.InitWithShallowSlice(work, 2, ixi1, 1);
+  xi2_.InitWithShallowSlice(work, 2, ixi2, 1);
+  xi3_.InitWithShallowSlice(work, 2, ixi3, 1);
+
+  // Assign remaining shorthands for derived particles
+  DoAssignShorthands();
+}
+
+//--------------------------------------------------------------------------------------
 //! \fn void Particles::AllocateMemory()
 //! \brief memory allocation will be done at the end of derived class initialization
 void Particles::AllocateMemory() {
@@ -464,146 +484,6 @@ void Particles::AllocateMemory() {
 
   // Allocate working arrays.
   if (nwork > 0) work.NewAthenaArray(nwork,nparmax_);
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn void Particles::CheckInMeshBlock()
-//! \brief check whether given position is within the meshblock assuming Cartesian
-
-bool Particles::CheckInMeshBlock(Real x1, Real x2, Real x3) {
-  RegionSize& bsize = pmy_block->block_size;
-  if ((x1>=bsize.x1min) && (x1<bsize.x1max) &&
-      (x2>=bsize.x2min) && (x2<bsize.x2max) &&
-      (x3>=bsize.x3min) && (x3<bsize.x3max)) {
-    return true;
-  } else {
-    return false;
-  }
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn void Particles::UpdatePositionIndices()
-//! \brief updates position indices of particles.
-
-void Particles::UpdatePositionIndices() {
-  UpdatePositionIndices(npar_, xp_, yp_, zp_, xi1_, xi2_, xi3_);
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn void Particles::ProcessNewParticles()
-//! \brief searches for and books new particles.
-
-void Particles::ProcessNewParticles(Mesh *pmesh, int ipar) {
-  // Count new particles.
-  const int nbtotal(pmesh->nbtotal), nblocks(pmesh->nblocal);
-  std::vector<int> nnewpar(nbtotal, 0);
-  for (int b = 0; b < nblocks; ++b) {
-    const MeshBlock *pmb(pmesh->my_blocks(b));
-    nnewpar[pmb->gid] = pmb->ppars[ipar]->CountNewParticles();
-  }
-#ifdef MPI_PARALLEL
-  MPI_Allreduce(MPI_IN_PLACE, &nnewpar[0], nbtotal, MPI_INT, MPI_MAX, my_comm);
-#endif
-
-  // Make the counts cumulative.
-  for (int i = 1; i < nbtotal; ++i)
-    nnewpar[i] += nnewpar[i-1];
-
-  // Set particle IDs.
-  for (int b = 0; b < nblocks; ++b) {
-    const MeshBlock *pmb(pmesh->my_blocks(b));
-    int newid_start = idmax[ipar] + (pmb->gid > 0 ? nnewpar[pmb->gid - 1] : 0);
-    pmb->ppars[ipar]->SetNewParticleID(newid_start);
-  }
-  idmax[ipar] += nnewpar[nbtotal - 1];
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn int Particles::CountNewParticles()
-//! \brief counts new particles in the block.
-
-int Particles::CountNewParticles() const {
-  int n = 0;
-  for (int i = 0; i < npar_; ++i)
-    if (pid_(i) <= 0) ++n;
-  return n;
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn void Particles::EulerStep(Real t, Real dt, const AthenaArray<Real>& meshsrc)
-//! \brief evolves the particle positions and velocities by one Euler step.
-
-void Particles::EulerStep(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
-  // Update positions.
-  for (int k = 0; k < npar_; ++k) {
-    //! \todo (ccyang):
-    //! - This is a temporary hack.
-    Real tmpx = xp_(k), tmpy = yp_(k), tmpz = zp_(k);
-    xp_(k) = xp0_(k) + dt * vpx_(k);
-    yp_(k) = yp0_(k) + dt * vpy_(k);
-    zp_(k) = zp0_(k) + dt * vpz_(k);
-    xp0_(k) = tmpx;
-    yp0_(k) = tmpy;
-    zp0_(k) = tmpz;
-  }
-
-  // Integrate the source terms (e.g., acceleration).
-  SourceTerms(t, dt, meshsrc);
-  UserSourceTerms(t, dt, meshsrc);
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn void Particles::UpdatePositionIndices(int npar,
-//!                                        const AthenaArray<Real>& xp,
-//!                                        const AthenaArray<Real>& yp,
-//!                                        const AthenaArray<Real>& zp,
-//!                                        AthenaArray<Real>& xi1,
-//!                                        AthenaArray<Real>& xi2,
-//!                                        AthenaArray<Real>& xi3)
-//! \brief finds the position indices of each particle with respect to the local grid.
-
-void Particles::UpdatePositionIndices(int npar,
-                                   const AthenaArray<Real>& xp,
-                                   const AthenaArray<Real>& yp,
-                                   const AthenaArray<Real>& zp,
-                                   AthenaArray<Real>& xi1,
-                                   AthenaArray<Real>& xi2,
-                                   AthenaArray<Real>& xi3) {
-  for (int k = 0; k < npar; ++k) {
-    // Convert to the Mesh coordinates.
-    Real x1, x2, x3;
-    pmy_block->pcoord->CartesianToMeshCoords(xp(k), yp(k), zp(k), x1, x2, x3);
-
-    // Convert to the index space.
-    pmy_block->pcoord->MeshCoordsToIndices(x1, x2, x3, xi1(k), xi2(k), xi3(k));
-  }
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn void Particles::SetNewParticleID(int id0)
-//! \brief searches for new particles and assigns ID, beginning at id + 1.
-
-void Particles::SetNewParticleID(int id) {
-  for (int i = 0; i < npar_; ++i)
-    if (pid_(i) <= 0) pid_(i) = ++id;
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn void Particles::SaveStatus()
-//! \brief saves the current positions and velocities for later use.
-
-void Particles::SaveStatus() {
-  for (int k = 0; k < npar_; ++k) {
-    // Save current positions.
-    xp0_(k) = xp_(k);
-    yp0_(k) = yp_(k);
-    zp0_(k) = zp_(k);
-
-    // Save current velocities.
-    vpx0_(k) = vpx_(k);
-    vpy0_(k) = vpy_(k);
-    vpz0_(k) = vpz_(k);
-  }
 }
 
 //--------------------------------------------------------------------------------------
@@ -639,37 +519,6 @@ int Particles::AddWorkingArray() {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void Particles::AssignShorthands()
-//! \brief assigns shorthands by shallow copying slices of the data.
-
-void Particles::AssignShorthands() {
-  pid_.InitWithShallowSlice(intprop, 2, ipid, 1);
-
-  mass_.InitWithShallowSlice(realprop, 2, imass, 1);
-
-  xp_.InitWithShallowSlice(realprop, 2, ixp, 1);
-  yp_.InitWithShallowSlice(realprop, 2, iyp, 1);
-  zp_.InitWithShallowSlice(realprop, 2, izp, 1);
-  vpx_.InitWithShallowSlice(realprop, 2, ivpx, 1);
-  vpy_.InitWithShallowSlice(realprop, 2, ivpy, 1);
-  vpz_.InitWithShallowSlice(realprop, 2, ivpz, 1);
-
-  xp0_.InitWithShallowSlice(auxprop, 2, ixp0, 1);
-  yp0_.InitWithShallowSlice(auxprop, 2, iyp0, 1);
-  zp0_.InitWithShallowSlice(auxprop, 2, izp0, 1);
-  vpx0_.InitWithShallowSlice(auxprop, 2, ivpx0, 1);
-  vpy0_.InitWithShallowSlice(auxprop, 2, ivpy0, 1);
-  vpz0_.InitWithShallowSlice(auxprop, 2, ivpz0, 1);
-
-  xi1_.InitWithShallowSlice(work, 2, ixi1, 1);
-  xi2_.InitWithShallowSlice(work, 2, ixi2, 1);
-  xi3_.InitWithShallowSlice(work, 2, ixi3, 1);
-
-  // Assign remaining shorthands for derived particles
-  DoAssignShorthands();
-}
-
-//--------------------------------------------------------------------------------------
 //! \fn void Particles::UpdateCapacity(int new_nparmax)
 //! \brief changes the capacity of particle arrays while preserving existing data.
 
@@ -693,6 +542,142 @@ void Particles::UpdateCapacity(int new_nparmax) {
 
   // Reassign the shorthands.
   AssignShorthands();
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void Particles::CheckInMeshBlock()
+//! \brief check whether given position is within the meshblock assuming Cartesian
+
+bool Particles::CheckInMeshBlock(Real x1, Real x2, Real x3) {
+  RegionSize& bsize = pmy_block->block_size;
+  if ((x1>=bsize.x1min) && (x1<bsize.x1max) &&
+      (x2>=bsize.x2min) && (x2<bsize.x2max) &&
+      (x3>=bsize.x3min) && (x3<bsize.x3max)) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void Particles::SaveStatus()
+//! \brief saves the current positions and velocities for later use.
+
+void Particles::SaveStatus() {
+  for (int k = 0; k < npar_; ++k) {
+    // Save current positions.
+    xp0_(k) = xp_(k);
+    yp0_(k) = yp_(k);
+    zp0_(k) = zp_(k);
+
+    // Save current velocities.
+    vpx0_(k) = vpx_(k);
+    vpy0_(k) = vpy_(k);
+    vpz0_(k) = vpz_(k);
+  }
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void Particles::UpdatePositionIndices()
+//! \brief updates position indices of particles.
+
+void Particles::UpdatePositionIndices() {
+  UpdatePositionIndices(npar_, xp_, yp_, zp_, xi1_, xi2_, xi3_);
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void Particles::UpdatePositionIndices(int npar,
+//!                                        const AthenaArray<Real>& xp,
+//!                                        const AthenaArray<Real>& yp,
+//!                                        const AthenaArray<Real>& zp,
+//!                                        AthenaArray<Real>& xi1,
+//!                                        AthenaArray<Real>& xi2,
+//!                                        AthenaArray<Real>& xi3)
+//! \brief finds the position indices of each particle with respect to the local grid.
+
+void Particles::UpdatePositionIndices(int npar,
+                                   const AthenaArray<Real>& xp,
+                                   const AthenaArray<Real>& yp,
+                                   const AthenaArray<Real>& zp,
+                                   AthenaArray<Real>& xi1,
+                                   AthenaArray<Real>& xi2,
+                                   AthenaArray<Real>& xi3) {
+  for (int k = 0; k < npar; ++k) {
+    // Convert to the Mesh coordinates.
+    Real x1, x2, x3;
+    pmy_block->pcoord->CartesianToMeshCoords(xp(k), yp(k), zp(k), x1, x2, x3);
+
+    // Convert to the index space.
+    pmy_block->pcoord->MeshCoordsToIndices(x1, x2, x3, xi1(k), xi2(k), xi3(k));
+  }
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn int Particles::CountNewParticles()
+//! \brief counts new particles in the block.
+
+int Particles::CountNewParticles() const {
+  int n = 0;
+  for (int i = 0; i < npar_; ++i)
+    if (pid_(i) <= 0) ++n;
+  return n;
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void Particles::SetNewParticleID(int id0)
+//! \brief searches for new particles and assigns ID, beginning at id + 1.
+
+void Particles::SetNewParticleID(int id) {
+  for (int i = 0; i < npar_; ++i)
+    if (pid_(i) <= 0) pid_(i) = ++id;
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn Real Particles::CellCrossingTime();
+//! \brief returns the minimum cell-crossing time of all particles
+
+Real Particles::CellCrossingTime() {
+  Coordinates *pc = pmy_block->pcoord;
+
+  // Find the maximum coordinate speed.
+  Real dt_inv2_max = 0.0;
+  for (int k = 0; k < npar_; ++k) {
+    Real dt_inv2 = 0.0, vpx1, vpx2, vpx3;
+    pc->CartesianToMeshCoordsVector(xp_(k), yp_(k), zp_(k), vpx_(k), vpy_(k), vpz_(k),
+                                    vpx1, vpx2, vpx3);
+    dt_inv2 += active1_ ? std::pow(vpx1 / pc->dx1f(static_cast<int>(xi1_(k))), 2) : 0;
+    dt_inv2 += active2_ ? std::pow(vpx2 / pc->dx2f(static_cast<int>(xi2_(k))), 2) : 0;
+    dt_inv2 += active3_ ? std::pow(vpx3 / pc->dx3f(static_cast<int>(xi3_(k))), 2) : 0;
+    dt_inv2_max = std::max(dt_inv2_max, dt_inv2);
+  }
+
+  // Return the time step constrained by the coordinate speed.
+  Real dt = dt_inv2_max > 0.0 ? 1.0 / std::sqrt(dt_inv2_max)
+                              : std::numeric_limits<Real>::max();
+  return dt;
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void Particles::EulerStep(Real t, Real dt, const AthenaArray<Real>& meshsrc)
+//! \brief evolves the particle positions and velocities by one Euler step.
+
+void Particles::EulerStep(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
+  // Update positions.
+  for (int k = 0; k < npar_; ++k) {
+    //! \todo (ccyang):
+    //! - This is a temporary hack.
+    Real tmpx = xp_(k), tmpy = yp_(k), tmpz = zp_(k);
+    xp_(k) = xp0_(k) + dt * vpx_(k);
+    yp_(k) = yp0_(k) + dt * vpy_(k);
+    zp_(k) = zp0_(k) + dt * vpz_(k);
+    xp0_(k) = tmpx;
+    yp0_(k) = tmpy;
+    zp0_(k) = tmpz;
+  }
+
+  // Integrate the source terms (e.g., acceleration).
+  SourceTerms(t, dt, meshsrc);
+  UserSourceTerms(t, dt, meshsrc);
 }
 
 //--------------------------------------------------------------------------------------
@@ -909,3 +894,31 @@ std::int64_t Particles::GetTotalNumber(Mesh *pm) {
   return npartot;
 }
 
+//--------------------------------------------------------------------------------------
+//! \fn void Particles::ProcessNewParticles()
+//! \brief searches for and books new particles.
+
+void Particles::ProcessNewParticles(Mesh *pmesh, int ipar) {
+  // Count new particles.
+  const int nbtotal(pmesh->nbtotal), nblocks(pmesh->nblocal);
+  std::vector<int> nnewpar(nbtotal, 0);
+  for (int b = 0; b < nblocks; ++b) {
+    const MeshBlock *pmb(pmesh->my_blocks(b));
+    nnewpar[pmb->gid] = pmb->ppars[ipar]->CountNewParticles();
+  }
+#ifdef MPI_PARALLEL
+  MPI_Allreduce(MPI_IN_PLACE, &nnewpar[0], nbtotal, MPI_INT, MPI_MAX, my_comm);
+#endif
+
+  // Make the counts cumulative.
+  for (int i = 1; i < nbtotal; ++i)
+    nnewpar[i] += nnewpar[i-1];
+
+  // Set particle IDs.
+  for (int b = 0; b < nblocks; ++b) {
+    const MeshBlock *pmb(pmesh->my_blocks(b));
+    int newid_start = idmax[ipar] + (pmb->gid > 0 ? nnewpar[pmb->gid - 1] : 0);
+    pmb->ppars[ipar]->SetNewParticleID(newid_start);
+  }
+  idmax[ipar] += nnewpar[nbtotal - 1];
+}

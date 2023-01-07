@@ -107,15 +107,13 @@ void DustParticles::AddOneParticle(Real mp, Real x1, Real x2, Real x3,
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn Real DustParticles::NewBlockTimeStep();
-//! \brief returns the time step required by particles in the block.
+//! \fn Real DustParticles::OtherCharacteristicTime1();
+//! \brief returns the drag timescale.
 
-Real DustParticles::NewBlockTimeStep() {
-  // Run first the parent class.
-  Real dt = Particles::NewBlockTimeStep();
-
-  // Nothing to do for tracer particles.
-  if (taus0 <= 0.0) return dt;
+Real DustParticles::OtherCharacteristicTime1() {
+  // No further constraints for infinitely tight coupling (zero stopping time), which is
+  // equivalent to a tracer particle
+  if (taus0 <= 0.0) return std::numeric_limits<Real>::max();
 
   Real epsmax = 0;
   if (backreaction) {
@@ -129,15 +127,15 @@ Real DustParticles::NewBlockTimeStep() {
       for (int j = js; j <= je; ++j) {
         for (int i = is; i <= ie; ++i) {
           // TODO(SMOON) Is FindLocalDensity called before NewBlockTimeStep?
+          // can we enforce this precondition using the variable "updated"?
           Real epsilon = rhop(k,j,i) / phydro->u(IDN,k,j,i);
           epsmax = std::max(epsmax, epsilon);
         }
       }
     }
   }
-
-  // Return the drag timescale.
-  return std::min(dt, static_cast<Real>(cfl_par_ * taus0 / (1.0 + epsmax)));
+  Real dt = taus0 / (1.0 + epsmax);
+  return dt;
 }
 
 //--------------------------------------------------------------------------------------

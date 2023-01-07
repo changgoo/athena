@@ -87,7 +87,7 @@ friend class ParticleMesh;
   // }
   // Where the actual implementation of Kick would be either EulerStep or BorisKick, etc.
   virtual void Integrate(int step);
-  virtual Real NewBlockTimeStep();
+  Real NewBlockTimeStep();
   std::size_t GetSizeInBytes() const;
   bool IsGravity() const { return isgravity_; }
   int GetNumPar() const { return npar_; }
@@ -110,7 +110,7 @@ friend class ParticleMesh;
   // TODO(SMOON) may not be needed; why not just make it default?
   void ToggleParHstOutFlag();
 
-  // Boundary communication interface
+  // Boundary communication interface (defined in particles_bvals.cpp)
   void ClearBoundary();
   void ClearNeighbors();
   void LinkNeighbors(MeshBlockTree &tree, int64_t nrbx1, int64_t nrbx2, int64_t nrbx3,
@@ -163,9 +163,9 @@ friend class ParticleMesh;
   int AddWorkingArray();
   void UpdateCapacity(int new_nparmax);  //!> Change the capacity of particle arrays
   bool CheckInMeshBlock(Real x1, Real x2, Real x3);
+  // TODO(SMOON) these two functions  can be moved to private once Integrate follows
+  // template design pattern.
   void SaveStatus(); // x->x0, v->v0
-  // TODO(SMOON) this can be moved to private once Integrate is changed to
-  // template function.
   void UpdatePositionIndices();
 
   // Data members
@@ -202,9 +202,6 @@ friend class ParticleMesh;
   AthenaArray<Real> realprop, auxprop, work;
 
  private:
-  // Class method
-  static void ProcessNewParticles(Mesh *pmesh, int ipar);
-
   // Methods (implementation)
   // Need to be implemented in derived classes
   virtual void DoAssignShorthands()=0;
@@ -213,11 +210,6 @@ friend class ParticleMesh;
   virtual void ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc)=0;
   virtual void DepositToMesh(Real t, Real dt, const AthenaArray<Real>& meshsrc,
                              AthenaArray<Real>& meshdst) {};
-
-  int CountNewParticles() const;
-  void ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3);
-  void EulerStep(Real t, Real dt, const AthenaArray<Real>& meshsrc);
-  void FlushReceiveBuffer(ParticleBuffer& recv);
   void UpdatePositionIndices(int npar,
                              const AthenaArray<Real>& xp,
                              const AthenaArray<Real>& yp,
@@ -225,11 +217,27 @@ friend class ParticleMesh;
                              AthenaArray<Real>& xi1,
                              AthenaArray<Real>& xi2,
                              AthenaArray<Real>& xi3);
+  int CountNewParticles() const;
   void SetNewParticleID(int id);
+  Real CellCrossingTime();
+  // hooks for further timestep constraints for derived particles
+  virtual Real OtherCharacteristicTime1() { return std::numeric_limits<Real>::max(); };
+  virtual Real OtherCharacteristicTime2() { return std::numeric_limits<Real>::max(); };
+  virtual Real OtherCharacteristicTime3() { return std::numeric_limits<Real>::max(); };
+  void EulerStep(Real t, Real dt, const AthenaArray<Real>& meshsrc);
+
+  // Input/Output
+  void OutputOneParticle(std::ostream &os, int k, bool header);
+
+  // boundary conditions (implemented in particles_bvals.cpp)
+  void ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3);
+  void FlushReceiveBuffer(ParticleBuffer& recv);
   struct Neighbor* FindTargetNeighbor(
       int ox1, int ox2, int ox3, int xi1, int xi2, int xi3);
   void ApplyBoundaryConditionsShear(int k, Real &x1, Real &x2, Real &x3);
-  void OutputOneParticle(std::ostream &os, int k, bool header);
+
+  // Private static function (called in static interfaces)
+  static void ProcessNewParticles(Mesh *pmesh, int ipar);
 
   // Class variable
   static std::vector<int> idmax;
@@ -237,7 +245,6 @@ friend class ParticleMesh;
   static ParameterInput *pinput;
 
   // Data members
-
   int nint;          //!> numbers of integer particle properties
   int nreal;         //!> numbers of real particle properties
   int naux;          //!> number of auxiliary particle properties
@@ -297,7 +304,6 @@ class DustParticles : public Particles {
   bool GetDragForce() const { return dragforce; }
   bool IsVariableTaus() const { return variable_taus; }
   Real GetStoppingTime() const { return taus0; }
-  Real NewBlockTimeStep() override;
 
  private:
   // Methods (implementation)
@@ -308,6 +314,7 @@ class DustParticles : public Particles {
   void DepositToMesh(Real t, Real dt, const AthenaArray<Real>& meshsrc,
                      AthenaArray<Real>& meshdst) override;
   void UserStoppingTime(Real t, Real dt, const AthenaArray<Real>& meshsrc);
+  Real OtherCharacteristicTime1() override;
 
   // Data members
   bool backreaction;   //!> turn on/off back reaction
