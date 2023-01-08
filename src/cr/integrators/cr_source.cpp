@@ -85,7 +85,7 @@ void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Rea
         Real vtot3 = v3;
 
         //This can be turned on for post-processing
-        /* Real kin_en = 1e20;
+        Real kin_en = 1e20;
         if(pcr->src_flag == 0) {
           kin_en = rho*(std::pow(v1,2)+std::pow(v2,2)+std::pow(v3,2));
           if (ec[i]>kin_en || ec[i]<0) {
@@ -93,7 +93,7 @@ void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Rea
             vtot2 = 0;
             vtot3 = 0;
           }
-        }*/
+        }
 
         // add the streaming velocity
         if(pcr->stream_flag) {
@@ -186,8 +186,9 @@ void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Rea
           InvRotateVec(sint_b[i],cost_b[i],sinp_b[i],cosp_b[i],
                                          newfr1,newfr2,newfr3);
           //This can be turned on for post-processing
-          //if (pcr->src_flag == 0 && ec[i]<=kin_en && ec[i]>0)
-          new_ec += dt * ec_source_(k,j,i);
+          if ((pcr->src_flag == 0 && ec[i]<=kin_en && ec[i]>0)||
+              (pcr->src_flag>0))
+            new_ec += dt * ec_source_(k,j,i);
         }
 
         if(new_ec < 0.0)
