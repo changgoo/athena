@@ -273,7 +273,6 @@ CosmicRay::CosmicRay(MeshBlock *pmb, ParameterInput *pin):
 
 CosmicRay::~CosmicRay() {
   delete pcrintegrator;
-  delete punit;
 }
 
 //Enrol the function to update opacity
