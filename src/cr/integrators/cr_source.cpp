@@ -194,6 +194,17 @@ void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Rea
         if(new_ec < 0.0)
           new_ec = ec[i];
 
+        if (pcr->losses_flag>0) {
+          new_ec -= pcr->lambdac * new_ec * rho * dt;
+          //c_in_code can be used fro relativistic CRs only -> to be changed
+          newfr1 -= pcr->lambdac * newfr1 * rho * dt
+            * std::pow(vlim/pcr->punit->c_in_code,2);
+          newfr2 -= pcr->lambdac * newfr2 * rho * dt
+            * std::pow(vlim/pcr->punit->c_in_code,2);
+          newfr3 -= pcr->lambdac * newfr3 * rho * dt
+            * std::pow(vlim/pcr->punit->c_in_code,2);
+        }
+
         // Add the energy source term
         if (NON_BAROTROPIC_EOS && (pcr->src_flag > 0)) {
           Real new_eg = u(IEN,k,j,i) - (new_ec - ec[i]);
@@ -205,13 +216,6 @@ void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Rea
           u(IM1,k,j,i) += (-(newfr1 - fc1[i]) * invlim);
           u(IM2,k,j,i) += (-(newfr2 - fc2[i]) * invlim);
           u(IM3,k,j,i) += (-(newfr3 - fc3[i]) * invlim);
-        }
-
-        if (pcr->losses_flag>0) {
-          new_ec -= pcr->lambdac * new_ec * rho * dt;
-          newfr1 -= pcr->lambdac * newfr1 * rho * dt;
-          newfr2 -= pcr->lambdac * newfr2 * rho * dt;
-          newfr3 -= pcr->lambdac * newfr3 * rho * dt;
         }
 
         u_cr(CRE,k,j,i) = new_ec;
