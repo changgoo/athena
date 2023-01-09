@@ -106,8 +106,8 @@ void CoolingSolver::CoolingSourceTerm(MeshBlock *pmb, const Real t, const Real d
         Real press_before = std::max(press,press_floor);
 
         // solve cooling
-        // Real press_after = pcool->Solver(press_before,rho,dt);
-        Real press_after = pcool->CoolingExplicitSubcycling(dt,press_before,rho);
+        Real press_after = pcool->Solver(press_before,rho,dt);
+        // Real press_after = pcool->CoolingExplicitSubcycling(dt,press_before,rho);
         delta_press = press_after-press_before; // save difference due to cooling
 
         // apply floor after solving the cooling
