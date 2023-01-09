@@ -61,8 +61,11 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     std::string cooling_type = pin->GetString("cooling", "cooling");
     if (cooling_type.compare("enroll") == 0) {
       EnrollUserExplicitSourceFunction(&CoolingSolver::CoolingSourceTerm);
-      if (Globals::my_rank == 0)
+      // Enroll timestep so that dt <= cfl_cool * min(t_cool)
+      EnrollUserTimeStepFunction(&CoolingSolver::CoolingTimeStep);
+      if (Globals::my_rank == 0) {
         std::cout << "Cooling solver is enrolled" << std::endl;
+      }
     } else if (cooling_type.compare("op_split") == 0) {
       if (Globals::my_rank == 0)
         std::cout << "Cooling solver is set to operator split" << std::endl;
@@ -73,9 +76,6 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
         << "Cooling must be turned on" << std::endl;
     ATHENA_ERROR(msg);
   }
-
-  // Enroll timestep so that dt <= min t_cool
-  EnrollUserTimeStepFunction(&CoolingSolver::CoolingTimeStep);
 
   // SN related parameters
   t_SN = pin->GetOrAddReal("problem","t_SN",0.0); // when to explode SN
