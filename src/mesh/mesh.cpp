@@ -42,6 +42,8 @@
 #include "../gravity/mg_gravity.hpp"
 #include "../hydro/hydro.hpp"
 #include "../hydro/hydro_diffusion/hydro_diffusion.hpp"
+#include "../microphysics/cooling.hpp"
+#include "../microphysics/units.hpp"
 #include "../multigrid/multigrid.hpp"
 #include "../orbital_advection/orbital_advection.hpp"
 #include "../outputs/io_wrapper.hpp"
@@ -323,6 +325,13 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
     }
   } else {
     max_level = 63;
+  }
+
+  // if cooling is turned on
+  // initialize cooling function and units here
+  if (cooling) {
+    pcf = InitializeCoolingFunction(pin);
+    punit = pcf->punit;
   }
 
   // Initialize Particles class.
@@ -740,6 +749,13 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     }
   } else {
     max_level = 63;
+  }
+
+  // if cooling is turned on
+  // initialize cooling function and units here
+  if (cooling) {
+    pcf = InitializeCoolingFunction(pin);
+    punit = pcf->punit;
   }
 
   // Initialize Particles class.

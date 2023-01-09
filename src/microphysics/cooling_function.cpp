@@ -10,13 +10,45 @@
 
 // C++ headers
 #include <fstream>    // ofstream
+#include <iostream>   // cout, endl
+#include <sstream>    // stringstream
 
 // Athena++ headers
 #include "../athena.hpp"
 #include "../athena_arrays.hpp"
+#include "../globals.hpp"
 #include "../parameter_input.hpp"          // ParameterInput
 #include "cooling.hpp"
 #include "units.hpp"
+
+//========================================================================================
+//! \fn InitializeCoolingFunction(ParameterInput)
+//! \brief ctor of the base class for cooling function
+//! \note Read parameters from "cooling" block in the input file
+//========================================================================================
+CoolingFunctionBase* InitializeCoolingFunction(ParameterInput *pin) {
+  CoolingFunctionBase *pcf;
+  std::string coolftn = pin->GetOrAddString("cooling", "coolftn", "tigress");
+  if (coolftn.compare("tigress") == 0) {
+    pcf = new TigressClassic(pin);
+    if (Globals::my_rank == 0)
+      std::cout << "[InitializeCoolingFunction] Cooling function is set to TigressClassic"
+                << std::endl;
+  } else if (coolftn.compare("plf") == 0) {
+    pcf = new PiecewiseLinearFits(pin);
+    if (Globals::my_rank == 0)
+      std::cout << "[InitializeCoolingFunction]"
+                << " Cooling function is set to PiecewiseLinearFits"
+                << std::endl;
+  } else {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in CoolingSolver" << std::endl
+        << "coolftn = " << coolftn.c_str() << " is not supported" << std::endl;
+    ATHENA_ERROR(msg);
+  }
+  pcf->punit->PrintCodeUnits();
+  return pcf;
+}
 
 //========================================================================================
 //! \fn CoolingFunctionBase::CoolingFunctionBase(ParameterInput *pin)
@@ -120,9 +152,10 @@ void CoolingFunctionBase::PrintCoolingFunction() {
 //========================================================================================
 PiecewiseLinearFits::PiecewiseLinearFits(ParameterInput *pin) :
   CoolingFunctionBase(pin),
+  coolftn_name("plf"),
   T_PE(pin->GetReal("cooling", "T_PE")), // temperature below which PE heating is applied
   Gamma0(pin->GetReal("cooling", "Gamma")), // heating rate in ergs / sec
-  coolftn_name("plf"), mu(0.62), muH(1.4) {
+  mu(0.62), muH(1.4) {
   Initialize(mu,muH);
 }
 
