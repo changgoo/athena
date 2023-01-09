@@ -82,7 +82,7 @@ void CoolingSolver::CoolingSourceTerm(MeshBlock *pmb, const Real t, const Real d
   // (Eqs 13 and 14 in Stone et al. 2020).
   // For vl2, the bookkeeping in stage1 is reset to zero in StartupTaskList,
   // so it is okay to set (erroneously) \gamma_1 = {1,1}.
-  Real factor;
+  Real factor = 1.0;
   if (bookkeeping) {
     if (pmb->pmy_mesh->time_integrator == "vl2") {
       factor = 1.0;
@@ -122,7 +122,6 @@ void CoolingSolver::CoolingSourceTerm(MeshBlock *pmb, const Real t, const Real d
           pcool->edot(k,j,i) += factor*delta_press*igm1_idt;
           pcool->edot_floor(k,j,i) += factor*delta_press_floor*igm1_idt;
         }
-
       }
     }
   }
@@ -131,24 +130,28 @@ void CoolingSolver::CoolingSourceTerm(MeshBlock *pmb, const Real t, const Real d
 }
 
 //========================================================================================
-//! \fn CoolingSolver::CoolingSolver(MeshBlock *pmb, ParameterInput *pin)
+//! \fn CoolingSolver::CoolingSolver(MeshBlock *pmb, ParameterInput *pin,
+//!                                  CoolingFunctionBase *pcf_)
 //! \brief ctor of the base class for cooling solver
 //! \note Read parameters from "cooling" block in the input file
 //========================================================================================
-CoolingSolver::CoolingSolver(MeshBlock *pmb, ParameterInput *pin) :
+CoolingSolver::CoolingSolver(MeshBlock *pmb, ParameterInput *pin,
+                             CoolingFunctionBase *pcf_) :
+  pcf(pcf_), punit(pcf->punit),
   cfl_cool(pin->GetReal("cooling", "cfl_cool")),
   cfl_cool_sub(pin->GetOrAddReal("cooling","cfl_cool_sub",0.1)),
   op_flag(false), bookkeeping(false),
-  coolftn(pin->GetOrAddString("cooling", "coolftn", "tigress")),
   cooling(pin->GetOrAddString("cooling", "cooling", "none")),
   solver(pin->GetOrAddString("cooling", "solver", "forward_euler")),
   uov_idx_(-1), nsub_max_(pin->GetOrAddInteger("cooling","nsub_max",-1)) {
+  if (nsub_max_ == -1) {
+    nsub_max_ = static_cast<int>(CoolingSolver::cfl_cool/CoolingSolver::cfl_cool_sub);
+    nsub_max_ *= 10;
+    if (Globals::my_rank == 0)
+      std::cout << "[CoolingSolver] nsub_max_ is set to " << nsub_max_ << std::endl;
+  }
   if (cooling.compare("op_split") == 0) {
     op_flag = true;
-    if (nsub_max_ == -1) {
-      nsub_max_ = static_cast<int>(CoolingSolver::cfl_cool/CoolingSolver::cfl_cool_sub)*10;
-      std::cout << "[CoolingSolver] nsub_max_ is set to " << nsub_max_ << std::endl;
-    }
     // error if op cooling solver is used but cfl_cool_sub > 1
     if (cfl_cool_sub > 1) {
       std::stringstream msg;
@@ -172,25 +175,6 @@ CoolingSolver::CoolingSolver(MeshBlock *pmb, ParameterInput *pin) :
         << cooling << " is given" << std::endl;
     ATHENA_ERROR(msg);
   }
-
-  if (coolftn.compare("tigress") == 0) {
-    pcf = new TigressClassic(pin);
-    if (Globals::my_rank == 0)
-      std::cout << "[CoolingSolver] Cooling function is set to TigressClassic"
-                << std::endl;
-  } else if (coolftn.compare("plf") == 0) {
-    pcf = new PiecewiseLinearFits(pin);
-    if (Globals::my_rank == 0)
-      std::cout << "[CoolingSolver] Cooling function is set to PiecewiseLinearFits"
-                << std::endl;
-  } else {
-    std::stringstream msg;
-    msg << "### FATAL ERROR in CoolingSolver" << std::endl
-        << "coolftn = " << coolftn.c_str() << " is not supported" << std::endl;
-    ATHENA_ERROR(msg);
-  }
-
-  punit = pcf->punit;
 
   // set function pointer
   if (solver.compare("forward_euler") == 0) {
@@ -289,7 +273,7 @@ void CoolingSolver::OperatorSplitSolver(MeshBlock *pmb) {
 //========================================================================================
 Real CoolingSolver::CoolingExplicitSubcycling(Real tend, Real press, const Real rho) {
   Real tnow = 0., tleft = tend;
-  Real dt_net, dt_sub;
+  Real dt_net = tend, dt_sub;
   int icount = 0;
   while ((icount<nsub_max_) && (tnow<tend)) {
     dt_net = std::abs(pcf->CoolingTime(rho, press))*cfl_cool_sub;

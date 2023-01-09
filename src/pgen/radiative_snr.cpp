@@ -201,7 +201,6 @@ void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
                 << " --> next SN will be at " << t_SN << std::endl;
   }
 
-  CoolingFunctionBase *pcf = my_blocks(0)->pcool->pcf;
   // Add density perturbation
   Real nH_0 = pin->GetReal("problem", "nH_0"); // measured in m_p muH cm^-3
   Real rho_0 = nH_0*pcf->nH_to_code_den;

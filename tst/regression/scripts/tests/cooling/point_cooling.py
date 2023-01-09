@@ -60,14 +60,14 @@ def run(**kwargs):
     arguments = arguments_def + \
         ['cooling/cooling=enroll',
          'cooling/cfl_cool=0.01',
-         'cooling/cfl_op_cool=-1',
+         'cooling/cfl_cool_sub=0.01',
          'job/problem_id=cooling1']
     athena.run('cooling/athinput.point_cooling_test', arguments)
 
     arguments = arguments_def + \
         ['cooling/cooling=op_split',
-         'cooling/cfl_cool=0.1',
-         'cooling/cfl_op_cool=0.001',
+         'cooling/cfl_cool=1',
+         'cooling/cfl_cool_sub=0.01',
          'job/problem_id=cooling2']
     athena.run('cooling/athinput.point_cooling_test', arguments)
     # No return statement/value is ever required from run(), but returning anything other

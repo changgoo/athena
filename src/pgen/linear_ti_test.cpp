@@ -56,9 +56,9 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
     std::string cooling_type = pin->GetString("cooling", "cooling");
     if (cooling_type.compare("enroll") == 0) {
       EnrollUserExplicitSourceFunction(&CoolingSolver::CoolingSourceTerm);
-      std::cout << "Cooling solver is enrolled" << std::endl;
+      std::cout << "[Problem] Cooling solver is enrolled" << std::endl;
     } else if (cooling_type.compare("op_split") == 0) {
-      std::cout << "Cooling solver is set to operator split" << std::endl;
+      std::cout << "[Problem] Cooling solver is set to operator split" << std::endl;
     }
   } else {
     std::stringstream msg;
@@ -99,7 +99,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   // the relative amplitude of the initial density perturbation
   Real alpha = pin->GetReal("problem", "alpha");
   // the wavenumber of the perturbation
-  int kn = pin->GetInteger("problem","kn");
+  int kn = pin->GetInteger("problem", "kn");
   // background mean density
   Real nH_0   = pin->GetReal("problem", "nH_0"); // measured in m_p muH cm^-3
   // the gas pressure is then set by requiring that the gas be in thermal
@@ -109,7 +109,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real tol = 1e-12;
   // set the initial pgas at the approximate extremes
   CoolingFunctionBase *pcf = pcool->pcf;
-  Real pgas_low = pcf->Get_Tfloor()*nH_0*pcf->pok_to_code_press;
+  Real pgas_low = 2*pcf->Get_Tfloor()*nH_0*pcf->pok_to_code_press;
   Real pgas_high = pcf->Get_Tmax()*nH_0*pcf->pok_to_code_press;
   Real pgas_mid = (pgas_high + pgas_low)/2.;
   Real rho_0 = nH_0*pcf->nH_to_code_den;
@@ -119,7 +119,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real tcool_mid = pcf->CoolingTime(rho_0, pgas_mid);
   // if the endpoints do not have opposite signs on their cooling times we
   // are not guaranteed a zero exists, so we throw an error
-  if (tcool_low*tcool_high>0) {
+  if (tcool_low*tcool_high>=0) {
     std::stringstream msg;
     msg << "### ERROR in ProblemGenerator " << std::endl
         << "pressure guesses must have tcool with opposite signs!" << std::endl;
@@ -129,6 +129,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   // find the equilibrium point of the cooling curve using
   // bisection root finding
   while ((pgas_high-pgas_low)/pgas_mid > tol) {
+    // std::cout << " (P/k, tcool) in cgs = " << pgas_mid*pcf->code_press_to_pok << " "
+    //           << tcool_low << " " << tcool_mid << " " << tcool_high << std::endl;
     if (tcool_low*tcool_mid < 0) {
       pgas_high = pgas_mid;
       tcool_high = tcool_mid;
