@@ -77,18 +77,7 @@ friend class ParticleMesh;
 
   // Particle interface
   void RemoveOneParticle(int k);
-  // TODO(SMOON) (template design pattern is appropriate here)
-  // Functions such as SourceTerms, EulerStep, BorisKick, ... needs to be
-  // inside the implementation of template function Integrate(). This needs some
-  // consistent name convention.
-  // for example, the interface looks like
-  // Integrate () {
-  //   Kick()
-  //   Drift()
-  //   Kick()
-  // }
-  // Where the actual implementation of Kick would be either EulerStep or BorisKick, etc.
-  virtual void Integrate(int step);
+  virtual void Integrate(int step); // TODO(SMOON) apply template pattern?
   Real NewBlockTimeStep();
   std::size_t GetSizeInBytes() const;
   bool IsGravity() const { return isgravity_; }
@@ -131,10 +120,6 @@ friend class ParticleMesh;
   bool ReceiveFromNeighborsShear();
 
   // Static functions
-  // TODO(SMOON) if they are helper functions, take them out of the
-  //             class for better readerbility, since they are not
-  //             really a member of this object. Do they access data members?
-  // SMOON: maybe we need Mesh-level pure abstract interface class.
   static void AMRCoarseToFine(Particles *pparc, Particles *pparf, MeshBlock* pmbf);
   static void AMRFineToCoarse(Particles *pparc, Particles *pparf);
   static void ComputePMDensityAndCommunicate(Mesh *pm, bool include_momentum);
@@ -149,7 +134,7 @@ friend class ParticleMesh;
   static int num_particles, num_particles_grav, num_particles_output;
   ParticleMesh *ppm;  //!> ptr to particle-mesh
   const int ipar;     // index of this Particle in ppars vector
-  std::string input_block_name, partype; // TODO(SMOON) input_block_name bad design?
+  std::string input_block_name, partype;
 
  protected:
   // Protected interfaces (to be used by derived classes)

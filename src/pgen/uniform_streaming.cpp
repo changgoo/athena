@@ -41,12 +41,14 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     ATHENA_ERROR(msg);
   }
 
-  if (pdustpar == nullptr) {
+  if (!(ppars[0]->partype.compare("dust") == 0)) {
     std::stringstream msg;
     msg << "### FATAL ERROR in function [MeshBlock::ProblemGenerator]" << std::endl
-        << "This problem requires dust particles." << std::endl;
+        << "Only dust particle is allowed. " << std::endl;
     ATHENA_ERROR(msg);
   }
+
+  DustParticles *ppar = dynamic_cast<DustParticles*>(ppars[0]);
 
   // Get the (uniform) velocity of the gas.
   Real ux0, uy0, uz0;
@@ -107,11 +109,11 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       Real yp1 = block_size.x2min + (j + 0.5) * dx2;
       for (int i = 0; i < npx1_loc; ++i) {
         Real xp1 = block_size.x1min + (i + 0.5) * dx1;
-        if (pdustpar->IsVariableTaus()) {
-          Real taus0 = pdustpar->GetStoppingTime();
-          pdustpar->AddOneParticle(mpar, xp1, yp1, zp1, vpx0, vpy0, vpz0, taus0);
+        if (ppar->IsVariableTaus()) {
+          Real taus0 = ppar->GetStoppingTime();
+          ppar->AddOneParticle(mpar, xp1, yp1, zp1, vpx0, vpy0, vpz0, taus0);
         } else {
-          pdustpar->AddOneParticle(mpar, xp1, yp1, zp1, vpx0, vpy0, vpz0);
+          ppar->AddOneParticle(mpar, xp1, yp1, zp1, vpx0, vpy0, vpz0);
         }
       }
     }
