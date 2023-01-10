@@ -64,10 +64,10 @@ void TracerParticles::AddOneParticle(Real mp, Real x1, Real x2, Real x3,
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void TracerParticles::DoAssignShorthands()
+//! \fn void TracerParticles::AssignShorthandsForDerived()
 //! \brief assigns shorthands by shallow coping slices of the data.
 
-void TracerParticles::DoAssignShorthands() {
+void TracerParticles::AssignShorthandsForDerived() {
   wx.InitWithShallowSlice(work, 2, iwx, 1);
   wy.InitWithShallowSlice(work, 2, iwy, 1);
   wz.InitWithShallowSlice(work, 2, iwz, 1);

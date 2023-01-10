@@ -50,10 +50,10 @@ StarParticles::~StarParticles() {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void StarParticles::DoAssignShorthands()
+//! \fn void StarParticles::AssignShorthandsForDerived()
 //! \brief assigns shorthands by shallow coping slices of the data.
 
-void StarParticles::DoAssignShorthands() {
+void StarParticles::AssignShorthandsForDerived() {
   metal.InitWithShallowSlice(realprop, 2, imetal, 1);
   age.InitWithShallowSlice(realprop, 2, iage, 1);
 

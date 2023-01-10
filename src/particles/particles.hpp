@@ -189,7 +189,7 @@ friend class ParticleMesh;
  private:
   // Methods (implementation)
   // Need to be implemented in derived classes
-  virtual void DoAssignShorthands()=0;
+  virtual void AssignShorthandsForDerived()=0;
   virtual void SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc)=0;
   virtual void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc)=0;
   virtual void ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc)=0;
@@ -292,7 +292,7 @@ class DustParticles : public Particles {
 
  private:
   // Methods (implementation)
-  void DoAssignShorthands() override;
+  void AssignShorthandsForDerived() override;
   void SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
   void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
   void ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
@@ -331,7 +331,7 @@ class TracerParticles : public Particles {
 
  private:
   // Methods (implementation)
-  void DoAssignShorthands() override;
+  void AssignShorthandsForDerived() override;
   void SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
   void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
   void ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
@@ -360,7 +360,7 @@ class StarParticles : public Particles {
 
  private:
   // Methods (implementation)
-  void DoAssignShorthands() override;
+  void AssignShorthandsForDerived() override;
   void SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
   void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
   void ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;

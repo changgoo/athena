@@ -139,10 +139,10 @@ Real DustParticles::OtherCharacteristicTime1() {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void DustParticles::DoAssignShorthands()
+//! \fn void DustParticles::AssignShorthandsForDerived()
 //! \brief assigns shorthands by shallow coping slices of the data.
 
-void DustParticles::DoAssignShorthands() {
+void DustParticles::AssignShorthandsForDerived() {
   wx.InitWithShallowSlice(work, 2, iwx, 1);
   wy.InitWithShallowSlice(work, 2, iwy, 1);
   wz.InitWithShallowSlice(work, 2, iwz, 1);
