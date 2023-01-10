@@ -709,6 +709,56 @@ void Particles::OutputOneParticle(std::ostream &os, int k, bool header) {
 }
 
 //--------------------------------------------------------------------------------------
+//! \fn void Particles::ComputePMDensityAndCommunicate(Mesh *pm, bool include_momentum)
+//! \brief finds particle mesh densities for all particle containers.
+//!
+//! If include_momentum is true, the momentum density field is also computed.
+
+void Particles::ComputePMDensityAndCommunicate(Mesh *pm, bool include_momentum) {
+  // Assign particle properties to mesh and send boundary.
+  int nblocks(pm->nblocal);
+
+  for (int b = 0; b < nblocks; ++b) {
+    MeshBlock *pmb(pm->my_blocks(b));
+    if (pm->shear_periodic) {
+      pmb->pbval->ComputeShear(pm->time, pm->time);
+    }
+    pmb->pbval->StartReceivingSubset(BoundaryCommSubset::pm,
+                                     pmb->pbval->bvars_pm);
+    for (Particles *ppar : pmb->ppars) {
+      ppar->ppm->ComputePMDensity(include_momentum);
+      ppar->ppm->pmbvar->SendBoundaryBuffers();
+    }
+  }
+
+  for (int b = 0; b < nblocks; ++b) {
+    MeshBlock *pmb(pm->my_blocks(b));
+    for (Particles *ppar : pmb->ppars) {
+      ppar->ppm->pmbvar->ReceiveAndSetBoundariesWithWait();
+      if (pm->shear_periodic)
+        ppar->ppm->pmbvar->SendShearingBoxBoundaryBuffers();
+    }
+  }
+
+  if (pm->shear_periodic) {
+    for (int b = 0; b < nblocks; ++b) {
+      MeshBlock *pmb(pm->my_blocks(b));
+      for (Particles *ppar : pmb->ppars) {
+        ppar->ppm->pmbvar->ReceiveAndSetShearingBoxBoundariesWithWait();
+        ppar->ppm->pmbvar->SetShearingBoxBoundaryBuffers();
+      }
+    }
+  }
+
+  for (int b = 0; b < nblocks; ++b) {
+    MeshBlock *pmb(pm->my_blocks(b));
+    pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::pm,
+                                    pmb->pbval->bvars_pm);
+    for (Particles *ppar : pmb->ppars) ppar->ppm->updated=false;
+  }
+}
+
+//--------------------------------------------------------------------------------------
 //! \fn Particles::Initialize(Mesh *pm, ParameterInput *pin)
 //! \brief initializes the class.
 
