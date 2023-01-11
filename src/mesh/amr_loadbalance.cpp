@@ -577,8 +577,8 @@ void Mesh::RedistributeAndRefineMeshBlocks(ParameterInput *pin, int ntot) {
           if (particle) {
             for (int ipar=0; ipar < Particles::num_particles; ++ipar) {
               MeshBlock* mbf = newlist(n-nbs);
-              Particles* pparc = pob->ppar[ipar];
-              Particles* pparf = mbf->ppar[ipar];
+              Particles* pparc = pob->ppars[ipar];
+              Particles* pparf = mbf->ppars[ipar];
               Particles::AMRFineToCoarse(pparc,pparf);
             }
           }
@@ -591,8 +591,8 @@ void Mesh::RedistributeAndRefineMeshBlocks(ParameterInput *pin, int ntot) {
         if (particle) {
           for (int ipar=0; ipar < Particles::num_particles; ++ipar) {
             MeshBlock* mbf = newlist(n-nbs);
-            Particles* pparc = pob->ppar[ipar];
-            Particles* pparf = mbf->ppar[ipar];
+            Particles* pparc = pob->ppars[ipar];
+            Particles* pparf = mbf->ppars[ipar];
             Particles::AMRCoarseToFine(pparc,pparf,mbf);
           }
         }
@@ -678,7 +678,7 @@ void Mesh::RedistributeAndRefineMeshBlocks(ParameterInput *pin, int ntot) {
 
   if (particle) {
     for (int i = 0; i < nblocal; ++i) {
-      for (Particles *ppar : my_blocks(i)->ppar) {
+      for (Particles *ppar : my_blocks(i)->ppars) {
         ppar->ClearNeighbors();
         ppar->LinkNeighbors(tree, nrbx1, nrbx2, nrbx3, root_level);
       }

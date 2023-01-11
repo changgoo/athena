@@ -22,8 +22,7 @@
 
 DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp)
   : Particles(pmb, pin, pp), backreaction(false), dragforce(true), variable_taus(false),
-  iwx(-1), iwy(-1), iwz(-1), idpx1(-1), idpx2(-1), idpx3(-1),
-  itaus(-1), taus0(0.0) {
+  iwx(-1), iwy(-1), iwz(-1), itaus(-1), taus0(0.0) {
   // Add working array at particles for gas velocity/particle momentum change.
   iwx = AddWorkingArray();
   iwy = AddWorkingArray();
@@ -42,19 +41,12 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParame
   backreaction = pin->GetOrAddBoolean(input_block_name, "backreaction", false);
   if (taus0 == 0.0) backreaction = false;
 
-  if (!backreaction) isgravity_ = false;
+  // TODO(SMOON): It is user's responsibility to set isgravity_ through input file.
+  // Temporarily commenting out the below line; this may be replaced by exception
+  // throwing when (!backreaction && isgravity_)
+//  if (!backreaction) isgravity_ = false;
 
   Particles::AllocateMemory();
-
-  if (backreaction) {
-    idpx1 = imom1;
-    idpx2 = imom2;
-    idpx3 = imom3;
-
-    dpx1.InitWithShallowSlice(ppm->meshaux, 4, idpx1, 1);
-    dpx2.InitWithShallowSlice(ppm->meshaux, 4, idpx2, 1);
-    dpx3.InitWithShallowSlice(ppm->meshaux, 4, idpx3, 1);
-  }
 
   AssignShorthands();
 }
@@ -66,14 +58,6 @@ DustParticles::DustParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParame
 DustParticles::~DustParticles() {
   // nothing to do
   return;
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn void DustParticles::SetOneParticleMass(Real new_mass)
-//! \brief sets the mass of each particle.
-
-void DustParticles::SetOneParticleMass(Real new_mass) {
-  pinput->SetReal(input_block_name, "mass", mass = new_mass);
 }
 
 //--------------------------------------------------------------------------------------
@@ -92,16 +76,18 @@ Real DustParticles::NewBlockTimeStep() {
     // Find the maximum local solid-to-gas density ratio.
     Coordinates *pc = pmy_block->pcoord;
     Hydro *phydro = pmy_block->phydro;
+    const AthenaArray<Real> &rhop = ppm->GetMassDensity();
     const int is = ppm->is, js = ppm->js, ks = ppm->ks;
     const int ie = ppm->ie, je = ppm->je, ke = ppm->ke;
-    for (int k = ks; k <= ke; ++k)
-      for (int j = js; j <= je; ++j)
+    for (int k = ks; k <= ke; ++k) {
+      for (int j = js; j <= je; ++j) {
         for (int i = is; i <= ie; ++i) {
-          Real epsilon = ppm->weight(k,j,i) / (
-                         pc->GetCellVolume(k,j,i) * phydro->u(IDN,k,j,i));
+          // TODO(SMOON) Is FindLocalDensity called before NewBlockTimeStep?
+          Real epsilon = rhop(k,j,i) / phydro->u(IDN,k,j,i);
           epsmax = std::max(epsmax, epsilon);
         }
-    epsmax *= mass;
+      }
+    }
   }
 
   // Return the drag timescale.
@@ -240,7 +226,7 @@ void DustParticles::ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& mes
         mass * wx(k), mass * wy(k), mass * wz(k), wx(k), wy(k), wz(k));
 
   // Assign the momentum change onto mesh.
-  ppm->AssignParticlesToMeshAux(work, iwx, idpx1, 3);
+  ppm->DepositParticlesToMeshAux(work, iwx, ppm->imom1, 3);
 }
 
 //--------------------------------------------------------------------------------------
@@ -252,5 +238,5 @@ void DustParticles::DepositToMesh(
          Real t, Real dt, const AthenaArray<Real>& meshsrc, AthenaArray<Real>& meshdst) {
   if (dragforce && backreaction)
     // Deposit particle momentum changes to the gas.
-    ppm->DepositMeshAux(meshdst, idpx1, IM1, 3);
+    ppm->DepositMeshAux(meshdst, ppm->imom1, IM1, 3);
 }

@@ -131,7 +131,7 @@ class MeshBlock {
   Units *punit;
 
   // pointer to particle classes
-  std::vector<Particles *> ppar, ppar_grav;
+  std::vector<Particles *> ppars, ppars_grav;
 
   // functions
   std::size_t GetBlockSizeInBytes();

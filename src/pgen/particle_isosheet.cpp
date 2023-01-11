@@ -112,7 +112,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   if (pmy_mesh->particle && (rho0_star > 0.0)) {
     Real sigz = pin->GetReal("problem","sigma_star");
 
-    StarParticles *pp = dynamic_cast<StarParticles*>(ppar[0]);
+    StarParticles *pp = dynamic_cast<StarParticles*>(ppars[0]);
 
     // Find the total number of particles in each direction.
     RegionSize& mesh_size = pmy_mesh->mesh_size;
@@ -166,7 +166,7 @@ Real DeltaRho(MeshBlock *pmb, int iout) {
   AthenaArray<Real> vol(pmb->ncells1);
   AthenaArray<Real> rho;
   rho.InitWithShallowSlice(pmb->phydro->u,4,IDN,1);
-  AthenaArray<Real> rhop(pmb->ppar[0]->GetMassDensity());
+  AthenaArray<Real> rhop(pmb->ppars[0]->ppm->GetMassDensity());
   for (int k=ks; k<=ke; ++k) {
     Real x3 = pmb->pcoord->x3v(k);
     for (int j=js; j<=je; ++j) {

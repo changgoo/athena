@@ -755,28 +755,29 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
     }
   } // endif (MAGNETIC_FIELDS_ENABLED)
 
-  // particle number density
-  if (output_params.variable.compare("np") == 0) {
-    for (int ipar = 0; ipar<Particles::num_particles; ++ipar) {
-      pod = new OutputData;
-      pod->type = "SCALARS";
-      pod->name = "np";
-      pod->name += std::to_string(ipar);
-      pod->data.InitWithShallowSlice(pmb->ppar[ipar]->ppm->weight, 4, 0, 1);
-      AppendOutputDataNode(pod);
-      num_vars_++;
-    }
-  }
+//  // particle number density
+// TODO(SMOON) maybe want to add number density property in meshaux
+//  if (output_params.variable.compare("np") == 0) {
+//    for (int ipar = 0; ipar<Particles::num_particles; ++ipar) {
+//      pod = new OutputData;
+//      pod->type = "SCALARS";
+//      pod->name = "np";
+//      pod->name += std::to_string(ipar);
+//      pod->data.InitWithShallowSlice(pmb->ppars[ipar]->ppm->weight, 4, 0, 1);
+//      AppendOutputDataNode(pod);
+//      num_vars_++;
+//    }
+//  }
 
   // particle velocity field
   if (output_params.variable.compare("vp") == 0 ||
       output_params.variable.compare("prim") == 0) {
-    for (int ipar = 0; ipar<Particles::num_particles; ++ipar) {
+    for (Particles *ppar : pmb->ppars) {
       pod = new OutputData;
       pod->type = "VECTORS";
       pod->name = "vp";
-      pod->name += std::to_string(ipar);
-      pod->data = pmb->ppar[ipar]->GetVelocityField();
+      pod->name += std::to_string(ppar->ipar);
+      pod->data = ppar->ppm->GetVelocityField();
       AppendOutputDataNode(pod);
       num_vars_ += 3;
     }
@@ -785,12 +786,12 @@ void OutputType::LoadOutputData(MeshBlock *pmb) {
   // particle mass density
   if (output_params.variable.compare("rhop") == 0 ||
       output_params.variable.compare("prim") == 0) {
-    for (int ipar = 0; ipar<Particles::num_particles; ++ipar) {
+    for (Particles *ppar : pmb->ppars) {
       pod = new OutputData;
       pod->type = "SCALARS";
       pod->name = "rhop";
-      pod->name += std::to_string(ipar);
-      pod->data = pmb->ppar[ipar]->GetMassDensity();
+      pod->name += std::to_string(ppar->ipar);
+      pod->data = ppar->ppm->GetMassDensity();
       AppendOutputDataNode(pod);
       num_vars_++;
     }

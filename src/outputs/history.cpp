@@ -221,12 +221,11 @@ void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
   }  // end loop over MeshBlocks
 
   // Get history output from Particles class.
-  for (int ipar=0; ipar<Particles::num_particles; ++ipar) {
-    int prev_out = (NHYDRO) + 3 + (NGRAV) + (NFIELD) + (NSCALARS) +
-                    (Particles::NHISTORY)*ipar;
-    for (int b=0; b<pm->nblocal; ++b) {
-      pmb = pm->my_blocks(b);
-      Particles *ppar(pmb->ppar[ipar]);
+  for (int b=0; b<pm->nblocal; ++b) {
+    pmb = pm->my_blocks(b);
+    for (Particles *ppar : pmb->ppars) {
+      int prev_out = (NHYDRO) + 3 + (NGRAV) + (NFIELD) + (NSCALARS)
+                    + (Particles::NHISTORY)*(ppar->ipar);
       ppar->AddHistoryOutput(hst_data.get(),prev_out);
     }
   }
@@ -306,9 +305,9 @@ void HistoryOutput::WriteOutputFile(Mesh *pm, ParameterInput *pin, bool flag) {
       for (int n=0; n<NSCALARS; n++) {
         std::fprintf(pfile,"[%d]=%d-scalar    ", iout++, n);
       }
-      for (int ipar = 0; ipar<Particles::num_particles; ++ipar) {
+      for (Particles *ppar : pmb->ppars) {
         std::string parhst_output_names[Particles::NHISTORY];
-        Particles::GetHistoryOutputNames(parhst_output_names, ipar);
+        Particles::GetHistoryOutputNames(parhst_output_names, ppar->ipar);
         for (int i = 0; i < Particles::NHISTORY; ++i)
           std::fprintf(pfile, "[%d]=%-8s", iout++, parhst_output_names[i].data());
       }

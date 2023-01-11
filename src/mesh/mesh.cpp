@@ -566,7 +566,7 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
   // Initialize neighbor lists in Particle class.
   if (particle) {
     for (int i = gids_; i <= gide_; i++)
-      for (Particles *ppar : my_blocks(i-gids_)->ppar)
+      for (Particles *ppar : my_blocks(i-gids_)->ppars)
         ppar->LinkNeighbors(tree, nrbx1, nrbx2, nrbx3, root_level);
   }
 
@@ -928,7 +928,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
   // Initialize neighbor lists in Particle class.
   if (particle) {
     for (int i = 0; i < nblocal; ++i)
-      for (Particles *ppar : my_blocks(i)->ppar)
+      for (Particles *ppar : my_blocks(i)->ppars)
         ppar->LinkNeighbors(tree, nrbx1, nrbx2, nrbx3, root_level);
   }
 
@@ -1131,7 +1131,7 @@ void Mesh::NewTimeStep() {
     MeshBlock *pmb = my_blocks(i);
     pmb->phydro->NewBlockTimeStep();
     Real min_dt = pmb->new_block_dt_;
-    for (Particles *ppar : pmb->ppar) {
+    for (Particles *ppar : pmb->ppars) {
       min_dt = std::min(min_dt,ppar->NewBlockTimeStep());
       pmb->new_block_dt_ = min_dt;
     }
@@ -1466,7 +1466,7 @@ void Mesh::Initialize(int res_flag, ParameterInput *pin) {
       // other BoundaryVariable objects:
       if ((SELF_GRAVITY_ENABLED == 1) || (SELF_GRAVITY_ENABLED == 3))
         pmb->pgrav->gbvar.SetupPersistentMPI();
-      for (Particles *ppar : pmb->ppar)
+      for (Particles *ppar : pmb->ppars)
         ppar->ppm->pmbvar->SetupPersistentMPI();
     }
 
