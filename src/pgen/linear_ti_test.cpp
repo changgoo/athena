@@ -148,23 +148,22 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   // below is for sanity check. Uncomment if needed
   Real muH = pcf->Get_muH();
   Real mu = pcf->Get_mu(rho_0, pgas_mid);
-  Real T = pgas_0/rho_0*(mu/muH);
+  Real T = pcf->GetTemperature(rho_0, pgas_mid);
   //
   if (Globals::my_rank == 0) {
     std::cout << "============== Check Initialization ===============" << std::endl
               << " Input (nH, P/k, T) in cgs = " << rho_0 << " " << pgas_0
               << " " << T << std::endl
+              << " nH to code den = " << pcf->nH_to_code_den
               << "  mu = " << mu << " muH = " << muH << std::endl;
   }
-  rho_0 *= pcf->nH_to_code_den; // to code units
-  pgas_0 *= pcf->pok_to_code_press; // to code units
   // store the initial mean density as a global variable
   rhobar_init = rho_0;
 
   // determine wavenumber in inverse code length
   Real kx = 2*PI*kn/Lbox;
   // determine growth rate via dispersion relation
-  Real om = OmegaG(this, rho_0,pgas_0,kx);
+  Real om = OmegaG(this, rho_0, pgas_mid, kx);
   if (Globals::my_rank == 0) {
     std::cout << "  Lbox = " << Lbox << std::endl;
     std::cout << "  k = " << kx << std::endl;
@@ -178,7 +177,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         Real pdev = -1*alpha*rho_0*(om/kx)*(om/kx)*std::cos(kx*x);
         Real vdev = -1*alpha*(om/kx)*std::sin(kx*x);
         phydro->w(IDN,k,j,i) = rho_0*(1 + alpha*std::cos(kx*x));
-        phydro->w(IPR,k,j,i) = pgas_0 + pdev;
+        phydro->w(IPR,k,j,i) = pgas_mid + pdev;
         phydro->w(IVX,k,j,i) = vdev;
         phydro->w(IVY,k,j,i) = 0.0;
         phydro->w(IVZ,k,j,i) = 0.0;
