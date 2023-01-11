@@ -327,12 +327,11 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
     max_level = 63;
   }
 
-  // if cooling is turned on
-  // initialize cooling function and units here
-  if (cooling) {
-    pcf = InitializeCoolingFunction(pin);
-    punit = pcf->punit;
-  }
+  // initialize units
+  punit = new Units(pin);
+
+  // construct cooling solver if needed
+  if (cooling) pcool = new CoolingSolver(this, pin);
 
   // Initialize Particles class.
   Particles::Initialize(this, pin);
@@ -751,12 +750,11 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     max_level = 63;
   }
 
-  // if cooling is turned on
-  // initialize cooling function and units here
-  if (cooling) {
-    pcf = InitializeCoolingFunction(pin);
-    punit = pcf->punit;
-  }
+  // initialize units
+  punit = new Units(pin);
+
+  // construct cooling solver if needed
+  if (cooling) pcool = new CoolingSolver(this, pin);
 
   // Initialize Particles class.
   Particles::Initialize(this, pin);
@@ -942,6 +940,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
 //! destructor
 
 Mesh::~Mesh() {
+  delete punit;
   for (int b=0; b<nblocal; ++b)
     delete my_blocks(b);
   delete [] nslist;

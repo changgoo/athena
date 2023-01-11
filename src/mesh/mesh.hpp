@@ -58,7 +58,6 @@ class TurbulenceDriver;
 class OrbitalAdvection;
 class BlockFFTGravity;
 class CoolingSolver;
-class CoolingFunctionBase;
 class Units;
 
 FluidFormulation GetFluidFormulation(const std::string& input_string);
@@ -129,6 +128,8 @@ class MeshBlock {
   OrbitalAdvection *porb;
   BlockFFTGravity *pfft;
   CoolingSolver *pcool;
+  Units *punit;
+
   // pointer to particle classes
   std::vector<Particles *> ppar, ppar_grav;
 
@@ -267,8 +268,9 @@ class Mesh {
   FFTGravityDriver *pfgrd;
   MGGravityDriver *pmgrd;
 
-  CoolingFunctionBase *pcf;
   Units *punit;
+  CoolingSolver *pcool;
+
 
   AthenaArray<Real> *ruser_mesh_data;
   AthenaArray<int> *iuser_mesh_data;

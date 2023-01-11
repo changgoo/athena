@@ -53,6 +53,7 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
                      int igflag, bool ref_flag) :
     pmy_mesh(pm), loc(iloc), block_size(input_block),
     gid(igid), lid(ilid), gflag(igflag), nuser_out_var(),
+    pcool(pm->pcool), punit(pm->punit),
     new_block_dt_{}, new_block_dt_hyperbolic_{}, new_block_dt_parabolic_{},
     new_block_dt_user_{},
     nreal_user_meshblock_data_(), nint_user_meshblock_data_(), cost_(1.0) {
@@ -207,11 +208,6 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
     pbval->AdvanceCounterPhysID(CellCenteredBoundaryVariable::max_phys_id);
   }
 
-  // CoolingSolver: constructor depends on EOS
-  if (pm->cooling) {
-    pcool = new CoolingSolver(this, pin, pm->pcf);
-  }
-
   // OrbitalAdvection: constructor depends on Coordinates, Hydro, Field, PassiveScalars.
   porb = new OrbitalAdvection(this, pin);
 
@@ -230,6 +226,7 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
                      double icost, char *mbdata, int igflag) :
     pmy_mesh(pm), loc(iloc), block_size(input_block),
     gid(igid), lid(ilid), gflag(igflag), nuser_out_var(),
+    pcool(pm->pcool), punit(pm->punit),
     new_block_dt_{}, new_block_dt_hyperbolic_{}, new_block_dt_parabolic_{},
     new_block_dt_user_{},
     nreal_user_meshblock_data_(), nint_user_meshblock_data_(), cost_(icost) {
@@ -352,14 +349,9 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
     }
   }
 
-  if(CR_ENABLED) {
+  if (CR_ENABLED) {
     pcr = new CosmicRay(this, pin);
     pbval->AdvanceCounterPhysID(CellCenteredBoundaryVariable::max_phys_id);
-  }
-
-  // CoolingSolver: constructor depends on EOS
-  if (pm->cooling) {
-    pcool = new CoolingSolver(this, pin, pm->pcf);
   }
 
   // OrbitalAdvection: constructor depends on Coordinates, Hydro, Field, PassiveScalars.
