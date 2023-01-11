@@ -62,6 +62,8 @@ Real CosmicRay::Get_SigmaParallel(Real rho, Real Press, Real ecr, Real grad_pc_p
     Real ni = xion * rho;
     Real mui = Get_mui(Temp, mu, xion);
     Real rho_ion = ni * mui/muH;
+    if (rho_ion > rho)
+      rho_ion = 0.9999 * rho;
 
     //neutral number-density
     Real nn = Get_NeutralDensity(Temp, rho, rho_ion, mui, muH);
@@ -76,6 +78,7 @@ Real CosmicRay::Get_SigmaParallel(Real rho, Real Press, Real ecr, Real grad_pc_p
                      punit->e_in_code/punit->c_in_code / kinenergy_in_code
                      / std::sqrt(rho_ion) / (0.3 * vi * punit->c_in_code));
     sigma_par = std::min(sigma_nll,sigma_in) * vmax;
+    sigma_par = std::min(sigma_par,sigma);
   }
 
   return sigma_par;
@@ -90,13 +93,13 @@ Real CosmicRay::Get_IonDensity(Real rho, Real Press, Real ecr) {
   // required to calculate the CR ionization rate
   Real ecr_in_cgs = ecr*punit->EnergyDensity;
   if (ecr < TINY_NUMBER) ecr_in_cgs = TINY_NUMBER*punit->EnergyDensity;
-  Real xion = Get_IonFraction(Temp, rho, ecr, ion_rate_norm);
+  Real xion = Get_IonFraction(Temp, rho, ecr_in_cgs, ion_rate_norm);
 
   Real ni = xion * rho;
   Real mui = Get_mui(Temp, mu, xion);
   rho_ion = ni * mui/muH;
-  if (rho_ion < rho)
-    rho_ion = 0.999;
+  if (rho_ion > rho)
+    rho_ion = 0.9999 * rho;
 
   return rho_ion;
 }
@@ -120,8 +123,8 @@ Real Get_IonFraction(Real Temp, Real rho, Real ecr, Real ion_rate_norm) {
     xi = 0.5*(std::sqrt(std::pow(beta+gammaCR+xM,2)
                   + 4.*beta)-(beta+gammaCR+xM)) + xM;
   else
-    xi = 1.15;
-
+    xi = 1.099;
+  xi = std::min(xi,1.099);
   return xi;
 }
 
@@ -142,14 +145,10 @@ Real Get_mui(Real Temp, Real mu, Real xi) {
 
 Real Get_NeutralDensity(Real Temp, Real rho, Real rhoi, Real mui, Real muH) {
   Real mun;
-  if (Temp > 2e4) {
-    mun = 0;
-  } else {
-    if (Temp <= 100)
-      mun = 2.;
-    else
-      mun = 1.;
-  }
+  if (Temp <= 100)
+    mun = 2.;
+  else
+    mun = 1.;
   Real nn = muH*(rho - rhoi)/(mun + mui);
   return nn;
 }

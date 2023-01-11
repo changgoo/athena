@@ -225,7 +225,7 @@ class TimeIntegratorTaskList : public TaskList {
 
   bool CheckNextMainStage(int stage) const {return stage_wghts[stage%nstages].main_stage;}
 
-  // Tasks functionc for cosmic rays
+  // Task functions for cosmic rays
   TaskStatus CalculateCRFlux(MeshBlock *pmb, int stage);
   TaskStatus IntegrateCR(MeshBlock *pmb, int stage);
   TaskStatus AddSourceTermsCR(MeshBlock *pmb, int stage);

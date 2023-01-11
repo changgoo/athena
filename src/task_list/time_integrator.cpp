@@ -940,10 +940,9 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
 
     if (CR_ENABLED) {
       AddTask(CALC_CRFLX,CALC_HYDFLX);
-      if (pm->multilevel) { // SMR or AMR
+      if (pm->multilevel || SHEAR_PERIODIC) { // SMR or AMR
         AddTask(SEND_CRFLX,CALC_CRFLX);
         AddTask(RECV_CRFLX,CALC_CRFLX);
-        //Do I need to include the shear_periodic case?
         if (SHEAR_PERIODIC) {
           AddTask(SEND_CRFLXSH,RECV_CRFLX);
           AddTask(RECV_CRFLXSH,(SEND_CRFLX|RECV_CRFLX));
@@ -3025,6 +3024,3 @@ TaskStatus TimeIntegratorTaskList::AddSourceTermsCR(MeshBlock *pmb, int stage) {
   }
   return TaskStatus::next;
 }
-
-
-
