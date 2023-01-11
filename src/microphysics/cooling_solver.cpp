@@ -32,7 +32,7 @@
 Real CoolingSolver::CoolingTimeStep(MeshBlock *pmb) {
   Real min_dt=HUGE_NUMBER;
   CoolingFunctionBase *pcf = pmb->pcool->pcf;
-  Units *punit = pmb->pcool->punit;
+  Units *punit = pmb->punit;
   Real cfl_cool = pmb->pcool->cfl_cool;
   for (int k=pmb->ks; k<=pmb->ke; ++k) {
     for (int j=pmb->js; j<=pmb->je; ++j) {
@@ -40,7 +40,7 @@ Real CoolingSolver::CoolingTimeStep(MeshBlock *pmb) {
       for (int i=pmb->is; i<=pmb->ie; ++i) {
         Real press = pmb->phydro->w(IPR,k,j,i);
         Real rho = pmb->phydro->w(IDN,k,j,i);
-        Real press_floor = rho*pcf->Get_Tfloor()/punit->Temperature;
+        Real press_floor = rho*pcf->Get_Tfloor()/punit->Temperature_mu;
         press = std::max(press,press_floor);
         Real dtcool = cfl_cool*std::abs(pcf->NetCoolingTime(rho,press));
         min_dt = std::min(min_dt, dtcool);
@@ -68,8 +68,8 @@ void CoolingSolver::CoolingSourceTerm(MeshBlock *pmb, const Real t, const Real d
   int ks = pmb->ks, ke = pmb->ke;
 
   CoolingSolver *pcool = pmb->pcool;
-  CoolingFunctionBase *pcf = pmb->pcool->pcf;
-  Units *punit = pmb->pcool->punit;
+  CoolingFunctionBase *pcf = pcool->pcf;
+  Units *punit = pmb->punit;
 
   Real temp_floor = pcf->Get_Tfloor(); // temperature floor
   Real igm1 = 1.0/(pcf->gamma_adi-1); // 1 / (gamma - 1)
@@ -101,7 +101,7 @@ void CoolingSolver::CoolingSourceTerm(MeshBlock *pmb, const Real t, const Real d
 
         Real delta_press=0.0, delta_press_floor=0.0;
         // apply floor before solving the cooling
-        Real press_floor = rho*temp_floor/punit->Temperature;
+        Real press_floor = rho*temp_floor/punit->Temperature_mu;
         if (press < press_floor) delta_press_floor = press_floor-press;
         Real press_before = std::max(press,press_floor);
 
@@ -130,14 +130,12 @@ void CoolingSolver::CoolingSourceTerm(MeshBlock *pmb, const Real t, const Real d
 }
 
 //========================================================================================
-//! \fn CoolingSolver::CoolingSolver(MeshBlock *pmb, ParameterInput *pin,
-//!                                  CoolingFunctionBase *pcf_)
+//! \fn CoolingSolver::CoolingSolver(Mesh *pm, ParameterInput *pin)
 //! \brief ctor of the base class for cooling solver
 //! \note Read parameters from "cooling" block in the input file
 //========================================================================================
-CoolingSolver::CoolingSolver(MeshBlock *pmb, ParameterInput *pin,
-                             CoolingFunctionBase *pcf_) :
-  pcf(pcf_), punit(pcf->punit),
+CoolingSolver::CoolingSolver(Mesh *pm, ParameterInput *pin) :
+  punit(pm->punit),
   cfl_cool(pin->GetReal("cooling", "cfl_cool")),
   cfl_cool_sub(pin->GetOrAddReal("cooling","cfl_cool_sub",0.1)),
   op_flag(false), bookkeeping(false),
@@ -150,6 +148,8 @@ CoolingSolver::CoolingSolver(MeshBlock *pmb, ParameterInput *pin,
     if (Globals::my_rank == 0)
       std::cout << "[CoolingSolver] nsub_max_ is set to " << nsub_max_ << std::endl;
   }
+
+  // check cooling solver
   if (cooling.compare("op_split") == 0) {
     op_flag = true;
     // error if op cooling solver is used but cfl_cool_sub > 1
@@ -176,13 +176,32 @@ CoolingSolver::CoolingSolver(MeshBlock *pmb, ParameterInput *pin,
     ATHENA_ERROR(msg);
   }
 
-  // set function pointer
   if (solver.compare("forward_euler") == 0) {
     if (Globals::my_rank == 0)
       std::cout << "[CoolingSolver] Solver is set to ForwardEuler" << std::endl;
   } else {
     std::cout << "cooling/solver must be one of [forward_euler], but "
               << solver << " is given" << std::endl;
+  }
+
+  // set cooling function pointer
+  std::string coolftn = pin->GetOrAddString("cooling", "coolftn", "tigress");
+  if (coolftn.compare("tigress") == 0) {
+    pcf = new TigressClassic(pin, punit);
+    if (Globals::my_rank == 0)
+      std::cout << "[InitializeCoolingFunction] Cooling function is set to TigressClassic"
+                << std::endl;
+  } else if (coolftn.compare("plf") == 0) {
+    pcf = new PiecewiseLinearFits(pin, punit);
+    if (Globals::my_rank == 0)
+      std::cout << "[InitializeCoolingFunction]"
+                << " Cooling function is set to PiecewiseLinearFits"
+                << std::endl;
+  } else {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in CoolingSolver" << std::endl
+        << "coolftn = " << coolftn.c_str() << " is not supported" << std::endl;
+    ATHENA_ERROR(msg);
   }
 }
 
@@ -239,7 +258,7 @@ void CoolingSolver::OperatorSplitSolver(MeshBlock *pmb) {
 
         Real delta_press=0.0, delta_press_floor=0.0;
         // apply floor before solving the cooling
-        Real press_floor = w_d*temp_floor/punit->Temperature;
+        Real press_floor = w_d*temp_floor/punit->Temperature_mu;
         if (w_p < press_floor) delta_press_floor = press_floor-w_p;
         Real press_before = std::max(w_p,press_floor);
 

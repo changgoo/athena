@@ -16,16 +16,14 @@
 // Athena++ headers
 #include "../athena.hpp"
 #include "../athena_arrays.hpp"
-#include "cooling.hpp"
 #include "units.hpp" // Units
 
+class Mesh;
 class CoolingFunctionBase;
-
-CoolingFunctionBase* InitializeCoolingFunction(ParameterInput *pin);
 
 class CoolingSolver {
  public:
-  explicit CoolingSolver(MeshBlock *pmb, ParameterInput *pin, CoolingFunctionBase *pcf_);
+  explicit CoolingSolver(Mesh *pm, ParameterInput *pin);
   ~CoolingSolver();
 
   static void CoolingSourceTerm(MeshBlock *pmb, const Real t, const Real dt,
@@ -55,10 +53,9 @@ class CoolingSolver {
 //! \brief Base class for Cooling Functions
 class CoolingFunctionBase {
  public:
-  explicit CoolingFunctionBase(ParameterInput *pin);
-  ~CoolingFunctionBase();
+  CoolingFunctionBase(ParameterInput *pin, Units *punit);
 
-  void Initialize(Real mu, Real muH);
+  void Initialize(Real muH);
 #pragma omp declare simd simdlen(SIMD_WIDTH) notinbranch uniform(this)
   Real CoolingTime(const Real rho, const Real Press);
   Real NetCoolingTime(const Real rho, const Real Press);
@@ -102,8 +99,7 @@ class CoolingFunctionBase {
 //========================================================================================
 class PiecewiseLinearFits : public CoolingFunctionBase {
  public:
-  explicit PiecewiseLinearFits(ParameterInput *pin);
-  // ~PiecewiseLinearFits() override { delete punit; }
+  PiecewiseLinearFits(ParameterInput *pin, Units *punit);
 
   Real Lambda_T(const Real rho, const Real Press) override;
   Real dlnL_dlnT(const Real rho, const Real Press) override;
@@ -155,8 +151,7 @@ class PiecewiseLinearFits : public CoolingFunctionBase {
 //========================================================================================
 class TigressClassic : public CoolingFunctionBase {
  public:
-  explicit TigressClassic(ParameterInput *pin);
-  // ~TigressClassic() override { delete punit; }
+  TigressClassic(ParameterInput *pin, Units *punit);
 
 #pragma omp declare simd simdlen(SIMD_WIDTH) notinbranch uniform(this)
   Real Lambda_T(const Real rho, const Real Press) override;
@@ -176,7 +171,7 @@ class TigressClassic : public CoolingFunctionBase {
   std::string coolftn_name;
 
   Real heat_ratio;
-  Real mu, muH;
+  Real muH;
   const Real mumin=0.6182, mumax=1.295;
 
   // specific functions for interpolation
