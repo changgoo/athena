@@ -35,20 +35,18 @@ static const Real e     = 4.80320427e-10;
 //! \brief Class for units
 class Units {
  public:
+  explicit Units(ParameterInput *pin);
   Units(Real dunit, Real lunit, Real vunit);
-  Units(Real dunit, Real lunit, Real vunit, Real mu0);
 
   void SetUnitsConstants();
   void PrintCodeUnits();
   void PrintConstantsInCodeUnits();
 
-  bool fixed_mu;
-
-  Real Mass, Length, Time;
-  Real Volume, Density, Velocity;
+  Real Density, Length, Velocity;
+  Real Mass, Volume, Time;
   Real EnergyDensity, Pressure;
   Real MagneticField;
-  Real Temperature, mu;
+  Real Temperature_mu;
 
   Real gram, cm, second, dyne, erg, Kelvin, Gauss;
 
