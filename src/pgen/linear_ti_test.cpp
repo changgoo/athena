@@ -256,7 +256,7 @@ static Real SolveCubic(const Real b, const Real c, const Real d) {
 static Real OmegaG(MeshBlock *pmb, const Real rho, const Real Press, const Real k) {
   CoolingSolver *pcool=pmb->pcool;
   CoolingFunctionBase *pcf = pcool->pcf;
-  Units *punit = pcf->punit;
+  Units *punit = pmb->punit;
   Real gm1 = pcf->gamma_adi-1;
   // get Temperature in Kelvin
   Real T = pcf->GetTemperature(rho,Press);

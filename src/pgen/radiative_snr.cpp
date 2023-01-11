@@ -203,7 +203,7 @@ void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
 
   // Add density perturbation
   Real nH_0 = pin->GetReal("problem", "nH_0"); // measured in m_p muH cm^-3
-  Real rho_0 = nH_0*pcf->nH_to_code_den;
+  Real rho_0 = nH_0*pcool->pcf->nH_to_code_den;
   Real amp_den = pin->GetOrAddReal("problem","amp_den",0.0);
   if (amp_den>0) {
     PerturbationGenerator *ppert;
@@ -342,7 +342,7 @@ void AddSupernova(Mesh *pm) {
 #ifdef MPI_PARALLEL
   MPI_Allreduce(MPI_IN_PLACE, &my_vol, 1, MPI_ATHENA_REAL, MPI_SUM, MPI_COMM_WORLD);
 #endif
-  Units *punit = pm->my_blocks(0)->pcool->punit;
+  Units *punit = pm->punit;
   // get pressure fron SNe in the code unit
   Real rhosn = M_ej*punit->Msun_in_code/my_vol;
   Real usn = E_SN*punit->Bethe_in_code/my_vol;
