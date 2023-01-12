@@ -46,11 +46,12 @@ MPI_Comm Particles::my_comm = MPI_COMM_NULL;
 
 Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp) :
   ipar(pp->ipar), input_block_name(pp->block_name), partype(pp->partype),
+  npar_(0), nparmax_(1),
   nint(0), nreal(0), naux(0), nwork(0),
   ipid(-1), imass(-1), ixp(-1), iyp(-1), izp(-1), ivpx(-1), ivpy(-1), ivpz(-1),
   ixp0(-1), iyp0(-1), izp0(-1), ivpx0(-1), ivpy0(-1), ivpz0(-1),
   ixi1(-1), ixi2(-1), ixi3(-1), igx(-1), igy(-1), igz(-1), ish(-1),
-  npar_(0), nparmax_(1), parhstout_(false), isgravity_(pp->gravity) {
+  parhstout_(false), isgravity_(pp->gravity) {
   // Add particle ID.
   ipid = AddIntProperty();
   intpropname.push_back("pid");
