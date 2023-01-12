@@ -1,5 +1,5 @@
 <comment>
-problem   = thermal instability test for 
+problem   = thermal instability test for
 reference = El Badry et al. 2019 (for now)
 configure = --prob TI_test
 
@@ -42,10 +42,12 @@ gamma           = 1.666666666667 # gamma = C_p/C_v
 iso_sound_speed = 0.4082482905   # equivalent to sqrt(gamma*p/d) for p=0.1, d=1
 
 <cooling>
-coolftn       = tigress	# tigress or plf
-solver        = euler	# euler or rk4
+cooling       = enroll           # [none, enroll, op_split]
+solver        = forward_euler    # [forward_euler]
+coolftn       = tigress	         # tigress or plf
 
-cfl_cool      = 0.01	# min dt_hydro/dt_cool
+cfl_cool      = 0.5	# min dt_hydro/dt_cool
+cfl_cool_sub  = 0.1     # dt_sub/dt_cool (must be less than 1)
 T_floor       = 10 	# temperature floor
 T_max         = 1e8	# temperature ceiling
 
@@ -55,6 +57,6 @@ Gamma         = 2e-26 	# heating rate in ergs / sec, if plf
 heat_ratio    = 1.0       # Gamma/Gamma0, if tigress
 
 <problem>
-rho_0         = 5.0	  # initial density meant to be in cm^-3, pressure is set so the gas is in equilibrium
+nH_0         = 5.0	  # initial density meant to be in cm^-3, pressure is set so the gas is in equilibrium
 alpha         = 0.0001	  # the relative amplitude of the density perturbation, should be << 1
 kn            = 1	  # the wavenumber of the perturbation, periodic in x direction

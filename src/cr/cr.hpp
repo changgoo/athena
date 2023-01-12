@@ -15,8 +15,7 @@
 #include "../athena.hpp"
 #include "../athena_arrays.hpp"
 #include "../bvals/cc/bvals_cc.hpp"
-#include "../utils/cooling_function.hpp"
-#include "../utils/units.hpp"
+#include "../microphysics/units.hpp"
 
 class MeshBlock;
 class ParameterInput;

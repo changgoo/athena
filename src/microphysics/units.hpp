@@ -1,5 +1,5 @@
-#ifndef UTILS_UNITS_HPP_
-#define UTILS_UNITS_HPP_
+#ifndef MICROPHYSICS_UNITS_HPP_
+#define MICROPHYSICS_UNITS_HPP_
 //========================================================================================
 // Athena++ astrophysical MHD code
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
@@ -35,20 +35,18 @@ static const Real e     = 4.80320427e-10;
 //! \brief Class for units
 class Units {
  public:
+  explicit Units(ParameterInput *pin);
   Units(Real dunit, Real lunit, Real vunit);
-  Units(Real dunit, Real lunit, Real vunit, Real mu0);
 
   void SetUnitsConstants();
   void PrintCodeUnits();
   void PrintConstantsInCodeUnits();
 
-  bool fixed_mu;
-
-  Real Mass, Length, Time;
-  Real Volume, Density, Velocity;
+  Real Density, Length, Velocity;
+  Real Mass, Volume, Time;
   Real EnergyDensity, Pressure;
   Real MagneticField;
-  Real Temperature, mu;
+  Real Temperature_mu;
 
   Real gram, cm, second, dyne, erg, Kelvin, Gauss;
 
@@ -66,4 +64,4 @@ class Units {
   Real e_in_code;
   Real Bethe_in_code;
 };
-#endif // UTILS_UNITS_HPP_
+#endif // MICROPHYSICS_UNITS_HPP_

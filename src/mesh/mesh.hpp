@@ -57,6 +57,8 @@ class FFTGravityDriver;
 class TurbulenceDriver;
 class OrbitalAdvection;
 class BlockFFTGravity;
+class CoolingSolver;
+class Units;
 
 FluidFormulation GetFluidFormulation(const std::string& input_string);
 
@@ -125,6 +127,9 @@ class MeshBlock {
   CosmicRay *pcr;
   OrbitalAdvection *porb;
   BlockFFTGravity *pfft;
+  CoolingSolver *pcool;
+  Units *punit;
+
   // pointer to particle classes
   std::vector<Particles *> ppars, ppars_grav;
 
@@ -243,6 +248,7 @@ class Mesh {
   Real start_time, time, tlim, dtlim;
   Real dt, dt_hyperbolic, dt_parabolic, dt_user, cfl_number;
   int nlim, ncycle, ncycle_out, dt_diagnostics;
+  std::string time_integrator;
   std::string sts_integrator;
   Real sts_max_dt_ratio;
   TaskType sts_loc;
@@ -250,6 +256,7 @@ class Mesh {
   int nbtotal, nblocal, nbnew, nbdel;
   std::vector<ParticleParameters> particle_params;
   bool particle, particle_gravity;
+  const bool cooling;
 
   int step_since_lb;
   int gflag;
@@ -260,6 +267,10 @@ class Mesh {
 
   FFTGravityDriver *pfgrd;
   MGGravityDriver *pmgrd;
+
+  Units *punit;
+  CoolingSolver *pcool;
+
 
   AthenaArray<Real> *ruser_mesh_data;
   AthenaArray<int> *iuser_mesh_data;

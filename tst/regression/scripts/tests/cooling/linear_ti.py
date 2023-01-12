@@ -17,10 +17,6 @@ _amp = 1.e-4
 resolution_range = [32, 64, 128]
 # cooling function to be used
 coolfnc = 'tigress'
-# integrator to be used for cooling
-# integrator = 'euler'
-# integrator = 'rk4'
-integrator = 'op'
 # tolerance in relative error for each resolution
 error_rel_tols = [0.008, 0.004, 0.001]
 
@@ -38,7 +34,7 @@ def prepare(**kwargs):
 
     # Configure as though we ran
     #     python configure.py -hdf5 --prob=TI_test
-    athena.configure(prob='TI_test', **kwargs)
+    athena.configure(prob='linear_ti_test', **kwargs)
 
     # Call make as though we ran
     #     make clean
@@ -49,23 +45,45 @@ def prepare(**kwargs):
 
 def run(**kwargs):
     # Run the executable.
+    # for enrolled cooling
     for N in resolution_range:
-        arguments = ['job/problem_id=TI_test-{}'.format(N),
+        arguments = ['job/problem_id=linear_ti_test-euler-{}'.format(N),
+                     'cooling/cooling=enroll',
                      'cooling/coolftn='+coolfnc,
-                     'cooling/cfl_cool=1.0',
-                     'cooling/solver='+integrator,
+                     'cooling/cfl_cool=0.5',
+                     'cooling/cfl_cool_sub=0.5',
                      'mesh/nx1='+repr(N),
                      'mesh/x2min='+repr(-0.00625*32/N),
                      'mesh/x2max='+repr(0.00625*32/N),
                      'mesh/x3min='+repr(-0.00625*32/N),
                      'mesh/x3max='+repr(0.00625*32/N),
-                     'problem/rho_0=5.0',
+                     'problem/nH_0=5.0',
                      'problem/kn=1',
                      'problem/alpha={}'.format(_amp)]
 
         # Run Athena++ as though we called
         # ./athena -i ../inputs/cooling/athinput.thermal_instability_test
-        athena.run('cooling/athinput.thermal_instability_test', arguments)
+        athena.run('cooling/athinput.linear_ti_test', arguments)
+
+    # for operater split cooling
+    for N in resolution_range:
+        arguments = ['job/problem_id=linear_ti_test-op-{}'.format(N),
+                     'cooling/cooling=op_split',
+                     'cooling/coolftn='+coolfnc,
+                     'cooling/cfl_cool=5.0',
+                     'cooling/cfl_cool_sub=0.5',
+                     'mesh/nx1='+repr(N),
+                     'mesh/x2min='+repr(-0.00625*32/N),
+                     'mesh/x2max='+repr(0.00625*32/N),
+                     'mesh/x3min='+repr(-0.00625*32/N),
+                     'mesh/x3max='+repr(0.00625*32/N),
+                     'problem/nH_0=5.0',
+                     'problem/kn=1',
+                     'problem/alpha={}'.format(_amp)]
+
+        # Run Athena++ as though we called
+        # ./athena -i ../inputs/cooling/athinput.thermal_instability_test
+        athena.run('cooling/athinput.linear_ti_test', arguments)
     # No return statement/value is ever required from run(), but returning anything other
     # than default None will cause run_tests.py to skip executing the optional Lcov cmd
     # immediately after this module.run() finishes, e.g. if Lcov was already invoked by:
@@ -87,34 +105,39 @@ def analyze():
     # initialize analyze_status to True (remains true if all tests are passed)
     analyze_status = True
 
-    # loop over different resolutions that have been tested
-    for (nx, err_tol) in zip(resolution_range, error_rel_tols):
+    # loop over cooling sovers
+    for csolver in ['euler', 'op']:
+        # loop over different resolutions that have been tested
+        for (nx, err_tol) in zip(resolution_range, error_rel_tols):
 
-        # Read in the data produced during this test.
-        filename = 'bin/TI_test-{}.hst'.format(nx)
-        hst_data = athena_read.hst(filename)
-        t_sol = hst_data['time']
-        alpha_sol = hst_data['rho_max']
+            # Read in the data produced during this test.
+            filename = 'bin/linear_ti_test-{}-{}.hst'.format(csolver, nx)
+            hst_data = athena_read.hst(filename)
+            t_sol = hst_data['time']
+            alpha_sol = hst_data['rho_max']
 
-        # Next we compute the differences between the reference arrays and
-        # the newly created ones in the L^1 sense.
-        error_abs = np.trapz(abs(alpha_sol - np.interp(t_sol, t_ref, alpha_ref)), t_sol)
-        errors_abs += [error_abs]
+            # Next we compute the differences between the reference arrays and
+            # the newly created ones in the L^1 sense.
+            error_abs = np.trapz(abs(alpha_sol - np.interp(t_sol, t_ref, alpha_ref)),
+                                 t_sol)
+            errors_abs += [error_abs]
 
-        # Compute the relative error
-        error_rel = error_abs / np.trapz(np.interp(t_sol, t_ref, alpha_ref), t_sol)
+            # Compute the relative error
+            error_rel = error_abs / np.trapz(np.interp(t_sol, t_ref, alpha_ref), t_sol)
 
-        # if error does not meet tolerance, test is failed
-        if error_rel > err_tol or np.isnan(error_rel):
-            print("Relative error is ", error_rel)
-            analyze_status = False
+            # if error does not meet tolerance, test is failed
+            if error_rel > err_tol or np.isnan(error_rel):
+                print("Relative error is ", error_rel)
+                analyze_status = False
 
-    # Finally, we want to check the 2nd order convergence rate of solver
-    for j in range(len(resolution_range)-1):
-        rate = np.log(errors_abs[j]/errors_abs[j+1]) / (
-            np.log(resolution_range[j+1]/resolution_range[j]))
-        if rate < rate_tols[j]:
-            print("Desired Convergance not achieved")
-            analyze_status = False
-
+        # Finally, we want to check the 2nd order convergence rate of solver
+        print("[{} solver]: convergence rates".format(csolver))
+        for j in range(len(resolution_range)-1):
+            rate = np.log(errors_abs[j]/errors_abs[j+1]) / (
+                np.log(resolution_range[j+1]/resolution_range[j]))
+            print("{} --> {}: {}".format(resolution_range[j],
+                                         resolution_range[j+1], rate))
+            if rate < rate_tols[j]:
+                print("Desired Convergance not achieved with {} solver".format(csolver))
+                analyze_status = False
     return analyze_status

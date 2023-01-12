@@ -14,30 +14,36 @@
 // Athena++ headers
 #include "../athena.hpp"
 #include "../athena_arrays.hpp"
+#include "../parameter_input.hpp"
 #include "units.hpp"
 
-//! \brief ctor without mu
-Units::Units(Real dunit, Real lunit, Real vunit) {
-  Density = dunit;
-  Length = lunit;
-  Velocity = vunit;
-  mu = 1.0;
-  fixed_mu = false;
-
+//========================================================================================
+//! \fn void Units::Units(ParameterInput *pin)
+//! \brief default unit constructor from the parameter input (default is for ISM problems)
+//!        temperature units are not set (due to the mu dependence)
+//========================================================================================
+Units::Units(ParameterInput *pin) :
+  Density(pin->GetOrAddReal("units", "density", 1.4*Constants::mH)),
+  Length(pin->GetOrAddReal("units", "length", Constants::pc)),
+  Velocity(pin->GetOrAddReal("units", "velocity", Constants::kms)) {
   SetUnitsConstants();
 }
 
-//! \brief ctor with fixed mu
-Units::Units(Real dunit, Real lunit, Real vunit, Real mu0) {
-  Density = dunit;
-  Length = lunit;
-  Velocity = vunit;
-  mu = mu0;
-  fixed_mu = true;
-
+//========================================================================================
+//! \fn void Units::Units()
+//! \brief unit constructor with arbitrary given set of units (in c.g.s.)
+//========================================================================================
+Units::Units(Real dunit, Real lunit, Real vunit) :
+  Density(dunit),
+  Length(lunit),
+  Velocity(vunit) {
   SetUnitsConstants();
 }
 
+//========================================================================================
+//! \fn void Units::SetUnitsConstants()
+//! \brief
+//========================================================================================
 void Units::SetUnitsConstants() {
   Volume = Length*Length*Length;
   Mass = Density*Volume;
@@ -47,7 +53,8 @@ void Units::SetUnitsConstants() {
 
   MagneticField = std::sqrt(4.*PI*Pressure);
 
-  Temperature = Pressure/Density*mu*Constants::mH/Constants::kB;
+  // units conversion factor for T/mu
+  Temperature_mu = Pressure/Density*Constants::mH/Constants::kB;
 
   cm = 1.0/Length;
   gram = 1.0/Mass;
@@ -81,13 +88,6 @@ void Units::PrintCodeUnits() {
   std::cout << "code Mass = " << Mass << " c.g.s." << std::endl;
   std::cout << "code Time = " << Time << " c.g.s." << std::endl;
   std::cout << "code Pressure = " << Pressure << " c.g.s." << std::endl;
-
-  std::cout << "code Temperature = " << Temperature << " c.g.s." << std::endl;
-  if (fixed_mu)
-    std::cout << "    with fixed mu0 = " << mu << std::endl;
-  else
-    std::cout << "    for mu = 1.0 (temperature conversion is non-trivial for general mu)"
-              << std::endl;
   std::cout << "====================================" << std::endl;
 }
 

@@ -12,8 +12,8 @@
 #include "../athena.hpp"
 #include "../globals.hpp"
 #include "../mesh/mesh.hpp"
+#include "../microphysics/units.hpp"
 #include "../parameter_input.hpp"
-#include "../utils/units.hpp"
 #include "cr.hpp"
 
 // MPI/OpenMP header
@@ -34,7 +34,7 @@ void DefaultTemperature(Units *punit, Real rho, Real Press,
                         Real &Temp, Real &mu, Real &muH) {
   mu = 1.27; //assuming neutral gas
   muH = 1.4272;
-  Temp = Press/rho*mu*punit->Temperature;
+  Temp = Press/rho*mu*punit->Temperature_mu;
 }
 
 Real CosmicRay::Get_SigmaParallel(Real rho, Real Press, Real ecr, Real grad_pc_par) {
