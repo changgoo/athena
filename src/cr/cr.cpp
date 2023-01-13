@@ -19,8 +19,8 @@
 #include "../coordinates/coordinates.hpp"
 #include "../globals.hpp"
 #include "../mesh/mesh.hpp"
+#include "../microphysics/units.hpp"
 #include "../parameter_input.hpp"
-#include "../utils/units.hpp"
 #include "cr.hpp"
 #include "integrators/cr_integrators.hpp"
 
@@ -126,21 +126,22 @@ inline void DefaultOpacity(MeshBlock *pmb, AthenaArray<Real> &u_cr,
           Real dpc_sign = 0.0;
           if(b_grad_pc > TINY_NUMBER) dpc_sign = 1.0;
           else if(-b_grad_pc > TINY_NUMBER) dpc_sign = -1.0;
-          //streaming velocity
-          pcr->v_adv(0,k,j,i) = -va1 * dpc_sign;
-          pcr->v_adv(1,k,j,i) = -va2 * dpc_sign;
-          pcr->v_adv(2,k,j,i) = -va3 * dpc_sign;
+          if(pcr->stream_flag) {
+            //streaming velocity
+            pcr->v_adv(0,k,j,i) = -va1 * dpc_sign;
+            pcr->v_adv(1,k,j,i) = -va2 * dpc_sign;
+            pcr->v_adv(2,k,j,i) = -va3 * dpc_sign;
 
-          //streaming coefficient
-          if(va < TINY_NUMBER) {
-            pcr->sigma_adv(0,k,j,i) = pcr->max_opacity;
-          } else {
-            pcr->sigma_adv(0,k,j,i) = std::fabs(b_grad_pc)/(btot * va * (1.0 + 1.0/3.0)
+            //streaming coefficient
+            if(va < TINY_NUMBER) {
+              pcr->sigma_adv(0,k,j,i) = pcr->max_opacity;
+            } else {
+              pcr->sigma_adv(0,k,j,i) = std::fabs(b_grad_pc)/(btot * va * (1.0 + 1.0/3.0)
                                                * invlim * u_cr(CRE,k,j,i));
+            }
+            pcr->sigma_adv(1,k,j,i) = pcr->max_opacity;
+            pcr->sigma_adv(2,k,j,i) = pcr->max_opacity;
           }
-          pcr->sigma_adv(1,k,j,i) = pcr->max_opacity;
-          pcr->sigma_adv(2,k,j,i) = pcr->max_opacity;
-
           // Here we calculate the angles of B needed to compute the rotation matrix
           // The information stored in the array
           // b_angle is
@@ -272,7 +273,6 @@ CosmicRay::CosmicRay(MeshBlock *pmb, ParameterInput *pin):
 
 CosmicRay::~CosmicRay() {
   delete pcrintegrator;
-  delete punit;
 }
 
 //Enrol the function to update opacity

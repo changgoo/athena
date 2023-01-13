@@ -1,5 +1,5 @@
-#ifndef UTILS_COOLING_FUNCTION_HPP_
-#define UTILS_COOLING_FUNCTION_HPP_
+#ifndef MICROPHYSICS_COOLING_HPP_
+#define MICROPHYSICS_COOLING_HPP_
 //========================================================================================
 // Athena++ astrophysical MHD code
 // Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
@@ -11,21 +11,56 @@
 // C headers
 
 // C++ headers
+#include <string>
 
 // Athena++ headers
 #include "../athena.hpp"
 #include "../athena_arrays.hpp"
 #include "units.hpp" // Units
 
+class Mesh;
+class CoolingFunctionBase;
+
+class CoolingSolver {
+ public:
+  explicit CoolingSolver(Mesh *pm, ParameterInput *pin);
+  ~CoolingSolver();
+
+  static void CoolingSourceTerm(MeshBlock *pmb, const Real t, const Real dt,
+       const AthenaArray<Real> &prim, const AthenaArray<Real> &prim_scalar,
+       const AthenaArray<Real> &bcc, AthenaArray<Real> &cons,
+       AthenaArray<Real> &cons_scalar);
+  static Real CoolingTimeStep(MeshBlock *pmb);
+
+  void OperatorSplitSolver(MeshBlock *pmb);
+  Real Solver(Real press, Real rho, Real dt);
+
+  CoolingFunctionBase *pcf;
+  Units *punit;
+  Real cfl_cool, cfl_cool_sub;
+  AthenaArray<Real> edot, edot_floor;
+
+  bool op_flag, bookkeeping;
+  std::string cooling, solver, coolftn;
+
+ private:
+  Real CoolingExplicitSubcycling(Real tend, Real press, const Real rho);
+
+  int uov_idx_; // indicies for user_out_var
+  int nsub_max_;
+};
+
 //! \brief Base class for Cooling Functions
 class CoolingFunctionBase {
  public:
-  explicit CoolingFunctionBase(ParameterInput *pin);
-  ~CoolingFunctionBase();
+  CoolingFunctionBase(ParameterInput *pin, Units *punit);
 
-  void Initialize(Real mu, Real muH);
-  // Real tcool(const Real T, const Real nH);
-  // Real netcool(const Real T, const Real nH);
+  void Initialize(Real muH);
+#pragma omp declare simd simdlen(SIMD_WIDTH) notinbranch uniform(this)
+  Real CoolingTime(const Real rho, const Real Press);
+  Real NetCoolingTime(const Real rho, const Real Press);
+
+  void PrintCoolingFunction();
 
   // Real Getdt(const Real T, const Real nH);
   virtual Real Lambda_T(const Real rho, const Real Press) = 0;
@@ -42,12 +77,14 @@ class CoolingFunctionBase {
 
   Units *punit;
 
-  Real to_nH,to_pok;
+  Real code_den_to_nH,code_press_to_pok;
+  Real nH_to_code_den,pok_to_code_press;
   Real mean_mass_per_H;
 
   Real T_max, T_floor, cfl_cool, gamma_adi;
 
  private:
+  std::string coolftn_name;
   Real mu,muH;
 };
 
@@ -62,8 +99,7 @@ class CoolingFunctionBase {
 //========================================================================================
 class PiecewiseLinearFits : public CoolingFunctionBase {
  public:
-  explicit PiecewiseLinearFits(ParameterInput *pin);
-  // ~PiecewiseLinearFits() override { delete punit; }
+  PiecewiseLinearFits(ParameterInput *pin, Units *punit);
 
   Real Lambda_T(const Real rho, const Real Press) override;
   Real dlnL_dlnT(const Real rho, const Real Press) override;
@@ -74,8 +110,9 @@ class PiecewiseLinearFits : public CoolingFunctionBase {
   Real GetTemperature(const Real rho, const Real Press) override;
 
  private:
-  Real mu,muH;
+  std::string coolftn_name;
   Real T_PE,Gamma0;
+  Real mu,muH;
   // fitting parameters
   static constexpr int nfit_cool = 12;
   Real T_cooling_curve[nfit_cool] =
@@ -114,11 +151,12 @@ class PiecewiseLinearFits : public CoolingFunctionBase {
 //========================================================================================
 class TigressClassic : public CoolingFunctionBase {
  public:
-  explicit TigressClassic(ParameterInput *pin);
-  // ~TigressClassic() override { delete punit; }
+  TigressClassic(ParameterInput *pin, Units *punit);
 
+#pragma omp declare simd simdlen(SIMD_WIDTH) notinbranch uniform(this)
   Real Lambda_T(const Real rho, const Real Press) override;
   Real dlnL_dlnT(const Real rho, const Real Press) override;
+#pragma omp declare simd simdlen(SIMD_WIDTH) notinbranch uniform(this)
   Real Gamma_T(const Real rho, const Real Press) override;
   Real Get_mu(const Real rho, const Real Press) override;
   Real Get_muH() override { return muH; }
@@ -126,14 +164,18 @@ class TigressClassic : public CoolingFunctionBase {
   void SetHeatRatio(Real hr) { heat_ratio = hr; }
 
   Real GetHeatRatio() { return heat_ratio;}
+#pragma omp declare simd simdlen(SIMD_WIDTH) notinbranch uniform(this)
   Real GetTemperature(const Real rho, const Real Press) override;
 
  private:
+  std::string coolftn_name;
+
   Real heat_ratio;
-  Real mu, muH;
+  Real muH;
   const Real mumin=0.6182, mumax=1.295;
 
   // specific functions for interpolation
+#pragma omp declare simd simdlen(SIMD_WIDTH) notinbranch uniform(this)
   int get_Tidx(const Real temp);
 
   // tables
@@ -1216,4 +1258,4 @@ class TigressClassic : public CoolingFunctionBase {
            0.00000000e+00,   0.00000000e+00,   0.00000000e+00,
     };
 };
-#endif // UTILS_COOLING_FUNCTION_HPP_
+#endif // MICROPHYSICS_COOLING_HPP_

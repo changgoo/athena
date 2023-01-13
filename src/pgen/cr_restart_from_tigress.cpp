@@ -29,16 +29,16 @@
 #include "../field/field.hpp"
 #include "../hydro/hydro.hpp"
 #include "../mesh/mesh.hpp"
+#include "../microphysics/cooling.hpp"
+#include "../microphysics/units.hpp"
 #include "../parameter_input.hpp"
 #include "../utils/utils.hpp"
 
 #define MAXLEN 256
 
 // Global variables ---
-// Pointer to unit class. This is now attached to the Cooling class
-Units *punit;
-// Pointer to Cooling function class,
-CoolingFunctionBase *pcool;
+CoolingSolver *pcool;
+
 // total rate of CR injection at a given time step
 static Real tot_InjectionRate;
 
@@ -119,23 +119,25 @@ static Real hst_Injected_CRenergy(MeshBlock *pmb, int iout) {
 }
 
 void Mesh::InitUserMeshData(ParameterInput *pin) {
-  // Pointer to Cooling function class,
-  // will be set to specific function depending on the input parameter (cooling/coolftn)
-  std::string coolftn = pin->GetOrAddString("cooling", "coolftn", "tigress");
-  if (coolftn.compare("tigress") == 0) {
-    pcool = new TigressClassic(pin);
-    std::cout << "Cooling function is set to TigressClassic" << std::endl;
-  } else if (coolftn.compare("plf") ==0) {
-    pcool = new PiecewiseLinearFits(pin);
-    std::cout << "Cooling function is set to PiecewiseLinearFits" << std::endl;
+  if (cooling) {
+    std::string cooling_type = pin->GetString("cooling", "cooling");
+    if (cooling_type.compare("enroll") == 0) {
+      EnrollUserExplicitSourceFunction(&CoolingSolver::CoolingSourceTerm);
+      if (Globals::my_rank == 0)
+        std::cout << "Cooling solver is enrolled" << std::endl;
+    } else if (cooling_type.compare("op_split") == 0) {
+      if (Globals::my_rank == 0)
+        std::cout << "Cooling solver is set to operator split" << std::endl;
+    }
   } else {
     std::stringstream msg;
-    msg << "### FATAL ERROR in CosmicRay" << std::endl
-        << "coolftn = " << coolftn.c_str() << " is not supported" << std::endl;
-    throw std::runtime_error(msg.str().c_str());
-    return;
+    msg << "### FATAL ERROR in ProblemGenerator" << std::endl
+        << "Cooling must be turned on" << std::endl;
+    ATHENA_ERROR(msg);
   }
-  punit = pcool->punit;
+
+  // Enroll timestep so that dt <= min t_cool
+  EnrollUserTimeStepFunction(&CoolingSolver::CoolingTimeStep);
 
   //CR energy density is injected as a consequence of supernova explosion
   //maximum age of stars exploding as supernovae
@@ -239,7 +241,7 @@ void CalculateInjectionRate(ParameterInput *pin, MeshBlock *pmb,
   tot_InjectionRate = 0.;
   Real InjectionRate;
   Real InjectionRate_in_code;
-
+  Units *punit = pmb->punit;
   for(size_t s=0; s<Nstars; ++s) {
     // convert the star age from code units in Myr
     Real tstar = pList[s].mage / punit->Myr_in_code;
@@ -332,9 +334,9 @@ void Source_CR(MeshBlock *pmb, Real time, Real dt,
 
 void TempCalculation(Units *punit, Real rho, Real Press,
                      Real &Temp, Real &mu, Real &muH) {
-  Temp = pcool->GetTemperature(rho, Press);
-  muH = pcool->Get_muH();
-  mu = pcool->Get_mu(rho, Press);
+  Temp = pcool->pcf->GetTemperature(rho, Press);
+  muH = pcool->pcf->Get_muH();
+  mu = pcool->pcf->Get_mu(rho, Press);
 }
 
 //======================================================================================
@@ -1312,7 +1314,7 @@ Real set_CR_Luminosity(Real tage) {
   Real dage = 0.2; //Myr
   int const Narray = 201;
   Real N_SNe, CR_Lum;
-  Real SN_energy = punit->Bethe_in_code;
+  Real SN_energy = pcool->punit->Bethe_in_code;
   Real CR_eff = 0.1;
 
   // SNRate for Msun cluster per Myr (Starburst99)

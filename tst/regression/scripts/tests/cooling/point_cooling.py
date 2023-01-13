@@ -28,7 +28,7 @@ def prepare(**kwargs):
 
     # Configure as though we ran
     #     python configure.py -hdf5 --prob=cooling
-    athena.configure(prob='cooling', **kwargs)
+    athena.configure(prob='point_cooling', **kwargs)
 
     # Call make as though we ran
     #     make clean
@@ -50,7 +50,6 @@ def run(**kwargs):
     # the string are exactly what one would type on the command line run running Athena++.
     arguments_def = ['time/ncycle_out=100',
                      'cooling/coolftn=tigress',
-                     'cooling/cfl_cool=0.01',
                      'problem/rho_0=30.0',
                      'problem/pgas_0=30000000']
 
@@ -59,21 +58,18 @@ def run(**kwargs):
     # from the bin/ directory. Note we omit the leading '../inputs/' below when specifying
     # the athinput file.)
     arguments = arguments_def + \
-        ['cooling/solver=euler',
+        ['cooling/cooling=enroll',
+         'cooling/cfl_cool=0.01',
+         'cooling/cfl_cool_sub=0.01',
          'job/problem_id=cooling1']
-    athena.run('cooling/athinput.cooling_test', arguments)
+    athena.run('cooling/athinput.point_cooling_test', arguments)
 
     arguments = arguments_def + \
-        ['cooling/solver=rk4',
-         'job/problem_id=cooling2']
-    athena.run('cooling/athinput.cooling_test', arguments)
-
-    arguments = arguments_def + \
-        ['cooling/solver=op',
+        ['cooling/cooling=op_split',
          'cooling/cfl_cool=1',
-         'cooling/cfl_op_cool=0.01',
-         'job/problem_id=cooling3']
-    athena.run('cooling/athinput.cooling_test', arguments)
+         'cooling/cfl_cool_sub=0.01',
+         'job/problem_id=cooling2']
+    athena.run('cooling/athinput.point_cooling_test', arguments)
     # No return statement/value is ever required from run(), but returning anything other
     # than default None will cause run_tests.py to skip executing the optional Lcov cmd
     # immediately after this module.run() finishes, e.g. if Lcov was already invoked by:
@@ -104,16 +100,16 @@ def analyze():
     # the file name is what we expect based on the job/problem_id field supplied in run().
     (t_sol1, mass_sol1, Etot_sol1) = np.loadtxt('bin/cooling1.hst', usecols=(0, 2, 9)).T
     (t_sol2, mass_sol2, Etot_sol2) = np.loadtxt('bin/cooling2.hst', usecols=(0, 2, 9)).T
-    (t_sol3, mass_sol3, Etot_sol3) = np.loadtxt('bin/cooling3.hst', usecols=(0, 2, 9)).T
+    # (t_sol3, mass_sol3, Etot_sol3) = np.loadtxt('bin/cooling3.hst', usecols=(0, 2, 9)).T
     # default volume of the simulation domain
     vol = 8
     # default conversion factor from code to kB K cm^-3 if using TIGRESS Units
     Pconv = 1.729586e+02
     # density, pressure, and T_mu of the solution
-    for solver, t_sol, mass_sol, Etot_sol in zip(['euler', 'RK4', 'op_split'],
-                                                 [t_sol1, t_sol2, t_sol3],
-                                                 [mass_sol1, mass_sol2, mass_sol3],
-                                                 [Etot_sol1, Etot_sol2, Etot_sol3]):
+    for solver, t_sol, mass_sol, Etot_sol in zip(['euler', 'op_split'],
+                                                 [t_sol1, t_sol2],
+                                                 [mass_sol1, mass_sol2],
+                                                 [Etot_sol1, Etot_sol2]):
         rho = mass_sol/vol
         P = (2./3)*Pconv*Etot_sol/vol
         T_sol = P/rho

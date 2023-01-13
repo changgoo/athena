@@ -29,6 +29,7 @@
 #include "../hydro/hydro_diffusion/hydro_diffusion.hpp"
 #include "../hydro/srcterms/hydro_srcterms.hpp"
 #include "../mesh/mesh.hpp"
+#include "../microphysics/cooling.hpp"
 #include "../orbital_advection/orbital_advection.hpp"
 #include "../parameter_input.hpp"
 #include "../particles/particles.hpp"
@@ -940,10 +941,9 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
 
     if (CR_ENABLED) {
       AddTask(CALC_CRFLX,CALC_HYDFLX);
-      if (pm->multilevel) { // SMR or AMR
+      if (pm->multilevel || SHEAR_PERIODIC) { // SMR or AMR
         AddTask(SEND_CRFLX,CALC_CRFLX);
         AddTask(RECV_CRFLX,CALC_CRFLX);
-        //Do I need to include the shear_periodic case?
         if (SHEAR_PERIODIC) {
           AddTask(SEND_CRFLXSH,RECV_CRFLX);
           AddTask(RECV_CRFLXSH,(SEND_CRFLX|RECV_CRFLX));
@@ -1683,6 +1683,30 @@ void TimeIntegratorTaskList::StartupTaskList(MeshBlock *pmb, int stage) {
       pmb->pcr->u_cr1.ZeroClear();
       if(integrator == "ssprk5_4")
         pmb->pcr->u_cr2 = pmb->pcr->u_cr;
+    }
+  }
+
+  if (pmb->pmy_mesh->cooling) {
+    if (pmb->pcool->bookkeeping) {
+      if (integrator == "rk2") {
+        if (stage == 1) {
+          pmb->peos->beta=0.5;
+          pmb->peos->efloor.ZeroClear();
+          pmb->pcool->edot.ZeroClear();
+          pmb->pcool->edot_floor.ZeroClear();
+        } else {
+          pmb->peos->beta=1.0;
+        }
+      } else if (integrator == "vl2") {
+        if (stage == nstages) {
+          pmb->peos->efloor.ZeroClear();
+          pmb->pcool->edot.ZeroClear();
+          pmb->pcool->edot_floor.ZeroClear();
+        }
+      } else {
+        std::cerr << "Energy book keeping is designed only for rk2 and vl2 integrators"
+                  << std::endl;
+      }
     }
   }
 
@@ -3024,6 +3048,3 @@ TaskStatus TimeIntegratorTaskList::AddSourceTermsCR(MeshBlock *pmb, int stage) {
   }
   return TaskStatus::next;
 }
-
-
-

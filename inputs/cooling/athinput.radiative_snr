@@ -24,6 +24,7 @@ dt         = 1.e-2      # time increment between outputs
 cfl_number = 0.3        # The Courant, Friedrichs, & Lewy (CFL) Number
 nlim       = -1		      # cycle limit
 tlim       = 0.1        # time limit
+dtlim      = 1.e-10
 integrator  = rk2       # time integration algorithm
 xorder      = 2         # order of spatial reconstruction
 ncycle_out  = 1         # interval for stdout summary info
@@ -56,12 +57,15 @@ nx3        = 32
 <hydro>
 gamma           = 1.666666666667 # gamma = C_p/C_v
 iso_sound_speed = 0.4082482905   # equivalent to sqrt(gamma*p/d) for p=0.1, d=1
+neighbor_flooring = true
 
 <cooling>
-coolftn       = tigress	# tigress or plf
+cooling       = enroll           # [none, enroll, op_split]
+solver        = forward_euler    # [forward_euler]
+coolftn       = tigress	         # tigress or plf
 
-cfl_cool      = 1      # min dt_hydro/dt_cool
-cfl_op_cool   = 0.1       # dt_sub/dt_cool (must be less than 1)
+cfl_cool      = 0.5       # min dt_hydro/dt_cool
+cfl_cool_sub  = 0.1       # dt_sub/dt_cool (must be less than 1)
 T_floor       = 10        # temperature floor
 T_max         = 1e8       # temperature ceiling
 
@@ -77,7 +81,7 @@ expo          = 2
 rseed         = 1
 
 <problem>
-rho_0         = 1.        # initial density meant to be in cm^-3
+nH_0          = 1.       # initial number density in cm^-3
 pgas_0        = 3000     # initial gas pressure meant to be in kB K cm^-3
 r_SN          = 5
 t_SN          = 0.0

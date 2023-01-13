@@ -85,7 +85,7 @@ void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Rea
         Real vtot3 = v3;
 
         //This can be turned on for post-processing
-        /* Real kin_en = 1e20;
+        Real kin_en = 1e20;
         if(pcr->src_flag == 0) {
           kin_en = rho*(std::pow(v1,2)+std::pow(v2,2)+std::pow(v3,2));
           if (ec[i]>kin_en || ec[i]<0) {
@@ -93,7 +93,7 @@ void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Rea
             vtot2 = 0;
             vtot3 = 0;
           }
-        }*/
+        }
 
         // add the streaming velocity
         if(pcr->stream_flag) {
@@ -186,12 +186,24 @@ void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Rea
           InvRotateVec(sint_b[i],cost_b[i],sinp_b[i],cosp_b[i],
                                          newfr1,newfr2,newfr3);
           //This can be turned on for post-processing
-          //if (pcr->src_flag == 0 && ec[i]<=kin_en && ec[i]>0)
-          new_ec += dt * ec_source_(k,j,i);
+          if ((pcr->src_flag == 0 && ec[i]<=kin_en && ec[i]>0)||
+              (pcr->src_flag>0))
+            new_ec += dt * ec_source_(k,j,i);
         }
 
         if(new_ec < 0.0)
           new_ec = ec[i];
+
+        if (pcr->losses_flag>0) {
+          new_ec -= pcr->lambdac * new_ec * rho * dt;
+          //c_in_code can be used fro relativistic CRs only -> to be changed
+          newfr1 -= pcr->lambdac * newfr1 * rho * dt
+            * std::pow(vlim/pcr->punit->c_in_code,2);
+          newfr2 -= pcr->lambdac * newfr2 * rho * dt
+            * std::pow(vlim/pcr->punit->c_in_code,2);
+          newfr3 -= pcr->lambdac * newfr3 * rho * dt
+            * std::pow(vlim/pcr->punit->c_in_code,2);
+        }
 
         // Add the energy source term
         if (NON_BAROTROPIC_EOS && (pcr->src_flag > 0)) {
@@ -204,13 +216,6 @@ void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Rea
           u(IM1,k,j,i) += (-(newfr1 - fc1[i]) * invlim);
           u(IM2,k,j,i) += (-(newfr2 - fc2[i]) * invlim);
           u(IM3,k,j,i) += (-(newfr3 - fc3[i]) * invlim);
-        }
-
-        if (pcr->losses_flag>0) {
-          new_ec -= pcr->lambdac * new_ec * rho * dt;
-          newfr1 -= pcr->lambdac * newfr1 * rho * dt;
-          newfr2 -= pcr->lambdac * newfr2 * rho * dt;
-          newfr3 -= pcr->lambdac * newfr3 * rho * dt;
         }
 
         u_cr(CRE,k,j,i) = new_ec;

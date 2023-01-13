@@ -42,6 +42,8 @@
 #include "../gravity/mg_gravity.hpp"
 #include "../hydro/hydro.hpp"
 #include "../hydro/hydro_diffusion/hydro_diffusion.hpp"
+#include "../microphysics/cooling.hpp"
+#include "../microphysics/units.hpp"
 #include "../multigrid/multigrid.hpp"
 #include "../orbital_advection/orbital_advection.hpp"
 #include "../outputs/io_wrapper.hpp"
@@ -98,12 +100,14 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
     nlim(pin->GetOrAddInteger("time", "nlim", -1)), ncycle(),
     ncycle_out(pin->GetOrAddInteger("time", "ncycle_out", 1)),
     dt_diagnostics(pin->GetOrAddInteger("time", "dt_diagnostics", -1)),
+    time_integrator(pin->GetOrAddString("time", "integrator", "vl2")),
     sts_integrator(pin->GetOrAddString("time", "sts_integrator", "rkl2")),
     sts_max_dt_ratio(pin->GetOrAddReal("time", "sts_max_dt_ratio", -1.0)),
     sts_loc(TaskType::main_int),
     muj(), nuj(), muj_tilde(), gammaj_tilde(),
     nbnew(), nbdel(),
     particle(false), particle_gravity(false),
+    cooling(pin->GetOrAddString("cooling", "cooling", "none") == "none" ? false : true),
     step_since_lb(), gflag(), amr_updated(multilevel),
     // private members:
     next_phys_id_(), num_mesh_threads_(pin->GetOrAddInteger("mesh", "num_threads", 1)),
@@ -322,6 +326,12 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
   } else {
     max_level = 63;
   }
+
+  // initialize units
+  punit = new Units(pin);
+
+  // construct cooling solver if needed
+  if (cooling) pcool = new CoolingSolver(this, pin);
 
   // Initialize Particles class.
   Particles::Initialize(this, pin);
@@ -603,12 +613,14 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     nlim(pin->GetOrAddInteger("time", "nlim", -1)), ncycle(),
     ncycle_out(pin->GetOrAddInteger("time", "ncycle_out", 1)),
     dt_diagnostics(pin->GetOrAddInteger("time", "dt_diagnostics", -1)),
+    time_integrator(pin->GetOrAddString("time", "integrator", "vl2")),
     sts_integrator(pin->GetOrAddString("time", "sts_integrator", "rkl2")),
     sts_max_dt_ratio(pin->GetOrAddReal("time", "sts_max_dt_ratio", -1.0)),
     sts_loc(TaskType::main_int),
     muj(), nuj(), muj_tilde(), gammaj_tilde(),
     nbnew(), nbdel(),
     particle(false), particle_gravity(false),
+    cooling(pin->GetOrAddString("cooling", "cooling", "none") == "none" ? false : true),
     step_since_lb(), gflag(), amr_updated(multilevel),
     // private members:
     next_phys_id_(), num_mesh_threads_(pin->GetOrAddInteger("mesh", "num_threads", 1)),
@@ -737,6 +749,12 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
   } else {
     max_level = 63;
   }
+
+  // initialize units
+  punit = new Units(pin);
+
+  // construct cooling solver if needed
+  if (cooling) pcool = new CoolingSolver(this, pin);
 
   // Initialize Particles class.
   Particles::Initialize(this, pin);
@@ -922,6 +940,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
 //! destructor
 
 Mesh::~Mesh() {
+  delete punit;
   for (int b=0; b<nblocal; ++b)
     delete my_blocks(b);
   delete [] nslist;
