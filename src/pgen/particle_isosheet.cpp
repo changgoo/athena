@@ -147,7 +147,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       Real x = udist(rng_generator)*mesh_size.x1len + mesh_size.x1min;
       Real y = udist(rng_generator)*mesh_size.x2len + mesh_size.x2min;
       Real z = z0*std::atanh(udist(rng_generator))*2.0*sgn;
-      ppar->AddOneParticle(mpar,x,y,z,vx,vy,vz);
+      int pid = ppar->AddOneParticle(mpar,x,y,z,vx,vy,vz);
     }
 
 //    std::cout << "[Problem IsoSheet] nparmax: " << ppar->nparmax_ << " npar: "

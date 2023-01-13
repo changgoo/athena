@@ -137,15 +137,12 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
               Real zp = zp1;
               if (mesh_size.nx3 > 1)
                 zp += dx3 * (udist(rng_generator) - 0.5);
+              int pid = ppar->AddOneParticle(mpar, xp, yp, zp, 0.0, 0.0, 0.0);
               if (DustParticles *pp = dynamic_cast<DustParticles*>(ppar)) {
                 if (pp->IsVariableTaus()) {
                   Real taus0 = pp->GetStoppingTime();
-                  pp->AddOneParticle(mpar, xp, yp, zp, 0.0, 0.0, 0.0, taus0);
-                } else {
-                  pp->AddOneParticle(mpar, xp, yp, zp, 0.0, 0.0, 0.0);
+                  if (pid != -1) pp->taus(pid) = taus0;
                 }
-              } else if (TracerParticles *pp = dynamic_cast<TracerParticles*>(ppar)) {
-                pp->AddOneParticle(mpar, xp, yp, zp, 0.0, 0.0, 0.0);
               }
             }
           }

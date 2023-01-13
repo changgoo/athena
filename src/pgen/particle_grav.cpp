@@ -127,7 +127,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       Real x1 = r*std::cos(phi)*sinth;
       Real x2 = r*std::sin(phi)*sinth;
       Real x3 = r*costh;
-      ppar->AddOneParticle(m0, x0+x1, y0+x2, z0+x3, 0.0, 0.0, 0.0);
+      int pid = ppar->AddOneParticle(m0, x0+x1, y0+x2, z0+x3, 0.0, 0.0, 0.0);
     }
 
 //   std::cout << "npartot: " << npartot

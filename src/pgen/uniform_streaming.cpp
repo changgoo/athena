@@ -109,11 +109,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       Real yp1 = block_size.x2min + (j + 0.5) * dx2;
       for (int i = 0; i < npx1_loc; ++i) {
         Real xp1 = block_size.x1min + (i + 0.5) * dx1;
+        int pid = ppar->AddOneParticle(mpar, xp1, yp1, zp1, vpx0, vpy0, vpz0);
         if (ppar->IsVariableTaus()) {
           Real taus0 = ppar->GetStoppingTime();
-          ppar->AddOneParticle(mpar, xp1, yp1, zp1, vpx0, vpy0, vpz0, taus0);
-        } else {
-          ppar->AddOneParticle(mpar, xp1, yp1, zp1, vpx0, vpy0, vpz0);
+          if (pid != -1) ppar->taus(pid) = taus0;
         }
       }
     }
