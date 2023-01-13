@@ -204,11 +204,8 @@ friend class ParticleMesh;
                              AthenaArray<Real>& xi3);
   int CountNewParticles() const;
   void SetNewParticleID(int id);
-  Real CellCrossingTime();
   // hooks for further timestep constraints for derived particles
-  virtual Real OtherCharacteristicTime1() { return std::numeric_limits<Real>::max(); }
-  virtual Real OtherCharacteristicTime2() { return std::numeric_limits<Real>::max(); }
-  virtual Real OtherCharacteristicTime3() { return std::numeric_limits<Real>::max(); }
+  virtual Real NewDtForDerived() { return std::numeric_limits<Real>::max(); }
   void EulerStep(Real t, Real dt, const AthenaArray<Real>& meshsrc);
 
   // Input/Output
@@ -299,7 +296,7 @@ class DustParticles : public Particles {
   void DepositToMesh(Real t, Real dt, const AthenaArray<Real>& meshsrc,
                      AthenaArray<Real>& meshdst) override;
   void UserStoppingTime(Real t, Real dt, const AthenaArray<Real>& meshsrc);
-  Real OtherCharacteristicTime1() override;
+  Real NewDtForDerived() override;
 
   // Data members
   bool backreaction;   //!> turn on/off back reaction

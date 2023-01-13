@@ -110,7 +110,7 @@ void DustParticles::AddOneParticle(Real mp, Real x1, Real x2, Real x3,
 //! \fn Real DustParticles::OtherCharacteristicTime1();
 //! \brief returns the drag timescale.
 
-Real DustParticles::OtherCharacteristicTime1() {
+Real DustParticles::NewDtForDerived() {
   // No further constraints for infinitely tight coupling (zero stopping time), which is
   // equivalent to a tracer particle
   if (taus0 <= 0.0) return std::numeric_limits<Real>::max();
@@ -135,7 +135,7 @@ Real DustParticles::OtherCharacteristicTime1() {
     }
   }
   Real dt = taus0 / (1.0 + epsmax);
-  return dt;
+  return dt; // cfl_par is multiplied in the caller (NewBlockTimeStep)
 }
 
 //--------------------------------------------------------------------------------------

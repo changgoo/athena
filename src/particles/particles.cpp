@@ -231,13 +231,33 @@ void Particles::Integrate(int stage) {
 //--------------------------------------------------------------------------------------
 //! \fn Real Particles::NewBlockTimeStep();
 //! \brief returns the time step required by particles in the block.
+//!
+//! \note
+//! The default timestep for particle integration is the cell crossing time. Additional
+//! timestep restrictions can be imposed in NewDtForDerived, which can be overrided in
+//! child classes. Final timestep is further reduced by multiplying cfl_par_.
 
 Real Particles::NewBlockTimeStep() {
-  Real dt = std::numeric_limits<Real>::max();
-  dt = std::min(dt, CellCrossingTime());
-  dt = std::min(dt, OtherCharacteristicTime1());
-  dt = std::min(dt, OtherCharacteristicTime2());
-  dt = std::min(dt, OtherCharacteristicTime3());
+  Coordinates *pc = pmy_block->pcoord;
+
+  // Find the maximum coordinate speed.
+  Real dt_inv2_max = 0.0;
+  for (int k = 0; k < npar_; ++k) {
+    Real dt_inv2 = 0.0, vpx1, vpx2, vpx3;
+    pc->CartesianToMeshCoordsVector(xp_(k), yp_(k), zp_(k), vpx_(k), vpy_(k), vpz_(k),
+                                    vpx1, vpx2, vpx3);
+    dt_inv2 += active1_ ? std::pow(vpx1 / pc->dx1f(static_cast<int>(xi1_(k))), 2) : 0;
+    dt_inv2 += active2_ ? std::pow(vpx2 / pc->dx2f(static_cast<int>(xi2_(k))), 2) : 0;
+    dt_inv2 += active3_ ? std::pow(vpx3 / pc->dx3f(static_cast<int>(xi3_(k))), 2) : 0;
+    dt_inv2_max = std::max(dt_inv2_max, dt_inv2);
+  }
+
+  // Return the time step constrained by the coordinate speed (cell crossing time).
+  Real dt = dt_inv2_max > 0.0 ? 1.0 / std::sqrt(dt_inv2_max)
+                              : std::numeric_limits<Real>::max();
+
+  // Additional time step constraints for derived Particles
+  dt = std::min(dt, NewDtForDerived());
   return cfl_par_*dt;
 }
 
@@ -630,31 +650,6 @@ int Particles::CountNewParticles() const {
 void Particles::SetNewParticleID(int id) {
   for (int i = 0; i < npar_; ++i)
     if (pid_(i) <= 0) pid_(i) = ++id;
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn Real Particles::CellCrossingTime();
-//! \brief returns the minimum cell-crossing time of all particles
-
-Real Particles::CellCrossingTime() {
-  Coordinates *pc = pmy_block->pcoord;
-
-  // Find the maximum coordinate speed.
-  Real dt_inv2_max = 0.0;
-  for (int k = 0; k < npar_; ++k) {
-    Real dt_inv2 = 0.0, vpx1, vpx2, vpx3;
-    pc->CartesianToMeshCoordsVector(xp_(k), yp_(k), zp_(k), vpx_(k), vpy_(k), vpz_(k),
-                                    vpx1, vpx2, vpx3);
-    dt_inv2 += active1_ ? std::pow(vpx1 / pc->dx1f(static_cast<int>(xi1_(k))), 2) : 0;
-    dt_inv2 += active2_ ? std::pow(vpx2 / pc->dx2f(static_cast<int>(xi2_(k))), 2) : 0;
-    dt_inv2 += active3_ ? std::pow(vpx3 / pc->dx3f(static_cast<int>(xi3_(k))), 2) : 0;
-    dt_inv2_max = std::max(dt_inv2_max, dt_inv2);
-  }
-
-  // Return the time step constrained by the coordinate speed.
-  Real dt = dt_inv2_max > 0.0 ? 1.0 / std::sqrt(dt_inv2_max)
-                              : std::numeric_limits<Real>::max();
-  return dt;
 }
 
 //--------------------------------------------------------------------------------------
