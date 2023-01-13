@@ -169,7 +169,7 @@ friend class ParticleMesh;
   // The actual data storage of all particle properties
   // Note to developers:
   // Direct access to these containers is discouraged; use shorthands instead.
-  // e.g.) use mass_(k) instead of realprop(imass, k)
+  // e.g.) use mass(k) instead of realprop(imass, k)
   // Auxiliary properties (auxprop) is communicated when particles moving to
   // another meshblock. Working arrays (work) is not communicated.
   std::vector<std::string> intpropname, realpropname, auxpropname;
@@ -301,7 +301,7 @@ class DustParticles : public Particles {
   int itaus;                 // index for stopping time
   int iwx, iwy, iwz;         // indices for working arrays
 
-  AthenaArray<Real> wx_, wy_, wz_;        // shorthand for working arrays
+  AthenaArray<Real> wx, wy, wz;        // shorthand for working arrays
 
   Real taus0;  //!> constant/default stopping time (in code units)
 };
@@ -335,7 +335,7 @@ class TracerParticles : public Particles {
   // indicies for additional shorthands
   int iwx, iwy, iwz;         // indices for working arrays
 
-  AthenaArray<Real> wx_, wy_, wz_;        // shorthand for working arrays
+  AthenaArray<Real> wx, wy, wz;        // shorthand for working arrays
 };
 
 //--------------------------------------------------------------------------------------
