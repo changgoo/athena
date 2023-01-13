@@ -44,13 +44,13 @@ void Particles::AMRCoarseToFine(Particles *pparc, Particles *pparf, MeshBlock* p
   const bool active1 = pparc->active1_,
              active2 = pparc->active2_,
              active3 = pparc->active3_;
-  const AthenaArray<Real> &xp = pparc->xp_, &yp = pparc->yp_, &zp = pparc->zp_;
+  const AthenaArray<Real> &xpc = pparc->xp, &ypc = pparc->yp, &zpc = pparc->zp;
   const Coordinates *pcoord = pmbf->pcoord;
 
   // Loop over particles in the coarse meshblock.
   for (int k = 0; k < pparc->npar_; ++k) {
     Real x1, x2, x3;
-    pcoord->CartesianToMeshCoords(xp(k), yp(k), zp(k), x1, x2, x3);
+    pcoord->CartesianToMeshCoords(xpc(k), ypc(k), zpc(k), x1, x2, x3);
     if ((!active1 || (active1 && x1min <= x1 && x1 < x1max)) &&
         (!active2 || (active2 && x2min <= x2 && x2 < x2max)) &&
         (!active3 || (active3 && x3min <= x3 && x3 < x3max))) {
@@ -228,15 +228,15 @@ void Particles::SendToNeighbors() {
     // (changgoo) not sure why indices have used instead of position
     // but must be equivalent
     // since UpdatePositionIndices are called just before this function call
-    int xi1i = static_cast<int>(xi1_(k)),
-        xi2i = static_cast<int>(xi2_(k)),
-        xi3i = static_cast<int>(xi3_(k));
-    int ox1 = CheckSide(xi1i, IS, IE),
-        ox2 = CheckSide(xi2i, JS, JE),
-        ox3 = CheckSide(xi3i, KS, KE);
+    int x1i = static_cast<int>(xi1_(k)),
+        x2i = static_cast<int>(xi2_(k)),
+        x3i = static_cast<int>(xi3_(k));
+    int ox1 = CheckSide(x1i, IS, IE),
+        ox2 = CheckSide(x2i, JS, JE),
+        ox3 = CheckSide(x3i, KS, KE);
 
     // initialize a flag for shear boundary crossing
-    if (pmy_mesh_->shear_periodic) auxprop(ish,k) = 0;
+    if (pmy_mesh_->shear_periodic) sh(k) = 0;
 
     if (ox1 == 0 && ox2 == 0 && ox3 == 0) {
       ++k;
@@ -253,7 +253,7 @@ void Particles::SendToNeighbors() {
     if (!active1_) ox1 = 0;
     if (!active2_) ox2 = 0;
     if (!active3_) ox3 = 0;
-    Neighbor *pn = FindTargetNeighbor(ox1, ox2, ox3, xi1i, xi2i, xi3i);
+    Neighbor *pn = FindTargetNeighbor(ox1, ox2, ox3, x1i, x2i, x3i);
     NeighborBlock *pnb = pn->pnb;
     if (pnb == NULL) {
       RemoveOneParticle(k);
@@ -428,15 +428,15 @@ void Particles::ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3) {
   Real x10, x20, x30;
   // these two must be equilvalent
   // pcoord->IndicesToMeshCoords(xi1_(k), xi2_(k), xi3_(k), x1, x2, x3);
-  pcoord->CartesianToMeshCoords(xp_(k), yp_(k), zp_(k), x1, x2, x3);
-  pcoord->CartesianToMeshCoords(xp0_(k), yp0_(k), zp0_(k), x10, x20, x30);
+  pcoord->CartesianToMeshCoords(xp(k), yp(k), zp(k), x1, x2, x3);
+  pcoord->CartesianToMeshCoords(xp0(k), yp0(k), zp0(k), x10, x20, x30);
 
   // Convert velocity vectors in mesh coordinates.
   Real vp1, vp2, vp3, vp10, vp20, vp30;
-  pcoord->CartesianToMeshCoordsVector(xp_(k), yp_(k), zp_(k),
-                                      vpx_(k), vpy_(k), vpz_(k), vp1, vp2, vp3);
-  pcoord->CartesianToMeshCoordsVector(xp0_(k), yp0_(k), zp0_(k),
-                                      vpx0_(k), vpy0_(k), vpz0_(k), vp10, vp20, vp30);
+  pcoord->CartesianToMeshCoordsVector(xp(k), yp(k), zp(k),
+                                      vpx(k), vpy(k), vpz(k), vp1, vp2, vp3);
+  pcoord->CartesianToMeshCoordsVector(xp0(k), yp0(k), zp0(k),
+                                      vpx0(k), vpy0(k), vpz0(k), vp10, vp20, vp30);
 
   // Apply periodic boundary conditions in X1.
   if (x1 < mesh_size.x1min) {
@@ -444,14 +444,14 @@ void Particles::ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3) {
     x1 += mesh_size.x1len;
     x10 += mesh_size.x1len;
     // the particle has crossed shear boundary to the left
-    if (pmy_mesh_->shear_periodic) auxprop(ish,k) = -1;
+    if (pmy_mesh_->shear_periodic) sh(k) = -1;
     flag = true;
   } else if (x1 >= mesh_size.x1max) {
     // Outer x1
     x1 -= mesh_size.x1len;
     x10 -= mesh_size.x1len;
     // the particle has crossed shear boundary to the right
-    if (pmy_mesh_->shear_periodic) auxprop(ish,k) = 1;
+    if (pmy_mesh_->shear_periodic) sh(k) = 1;
     flag = true;
   }
 
@@ -483,12 +483,12 @@ void Particles::ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3) {
 
   if (flag) {
     // Convert positions and velocities back in Cartesian coordinates.
-    pcoord->MeshCoordsToCartesian(x1, x2, x3, xp_(k), yp_(k), zp_(k));
-    pcoord->MeshCoordsToCartesian(x10, x20, x30, xp0_(k), yp0_(k), zp0_(k));
+    pcoord->MeshCoordsToCartesian(x1, x2, x3, xp(k), yp(k), zp(k));
+    pcoord->MeshCoordsToCartesian(x10, x20, x30, xp0(k), yp0(k), zp0(k));
     pcoord->MeshCoordsToCartesianVector(x1, x2, x3,
-                                        vp1, vp2, vp3, vpx_(k), vpy_(k), vpz_(k));
+                                        vp1, vp2, vp3, vpx(k), vpy(k), vpz(k));
     pcoord->MeshCoordsToCartesianVector(x10, x20, x30,
-                                        vp10, vp20, vp30, vpx0_(k), vpy0_(k), vpz0_(k));
+                                        vp10, vp20, vp30, vpx0(k), vpy0(k), vpz0(k));
   }
 }
 
@@ -498,7 +498,7 @@ void Particles::ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3) {
 //! \brief finds the neighbor to send a particle to.
 
 struct Neighbor* Particles::FindTargetNeighbor(
-    int ox1, int ox2, int ox3, int xi1, int xi2, int xi3) {
+    int ox1, int ox2, int ox3, int x1i, int x2i, int x3i) {
   // Find the head of the linked list.
   Neighbor *pn = &neighbor_[ox1+1][ox2+1][ox3+1];
 
@@ -507,9 +507,9 @@ struct Neighbor* Particles::FindTargetNeighbor(
       pn->pnb->snb.level > pmy_block->loc.level) {
     RegionSize& bs = pmy_block->block_size;
     int fi[2] = {0, 0}, i = 0;
-    if (active1_ && ox1 == 0) fi[i++] = 2 * (xi1 - pmy_block->is) / bs.nx1;
-    if (active2_ && ox2 == 0) fi[i++] = 2 * (xi2 - pmy_block->js) / bs.nx2;
-    if (active3_ && ox3 == 0) fi[i++] = 2 * (xi3 - pmy_block->ks) / bs.nx3;
+    if (active1_ && ox1 == 0) fi[i++] = 2 * (x1i - pmy_block->is) / bs.nx1;
+    if (active2_ && ox2 == 0) fi[i++] = 2 * (x2i - pmy_block->js) / bs.nx2;
+    if (active3_ && ox3 == 0) fi[i++] = 2 * (x3i - pmy_block->ks) / bs.nx3;
     while (pn != NULL) {
       NeighborIndexes& ni = pn->pnb->ni;
       if (ni.fi1 == fi[0] && ni.fi2 == fi[1]) break;
@@ -545,9 +545,9 @@ void Particles::FlushReceiveBuffer(ParticleBuffer& recv) {
 
   // Find their position indices.
   AthenaArray<Real> xps, yps, zps, xi1s, xi2s, xi3s;
-  xps.InitWithShallowSlice(xp_, 1, npar_, nprecv);
-  yps.InitWithShallowSlice(yp_, 1, npar_, nprecv);
-  zps.InitWithShallowSlice(zp_, 1, npar_, nprecv);
+  xps.InitWithShallowSlice(xp, 1, npar_, nprecv);
+  yps.InitWithShallowSlice(yp, 1, npar_, nprecv);
+  zps.InitWithShallowSlice(zp, 1, npar_, nprecv);
   xi1s.InitWithShallowSlice(xi1_, 1, npar_, nprecv);
   xi2s.InitWithShallowSlice(xi2_, 1, npar_, nprecv);
   xi3s.InitWithShallowSlice(xi3_, 1, npar_, nprecv);
@@ -613,7 +613,7 @@ void Particles::SendParticlesShear() {
   for (int k = 0; k < npar_; ) {
     // Apply shear offset and find the mesh coordinates.
     Real x1, x2, x3;
-    if (auxprop(ish,k) == 0) {
+    if (sh(k) == 0) {
       // the particle hasn't crossed shear boundary
       ++k;
       continue;
@@ -622,7 +622,7 @@ void Particles::SendParticlesShear() {
     }
 
     // we know which side to check
-    int upper = (auxprop(ish,k) == -1) ? 1 : 0;
+    int upper = (sh(k) == -1) ? 1 : 0;
     if (!pbval_->is_shear[upper]) {
       // shouldn't reach here
       std::stringstream msg;
@@ -756,21 +756,21 @@ void Particles::ApplyBoundaryConditionsShear(int k, Real &x1, Real &x2, Real &x3
 
   // Find the mesh coordinates.
   Real x10, x20, x30;
-  pcoord->CartesianToMeshCoords(xp_(k), yp_(k), zp_(k), x1, x2, x3);
-  pcoord->CartesianToMeshCoords(xp0_(k), yp0_(k), zp0_(k), x10, x20, x30);
+  pcoord->CartesianToMeshCoords(xp(k), yp(k), zp(k), x1, x2, x3);
+  pcoord->CartesianToMeshCoords(xp0(k), yp0(k), zp0(k), x10, x20, x30);
 
   // Convert velocity vectors in mesh coordinates.
   Real vp1, vp2, vp3, vp10, vp20, vp30;
-  pcoord->CartesianToMeshCoordsVector(xp_(k), yp_(k), zp_(k),
-                                      vpx_(k), vpy_(k), vpz_(k), vp1, vp2, vp3);
-  pcoord->CartesianToMeshCoordsVector(xp0_(k), yp0_(k), zp0_(k),
-                                      vpx0_(k), vpy0_(k), vpz0_(k), vp10, vp20, vp30);
+  pcoord->CartesianToMeshCoordsVector(xp(k), yp(k), zp(k),
+                                      vpx(k), vpy(k), vpz(k), vp1, vp2, vp3);
+  pcoord->CartesianToMeshCoordsVector(xp0(k), yp0(k), zp0(k),
+                                      vpx0(k), vpy0(k), vpz0(k), vp10, vp20, vp30);
 
   // Apply periodic boundary conditions in X1.
   Real yshear = qomL_*pmy_mesh_->time;
   Real deltay = std::fmod(yshear, mesh_size.x2len);
 
-  if (auxprop(ish,k) == 1) {
+  if (sh(k) == 1) {
     // this particle crossed shear boundary to the right
     x2 += deltay;
     x20 += deltay;
@@ -782,7 +782,7 @@ void Particles::ApplyBoundaryConditionsShear(int k, Real &x1, Real &x2, Real &x3
       x2 -= mesh_size.x2len;
       x20 -= mesh_size.x2len;
     }
-  } else if (auxprop(ish,k) == -1) {
+  } else if (sh(k) == -1) {
     // this particle crossed shear boundary to the left
     x2 -= deltay;
     x20 -= deltay;
@@ -798,12 +798,12 @@ void Particles::ApplyBoundaryConditionsShear(int k, Real &x1, Real &x2, Real &x3
 
   if (flag) {
     // Convert positions and velocities back in Cartesian coordinates.
-    pcoord->MeshCoordsToCartesian(x1, x2, x3, xp_(k), yp_(k), zp_(k));
-    pcoord->MeshCoordsToCartesian(x10, x20, x30, xp0_(k), yp0_(k), zp0_(k));
+    pcoord->MeshCoordsToCartesian(x1, x2, x3, xp(k), yp(k), zp(k));
+    pcoord->MeshCoordsToCartesian(x10, x20, x30, xp0(k), yp0(k), zp0(k));
     pcoord->MeshCoordsToCartesianVector(x1, x2, x3,
-                                        vp1, vp2, vp3, vpx_(k), vpy_(k), vpz_(k));
+                                        vp1, vp2, vp3, vpx(k), vpy(k), vpz(k));
     pcoord->MeshCoordsToCartesianVector(x10, x20, x30,
-                                        vp10, vp20, vp30, vpx0_(k), vpy0_(k), vpz0_(k));
+                                        vp10, vp20, vp30, vpx0(k), vpy0(k), vpz0(k));
   }
 }
 

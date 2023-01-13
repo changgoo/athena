@@ -93,14 +93,14 @@ void ParticleMesh::ComputePMDensity(bool include_momentum) {
     mom2.InitWithShallowSlice(parprop, 2, 2, 1);
     mom3.InitWithShallowSlice(parprop, 2, 3, 1);
     for (int k = 0; k < ppar_->npar_; ++k) {
-      pc->CartesianToMeshCoordsVector(ppar_->xp_(k), ppar_->yp_(k), ppar_->zp_(k),
-        ppar_->mass_(k)*ppar_->vpx_(k), ppar_->mass_(k)*ppar_->vpy_(k),
-        ppar_->mass_(k)*ppar_->vpz_(k), mom1(k), mom2(k), mom3(k));
-      mpar(k) = ppar_->mass_(k);
+      pc->CartesianToMeshCoordsVector(ppar_->xp(k), ppar_->yp(k), ppar_->zp(k),
+        ppar_->mass(k)*ppar_->vpx(k), ppar_->mass(k)*ppar_->vpy(k),
+        ppar_->mass(k)*ppar_->vpz(k), mom1(k), mom2(k), mom3(k));
+      mpar(k) = ppar_->mass(k);
     }
     DepositParticlesToMeshAux(parprop, 0, idens, 4);
   } else {
-    DepositParticlesToMeshAux(ppar_->mass_, 0, idens, 1);
+    DepositParticlesToMeshAux(ppar_->mass, 0, idens, 1);
   }
 
   // set flag to trigger PM communications

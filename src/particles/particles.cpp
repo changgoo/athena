@@ -48,13 +48,18 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
   ipar(pp->ipar), input_block_name(pp->block_name), partype(pp->partype),
   npar_(0), nparmax_(1),
   nint(0), nreal(0), naux(0), nwork(0),
-  ipid(-1), imass(-1), ixp(-1), iyp(-1), izp(-1), ivpx(-1), ivpy(-1), ivpz(-1),
+  ipid(-1), ish(-1),
+  imass(-1), ixp(-1), iyp(-1), izp(-1), ivpx(-1), ivpy(-1), ivpz(-1),
   ixp0(-1), iyp0(-1), izp0(-1), ivpx0(-1), ivpy0(-1), ivpz0(-1),
-  ixi1(-1), ixi2(-1), ixi3(-1), igx(-1), igy(-1), igz(-1), ish(-1),
+  ixi1(-1), ixi2(-1), ixi3(-1), igx(-1), igy(-1), igz(-1),
   parhstout_(false), isgravity_(pp->gravity) {
+  // integer properties
+
   // Add particle ID.
   ipid = AddIntProperty();
   intpropname.push_back("pid");
+
+  // real properties
 
   // Add particle mass
   imass = AddRealProperty();
@@ -75,6 +80,8 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
   realpropname.push_back("v1");
   realpropname.push_back("v2");
   realpropname.push_back("v3");
+
+  // aux properties
 
   // Add old particle position.
   ixp0 = AddAuxProperty();
@@ -140,8 +147,8 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
     qomL_ = qshear_*Omega_0_*pmy_mesh_->mesh_size.x1len;
 
     // aux array for shear boundary flag
-    ish = AddAuxProperty();
-    auxpropname.push_back("ish");
+    ish = AddIntProperty();
+    intpropname.push_back("ish");
   }
 
   // Actual memory allocation and shorthand assignment will be done in the derived class
@@ -179,6 +186,37 @@ Particles::~Particles() {
 
   // Delete particle gravity.
   if (isgravity_) delete ppgrav;
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn int Particles::AddOneParticle()
+//! \brief add one particle if position is within the mesh block
+
+int Particles::AddOneParticle(Real mp, Real x1, Real x2, Real x3,
+  Real v1, Real v2, Real v3) {
+  if (CheckInMeshBlock(x1,x2,x3)) {
+    if (npar_ == nparmax_) UpdateCapacity(npar_*2);
+    // initialize all properties zero (just in case if there is gabage value)
+    for (int j = 0; j < nint; ++j)
+      intprop(j,npar_) = 0;
+    for (int j = 0; j < nreal; ++j)
+      realprop(j,npar_) = 0.0;
+    for (int j = 0; j < naux; ++j)
+      auxprop(j,npar_) = 0.0;
+
+    pid(npar_) = -1;
+    mass(npar_) = mp;
+    xp(npar_) = x1;
+    yp(npar_) = x2;
+    zp(npar_) = x3;
+    vpx(npar_) = v1;
+    vpy(npar_) = v2;
+    vpz(npar_) = v3;
+
+    return npar_++;
+  }
+
+  return -1;
 }
 
 //--------------------------------------------------------------------------------------
@@ -244,7 +282,7 @@ Real Particles::NewBlockTimeStep() {
   Real dt_inv2_max = 0.0;
   for (int k = 0; k < npar_; ++k) {
     Real dt_inv2 = 0.0, vpx1, vpx2, vpx3;
-    pc->CartesianToMeshCoordsVector(xp_(k), yp_(k), zp_(k), vpx_(k), vpy_(k), vpz_(k),
+    pc->CartesianToMeshCoordsVector(xp(k), yp(k), zp(k), vpx(k), vpy(k), vpz(k),
                                     vpx1, vpx2, vpx3);
     dt_inv2 += active1_ ? std::pow(vpx1 / pc->dx1f(static_cast<int>(xi1_(k))), 2) : 0;
     dt_inv2 += active2_ ? std::pow(vpx2 / pc->dx2f(static_cast<int>(xi2_(k))), 2) : 0;
@@ -340,8 +378,8 @@ void Particles::AddHistoryOutput(Real data_sum[], int pos) {
   np += npar_;
 
   for (int k = 0; k < npar_; ++k) {
-    pmy_block->pcoord->CartesianToMeshCoordsVector(xp_(k), yp_(k), zp_(k),
-        vpx_(k), vpy_(k), vpz_(k), vp1, vp2, vp3);
+    pmy_block->pcoord->CartesianToMeshCoordsVector(xp(k), yp(k), zp(k),
+        vpx(k), vpy(k), vpz(k), vp1, vp2, vp3);
     sum[0] += vp1;
     sum[1] += vp2;
     sum[2] += vp3;
@@ -446,24 +484,31 @@ void Particles::ToggleParHstOutFlag() {
 //! \brief assigns shorthands by shallow copying slices of the data.
 
 void Particles::AssignShorthands() {
-  pid_.InitWithShallowSlice(intprop, 2, ipid, 1);
+  // public shorthands
+  // integer property
+  pid.InitWithShallowSlice(intprop, 2, ipid, 1);
+  if (pmy_mesh_->shear_periodic)
+    sh.InitWithShallowSlice(intprop, 2, ish, 1);
+  // real property
+  mass.InitWithShallowSlice(realprop, 2, imass, 1);
 
-  mass_.InitWithShallowSlice(realprop, 2, imass, 1);
+  xp.InitWithShallowSlice(realprop, 2, ixp, 1);
+  yp.InitWithShallowSlice(realprop, 2, iyp, 1);
+  zp.InitWithShallowSlice(realprop, 2, izp, 1);
+  vpx.InitWithShallowSlice(realprop, 2, ivpx, 1);
+  vpy.InitWithShallowSlice(realprop, 2, ivpy, 1);
+  vpz.InitWithShallowSlice(realprop, 2, ivpz, 1);
 
-  xp_.InitWithShallowSlice(realprop, 2, ixp, 1);
-  yp_.InitWithShallowSlice(realprop, 2, iyp, 1);
-  zp_.InitWithShallowSlice(realprop, 2, izp, 1);
-  vpx_.InitWithShallowSlice(realprop, 2, ivpx, 1);
-  vpy_.InitWithShallowSlice(realprop, 2, ivpy, 1);
-  vpz_.InitWithShallowSlice(realprop, 2, ivpz, 1);
+  // aux property
+  xp0.InitWithShallowSlice(auxprop, 2, ixp0, 1);
+  yp0.InitWithShallowSlice(auxprop, 2, iyp0, 1);
+  zp0.InitWithShallowSlice(auxprop, 2, izp0, 1);
+  vpx0.InitWithShallowSlice(auxprop, 2, ivpx0, 1);
+  vpy0.InitWithShallowSlice(auxprop, 2, ivpy0, 1);
+  vpz0.InitWithShallowSlice(auxprop, 2, ivpz0, 1);
 
-  xp0_.InitWithShallowSlice(auxprop, 2, ixp0, 1);
-  yp0_.InitWithShallowSlice(auxprop, 2, iyp0, 1);
-  zp0_.InitWithShallowSlice(auxprop, 2, izp0, 1);
-  vpx0_.InitWithShallowSlice(auxprop, 2, ivpx0, 1);
-  vpy0_.InitWithShallowSlice(auxprop, 2, ivpy0, 1);
-  vpz0_.InitWithShallowSlice(auxprop, 2, ivpz0, 1);
-
+  // private shorthands
+  // work
   xi1_.InitWithShallowSlice(work, 2, ixi1, 1);
   xi2_.InitWithShallowSlice(work, 2, ixi2, 1);
   xi3_.InitWithShallowSlice(work, 2, ixi3, 1);
@@ -586,14 +631,14 @@ bool Particles::CheckInMeshBlock(Real x1, Real x2, Real x3) {
 void Particles::SaveStatus() {
   for (int k = 0; k < npar_; ++k) {
     // Save current positions.
-    xp0_(k) = xp_(k);
-    yp0_(k) = yp_(k);
-    zp0_(k) = zp_(k);
+    xp0(k) = xp(k);
+    yp0(k) = yp(k);
+    zp0(k) = zp(k);
 
     // Save current velocities.
-    vpx0_(k) = vpx_(k);
-    vpy0_(k) = vpy_(k);
-    vpz0_(k) = vpz_(k);
+    vpx0(k) = vpx(k);
+    vpy0(k) = vpy(k);
+    vpz0(k) = vpz(k);
   }
 }
 
@@ -602,33 +647,33 @@ void Particles::SaveStatus() {
 //! \brief updates position indices of particles.
 
 void Particles::UpdatePositionIndices() {
-  UpdatePositionIndices(npar_, xp_, yp_, zp_, xi1_, xi2_, xi3_);
+  UpdatePositionIndices(npar_, xp, yp, zp, xi1_, xi2_, xi3_);
 }
 
 //--------------------------------------------------------------------------------------
 //! \fn void Particles::UpdatePositionIndices(int npar,
-//!                                        const AthenaArray<Real>& xp,
-//!                                        const AthenaArray<Real>& yp,
-//!                                        const AthenaArray<Real>& zp,
-//!                                        AthenaArray<Real>& xi1,
-//!                                        AthenaArray<Real>& xi2,
-//!                                        AthenaArray<Real>& xi3)
+//!                                        const AthenaArray<Real>& x1p,
+//!                                        const AthenaArray<Real>& x2p,
+//!                                        const AthenaArray<Real>& x3p,
+//!                                        AthenaArray<Real>& x1i,
+//!                                        AthenaArray<Real>& x2i,
+//!                                        AthenaArray<Real>& x3i)
 //! \brief finds the position indices of each particle with respect to the local grid.
 
 void Particles::UpdatePositionIndices(int npar,
-                                   const AthenaArray<Real>& xp,
-                                   const AthenaArray<Real>& yp,
-                                   const AthenaArray<Real>& zp,
-                                   AthenaArray<Real>& xi1,
-                                   AthenaArray<Real>& xi2,
-                                   AthenaArray<Real>& xi3) {
+                                   const AthenaArray<Real>& x1p,
+                                   const AthenaArray<Real>& x2p,
+                                   const AthenaArray<Real>& x3p,
+                                   AthenaArray<Real>& x1i,
+                                   AthenaArray<Real>& x2i,
+                                   AthenaArray<Real>& x3i) {
   for (int k = 0; k < npar; ++k) {
     // Convert to the Mesh coordinates.
     Real x1, x2, x3;
-    pmy_block->pcoord->CartesianToMeshCoords(xp(k), yp(k), zp(k), x1, x2, x3);
+    pmy_block->pcoord->CartesianToMeshCoords(x1p(k), x2p(k), x3p(k), x1, x2, x3);
 
     // Convert to the index space.
-    pmy_block->pcoord->MeshCoordsToIndices(x1, x2, x3, xi1(k), xi2(k), xi3(k));
+    pmy_block->pcoord->MeshCoordsToIndices(x1, x2, x3, x1i(k), x2i(k), x3i(k));
   }
 }
 
@@ -639,7 +684,7 @@ void Particles::UpdatePositionIndices(int npar,
 int Particles::CountNewParticles() const {
   int n = 0;
   for (int i = 0; i < npar_; ++i)
-    if (pid_(i) <= 0) ++n;
+    if (pid(i) <= 0) ++n;
   return n;
 }
 
@@ -649,7 +694,7 @@ int Particles::CountNewParticles() const {
 
 void Particles::SetNewParticleID(int id) {
   for (int i = 0; i < npar_; ++i)
-    if (pid_(i) <= 0) pid_(i) = ++id;
+    if (pid(i) <= 0) pid(i) = ++id;
 }
 
 //--------------------------------------------------------------------------------------
@@ -661,13 +706,13 @@ void Particles::EulerStep(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
   for (int k = 0; k < npar_; ++k) {
     //! \todo (ccyang):
     //! - This is a temporary hack.
-    Real tmpx = xp_(k), tmpy = yp_(k), tmpz = zp_(k);
-    xp_(k) = xp0_(k) + dt * vpx_(k);
-    yp_(k) = yp0_(k) + dt * vpy_(k);
-    zp_(k) = zp0_(k) + dt * vpz_(k);
-    xp0_(k) = tmpx;
-    yp0_(k) = tmpy;
-    zp0_(k) = tmpz;
+    Real tmpx = xp(k), tmpy = yp(k), tmpz = zp(k);
+    xp(k) = xp0(k) + dt * vpx(k);
+    yp(k) = yp0(k) + dt * vpy(k);
+    zp(k) = zp0(k) + dt * vpz(k);
+    xp0(k) = tmpx;
+    yp0(k) = tmpy;
+    zp0(k) = tmpz;
   }
 
   // Integrate the source terms (e.g., acceleration).
