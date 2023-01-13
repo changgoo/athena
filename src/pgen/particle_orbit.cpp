@@ -136,21 +136,21 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       Real vcirc = std::sqrt((m1+m2)/(x1-x2));
       Real v1 = vcirc*m2/(m1+m2);
       Real v2 = -v1/mratio;
-      ppar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1,0.0);
-      ppar->AddOneParticle(m2,x2,0.0,0.0,0.0,v2,0.0);
+      int pid1 = ppar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1,0.0);
+      int pid2 = ppar->AddOneParticle(m2,x2,0.0,0.0,0.0,v2,0.0);
     } else {
       // simple particle orbit tests
       if (pmy_mesh->shear_periodic) {
         // epicyclic motions
         Real x0 = 0.5;
-        ppar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1,0.0);
-        ppar->AddOneParticle(m1,x0+x1,0.0,0.0,0.0,v1-x0,0.0);
+        int pid1 = ppar->AddOneParticle(m1,   x1,0.0,0.0,0.0,v1   ,0.0);
+        int pid2 = ppar->AddOneParticle(m1,x0+x1,0.0,0.0,0.0,v1-x0,0.0);
       } else {
         // kepler orbits
-        ppar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1,0.0);
-        ppar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*1.2,0.0);
-        ppar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*0.8,0.0);
-        ppar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*0.6,0.0);
+        int pid1 = ppar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1    ,0.0);
+        int pid2 = ppar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*1.2,0.0);
+        int pid3 = ppar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*0.8,0.0);
+        int pid4 = ppar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*0.6,0.0);
       }
     }
 
@@ -190,19 +190,11 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
 void MeshBlock::UserWorkInLoop() {
   const Coordinates *pc = pcoord;
   StarParticles *ppar = dynamic_cast<StarParticles*>(ppars[0]);
-  const AthenaArray<int>& pid = ppar->pid();
-  const AthenaArray<Real>& mass = ppar->mass();
-  const AthenaArray<Real>& xp0 = ppar->xp0();
-  const AthenaArray<Real>& yp0 = ppar->yp0();
-  const AthenaArray<Real>& zp0 = ppar->zp0();
-  const AthenaArray<Real>& vpx0 = ppar->vpx0();
-  const AthenaArray<Real>& vpy0 = ppar->vpy0();
-  const AthenaArray<Real>& vpz0 = ppar->vpz0();
-
   for (int k=0; k<ppar->GetNumPar(); ++k) {
     Real x1, x2, x3;
-    pc->CartesianToMeshCoords(xp0(k), yp0(k), zp0(k), x1, x2, x3);
-    Real Ek = 0.5*mass(k)*(SQR(vpx0(k)) + SQR(vpy0(k)) + SQR(vpz0(k)));
+    pc->CartesianToMeshCoords(ppar->xp0(k), ppar->yp0(k), ppar->zp0(k), x1, x2, x3);
+    Real Ek = 0.5*ppar->mass(k)
+             *(SQR(ppar->vpx0(k)) + SQR(ppar->vpy0(k)) + SQR(ppar->vpz0(k)));
     Real phi;
     if (pmy_mesh->shear_periodic) {
       // simple particle orbit tests
@@ -213,7 +205,7 @@ void MeshBlock::UserWorkInLoop() {
       phi = -m0/r; // G=1
     }
     Real Etot = Ek + phi;
-    ruser_meshblock_data[0](pid(k)-1) = Etot;
+    ruser_meshblock_data[0](ppar->pid(k)-1) = Etot;
   }
   return;
 }
@@ -238,15 +230,15 @@ void StarParticles::UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& me
   for (int k = 0; k < npar_; ++k) {
     if (age(k) > 0) { // first kick (from n-1/2 to n) is skipped for the new particles
       Real x1, x2, x3;
-      pc->CartesianToMeshCoords(xp_(k), yp_(k), zp_(k), x1, x2, x3);
+      pc->CartesianToMeshCoords(xp(k), yp(k), zp(k), x1, x2, x3);
 
       Real r = std::sqrt(x1*x1 + x2*x2 + x3*x3); // m0 is at (0,0,0)
       Real acc = -m0/(r*r); // G=1
       Real ax = acc*x1/r, ay = acc*x2/r, az = acc*x3/r;
 
-      vpx_(k) = vpx_(k) + dt*ax;
-      vpy_(k) = vpy_(k) + dt*ay;
-      vpz_(k) = vpz_(k) + dt*az;
+      vpx(k) += dt*ax;
+      vpy(k) += dt*ay;
+      vpz(k) += dt*az;
     }
   }
 }
