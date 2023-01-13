@@ -39,6 +39,7 @@ class ParameterInput;
 
 class ParticleMesh {
 friend class Particles;
+friend class ParticleMeshBoundaryVariable;
 friend class DustParticles;
 friend class TracerParticles;
 friend class StarParticles;
@@ -51,6 +52,8 @@ friend class OutputType;
   ~ParticleMesh();
 
   // Interface
+  void ComputePMDensity(bool include_momentum=false);
+  void DepositPMtoMesh(int stage);
   Real FindMaximumDensity() const;
   AthenaArray<Real> GetMassDensity() const { return dens_; }
   AthenaArray<Real> GetMomentumDensityX1() const { return mom1_; }
@@ -60,11 +63,7 @@ friend class OutputType;
 
   ParticleMeshBoundaryVariable *pmbvar;
 
-  bool updated; //!> flag whether pm is recacluated
-
-  // ParticleMeshBoundaryVariable needs access to these indices; hence public.
-  int imom1, imom2, imom3;   //!> index to momentum vector in meshaux
-  int idens;   //!> index to density in meshaux
+  bool updated; //!> flag whether pm is recalculated
 
  private:
   // Instance methods
@@ -77,6 +76,9 @@ friend class OutputType;
   void DepositMeshAux(AthenaArray<Real>& u, int ma1, int mb1, int nprop);
 
   // Instance Variables
+  int imom1, imom2, imom3;   //!> index to momentum vector in meshaux
+  int idens;   //!> index to density in meshaux
+
   int nmeshaux_;  //!> number of auxiliaries to the meshblock
   int is, ie, js, je, ks, ke;  // beginning and ending indices
   bool active1_, active2_, active3_;  // active dimensions

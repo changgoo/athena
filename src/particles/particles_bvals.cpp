@@ -44,26 +44,26 @@ void Particles::AMRCoarseToFine(Particles *pparc, Particles *pparf, MeshBlock* p
   const bool active1 = pparc->active1_,
              active2 = pparc->active2_,
              active3 = pparc->active3_;
-  const AthenaArray<Real> &xp = pparc->xp, &yp = pparc->yp, &zp = pparc->zp;
+  const AthenaArray<Real> &xp = pparc->xp_, &yp = pparc->yp_, &zp = pparc->zp_;
   const Coordinates *pcoord = pmbf->pcoord;
 
   // Loop over particles in the coarse meshblock.
-  for (int k = 0; k < pparc->npar; ++k) {
+  for (int k = 0; k < pparc->npar_; ++k) {
     Real x1, x2, x3;
     pcoord->CartesianToMeshCoords(xp(k), yp(k), zp(k), x1, x2, x3);
     if ((!active1 || (active1 && x1min <= x1 && x1 < x1max)) &&
         (!active2 || (active2 && x2min <= x2 && x2 < x2max)) &&
         (!active3 || (active3 && x3min <= x3 && x3 < x3max))) {
       // Load a particle to the fine meshblock.
-      int npar = pparf->npar;
-      if (npar >= pparf->nparmax) pparf->UpdateCapacity(2 * pparf->nparmax);
+      int npar = pparf->npar_;
+      if (npar >= pparf->nparmax_) pparf->UpdateCapacity(2 * pparf->nparmax_);
       for (int j = 0; j < pparf->nint; ++j)
         pparf->intprop(j,npar) = pparc->intprop(j,k);
       for (int j = 0; j < pparf->nreal; ++j)
         pparf->realprop(j,npar) = pparc->realprop(j,k);
       for (int j = 0; j < pparf->naux; ++j)
         pparf->auxprop(j,npar) = pparc->auxprop(j,k);
-      ++pparf->npar;
+      ++pparf->npar_;
     }
   }
 }
@@ -74,9 +74,9 @@ void Particles::AMRCoarseToFine(Particles *pparc, Particles *pparf, MeshBlock* p
 
 void Particles::AMRFineToCoarse(Particles *pparc, Particles *pparf) {
   // Check the capacity.
-  int nparf = pparf->npar, nparc = pparc->npar;
+  int nparf = pparf->npar_, nparc = pparc->npar_;
   int npar_new = nparf + nparc;
-  if (npar_new > pparc->nparmax) pparc->UpdateCapacity(npar_new);
+  if (npar_new > pparc->nparmax_) pparc->UpdateCapacity(npar_new);
 
   // Load the particles.
   for (int j = 0; j < pparf->nint; ++j)
@@ -88,7 +88,7 @@ void Particles::AMRFineToCoarse(Particles *pparc, Particles *pparf) {
   for (int j = 0; j < pparf->naux; ++j)
     for (int k = 0; k < nparf; ++k)
       pparc->auxprop(j,nparc+k) = pparf->auxprop(j,k);
-  pparc->npar = npar_new;
+  pparc->npar_ = npar_new;
 }
 
 //--------------------------------------------------------------------------------------
@@ -103,7 +103,7 @@ void Particles::ClearBoundary() {
     if (nb.snb.rank != Globals::my_rank) {
       ParticleBuffer& recv = recv_[nb.bufid];
       recv.flagn = recv.flagi = recv.flagr = 0;
-      send_[nb.bufid].npar = 0;
+      send_[nb.bufid].npar_ = 0;
     }
 #endif
   }
@@ -165,7 +165,7 @@ void Particles::LinkNeighbors(MeshBlockTree &tree,
     }
     pn->pnb = &nb;
     if (snb.rank == Globals::my_rank) {
-      pn->pmb = pmy_mesh->FindMeshBlock(snb.gid);
+      pn->pmb = pmy_mesh_->FindMeshBlock(snb.gid);
     } else {
 #ifdef MPI_PARALLEL
       // assign unique tag
@@ -178,7 +178,7 @@ void Particles::LinkNeighbors(MeshBlockTree &tree,
   }
 
   // Collect missing directions from fine to coarse level.
-  if (pmy_mesh->multilevel) {
+  if (pmy_mesh_->multilevel) {
     int my_level = pbval_->loc.level;
     for (int l = 0; l < 3; l++) {
       if (!active1_ && l != 1) continue;
@@ -196,7 +196,7 @@ void Particles::LinkNeighbors(MeshBlockTree &tree,
                 if (nb.snb.gid == ngid) {
                   pn->pnb = &nb;
                   if (nb.snb.rank == Globals::my_rank)
-                    pn->pmb = pmy_mesh->FindMeshBlock(ngid);
+                    pn->pmb = pmy_mesh_->FindMeshBlock(ngid);
                   break;
                 }
               }
@@ -223,20 +223,20 @@ void Particles::SendToNeighbors() {
   const int KS = pmy_block->ks;
   const int KE = pmy_block->ke;
 
-  for (int k = 0; k < npar; ) {
+  for (int k = 0; k < npar_; ) {
     // Check if a particle is outside the boundary.
     // (changgoo) not sure why indices have used instead of position
     // but must be equivalent
-    // since GetPositionIndices are called just before this function call
-    int xi1i = static_cast<int>(xi1(k)),
-        xi2i = static_cast<int>(xi2(k)),
-        xi3i = static_cast<int>(xi3(k));
+    // since UpdatePositionIndices are called just before this function call
+    int xi1i = static_cast<int>(xi1_(k)),
+        xi2i = static_cast<int>(xi2_(k)),
+        xi3i = static_cast<int>(xi3_(k));
     int ox1 = CheckSide(xi1i, IS, IE),
         ox2 = CheckSide(xi2i, JS, JE),
         ox3 = CheckSide(xi3i, KS, KE);
 
     // initialize a flag for shear boundary crossing
-    if (pmy_mesh->shear_periodic) auxprop(ish,k) = 0;
+    if (pmy_mesh_->shear_periodic) auxprop(ish,k) = 0;
 
     if (ox1 == 0 && ox2 == 0 && ox3 == 0) {
       ++k;
@@ -266,7 +266,7 @@ void Particles::SendToNeighbors() {
       // No need to send if back to the same block.
       if (pnb->snb.gid == pmy_block->gid) {
         // Update particle indices for particles that are in the same block
-        pmy_block->pcoord->MeshCoordsToIndices(x1, x2, x3, xi1(k), xi2(k), xi3(k));
+        pmy_block->pcoord->MeshCoordsToIndices(x1, x2, x3, xi1_(k), xi2_(k), xi3_(k));
         ++k;
         continue;
       }
@@ -291,9 +291,9 @@ void Particles::SendToNeighbors() {
     NeighborBlock& nb = pbval_->neighbor[i];
     int dst = nb.snb.rank;
     if (dst == Globals::my_rank) {
-      Particles *ppar = pmy_mesh->FindMeshBlock(nb.snb.gid)->ppars[ipar];
+      Particles *ppar = pmy_mesh_->FindMeshBlock(nb.snb.gid)->ppars[ipar];
       ppar->bstatus_[nb.targetid] =
-          (ppar->recv_[nb.targetid].npar > 0) ? BoundaryStatus::arrived
+          (ppar->recv_[nb.targetid].npar_ > 0) ? BoundaryStatus::arrived
                                               : BoundaryStatus::completed;
     } else {
 #ifdef MPI_PARALLEL
@@ -310,7 +310,7 @@ void Particles::SendToNeighbors() {
 
 #ifdef MPI_PARALLEL
 void Particles::SendParticleBuffer(ParticleBuffer& send, int dst) {
-  int npsend = send.npar;
+  int npsend = send.npar_;
   int sendtag = send.tag;
   MPI_Send(&npsend, 1, MPI_INT, dst, sendtag, my_comm);
   if (npsend > 0) {
@@ -338,17 +338,17 @@ void Particles::ReceiveParticleBuffer(int nb_rank, ParticleBuffer& recv,
     if (!recv.flagn) {
       // Get the number of incoming particles.
       if (recv.reqn == MPI_REQUEST_NULL)
-        MPI_Irecv(&recv.npar, 1, MPI_INT, nb_rank, recv.tag, my_comm, &recv.reqn);
+        MPI_Irecv(&recv.npar_, 1, MPI_INT, nb_rank, recv.tag, my_comm, &recv.reqn);
       else
         MPI_Test(&recv.reqn, &recv.flagn, MPI_STATUS_IGNORE);
       if (recv.flagn) {
-        if (recv.npar > 0) {
+        if (recv.npar_ > 0) {
           // Check the buffer size.
-          int nprecv = recv.npar;
-          if (nprecv > recv.nparmax) {
-            recv.npar = 0;
-            recv.Reallocate(2 * nprecv - recv.nparmax, nint_buf, nreal_buf);
-            recv.npar = nprecv;
+          int nprecv = recv.npar_;
+          if (nprecv > recv.nparmax_) {
+            recv.npar_ = 0;
+            recv.Reallocate(2 * nprecv - recv.nparmax_, nint_buf, nreal_buf);
+            recv.npar_ = nprecv;
           }
         } else {
           // No incoming particles.
@@ -356,18 +356,18 @@ void Particles::ReceiveParticleBuffer(int nb_rank, ParticleBuffer& recv,
         }
       }
     }
-    if (recv.flagn && recv.npar > 0) {
+    if (recv.flagn && recv.npar_ > 0) {
       // Receive data from the neighbor.
       if (!recv.flagi) {
         if (recv.reqi == MPI_REQUEST_NULL)
-          MPI_Irecv(recv.ibuf, recv.npar * nint_buf, MPI_INT,
+          MPI_Irecv(recv.ibuf, recv.npar_ * nint_buf, MPI_INT,
                     nb_rank, recv.tag + 1, my_comm, &recv.reqi);
         else
           MPI_Test(&recv.reqi, &recv.flagi, MPI_STATUS_IGNORE);
       }
       if (!recv.flagr) {
         if (recv.reqr == MPI_REQUEST_NULL)
-          MPI_Irecv(recv.rbuf, recv.npar * nreal_buf, MPI_ATHENA_REAL,
+          MPI_Irecv(recv.rbuf, recv.npar_ * nreal_buf, MPI_ATHENA_REAL,
                     nb_rank, recv.tag + 2, my_comm, &recv.reqr);
         else
           MPI_Test(&recv.reqr, &recv.flagr, MPI_STATUS_IGNORE);
@@ -421,22 +421,22 @@ bool Particles::ReceiveFromNeighbors() {
 
 void Particles::ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3) {
   bool flag = false;
-  RegionSize& mesh_size = pmy_mesh->mesh_size;
+  RegionSize& mesh_size = pmy_mesh_->mesh_size;
   Coordinates *pcoord = pmy_block->pcoord;
 
   // Find the mesh coordinates.
   Real x10, x20, x30;
   // these two must be equilvalent
-  // pcoord->IndicesToMeshCoords(xi1(k), xi2(k), xi3(k), x1, x2, x3);
-  pcoord->CartesianToMeshCoords(xp(k), yp(k), zp(k), x1, x2, x3);
-  pcoord->CartesianToMeshCoords(xp0(k), yp0(k), zp0(k), x10, x20, x30);
+  // pcoord->IndicesToMeshCoords(xi1_(k), xi2_(k), xi3_(k), x1, x2, x3);
+  pcoord->CartesianToMeshCoords(xp_(k), yp_(k), zp_(k), x1, x2, x3);
+  pcoord->CartesianToMeshCoords(xp0_(k), yp0_(k), zp0_(k), x10, x20, x30);
 
   // Convert velocity vectors in mesh coordinates.
   Real vp1, vp2, vp3, vp10, vp20, vp30;
-  pcoord->CartesianToMeshCoordsVector(xp(k), yp(k), zp(k),
-                                      vpx(k), vpy(k), vpz(k), vp1, vp2, vp3);
-  pcoord->CartesianToMeshCoordsVector(xp0(k), yp0(k), zp0(k),
-                                      vpx0(k), vpy0(k), vpz0(k), vp10, vp20, vp30);
+  pcoord->CartesianToMeshCoordsVector(xp_(k), yp_(k), zp_(k),
+                                      vpx_(k), vpy_(k), vpz_(k), vp1, vp2, vp3);
+  pcoord->CartesianToMeshCoordsVector(xp0_(k), yp0_(k), zp0_(k),
+                                      vpx0_(k), vpy0_(k), vpz0_(k), vp10, vp20, vp30);
 
   // Apply periodic boundary conditions in X1.
   if (x1 < mesh_size.x1min) {
@@ -444,14 +444,14 @@ void Particles::ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3) {
     x1 += mesh_size.x1len;
     x10 += mesh_size.x1len;
     // the particle has crossed shear boundary to the left
-    if (pmy_mesh->shear_periodic) auxprop(ish,k) = -1;
+    if (pmy_mesh_->shear_periodic) auxprop(ish,k) = -1;
     flag = true;
   } else if (x1 >= mesh_size.x1max) {
     // Outer x1
     x1 -= mesh_size.x1len;
     x10 -= mesh_size.x1len;
     // the particle has crossed shear boundary to the right
-    if (pmy_mesh->shear_periodic) auxprop(ish,k) = 1;
+    if (pmy_mesh_->shear_periodic) auxprop(ish,k) = 1;
     flag = true;
   }
 
@@ -483,12 +483,12 @@ void Particles::ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3) {
 
   if (flag) {
     // Convert positions and velocities back in Cartesian coordinates.
-    pcoord->MeshCoordsToCartesian(x1, x2, x3, xp(k), yp(k), zp(k));
-    pcoord->MeshCoordsToCartesian(x10, x20, x30, xp0(k), yp0(k), zp0(k));
+    pcoord->MeshCoordsToCartesian(x1, x2, x3, xp_(k), yp_(k), zp_(k));
+    pcoord->MeshCoordsToCartesian(x10, x20, x30, xp0_(k), yp0_(k), zp0_(k));
     pcoord->MeshCoordsToCartesianVector(x1, x2, x3,
-                                        vp1, vp2, vp3, vpx(k), vpy(k), vpz(k));
+                                        vp1, vp2, vp3, vpx_(k), vpy_(k), vpz_(k));
     pcoord->MeshCoordsToCartesianVector(x10, x20, x30,
-                                        vp10, vp20, vp30, vpx0(k), vpy0(k), vpz0(k));
+                                        vp10, vp20, vp30, vpx0_(k), vpy0_(k), vpz0_(k));
   }
 }
 
@@ -503,7 +503,7 @@ struct Neighbor* Particles::FindTargetNeighbor(
   Neighbor *pn = &neighbor_[ox1+1][ox2+1][ox3+1];
 
   // Search down the list if the neighbor is at a finer level.
-  if (pmy_mesh->multilevel && pn->pnb != NULL &&
+  if (pmy_mesh_->multilevel && pn->pnb != NULL &&
       pn->pnb->snb.level > pmy_block->loc.level) {
     RegionSize& bs = pmy_block->block_size;
     int fi[2] = {0, 0}, i = 0;
@@ -527,14 +527,14 @@ struct Neighbor* Particles::FindTargetNeighbor(
 
 void Particles::FlushReceiveBuffer(ParticleBuffer& recv) {
   // Check the memory size.
-  int nprecv = recv.npar;
-  if (npar + nprecv > nparmax)
-    UpdateCapacity(nparmax + 2 * (npar + nprecv - nparmax));
+  int nprecv = recv.npar_;
+  if (npar_ + nprecv > nparmax_)
+    UpdateCapacity(nparmax_ + 2 * (npar_ + nprecv - nparmax_));
 
   // Flush the receive buffers.
   int *pi = recv.ibuf;
   Real *pr = recv.rbuf;
-  for (int k = npar; k < npar + nprecv; ++k) {
+  for (int k = npar_; k < npar_ + nprecv; ++k) {
     for (int j = 0; j < nint; ++j)
       intprop(j,k) = *pi++;
     for (int j = 0; j < nreal; ++j)
@@ -545,17 +545,17 @@ void Particles::FlushReceiveBuffer(ParticleBuffer& recv) {
 
   // Find their position indices.
   AthenaArray<Real> xps, yps, zps, xi1s, xi2s, xi3s;
-  xps.InitWithShallowSlice(xp, 1, npar, nprecv);
-  yps.InitWithShallowSlice(yp, 1, npar, nprecv);
-  zps.InitWithShallowSlice(zp, 1, npar, nprecv);
-  xi1s.InitWithShallowSlice(xi1, 1, npar, nprecv);
-  xi2s.InitWithShallowSlice(xi2, 1, npar, nprecv);
-  xi3s.InitWithShallowSlice(xi3, 1, npar, nprecv);
-  GetPositionIndices(nprecv, xps, yps, zps, xi1s, xi2s, xi3s);
+  xps.InitWithShallowSlice(xp_, 1, npar_, nprecv);
+  yps.InitWithShallowSlice(yp_, 1, npar_, nprecv);
+  zps.InitWithShallowSlice(zp_, 1, npar_, nprecv);
+  xi1s.InitWithShallowSlice(xi1_, 1, npar_, nprecv);
+  xi2s.InitWithShallowSlice(xi2_, 1, npar_, nprecv);
+  xi3s.InitWithShallowSlice(xi3_, 1, npar_, nprecv);
+  UpdatePositionIndices(nprecv, xps, yps, zps, xi1s, xi2s, xi3s);
 
   // Clear the receive buffers.
-  npar += nprecv;
-  recv.npar = 0;
+  npar_ += nprecv;
+  recv.npar_ = 0;
 }
 
 
@@ -565,19 +565,19 @@ void Particles::FlushReceiveBuffer(ParticleBuffer& recv) {
 
 void Particles::LoadParticleBuffer(ParticleBuffer *ppb, int k) {
   // Check the buffer size.
-  if (ppb->npar >= ppb->nparmax)
-    ppb->Reallocate((ppb->nparmax > 0) ? 2 * ppb->nparmax : 1, nint_buf, nreal_buf);
+  if (ppb->npar_ >= ppb->nparmax_)
+    ppb->Reallocate((ppb->nparmax_ > 0) ? 2 * ppb->nparmax_ : 1, nint_buf, nreal_buf);
 
   // Copy the properties of the particle to the buffer.
-  int *pi = ppb->ibuf + nint_buf * ppb->npar;
+  int *pi = ppb->ibuf + nint_buf * ppb->npar_;
   for (int j = 0; j < nint; ++j)
     *pi++ = intprop(j,k);
-  Real *pr = ppb->rbuf + nreal_buf * ppb->npar;
+  Real *pr = ppb->rbuf + nreal_buf * ppb->npar_;
   for (int j = 0; j < nreal; ++j)
     *pr++ = realprop(j,k);
   for (int j = 0; j < naux; ++j)
     *pr++ = auxprop(j,k);
-  ++ppb->npar;
+  ++ppb->npar_;
 }
 
 //--------------------------------------------------------------------------------------
@@ -587,11 +587,11 @@ void Particles::LoadParticleBuffer(ParticleBuffer *ppb, int k) {
 
 int Particles::FindTargetGidAlongX2(Real x2) {
   LogicalLocation target_loc(pmy_block->loc);
-  RegionSize msize(pmy_mesh->mesh_size), bsize(pmy_block->block_size);
+  RegionSize msize(pmy_mesh_->mesh_size), bsize(pmy_block->block_size);
   Real x2min = msize.x2min;
-  MeshBlockTree *proot = &(pmy_mesh->tree), *pleaf=nullptr;
+  MeshBlockTree *proot = &(pmy_mesh_->tree), *pleaf=nullptr;
 
-  for (int lx2=0; lx2<pmy_mesh->nrbx2; ++lx2) {
+  for (int lx2=0; lx2<pmy_mesh_->nrbx2; ++lx2) {
     // calculate target block min/max assuming uniform mesh
     Real bmin = x2min+lx2*bsize.x2len, bmax = bmin+bsize.x2len;
     if ((bmin < x2) && (x2 <= bmax)) {
@@ -610,7 +610,7 @@ int Particles::FindTargetGidAlongX2(Real x2) {
 //! \brief send particles outside meshblock due to shear
 
 void Particles::SendParticlesShear() {
-  for (int k = 0; k < npar; ) {
+  for (int k = 0; k < npar_; ) {
     // Apply shear offset and find the mesh coordinates.
     Real x1, x2, x3;
     if (auxprop(ish,k) == 0) {
@@ -662,11 +662,11 @@ void Particles::SendParticlesShear() {
         // if the target block is me
         // Update particle indices and done.
         Coordinates *pc = pmy_block->pcoord;
-        pc->MeshCoordsToIndices(x1, x2, x3, xi1(k), xi2(k), xi3(k));
+        pc->MeshCoordsToIndices(x1, x2, x3, xi1_(k), xi2_(k), xi3_(k));
         ++k;
         continue;
       }
-      MeshBlock *ptarget_block = pmy_mesh->FindMeshBlock(snb.gid);
+      MeshBlock *ptarget_block = pmy_mesh_->FindMeshBlock(snb.gid);
       // Use the target receive buffer.
       ppb = &ptarget_block->ppars[ipar]->recv_sh_[shid];
     } else {
@@ -689,9 +689,9 @@ void Particles::SendParticlesShear() {
         if (snb.rank == Globals::my_rank) {
           // neighbor is on the same processor
           // set the BoundaryStatus flag on the destination buffer
-          Particles *ppar = pmy_mesh->FindMeshBlock(snb.gid)->ppars[ipar];
+          Particles *ppar = pmy_mesh_->FindMeshBlock(snb.gid)->ppars[ipar];
           ppar->bstatus_recv_sh_[n+upper*4] =
-              (ppar->recv_sh_[n+upper*4].npar > 0) ? BoundaryStatus::arrived
+              (ppar->recv_sh_[n+upper*4].npar_ > 0) ? BoundaryStatus::arrived
                                                    : BoundaryStatus::completed;
         } else {
 #ifdef MPI_PARALLEL
@@ -751,31 +751,31 @@ bool Particles::ReceiveFromNeighborsShear() {
 
 void Particles::ApplyBoundaryConditionsShear(int k, Real &x1, Real &x2, Real &x3) {
   bool flag = false;
-  RegionSize& mesh_size = pmy_mesh->mesh_size;
+  RegionSize& mesh_size = pmy_mesh_->mesh_size;
   Coordinates *pcoord = pmy_block->pcoord;
 
   // Find the mesh coordinates.
   Real x10, x20, x30;
-  pcoord->CartesianToMeshCoords(xp(k), yp(k), zp(k), x1, x2, x3);
-  pcoord->CartesianToMeshCoords(xp0(k), yp0(k), zp0(k), x10, x20, x30);
+  pcoord->CartesianToMeshCoords(xp_(k), yp_(k), zp_(k), x1, x2, x3);
+  pcoord->CartesianToMeshCoords(xp0_(k), yp0_(k), zp0_(k), x10, x20, x30);
 
   // Convert velocity vectors in mesh coordinates.
   Real vp1, vp2, vp3, vp10, vp20, vp30;
-  pcoord->CartesianToMeshCoordsVector(xp(k), yp(k), zp(k),
-                                      vpx(k), vpy(k), vpz(k), vp1, vp2, vp3);
-  pcoord->CartesianToMeshCoordsVector(xp0(k), yp0(k), zp0(k),
-                                      vpx0(k), vpy0(k), vpz0(k), vp10, vp20, vp30);
+  pcoord->CartesianToMeshCoordsVector(xp_(k), yp_(k), zp_(k),
+                                      vpx_(k), vpy_(k), vpz_(k), vp1, vp2, vp3);
+  pcoord->CartesianToMeshCoordsVector(xp0_(k), yp0_(k), zp0_(k),
+                                      vpx0_(k), vpy0_(k), vpz0_(k), vp10, vp20, vp30);
 
   // Apply periodic boundary conditions in X1.
-  Real yshear = qomL*pmy_mesh->time;
+  Real yshear = qomL_*pmy_mesh_->time;
   Real deltay = std::fmod(yshear, mesh_size.x2len);
 
   if (auxprop(ish,k) == 1) {
     // this particle crossed shear boundary to the right
     x2 += deltay;
     x20 += deltay;
-    vp2 += qomL;
-    vp20 += qomL;
+    vp2 += qomL_;
+    vp20 += qomL_;
     flag = true;
     if (x2 >= mesh_size.x2max) {
       // this particle can cross the y-boundary to the top again
@@ -786,8 +786,8 @@ void Particles::ApplyBoundaryConditionsShear(int k, Real &x1, Real &x2, Real &x3
     // this particle crossed shear boundary to the left
     x2 -= deltay;
     x20 -= deltay;
-    vp2 -= qomL;
-    vp20 -= qomL;
+    vp2 -= qomL_;
+    vp20 -= qomL_;
     flag = true;
     if (x2 < mesh_size.x2min) {
       // this particle can cross the y-boundary to the bottom again
@@ -798,12 +798,12 @@ void Particles::ApplyBoundaryConditionsShear(int k, Real &x1, Real &x2, Real &x3
 
   if (flag) {
     // Convert positions and velocities back in Cartesian coordinates.
-    pcoord->MeshCoordsToCartesian(x1, x2, x3, xp(k), yp(k), zp(k));
-    pcoord->MeshCoordsToCartesian(x10, x20, x30, xp0(k), yp0(k), zp0(k));
+    pcoord->MeshCoordsToCartesian(x1, x2, x3, xp_(k), yp_(k), zp_(k));
+    pcoord->MeshCoordsToCartesian(x10, x20, x30, xp0_(k), yp0_(k), zp0_(k));
     pcoord->MeshCoordsToCartesianVector(x1, x2, x3,
-                                        vp1, vp2, vp3, vpx(k), vpy(k), vpz(k));
+                                        vp1, vp2, vp3, vpx_(k), vpy_(k), vpz_(k));
     pcoord->MeshCoordsToCartesianVector(x10, x20, x30,
-                                        vp10, vp20, vp30, vpx0(k), vpy0(k), vpz0(k));
+                                        vp10, vp20, vp30, vpx0_(k), vpy0_(k), vpz0_(k));
   }
 }
 
@@ -856,7 +856,7 @@ void Particles::ClearBoundaryShear() {
         ParticleBuffer& recv = recv_sh_[n+upper*4];
         ParticleBuffer& send = send_sh_[n+upper*4];
         recv.flagn = recv.flagi = recv.flagr = 0;
-        send.npar = 0;
+        send.npar_ = 0;
         bstatus_send_sh_[n+upper*4] = BoundaryStatus::completed;
 #endif
       }

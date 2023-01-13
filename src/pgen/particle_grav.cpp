@@ -90,24 +90,21 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   }
 
   if (pmy_mesh->particle) {
-    if (!(ppars[0]->partype.compare("star") == 0)) {
+    if (!((ppars[0]->partype).compare("star") == 0)) {
       std::stringstream msg;
       msg << "### FATAL ERROR in function [MeshBlock::ProblemGenerator]" << std::endl
           << "Only star particle is allowed. " << std::endl;
       ATHENA_ERROR(msg);
     }
 
-    StarParticles *pp = dynamic_cast<StarParticles*>(ppars[0]);
+    StarParticles *ppar = dynamic_cast<StarParticles*>(ppars[0]);
 
     // Find the total number of particles in each direction.
     RegionSize& mesh_size = pmy_mesh->mesh_size;
-    Real npartot = pin->GetOrAddReal(pp->input_block_name, "npartot",10000);
+    Real npartot = pin->GetOrAddReal(ppar->input_block_name, "npartot",10000);
     Real Mtot = pin->GetOrAddReal("problem", "Mtot", 1);
     Real a = pin->GetOrAddReal("problem", "a", 1);
     Real m0 = (1-fgas)*Mtot/npartot;
-
-    // Determine number of particles in the block.
-    pp->UpdateCapacity(static_cast<int>(npartot/Globals::nranks)+1);
 
     // Assign the particles.
     // Ramdomizing position. Or velocity perturbation
@@ -119,7 +116,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     rng_generator.seed(rseed);
 
     // Real ph = udist(rng_generator)*TWO_PI;
-    int ipid = 0;
     // generate global positions
 
     for (int k = 0; k < npartot; ++k ) {
@@ -131,29 +127,11 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       Real x1 = r*std::cos(phi)*sinth;
       Real x2 = r*std::sin(phi)*sinth;
       Real x3 = r*costh;
-      // if inside the mesh block
-      if ((x1>=block_size.x1min) && (x1<block_size.x1max) &&
-          (x2>=block_size.x2min) && (x2<block_size.x2max) &&
-          (x3>=block_size.x3min) && (x3<block_size.x3max)) {
-        pp->mp(ipid) = m0;
-        pp->mzp(ipid) = m0;
-        pp->tage(ipid) = 0.0;
-
-        pp->xp(ipid) = x1+x0;
-        pp->yp(ipid) = x2+y0;
-        pp->zp(ipid) = x3+z0;
-
-        pp->vpx(ipid) = 0.0;
-        pp->vpy(ipid) = 0.0;
-        pp->vpz(ipid) = 0.0;
-
-        ipid++;
-      }
+      ppar->AddOneParticle(m0, x0+x1, y0+x2, z0+x3, 0.0, 0.0, 0.0);
     }
-    pp->npar = ipid;
 
-    std::cout << "npartot: " << npartot
-              << " nparmax: " << pp->nparmax << " npar: " << pp->npar << std::endl;
+//   std::cout << "npartot: " << npartot
+//             << " nparmax: " << ppar->nparmax_ << " npar: " << ppar->npar_ << std::endl;
   }
 }
 

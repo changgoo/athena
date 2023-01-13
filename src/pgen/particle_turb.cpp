@@ -94,11 +94,19 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       Real dx1 = mesh_size.x1len / npx1,
            dx2 = mesh_size.x2len / npx2,
            dx3 = mesh_size.x3len / npx3;
+      Real mpar;
       if (DustParticles *pp = dynamic_cast<DustParticles*>(ppar)) {
-        Real dtog = pin->GetOrAddReal(ppar->input_block_name,"dtog",1);
-        pp->SetOneParticleMass(dtog * d0 * vol / (npx1 * npx2 * npx3));
+        Real dtog = pin->GetOrAddReal(pp->input_block_name,"dtog",1);
+        mpar = dtog * d0 * vol / (npx1 * npx2 * npx3);
       } else if (TracerParticles *pp = dynamic_cast<TracerParticles*>(ppar)) {
-        pp->SetOneParticleMass(d0 * vol / (npx1 * npx2 * npx3));
+        mpar = d0 * vol / (npx1 * npx2 * npx3);
+      } else {
+        std::stringstream msg;
+        msg << "### FATAL ERROR in ProblemGenerator " << std::endl
+            << " partype: " << ppar->partype
+            << " is not supported" << std::endl;
+        ATHENA_ERROR(msg);
+        return;
       }
 
       // Determine number of particles in the block.
@@ -106,8 +114,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           npx2_loc = static_cast<int>(std::round(block_size.x2len / dx2)),
           npx3_loc = static_cast<int>(std::round(block_size.x3len / dx3));
       int npar = npx1_loc * npx2_loc * npx3_loc;
-      if (npar > ppar->nparmax)
-        ppar->UpdateCapacity(npar);
 
       // Assign the particles.
       // Ramdomizing position. Or velocity perturbation
@@ -118,10 +124,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       std::uniform_real_distribution<Real> udist(0.0,1.0); // uniform in [0,1)
       rng_generator.seed(rseed);
 
-      // TODO(SMOON) Add particles using AddOneParticle interface.
-      // Encapsulate xp, yp, ...
       // Real ph = udist(rng_generator)*TWO_PI;
-      int ipid = 0;
       for (int k = 0; k < npx3_loc; ++k) {
         Real zp1 = block_size.x3min + (k + 0.5) * dx3;
         for (int j = 0; j < npx2_loc; ++j) {
@@ -129,30 +132,23 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           for (int i = 0; i < npx1_loc; ++i) {
             Real xp1 = block_size.x1min + (i + 0.5) * dx1;
             if ((xp1>xp1min) && (xp1<xp1max)) {
-              ppar->xp(ipid) = xp1 + dx1 * (udist(rng_generator) - 0.5);
-              ppar->yp(ipid) = yp1 + dx2 * (udist(rng_generator) - 0.5);
-              ppar->zp(ipid) = zp1;
+              Real xp = xp1 + dx1 * (udist(rng_generator) - 0.5);
+              Real yp = yp1 + dx2 * (udist(rng_generator) - 0.5);
+              Real zp = zp1;
               if (mesh_size.nx3 > 1)
-                ppar->zp(ipid) += dx3 * (udist(rng_generator) - 0.5);
-
-              ppar->vpx(ipid) = 0.0;
-              ppar->vpy(ipid) = 0.0;
-              ppar->vpz(ipid) = 0.0;
-              ++ipid;
+                zp += dx3 * (udist(rng_generator) - 0.5);
+              if (DustParticles *pp = dynamic_cast<DustParticles*>(ppar)) {
+                if (pp->IsVariableTaus()) {
+                  Real taus0 = pp->GetStoppingTime();
+                  pp->AddOneParticle(mpar, xp, yp, zp, 0.0, 0.0, 0.0, taus0);
+                } else {
+                  pp->AddOneParticle(mpar, xp, yp, zp, 0.0, 0.0, 0.0);
+                }
+              } else if (TracerParticles *pp = dynamic_cast<TracerParticles*>(ppar)) {
+                pp->AddOneParticle(mpar, xp, yp, zp, 0.0, 0.0, 0.0);
+              }
             }
           }
-        }
-      }
-
-      ppar->npar = ipid;
-
-      // Initialize the stopping time.
-      // TODO(SMOON) this must be done in AddOneParticle
-      if (DustParticles *pp = dynamic_cast<DustParticles*>(ppar)) {
-        if (pp->GetVariableTaus()) {
-          Real taus0 = pp->GetStoppingTime();
-          for (int k = 0; k < npar; ++k)
-            pp->taus(k) = taus0;
         }
       }
     }

@@ -67,7 +67,7 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 //! Called in MeshBlock constructor before ProblemGenerator.
 //========================================================================================
 void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
-  // Allocate storage for keeping track of cooling
+  // Allocate storage for keeping track of particle energy
   AllocateRealUserMeshBlockDataField(1);
   ruser_meshblock_data[0].NewAthenaArray(4);
   ruser_meshblock_data[0](0) = 0.0; // p1
@@ -112,55 +112,55 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
   // initialize particle
   if (pmy_mesh->particle) {
-    if (!(ppars[0]->partype.compare("star") == 0)) {
+    if (!((ppars[0]->partype).compare("star") == 0)) {
       std::stringstream msg;
       msg << "### FATAL ERROR in function [MeshBlock::ProblemGenerator]" << std::endl
           << "Only star particle is allowed. " << std::endl;
       ATHENA_ERROR(msg);
     }
 
-    StarParticles *pp = dynamic_cast<StarParticles*>(ppars[0]);
+    StarParticles *ppar = dynamic_cast<StarParticles*>(ppars[0]);
 
-    Real x1 = pin->GetOrAddReal(pp->input_block_name, "x1", 1.0);
-    Real m1 = pin->GetOrAddReal(pp->input_block_name, "m1", 1.0);
-    Real v1 = pin->GetOrAddReal(pp->input_block_name, "v1", 1.0);
+    Real x1 = pin->GetOrAddReal(ppar->input_block_name, "x1", 1.0);
+    Real m1 = pin->GetOrAddReal(ppar->input_block_name, "m1", 1.0);
+    Real v1 = pin->GetOrAddReal(ppar->input_block_name, "v1", 1.0);
 
     if (pmy_mesh->particle_gravity) {
       // self-gravitating two-body problem
       // have to turn off gravity from gas (modify gravity/block_fft_gravity)
       // and to gas (modify hydro/srcterms/hydro_srcterms)
-      Real mratio = pin->GetOrAddReal(pp->input_block_name, "mratio", 1.0);
+      Real mratio = pin->GetOrAddReal(ppar->input_block_name, "mratio", 1.0);
       Real m2 = mratio*m1;
       Real mu = m1*m2/(m1+m2);
       Real x2 = -x1/mratio;
       Real vcirc = std::sqrt((m1+m2)/(x1-x2));
       Real v1 = vcirc*m2/(m1+m2);
       Real v2 = -v1/mratio;
-      pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1,0.0);
-      pp->AddOneParticle(m2,x2,0.0,0.0,0.0,v2,0.0);
+      ppar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1,0.0);
+      ppar->AddOneParticle(m2,x2,0.0,0.0,0.0,v2,0.0);
     } else {
       // simple particle orbit tests
       if (pmy_mesh->shear_periodic) {
         // epicyclic motions
         Real x0 = 0.5;
-        pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1,0.0);
-        pp->AddOneParticle(m1,x0+x1,0.0,0.0,0.0,v1-x0,0.0);
+        ppar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1,0.0);
+        ppar->AddOneParticle(m1,x0+x1,0.0,0.0,0.0,v1-x0,0.0);
       } else {
         // kepler orbits
-        pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1,0.0);
-        pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*1.2,0.0);
-        pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*0.8,0.0);
-        pp->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*0.6,0.0);
+        ppar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1,0.0);
+        ppar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*1.2,0.0);
+        ppar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*0.8,0.0);
+        ppar->AddOneParticle(m1,x1,0.0,0.0,0.0,v1*0.6,0.0);
       }
     }
 
-    std::cout << " nparmax: " << pp->nparmax << " npar: " << pp->npar << std::endl;
-    // if (pp->npar>1) {
-    //   pp->OutputOneParticle(std::cout, 0, true);
-    //   for (int ip=1; ip<pp->npar; ++ip)
-    //     pp->OutputOneParticle(std::cout, ip, false);
+//  std::cout << " nparmax: " << ppar->nparmax_ << " npar: " << ppar->npar_ << std::endl;
+    // if (ppar->npar_>1) {
+    //   ppar->OutputOneParticle(std::cout, 0, true);
+    //   for (int ip=1; ip<ppar->npar_; ++ip)
+    //     ppar->OutputOneParticle(std::cout, ip, false);
     // }
-    pp->ToggleParHstOutFlag();
+    ppar->ToggleParHstOutFlag();
   }
 }
 
@@ -189,20 +189,31 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
 
 void MeshBlock::UserWorkInLoop() {
   const Coordinates *pc = pcoord;
-  StarParticles *pp = dynamic_cast<StarParticles*>(ppars[0]);
-  for (int k=0; k<pp->npar; ++k) {
+  StarParticles *ppar = dynamic_cast<StarParticles*>(ppars[0]);
+  const AthenaArray<int>& pid = ppar->pid();
+  const AthenaArray<Real>& mass = ppar->mass();
+  const AthenaArray<Real>& xp0 = ppar->xp0();
+  const AthenaArray<Real>& yp0 = ppar->yp0();
+  const AthenaArray<Real>& zp0 = ppar->zp0();
+  const AthenaArray<Real>& vpx0 = ppar->vpx0();
+  const AthenaArray<Real>& vpy0 = ppar->vpy0();
+  const AthenaArray<Real>& vpz0 = ppar->vpz0();
+
+  for (int k=0; k<ppar->GetNumPar(); ++k) {
     Real x1, x2, x3;
-    pc->CartesianToMeshCoords(pp->xp0(k), pp->yp0(k), pp->zp0(k), x1, x2, x3);
-    Real Ek = 0.5*pp->mp(k)*(SQR(pp->vpx0(k)) + SQR(pp->vpy0(k)) + SQR(pp->vpz0(k)));
+    pc->CartesianToMeshCoords(xp0(k), yp0(k), zp0(k), x1, x2, x3);
+    Real Ek = 0.5*mass(k)*(SQR(vpx0(k)) + SQR(vpy0(k)) + SQR(vpz0(k)));
     Real phi;
     if (pmy_mesh->shear_periodic) {
-      phi = -pp->qshear_*SQR(pp->Omega_0_*x1);
+      // simple particle orbit tests
+      phi = -porb->qshear*SQR(porb->Omega0*x1);
     } else {
+      // kepler orbits
       Real r = std::sqrt(x1*x1 + x2*x2 + x3*x3); // m0 is at (0,0,0)
       phi = -m0/r; // G=1
     }
     Real Etot = Ek + phi;
-    ruser_meshblock_data[0](pp->pid(k)-1) = Etot;
+    ruser_meshblock_data[0](pid(k)-1) = Etot;
   }
   return;
 }
@@ -224,18 +235,18 @@ Real ParticleEnergy(MeshBlock *pmb, int iout) {
 
 void StarParticles::UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
   const Coordinates *pc = pmy_block->pcoord;
-  for (int k = 0; k < npar; ++k) {
-    if (tage(k) > 0) { // first kick (from n-1/2 to n) is skipped for the new particles
+  for (int k = 0; k < npar_; ++k) {
+    if (age(k) > 0) { // first kick (from n-1/2 to n) is skipped for the new particles
       Real x1, x2, x3;
-      pc->CartesianToMeshCoords(xp(k), yp(k), zp(k), x1, x2, x3);
+      pc->CartesianToMeshCoords(xp_(k), yp_(k), zp_(k), x1, x2, x3);
 
       Real r = std::sqrt(x1*x1 + x2*x2 + x3*x3); // m0 is at (0,0,0)
       Real acc = -m0/(r*r); // G=1
       Real ax = acc*x1/r, ay = acc*x2/r, az = acc*x3/r;
 
-      vpx(k) = vpx(k) + dt*ax;
-      vpy(k) = vpy(k) + dt*ay;
-      vpz(k) = vpz(k) + dt*az;
+      vpx_(k) = vpx_(k) + dt*ax;
+      vpy_(k) = vpy_(k) + dt*ay;
+      vpz_(k) = vpz_(k) + dt*az;
     }
   }
 }

@@ -16,20 +16,13 @@
 #include "../athena.hpp"
 #include "../coordinates/coordinates.hpp"
 #include "../globals.hpp"
+#include "../hydro/hydro.hpp"
 #include "../utils/buffer_utils.hpp"
 #include "particle_mesh.hpp"
 #include "particles.hpp"
 
 // Local function prototypes.
 static Real _WeightFunction(Real dxi);
-
-//--------------------------------------------------------------------------------------
-//! \fn int ParticleMesh::AddMeshAux()
-//! \brief adds one auxiliary to the mesh and returns the index.
-
-int ParticleMesh::AddMeshAux() {
-  return nmeshaux_++;
-}
 
 //--------------------------------------------------------------------------------------
 //! \fn ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb)
@@ -45,7 +38,7 @@ ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : updated(false),
   nx1_(pmb->ncells1), nx2_(pmb->ncells2), nx3_(pmb->ncells3),
   ncells_(nx1_ * nx2_ * nx3_),
   npc1_(active1_ ? NPC : 1), npc2_(active2_ ? NPC : 1), npc3_(active3_ ? NPC : 1),
-  ppar_(ppar), pmb_(pmb), pmesh_(ppar->pmy_mesh) {
+  ppar_(ppar), pmb_(pmb), pmesh_(ppar->pmy_mesh_) {
   // Add density and momentum in meshaux.
   idens = AddMeshAux();
   imom1 = AddMeshAux();
@@ -83,6 +76,59 @@ ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : updated(false),
 ParticleMesh::~ParticleMesh() {
   // Destroy the particle meshblock.
   meshaux_.DeleteAthenaArray();
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void ParticleMesh::ComputePMDensity(bool include_momentum)
+//! \brief finds the mass and momentum density of particles on the mesh.
+
+void ParticleMesh::ComputePMDensity(bool include_momentum) {
+  Coordinates *pc(pmb_->pcoord);
+
+  if (include_momentum) {
+    AthenaArray<Real> parprop, mom1, mom2, mom3, mpar;
+    parprop.NewAthenaArray(4, ppar_->npar_);
+    mpar.InitWithShallowSlice(parprop, 2, 0, 1);
+    mom1.InitWithShallowSlice(parprop, 2, 1, 1);
+    mom2.InitWithShallowSlice(parprop, 2, 2, 1);
+    mom3.InitWithShallowSlice(parprop, 2, 3, 1);
+    for (int k = 0; k < ppar_->npar_; ++k) {
+      pc->CartesianToMeshCoordsVector(ppar_->xp_(k), ppar_->yp_(k), ppar_->zp_(k),
+        ppar_->mass_(k)*ppar_->vpx_(k), ppar_->mass_(k)*ppar_->vpy_(k),
+        ppar_->mass_(k)*ppar_->vpz_(k), mom1(k), mom2(k), mom3(k));
+      mpar(k) = ppar_->mass_(k);
+    }
+    DepositParticlesToMeshAux(parprop, 0, idens, 4);
+  } else {
+    DepositParticlesToMeshAux(ppar_->mass_, 0, idens, 1);
+  }
+
+  // set flag to trigger PM communications
+  updated = true;
+  pmbvar->var_buf.ZeroClear();
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn ParticleMesh::DepositPMtoMesh()
+//! \brief deposit PM momentum to hydro vars
+//!
+//! this has to be tested
+void ParticleMesh::DepositPMtoMesh(int stage) {
+  // Deposit ParticleMesh meshaux to MeshBlock.
+  Hydro *phydro = pmb_->phydro;
+  Real t = pmesh_->time, dt = pmesh_->dt;
+
+  switch (stage) {
+  case 1:
+    dt = 0.5 * dt;
+    break;
+
+  case 2:
+    t += 0.5 * dt;
+    break;
+  }
+
+  ppar_->DepositToMesh(t, dt, phydro->w, phydro->u);
 }
 
 //--------------------------------------------------------------------------------------
@@ -126,6 +172,14 @@ AthenaArray<Real> ParticleMesh::GetVelocityField() const {
 }
 
 //--------------------------------------------------------------------------------------
+//! \fn int ParticleMesh::AddMeshAux()
+//! \brief adds one auxiliary to the mesh and returns the index.
+
+int ParticleMesh::AddMeshAux() {
+  return nmeshaux_++;
+}
+
+//--------------------------------------------------------------------------------------
 //! \fn void ParticleMesh::InterpolateMeshToParticles(
 //!              const AthenaArray<Real>& meshsrc, int ms1,
 //!              AthenaArray<Real>& par, int p1, int nprop)
@@ -161,14 +215,14 @@ void ParticleMesh::InterpolateMeshToParticles(
   int imb3v[SIMD_WIDTH] __attribute__((aligned(CACHELINE_BYTES)));
 
   // Loop over each particle.
-  int npar = ppar_->npar;
+  int npar = ppar_->npar_;
   for (int k = 0; k < npar; k += SIMD_WIDTH) {
 #pragma omp simd simdlen(SIMD_WIDTH)
     for (int kk = 0; kk < std::min(SIMD_WIDTH, npar-k); ++kk) {
       int kkk = k + kk;
 
       // Find the domain the particle influences.
-      Real xi1 = ppar_->xi1(kkk), xi2 = ppar_->xi2(kkk), xi3 = ppar_->xi3(kkk);
+      Real xi1 = ppar_->xi1_(kkk), xi2 = ppar_->xi2_(kkk), xi3 = ppar_->xi3_(kkk);
       int imb1 = static_cast<int>(xi1 - dxi1_),
           imb2 = static_cast<int>(xi2 - dxi2_),
           imb3 = static_cast<int>(xi3 - dxi3_);
@@ -268,14 +322,14 @@ void ParticleMesh::DepositParticlesToMeshAux(
   Coordinates *pc = pmb_->pcoord;
 
   // Loop over each particle.
-  int npar = ppar_->npar;
+  int npar = ppar_->npar_;
   for (int k = 0; k < npar; k += SIMD_WIDTH) {
 #pragma omp simd simdlen(SIMD_WIDTH)
     for (int kk = 0; kk < std::min(SIMD_WIDTH, npar-k); ++kk) {
       int kkk = k + kk;
 
       // Find the domain the particle influences.
-      Real xi1 = ppar_->xi1(kkk), xi2 = ppar_->xi2(kkk), xi3 = ppar_->xi3(kkk);
+      Real xi1 = ppar_->xi1_(kkk), xi2 = ppar_->xi2_(kkk), xi3 = ppar_->xi3_(kkk);
       int imb1 = static_cast<int>(xi1 - dxi1_),
           imb2 = static_cast<int>(xi2 - dxi2_),
           imb3 = static_cast<int>(xi3 - dxi3_);

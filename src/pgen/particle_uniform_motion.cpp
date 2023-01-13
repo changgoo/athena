@@ -67,12 +67,11 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 }
 
 void Mesh::UserWorkInLoop() {
-  Particles::FindDensityOnMesh(this, false);
 //   // output history of selected particle(s)
 //   for (int b = 0; b < nblocal; ++b) {
 //     MeshBlock *pmb(my_blocks(b));
-//     for (int ipar=0; ipar<Particles::num_particles; ++ipar) {
-//       pmb->ppar[ipar]->OutputParticles((ncycle == 0),1234);
+//     for (Particles *ppar : pmb->ppar) {
+//       ppar->OutputParticles((ncycle == 0),1234);
 //     }
 //   }
 }
@@ -122,10 +121,17 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     rng_generator.seed(rseed);
 
     for (Particles *ppar : ppars) {
-      int npartot = pin->GetInteger("problem","npartot");
+      if ((!((ppar->partype).compare("star") == 0))&&
+          (!((ppar->partype).compare("tracer") == 0))) {
+        std::stringstream msg;
+        msg << "### FATAL ERROR in ProblemGenerator " << std::endl
+            << " partype: " << ppar->partype
+            << " is not supported" << std::endl;
+        ATHENA_ERROR(msg);
+        return;
+      }
 
-      // Update capacity of particle container
-      // ppar->UpdateCapacity(static_cast<int>(npartot/Globals::nranks));
+      int npartot = pin->GetInteger("problem","npartot");
 
       // Assign the particles.
       RegionSize& mesh_size = pmy_mesh->mesh_size;
@@ -157,8 +163,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           if (StarParticles *pp = dynamic_cast<StarParticles*>(ppar)) {
             pp->AddOneParticle(mass,x,y,z,vx0,vy,0.0);
           } else if (TracerParticles *pp = dynamic_cast<TracerParticles*>(ppar)) {
-            pp->AddOneParticle(x,y,z,vx0,vy,0.0);
-            pp->SetOneParticleMass(mass);
+            pp->AddOneParticle(mass,x,y,z,vx0,vy,0.0);
           } else {
             std::stringstream msg;
             msg << "### FATAL ERROR in ProblemGenerator " << std::endl
@@ -191,8 +196,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           if (StarParticles *pp = dynamic_cast<StarParticles*>(ppar)) {
             pp->AddOneParticle(mass,x,y,z,vx0,vy,0.0);
           } else if (TracerParticles *pp = dynamic_cast<TracerParticles*>(ppar)) {
-            pp->AddOneParticle(x,y,z,vx0,vy,0.0);
-            pp->SetOneParticleMass(mass);
+            pp->AddOneParticle(mass,x,y,z,vx0,vy,0.0);
           } else {
             std::stringstream msg;
             msg << "### FATAL ERROR in ProblemGenerator " << std::endl
@@ -204,10 +208,12 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         }
       }
 
-      if (ppar->npar > 0)
-        std::cout << " ipar: " << ppar->ipar << " type: " << ppar->partype
-                  << " nparmax: " << ppar->nparmax
-                  << " npar: " << ppar->npar << " mass: " << mass << std::endl;
+      // TODO(SMOON) better not to access private members; if needed, implement
+      // something like Particles::PrintDiagnostics()
+//      if (ppar->npar_ > 0)
+//        std::cout << " ipar: " << ppar->ipar << " type: " << ppar->partype
+//                  << " nparmax: " << ppar->nparmax_
+//                  << " npar: " << ppar->npar_ << " mass: " << mass << std::endl;
 
       // calculate PM density every substeps (for history dumps)
       // ppar->pm_stages[0] = true;

@@ -112,13 +112,18 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   if (pmy_mesh->particle && (rho0_star > 0.0)) {
     Real sigz = pin->GetReal("problem","sigma_star");
 
-    StarParticles *pp = dynamic_cast<StarParticles*>(ppars[0]);
+    if (!((ppars[0]->partype).compare("star") == 0)) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in function [MeshBlock::ProblemGenerator]" << std::endl
+          << "Only star particle is allowed. " << std::endl;
+      ATHENA_ERROR(msg);
+    }
+
+    StarParticles *ppar = dynamic_cast<StarParticles*>(ppars[0]);
 
     // Find the total number of particles in each direction.
     RegionSize& mesh_size = pmy_mesh->mesh_size;
-    int npartot = pin->GetInteger(pp->input_block_name, "npartot");
-
-    pp->UpdateCapacity(npartot/Globals::nranks);
+    int npartot = pin->GetInteger(ppar->input_block_name, "npartot");
 
     // Assign the particles.
     // Ramdomizing position. Or velocity perturbation
@@ -142,11 +147,11 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       Real x = udist(rng_generator)*mesh_size.x1len + mesh_size.x1min;
       Real y = udist(rng_generator)*mesh_size.x2len + mesh_size.x2min;
       Real z = z0*std::atanh(udist(rng_generator))*2.0*sgn;
-      pp->AddOneParticle(mpar,x,y,z,vx,vy,vz);
+      ppar->AddOneParticle(mpar,x,y,z,vx,vy,vz);
     }
 
-    std::cout << "[Problem IsoSheet] nparmax: " << pp->nparmax << " npar: " << pp->npar
-              << " mpar: " << mpar << std::endl;
+//    std::cout << "[Problem IsoSheet] nparmax: " << ppar->nparmax_ << " npar: "
+//              << ppar->npar_ << " mpar: " << mpar << std::endl;
   }
   return;
 }
