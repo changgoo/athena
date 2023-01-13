@@ -44,26 +44,6 @@ TracerParticles::~TracerParticles() {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void TracerParticles::AddOneParticle()
-//! \brief add one particle if position is within the mesh block
-
-void TracerParticles::AddOneParticle(Real mp, Real x1, Real x2, Real x3,
-  Real v1, Real v2, Real v3) {
-  if (CheckInMeshBlock(x1,x2,x3)) {
-    if (npar_ == nparmax_) UpdateCapacity(npar_*2);
-    pid_(npar_) = -1;
-    mass_(npar_) = mp;
-    xp_(npar_) = x1;
-    yp_(npar_) = x2;
-    zp_(npar_) = x3;
-    vpx_(npar_) = v1;
-    vpy_(npar_) = v2;
-    vpz_(npar_) = v3;
-    npar_++;
-  }
-}
-
-//--------------------------------------------------------------------------------------
 //! \fn void TracerParticles::AssignShorthandsForDerived()
 //! \brief assigns shorthands by shallow coping slices of the data.
 
@@ -86,18 +66,18 @@ void TracerParticles::SourceTerms(Real t, Real dt, const AthenaArray<Real>& mesh
     Real x1, x2, x3;
     //! \todo (ccyang):
     //! - using (xp0, yp0, zp0) is a temporary hack.
-    pc->CartesianToMeshCoords(xp0_(k), yp0_(k), zp0_(k), x1, x2, x3);
+    pc->CartesianToMeshCoords(xp0(k), yp0(k), zp0(k), x1, x2, x3);
     pc->MeshCoordsToCartesianVector(x1, x2, x3, wx(k), wy(k), wz(k),
                                                 wx(k), wy(k), wz(k));
   }
 
   // Tracer particles
   for (int k = 0; k < npar_; ++k) {
-    Real tmpx = vpx_(k), tmpy = vpy_(k), tmpz = vpz_(k);
-    vpx_(k) = wx(k);
-    vpy_(k) = wy(k);
-    vpz_(k) = wz(k);
-    vpx0_(k) = tmpx; vpy0_(k) = tmpy; vpz0_(k) = tmpz;
+    Real tmpx = vpx(k), tmpy = vpy(k), tmpz = vpz(k);
+    vpx(k) = wx(k);
+    vpy(k) = wy(k);
+    vpz(k) = wz(k);
+    vpx0(k) = tmpx; vpy0(k) = tmpy; vpz0(k) = tmpz;
   }
 
   return;
