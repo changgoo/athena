@@ -76,21 +76,13 @@ friend class ParticleMesh;
   virtual ~Particles();
 
   // Particle interface
+  int AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
   void RemoveOneParticle(int k);
   virtual void Integrate(int step); // TODO(SMOON) apply template pattern?
   Real NewBlockTimeStep();
   std::size_t GetSizeInBytes() const;
   bool IsGravity() const { return isgravity_; }
   int GetNumPar() const { return npar_; }
-  // Read-only accessors to the particle properties
-  const AthenaArray<int>& pid() const { return pid_; }
-  const AthenaArray<Real>& mass() const { return mass_; }
-  const AthenaArray<Real>& xp0() const { return xp0_; }
-  const AthenaArray<Real>& yp0() const { return yp0_; }
-  const AthenaArray<Real>& zp0() const { return zp0_; }
-  const AthenaArray<Real>& vpx0() const { return vpx0_; }
-  const AthenaArray<Real>& vpy0() const { return vpy0_; }
-  const AthenaArray<Real>& vpz0() const { return vpz0_; }
 
   // Input/Output interface
   void UnpackParticlesForRestart(char *mbdata, std::size_t &os);
@@ -136,6 +128,14 @@ friend class ParticleMesh;
   const int ipar;     // index of this Particle in ppars vector
   std::string input_block_name, partype;
 
+  // Shallow slices of the actual data container (intprop, realprop, auxprop, work)
+  AthenaArray<int> pid, sh;                  //!> particle ID
+  AthenaArray<Real> mass;                //!> mass
+  AthenaArray<Real> xp, yp, zp;        //!> position
+  AthenaArray<Real> vpx, vpy, vpz;     //!> velocity
+  AthenaArray<Real> xp0, yp0, zp0;     //!> beginning position (SMOON: What is this?)
+  AthenaArray<Real> vpx0, vpy0, vpz0;  //!> beginning velocity (SMOON: What is this?)
+
  protected:
   // Protected interfaces (to be used by derived classes)
   // SMOON: A possibility of forgetting to call these two functions may indicate
@@ -152,16 +152,6 @@ friend class ParticleMesh;
   // template design pattern.
   void SaveStatus(); // x->x0, v->v0
   void UpdatePositionIndices();
-
-  // Data members
-  // Shallow slices of the actual data container (intprop, realprop, auxprop, work)
-  AthenaArray<int> pid_;                  //!> particle ID
-  AthenaArray<Real> mass_;                //!> mass
-  AthenaArray<Real> xp_, yp_, zp_;        //!> position
-  AthenaArray<Real> vpx_, vpy_, vpz_;     //!> velocity
-  AthenaArray<Real> xi1_, xi2_, xi3_;     //!> position indices in local meshblock
-  AthenaArray<Real> xp0_, yp0_, zp0_;     //!> beginning position (SMOON: What is this?)
-  AthenaArray<Real> vpx0_, vpy0_, vpz0_;  //!> beginning velocity (SMOON: What is this?)
 
   int npar_;     //!> number of particles
   int nparmax_;  //!> maximum number of particles per meshblock
@@ -233,21 +223,24 @@ friend class ParticleMesh;
   int nwork;         //!> number of working arrays for particles
   int nint_buf, nreal_buf; //!> number of properties for buffer
 
-  int ipid;                 //!> index for the particle ID
+  // indices for integer shorthands
+  int ipid;                 // index for the particle ID
+  int ish;                  // index for shear boundary flag
+
+  // indices for realprop shorthands
   int imass;                // index for the particle mass
   int ixp, iyp, izp;        // indices for the position components
   int ivpx, ivpy, ivpz;     // indices for the velocity components
 
+  // indices for auxprop shorthands
   int ixp0, iyp0, izp0;     // indices for beginning position components
   int ivpx0, ivpy0, ivpz0;  // indices for beginning velocity components
 
+  // indices for work shorthands
   int ixi1, ixi2, ixi3;     // indices for position indices
-
   int igx, igy, igz; // indices for gravity force
-  // TODO(SMOON) auxprop(ish,:) is actually an integer flag, but type-casted
-  // into Real because it it stored in auxprop. It does not make sence that
-  // "auxprop" must be Real. After all, why do we need seperate auxprop?
-  int ish;
+
+  AthenaArray<Real> xi1_, xi2_, xi3_;     //!> position indices in local meshblock
 
   bool parhstout_; //!> flag for individual particle history output
   bool isgravity_; //!> flag for gravity
@@ -279,13 +272,14 @@ class DustParticles : public Particles {
   ~DustParticles();
 
   // Methods (interface)
-  void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
-  void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3,
-                      Real taus);
   bool GetBackReaction() const { return backreaction; }
   bool GetDragForce() const { return dragforce; }
   bool IsVariableTaus() const { return variable_taus; }
   Real GetStoppingTime() const { return taus0; }
+
+  // Data members
+  // shorthand for additional properties
+  AthenaArray<Real> taus;              // shorthand for stopping time
 
  private:
   // Methods (implementation)
@@ -303,12 +297,13 @@ class DustParticles : public Particles {
   bool dragforce;      //!> turn on/off drag force
   bool variable_taus;  //!> whether or not the stopping time is variable
 
+  // indicies for additional shorthands
+  int itaus;                 // index for stopping time
   int iwx, iwy, iwz;         // indices for working arrays
-  int itaus;                 //!> index for stopping time
+
+  AthenaArray<Real> wx_, wy_, wz_;        // shorthand for working arrays
 
   Real taus0;  //!> constant/default stopping time (in code units)
-  AthenaArray<Real> wx, wy, wz;        // shorthand for working arrays
-  AthenaArray<Real> taus_;              // shorthand for stopping time
 };
 
 //--------------------------------------------------------------------------------------
@@ -324,7 +319,10 @@ class TracerParticles : public Particles {
   ~TracerParticles();
 
   // Methods (interface)
-  void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
+
+  // Data members
+  // shorthand for additional properties
+
 
  private:
   // Methods (implementation)
@@ -334,8 +332,10 @@ class TracerParticles : public Particles {
   void ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
 
   // Data members
+  // indicies for additional shorthands
   int iwx, iwy, iwz;         // indices for working arrays
-  AthenaArray<Real> wx, wy, wz;        // shorthand for working arrays
+
+  AthenaArray<Real> wx_, wy_, wz_;        // shorthand for working arrays
 };
 
 //--------------------------------------------------------------------------------------
@@ -351,9 +351,12 @@ class StarParticles : public Particles {
   ~StarParticles();
 
   // Methods (interface)
-  void AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
   // TODO(SMOON) should be removed after applying template design pattern
   void Integrate(int step) override;
+
+  // Data members
+  // shorthand for additional properties
+  AthenaArray<Real> metal, age, fgas;
 
  private:
   // Methods (implementation)
@@ -373,8 +376,8 @@ class StarParticles : public Particles {
 
   // Data members
   Real dt_old;
+  // indicies for additional shorthands
   int imetal, iage, ifgas;            // indices for:
-  AthenaArray<Real> metal, age, fgas; // metal mass, age, and gas fraction
 };
 
 #endif  // PARTICLES_PARTICLES_HPP_
