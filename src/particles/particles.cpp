@@ -386,7 +386,7 @@ void Particles::AddHistoryOutput(Real data_sum[], int pos) {
     sum[3] += vp1 * vp1;
     sum[4] += vp2 * vp2;
     sum[5] += vp3 * vp3;
-    sum[6] += mass_(k);
+    sum[6] += mass(k);
   }
 
   // Assign the values to output variables.
@@ -405,7 +405,7 @@ void Particles::OutputParticles(bool header) {
 
   for (int k = 0; k < npar_; ++k) {
     // Create the filename.
-    fname << file_basename << ".par" << pid_(k) << ".csv";
+    fname << file_basename << ".par" << pid(k) << ".csv";
 
     // Open the file for write.
     if (header)
@@ -438,10 +438,10 @@ void Particles::OutputParticles(bool header, int kid) {
   std::string file_basename = pinput->GetString("job","problem_id");
 
   for (int k = 0; k < npar_; ++k) {
-    if (pid_(k) != kid) continue;
+    if (pid(k) != kid) continue;
 
     // Create the filename.
-    fname << file_basename << ".pid" << pid_(k) << ".par" << ipar << ".csv";
+    fname << file_basename << ".pid" << pid(k) << ".par" << ipar << ".csv";
 
     // Open the file for write.
     if (header)
