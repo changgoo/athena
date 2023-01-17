@@ -125,7 +125,7 @@ void EquationOfState::ConservedToPrimitive(
   }
 
   // apply neighbor flooring
-  if (neighbor_flooring_) {
+  if (neighbor_flooring_ && (!test_flag)) {
     for (int k=kl; k<=ku; ++k) {
       for (int j=jl; j<=ju; ++j) {
 #pragma omp simd
@@ -143,8 +143,8 @@ void EquationOfState::ConservedToPrimitive(
             if (bookkeeping) efloor(k,j,i) += (eint_avg - eint)*beta;
             cons(IEN,k,j,i) = eint_avg + e_k;
             prim(IEN,k,j,i) = eint_avg/gm1;
-            std::cout << " at (" << i << ", " << j << ", " << k << ") "
-                      << u_d << "; " << eint << " --> " << eint_avg << std::endl;
+            // std::cout << " at (" << i << ", " << j << ", " << k << ") "
+                      // << u_d << "; " << eint << " --> " << eint_avg << std::endl;
           }
         }
       }

@@ -62,6 +62,8 @@ class Hydro {
   HydroSourceTerms hsrc;
   HydroDiffusion hdif;
 
+  bool fofc_enabled;
+
   // functions
   void NewBlockTimeStep();    // computes new timestep on a MeshBlock
   void AddFluxDivergence(const Real wght, AthenaArray<Real> &u_out);
@@ -78,6 +80,7 @@ class Hydro {
       const int ivx,
       AthenaArray<Real> &wl, AthenaArray<Real> &wr, AthenaArray<Real> &flx,
       const AthenaArray<Real> &dxw);
+  void SingleStateLLF_Hyd(Real wli[], Real wri[], Real flx[]);
 #else  // MHD:
   void RiemannSolver(
       const int k, const int j, const int il, const int iu,
@@ -85,10 +88,11 @@ class Hydro {
       AthenaArray<Real> &wl, AthenaArray<Real> &wr, AthenaArray<Real> &flx,
       AthenaArray<Real> &ey, AthenaArray<Real> &ez,
       AthenaArray<Real> &wct, const AthenaArray<Real> &dxw);
+  void SingleStateLLF_MHD(Real wli[], Real wri[], Real flx[]);
 #endif
   void CalculateVelocityDifferences(const int k, const int j, const int il, const int iu,
     const int ivx, AthenaArray<Real> &dvn, AthenaArray<Real> &dvt);
-
+  void FirstOrderFluxCorrection(Real gam0, Real gam1, Real beta);
  private:
   AthenaArray<Real> dt1_, dt2_, dt3_;  // scratch arrays used in NewTimeStep
   // scratch space used to compute fluxes
@@ -114,6 +118,9 @@ class Hydro {
   AthenaArray<Real> wl3d_, wr3d_;
   // 1D scratch arrays
   AthenaArray<Real> laplacian_l_fc_, laplacian_r_fc_;
+
+  // FOFC scratch arrays
+  AthenaArray<Real> utest_;
 
   TimeStepFunc UserTimeStep_;
 
