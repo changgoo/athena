@@ -253,6 +253,15 @@ void CoolingSolver::OperatorSplitSolver(MeshBlock *pmb) {
 
         Real& w_d  = pmb->phydro->w(IDN,k,j,i);
         Real& w_p  = pmb->phydro->w(IPR,k,j,i);
+
+        if ((w_d != w_d) || (w_p != w_p)) {
+          std::stringstream msg;
+          msg << "### FATAL ERROR in OperatorSplitSolver" << std::endl
+              << "nan values have passed from integrator "
+              << "d = " << w_d << " p = " << w_p << std::endl;
+          ATHENA_ERROR(msg);
+        }
+
         // find non-thermal part of energy to keep it the same
         Real e_non_thermal = u_e - w_p*igm1;
 
