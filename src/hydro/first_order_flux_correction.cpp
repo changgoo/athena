@@ -48,12 +48,13 @@ void Hydro::FirstOrderFluxCorrection(Real gam0, Real gam1, Real beta) {
   // assume second order integrator
   Real beta_dt = beta*pmb->pmy_mesh->dt;
 
+  // estimate next step conserved quantities
   for (int n=0; n<NHYDRO; ++n) {
     for (int k=ks; k<=ke; ++k) {
       for (int j=js; j<=je; ++j) {
 #pragma omp simd
         for (int i=is; i<=ie; ++i) {
-          utest_(n,k,j,i) = gam0*u0(n,k,j,i) + gam1*u1(n,k,j,i);
+          utest_(n,k,j,i) = gam0*u1(n,k,j,i) + gam1*u(n,k,j,i);
         }
       }
     }
@@ -61,9 +62,9 @@ void Hydro::FirstOrderFluxCorrection(Real gam0, Real gam1, Real beta) {
 
   AddFluxDivergence(beta_dt, utest_);
 
+  // test only active zones
+  // this call does not change w, w1
   pmb->peos->test_flag = true;
-
-  // test only active zones?
   pmb->peos->ConservedToPrimitive(utest_, w, pmb->pfield->b,
                                   w1, pmb->pfield->bcc, pmb->pcoord,
                                   is, ie, js, je, ks, ke);

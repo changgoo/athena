@@ -55,9 +55,10 @@ nx2        = 32
 nx3        = 32
 
 <hydro>
-gamma           = 1.666666666667 # gamma = C_p/C_v
-iso_sound_speed = 0.4082482905   # equivalent to sqrt(gamma*p/d) for p=0.1, d=1
+gamma             = 1.666666666667 # gamma = C_p/C_v
+iso_sound_speed   = 0.4082482905   # equivalent to sqrt(gamma*p/d) for p=0.1, d=1
 neighbor_flooring = true
+fofc              = true
 
 <cooling>
 cooling       = enroll           # [none, enroll, op_split]
@@ -67,7 +68,7 @@ coolftn       = tigress	         # tigress or plf
 cfl_cool      = 0.5       # min dt_hydro/dt_cool
 cfl_cool_sub  = 0.1       # dt_sub/dt_cool (must be less than 1)
 T_floor       = 10        # temperature floor
-T_max         = 1e8       # temperature ceiling
+T_max         = 1e9       # temperature ceiling
 
 T_PE          = 15000     # temperature below which PE heating is applied, if plf
 Gamma         = 2e-26     # heating rate in ergs / sec, if plf

@@ -37,6 +37,13 @@ EquationOfState::EquationOfState(MeshBlock *pmb, ParameterInput *pin) :
   nbavg_.NewAthenaArray(pmb->ncells3, pmb->ncells2, pmb->ncells1);
 }
 
+//----------------------------------------------------------------------------------------
+//! \fn void EquationOfState::SingleConservativeToPrimitive(
+//!  Real &u_d, Real &u_m1, Real &u_m2, Real &u_m3, Real &u_e,
+//!  Real &w_d, Real &w_vx, Real &w_vy, Real &w_vz, Real &w_p,
+//!  Real &dp, bool &dfloor_used, bool &pfloor_used)
+//! \brief Converts single conserved variable into primitive variable in adiabatic hydro.
+//!        Checks floor needs
 void EquationOfState::SingleConservativeToPrimitive(
   Real &u_d, Real &u_m1, Real &u_m2, Real &u_m3, Real &u_e,
   Real &w_d, Real &w_vx, Real &w_vy, Real &w_vz, Real &w_p,
@@ -73,13 +80,13 @@ void EquationOfState::SingleConservativeToPrimitive(
 //!          AthenaArray<Real> &prim, AthenaArray<Real> &bcc, Coordinates *pco,
 //!          int il, int iu, int jl, int ju, int kl, int ku)
 //! \brief Converts conserved into primitive variables in adiabatic hydro.
-
 void EquationOfState::ConservedToPrimitive(
     AthenaArray<Real> &cons, const AthenaArray<Real> &prim_old, const FaceField &b,
     AthenaArray<Real> &prim, AthenaArray<Real> &bcc,
     Coordinates *pco, int il, int iu, int jl, int ju, int kl, int ku) {
   Real gm1 = gamma_ - 1.0;
   int nbad_d = 0, nbad_p = 0;
+
   // apply floor or flag for neighbor averaging or flag for FOFC
   for (int k=kl; k<=ku; ++k) {
     for (int j=jl; j<=ju; ++j) {
@@ -143,16 +150,26 @@ void EquationOfState::ConservedToPrimitive(
             if (bookkeeping) efloor(k,j,i) += (eint_avg - eint)*beta;
             cons(IEN,k,j,i) = eint_avg + e_k;
             prim(IEN,k,j,i) = eint_avg/gm1;
-            // std::cout << " at (" << i << ", " << j << ", " << k << ") "
-                      // << u_d << "; " << eint << " --> " << eint_avg << std::endl;
           }
         }
       }
     }
   }
 
-  if (nbad_p > 0) std::cout << nbad_p << " cells had negative pressure" << std::endl;
-  if (nbad_d > 0) std::cout << nbad_d << " cells had negative density" << std::endl;
+  // reset test flag for FOFC
+  if (test_flag) test_flag = false;
+
+  // reporting number of bad cells
+  if (test_flag) {
+    if (nbad_p > 0)
+      std::cout << nbad_p << " cells tagged for negative pressure" << std::endl;
+    if (nbad_d > 0)
+      std::cout << nbad_d << " cells tagged for negative density" << std::endl;
+  } else {
+    if (nbad_p > 0) std::cout << nbad_p << " cells had negative pressure" << std::endl;
+    if (nbad_d > 0) std::cout << nbad_d << " cells had negative density" << std::endl;
+  }
+
   return;
 }
 
