@@ -108,6 +108,7 @@ Mesh::Mesh(ParameterInput *pin, int mesh_test) :
     nbnew(), nbdel(),
     particle(false), particle_gravity(false),
     cooling(pin->GetOrAddString("cooling", "cooling", "none") == "none" ? false : true),
+    fofc_enabled(pin->GetOrAddBoolean("hydro", "fofc", false)),
     step_since_lb(), gflag(), amr_updated(multilevel),
     // private members:
     next_phys_id_(), num_mesh_threads_(pin->GetOrAddInteger("mesh", "num_threads", 1)),
@@ -621,6 +622,7 @@ Mesh::Mesh(ParameterInput *pin, IOWrapper& resfile, int mesh_test) :
     nbnew(), nbdel(),
     particle(false), particle_gravity(false),
     cooling(pin->GetOrAddString("cooling", "cooling", "none") == "none" ? false : true),
+    fofc_enabled(pin->GetOrAddBoolean("hydro", "fofc", false)),
     step_since_lb(), gflag(), amr_updated(multilevel),
     // private members:
     next_phys_id_(), num_mesh_threads_(pin->GetOrAddInteger("mesh", "num_threads", 1)),

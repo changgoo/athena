@@ -54,7 +54,7 @@ Hydro::Hydro(MeshBlock *pmb, ParameterInput *pin) :
     hbvar(pmb, &u, &coarse_cons_, flux, HydroBoundaryQuantity::cons),
     hsrc(this, pin),
     hdif(this, pin),
-    fofc_enabled(pin->GetOrAddBoolean("hydro", "fofc", false)) {
+    fofc_enabled(pin->GetBoolean("hydro", "fofc")) {
   int nc1 = pmb->ncells1, nc2 = pmb->ncells2, nc3 = pmb->ncells3;
   Mesh *pm = pmy_block->pmy_mesh;
 

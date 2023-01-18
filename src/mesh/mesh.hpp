@@ -256,7 +256,7 @@ class Mesh {
   int nbtotal, nblocal, nbnew, nbdel;
   std::vector<ParticleParameters> particle_params;
   bool particle, particle_gravity;
-  const bool cooling;
+  const bool cooling, fofc_enabled;
 
   int step_since_lb;
   int gflag;
