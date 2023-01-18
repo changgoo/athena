@@ -33,6 +33,7 @@
 
 // user function
 void AddSupernova(Mesh *pm);
+void CollectCounters(Mesh *pm);
 
 // user history
 Real CoolingLosses(MeshBlock *pmb, int iout);
@@ -277,6 +278,8 @@ void Mesh::UserWorkInLoop() {
       std::cout << "SN exploded at " << time
                 << " --> next SN will be at " << t_SN << std::endl;
   }
+  // check number of bad cells
+  CollectCounters(this);
 }
 
 //========================================================================================
@@ -365,6 +368,30 @@ void AddSupernova(Mesh *pm) {
       }
     }
   }
+}
+
+//========================================================================================
+//! \fn void CollectCounters(Mesh *pm)
+//! \brief collect counters
+//========================================================================================
+void CollectCounters(Mesh *pm) {
+  int nbad_d=0, nbad_p=0;
+
+  // summing up over meshblocks within the rank
+  for (int b=0; b<pm->nblocal; ++b) {
+    MeshBlock *pmb = pm->my_blocks(b);
+    nbad_d += pmb->nbad_d;
+    nbad_p += pmb->nbad_p;
+  }
+
+  // calculate total feedback region volume
+#ifdef MPI_PARALLEL
+  MPI_Allreduce(MPI_IN_PLACE, &nbad_d, 1, MPI_ATHENA_INT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &nbad_p, 1, MPI_ATHENA_INT, MPI_SUM, MPI_COMM_WORLD);
+#endif
+
+  if (nbad_p > 0) std::cout << nbad_p << " cells had negative pressure" << std::endl;
+  if (nbad_d > 0) std::cout << nbad_d << " cells had negative density" << std::endl;
 }
 
 //========================================================================================

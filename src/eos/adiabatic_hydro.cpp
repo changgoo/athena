@@ -159,16 +159,10 @@ void EquationOfState::ConservedToPrimitive(
   // reset test flag for FOFC
   if (test_flag) test_flag = false;
 
-  // reporting number of bad cells
-  if (test_flag) {
-    if (nbad_p > 0)
-      std::cout << nbad_p << " cells tagged for negative pressure" << std::endl;
-    if (nbad_d > 0)
-      std::cout << nbad_d << " cells tagged for negative density" << std::endl;
-  } else {
-    if (nbad_p > 0) std::cout << nbad_p << " cells had negative pressure" << std::endl;
-    if (nbad_d > 0) std::cout << nbad_d << " cells had negative density" << std::endl;
-  }
+  // updated number of bad cells in the mesh block
+  // to be used elsewhere for diagnosing purposes
+  pmy_block_->nbad_d = nbad_d;
+  pmy_block_->nbad_p = nbad_p;
 
   return;
 }

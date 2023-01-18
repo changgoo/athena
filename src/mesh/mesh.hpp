@@ -101,6 +101,7 @@ class MeshBlock {
   int gid, lid;
   int cis, cie, cjs, cje, cks, cke, cnghost;
   int gflag;
+  int nbad_d, nbad_p;
 
   // user output variables for analysis
   int nuser_out_var;
