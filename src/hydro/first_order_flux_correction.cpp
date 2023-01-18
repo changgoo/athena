@@ -86,14 +86,14 @@ void Hydro::FirstOrderFluxCorrection(Real gam0, Real gam1, Real beta) {
           wim1[IVX] = w(IVX,k,j,i-1);
           wim1[IVY] = w(IVY,k,j,i-1);
           wim1[IVZ] = w(IVZ,k,j,i-1);
-          if (NON_BAROTROPIC_EOS) wim1[IEN] = w(IEN,k,j,i-1);
+          if (NON_BAROTROPIC_EOS) wim1[IPR] = w(IPR,k,j,i-1);
 
           // first order right state
           wi[IDN] = w(IDN,k,j,i);
           wi[IVX] = w(IVX,k,j,i);
           wi[IVY] = w(IVY,k,j,i);
           wi[IVZ] = w(IVZ,k,j,i);
-          if (NON_BAROTROPIC_EOS) wi[IEN] = w(IEN,k,j,i);
+          if (NON_BAROTROPIC_EOS) wi[IPR] = w(IPR,k,j,i);
 
           // compute LLF flux
           SingleStateLLF_Hyd(wim1, wi, flx);
@@ -111,7 +111,7 @@ void Hydro::FirstOrderFluxCorrection(Real gam0, Real gam1, Real beta) {
           wip1[IVX] = w(IVX,k,j,i+1);
           wip1[IVY] = w(IVY,k,j,i+1);
           wip1[IVZ] = w(IVZ,k,j,i+1);
-          if (NON_BAROTROPIC_EOS) wip1[IEN] = w(IEN,k,j,i+1);
+          if (NON_BAROTROPIC_EOS) wip1[IPR] = w(IPR,k,j,i+1);
 
           // compute LLF flux
           SingleStateLLF_Hyd(wi, wip1, flx);
@@ -131,14 +131,14 @@ void Hydro::FirstOrderFluxCorrection(Real gam0, Real gam1, Real beta) {
             wim1[IVX] = w(IVY,k,j-1,i);
             wim1[IVY] = w(IVZ,k,j-1,i);
             wim1[IVZ] = w(IVX,k,j-1,i);
-            if (NON_BAROTROPIC_EOS) wim1[IEN] = w(IEN,k,j-1,i);
+            if (NON_BAROTROPIC_EOS) wim1[IPR] = w(IPR,k,j-1,i);
 
             // first order right state
             wi[IDN] = w(IDN,k,j,i);
             wi[IVX] = w(IVY,k,j,i);
             wi[IVY] = w(IVZ,k,j,i);
             wi[IVZ] = w(IVX,k,j,i);
-            if (NON_BAROTROPIC_EOS) wi[IEN] = w(IEN,k,j,i);
+            if (NON_BAROTROPIC_EOS) wi[IPR] = w(IPR,k,j,i);
 
             // compute LLF flux
             SingleStateLLF_Hyd(wim1, wi, flx);
@@ -156,7 +156,7 @@ void Hydro::FirstOrderFluxCorrection(Real gam0, Real gam1, Real beta) {
             wip1[IVX] = w(IVY,k,j+1,i);
             wip1[IVY] = w(IVZ,k,j+1,i);
             wip1[IVZ] = w(IVX,k,j+1,i);
-            if (NON_BAROTROPIC_EOS) wip1[IEN] = w(IEN,k,j+1,i);
+            if (NON_BAROTROPIC_EOS) wip1[IPR] = w(IPR,k,j+1,i);
 
             // compute LLF flux
             SingleStateLLF_Hyd(wi, wip1, flx);
@@ -177,14 +177,14 @@ void Hydro::FirstOrderFluxCorrection(Real gam0, Real gam1, Real beta) {
             wim1[IVX] = w(IVZ,k-1,j,i);
             wim1[IVY] = w(IVX,k-1,j,i);
             wim1[IVZ] = w(IVY,k-1,j,i);
-            if (NON_BAROTROPIC_EOS) wim1[IEN] = w(IEN,k-1,j,i);
+            if (NON_BAROTROPIC_EOS) wim1[IPR] = w(IPR,k-1,j,i);
 
             // first order right state
             wi[IDN] = w(IDN,k,j,i);
             wi[IVX] = w(IVZ,k,j,i);
             wi[IVY] = w(IVX,k,j,i);
             wi[IVZ] = w(IVY,k,j,i);
-            if (NON_BAROTROPIC_EOS) wi[IEN] = w(IEN,k,j,i);
+            if (NON_BAROTROPIC_EOS) wi[IPR] = w(IPR,k,j,i);
 
             // compute LLF flux
             SingleStateLLF_Hyd(wim1, wi, flx);
@@ -202,7 +202,7 @@ void Hydro::FirstOrderFluxCorrection(Real gam0, Real gam1, Real beta) {
             wip1[IVX] = w(IVZ,k+1,j,i);
             wip1[IVY] = w(IVX,k+1,j,i);
             wip1[IVZ] = w(IVY,k+1,j,i);
-            if (NON_BAROTROPIC_EOS) wip1[IEN] = w(IEN,k+1,j,i);
+            if (NON_BAROTROPIC_EOS) wip1[IPR] = w(IPR,k+1,j,i);
 
             // compute LLF flux
             SingleStateLLF_Hyd(wi, wip1, flx);

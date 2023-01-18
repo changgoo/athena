@@ -55,6 +55,44 @@ void EquationOfState::SingleConservativeToPrimitiveHydro(
   }
 }
 
+//----------------------------------------------------------------------------------------
+//! \fn void EquationOfState::SingleConservativeToPrimitive(
+//!  Real &u_d, Real &u_m1, Real &u_m2, Real &u_m3, Real &u_e, Real emag,
+//!  Real &w_d, Real &w_vx, Real &w_vy, Real &w_vz, Real &w_p,
+//!  Real &dp, bool &dfloor_used, bool &pfloor_used)
+//! \brief Converts single conserved variable into primitive variable in hydro.
+//!        Checks floor needs
+void EquationOfState::SingleConservativeToPrimitiveMHD(
+  Real &u_d, Real &u_m1, Real &u_m2, Real &u_m3, Real &u_e,
+  Real &w_d, Real &w_vx, Real &w_vy, Real &w_vz, Real &w_p,
+  Real &dp, bool &dfloor_used, bool &pfloor_used, const Real e_mag)  {
+  // apply density floor, without changing momentum or energy
+  if (u_d < density_floor_) {
+    u_d = density_floor_;
+    dfloor_used = true;
+  }
+
+  w_d = u_d;
+
+  Real di = 1.0/u_d;
+  w_vx = u_m1*di;
+  w_vy = u_m2*di;
+  w_vz = u_m3*di;
+
+  if (NON_BAROTROPIC_EOS) {
+    Real gm1 = gamma_ - 1.0;
+    Real e_k = 0.5*di*(SQR(u_m1) + SQR(u_m2) + SQR(u_m3));
+    w_p = gm1*(u_e - e_k - e_mag);
+
+    // apply pressure floor, correct total energy
+    if (w_p < pressure_floor_) {
+      dp = pressure_floor_ - w_p;
+      w_p = pressure_floor_;
+      u_e = w_p/gm1 + e_k + e_mag;
+      pfloor_used = true;
+    }
+  }
+}
 
 //----------------------------------------------------------------------------------------
 //! \fn void EquationOfState::NeighborAveragingConserved
@@ -110,6 +148,13 @@ void EquationOfState::NeighborAveragingConserved(
     NeighborAveragingEint(cons, bcc, eint_avg, k, j, i, il, iu, jl, ju, kl, ku);
     cons_avg(IEN) = eint_avg + e_k;
     prim_avg(IEN) = eint_avg/gm1;
+    if (MAGNETIC_FIELDS_ENABLED) {
+      const Real bcc1 = bcc(IB1,k,j,i);
+      const Real bcc2 = bcc(IB2,k,j,i);
+      const Real bcc3 = bcc(IB3,k,j,i);
+      Real e_mag = 0.5*(SQR(bcc1) + SQR(bcc2) + SQR(bcc3));
+      cons_avg(IEN) += e_mag;
+    }
   }
 
   return;
@@ -146,6 +191,14 @@ void EquationOfState::NeighborAveragingEint(const AthenaArray<Real> &cons,
       Real ndi = 1.0/nu_d;
       Real ne_k = 0.5*ndi*(SQR(nu_m1) + SQR(nu_m2) + SQR(nu_m3));
       Real neint = nu_e - ne_k;
+
+      if (MAGNETIC_FIELDS_ENABLED) {
+        const Real bcc1 = bcc(IB1,k0,j0,i0);
+        const Real bcc2 = bcc(IB2,k0,j0,i0);
+        const Real bcc3 = bcc(IB3,k0,j0,i0);
+        Real ne_mag = 0.5*(SQR(bcc1) + SQR(bcc2) + SQR(bcc3));
+        neint -= ne_mag;
+      }
 
       Real vol = 1.0; // will change to real cell volume
       vol_neighbors += vol;

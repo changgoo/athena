@@ -49,6 +49,10 @@ class EquationOfState {
       Real &u_d, Real &u_m1, Real &u_m2, Real &u_m3, Real &u_e,
       Real &w_d, Real &w_vx, Real &w_vy, Real &w_vz, Real &w_p,
       Real &dp, bool &dfloor_used, bool &pfloor_used);
+  void SingleConservativeToPrimitiveMHD(
+      Real &u_d, Real &u_m1, Real &u_m2, Real &u_m3, Real &u_e,
+      Real &w_d, Real &w_vx, Real &w_vy, Real &w_vz, Real &w_p,
+      Real &dp, bool &dfloor_used, bool &pfloor_used, const Real e_mag);
   // void PrimitiveToConservedCellAverage(const AthenaArray<Real> &prim,
   //   const AthenaArray<Real> &bc, AthenaArray<Real> &cons, Coordinates *pco, int il,
   //   int iu, int jl, int ju, int kl, int ku);
