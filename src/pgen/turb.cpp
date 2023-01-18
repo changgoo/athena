@@ -32,6 +32,11 @@
 #include <omp.h>
 #endif
 
+// user function
+void CollectCounters(Mesh *pm);
+
+int turb_flag;
+Real rho0=1.0;
 TurbulenceDriver *ptrbd;
 //========================================================================================
 //! \fn void Mesh::InitUserMeshData(ParameterInput *pin)
@@ -56,7 +61,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   for (int k=ks; k<=ke; k++) {
     for (int j=js; j<=je; j++) {
       for (int i=is; i<=ie; i++) {
-        phydro->u(IDN,k,j,i) = 1.0;
+        phydro->u(IDN,k,j,i) = rho0;
 
         phydro->u(IM1,k,j,i) = 0.0;
         phydro->u(IM2,k,j,i) = 0.0;
@@ -75,11 +80,20 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 //  \brief
 //========================================================================================
 void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
-  ptrbd = new TurbulenceDriver(this, pin);
+  turb_flag = pin->GetOrAddInteger("problem","turb_flag",0);
+  if (turb_flag != 0) {
+    ptrbd = new TurbulenceDriver(this, pin);
 
-  if (((ptrbd->turb_flag == 1) || (ptrbd->turb_flag == 2)) && (res_flag == 0)) {
-    ptrbd->Driving();
-    if (ptrbd->turb_flag == 1) delete ptrbd;
+    if (res_flag == 0) {
+      if (turb_flag == 3) {
+        MeshBlock *pmb = my_blocks(0);
+        Real dx = pmb->pcoord->dx1v(0);
+        // get rough estimate of dt
+        dt = std::cbrt(1.5*rho0/ptrbd->dedt*SQR(dx));
+      }
+      ptrbd->Driving();
+      if (turb_flag == 1) delete ptrbd;
+    }
   }
 }
 
@@ -88,7 +102,9 @@ void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
 //  \brief
 //========================================================================================
 void Mesh::UserWorkInLoop() {
-  if (ptrbd->turb_flag > 1) ptrbd->Driving(); // driven turbulence
+  if (turb_flag > 1) ptrbd->Driving(); // driven turbulence
+  // check number of bad cells
+  CollectCounters(this);
 }
 
 //========================================================================================
@@ -96,5 +112,29 @@ void Mesh::UserWorkInLoop() {
 //  \brief
 //========================================================================================
 void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
-  if (ptrbd->turb_flag > 1) delete ptrbd; // driven turbulence
+  if (turb_flag > 1) delete ptrbd; // driven turbulence
+}
+
+//========================================================================================
+//! \fn void CollectCounters(Mesh *pm)
+//! \brief collect counters
+//========================================================================================
+void CollectCounters(Mesh *pm) {
+  int nbad_d=0, nbad_p=0;
+
+  // summing up over meshblocks within the rank
+  for (int b=0; b<pm->nblocal; ++b) {
+    MeshBlock *pmb = pm->my_blocks(b);
+    nbad_d += pmb->nbad_d;
+    nbad_p += pmb->nbad_p;
+  }
+
+  // calculate total feedback region volume
+#ifdef MPI_PARALLEL
+  MPI_Allreduce(MPI_IN_PLACE, &nbad_d, 1, MPI_ATHENA_INT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &nbad_p, 1, MPI_ATHENA_INT, MPI_SUM, MPI_COMM_WORLD);
+#endif
+
+  if (nbad_p > 0) std::cout << nbad_p << " cells had negative pressure" << std::endl;
+  if (nbad_d > 0) std::cout << nbad_d << " cells had negative density" << std::endl;
 }
