@@ -213,6 +213,10 @@ void Hydro::FirstOrderFluxCorrection(Real gam0, Real gam1, Real beta) {
             x3flux(IM1,k+1,j,i) = flx[IVY];
             x3flux(IM2,k+1,j,i) = flx[IVZ];
             if (NON_BAROTROPIC_EOS) x3flux(IEN,k+1,j,i) = flx[IEN];
+
+            // diffusion fluxes needs to be added
+            if (!STS_ENABLED)
+              AddDiffusionFluxesSingleCell(i,j,k);
           }
         }
       }

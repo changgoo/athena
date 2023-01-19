@@ -120,11 +120,12 @@ class Hydro {
   AthenaArray<Real> laplacian_l_fc_, laplacian_r_fc_;
 
   // FOFC scratch arrays
-  AthenaArray<Real> utest_;
+  AthenaArray<Real> utest_, bcctest_;
 
   TimeStepFunc UserTimeStep_;
 
   void AddDiffusionFluxes();
+  void AddDiffusionFluxesSingleCell(int i, int j, int k);
   Real GetWeightForCT(Real dflx, Real rhol, Real rhor, Real dx, Real dt);
 };
 #endif // HYDRO_HYDRO_HPP_

@@ -1803,10 +1803,11 @@ TaskStatus TimeIntegratorTaskList::CalculateHydroFlux(MeshBlock *pmb, int stage)
           phydro->CalculateFluxes(phydro->w,  pfield->b,  pfield->bcc,
                                   pmb->precon->xorder);
         }
-        if (phydro->fofc_enabled)
+        if (phydro->fofc_enabled) {
           phydro->FirstOrderFluxCorrection(stage_wghts[stage-1].gamma_1,
                                            stage_wghts[stage-1].gamma_2,
                                            stage_wghts[stage-1].beta);
+        }
       }
     }
     return TaskStatus::next;
