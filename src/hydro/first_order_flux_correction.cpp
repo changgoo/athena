@@ -41,11 +41,7 @@
 // used)
 void Hydro::FirstOrderFluxCorrection(Real gam0, Real gam1, Real beta) {
   MeshBlock *pmb = pmy_block;
-#if MAGNETIC_FIELDS_ENABLED
-  Field *pf = pmb->pfield;
-  Coordinates *pco = pmb->pcoord;
-  AthenaArray<Real> &bcc_ = pf->bcc;
-#endif
+
   int is = pmb->is; int js = pmb->js; int ks = pmb->ks;
   int ie = pmb->ie; int je = pmb->je; int ke = pmb->ke;
   int il, iu, jl, ju, kl, ku;
@@ -68,21 +64,37 @@ void Hydro::FirstOrderFluxCorrection(Real gam0, Real gam1, Real beta) {
   AddFluxDivergence(beta_dt, utest_);
 
 #if MAGNETIC_FIELDS_ENABLED
-  // substract old emag from u1 and u so that utest_(IEN) only contains e_int and e_k
-  // pf->bcc is calculated from b in the last Cons2Prim call
-  // we need bcc1 from b1.
-  // take this approach instead of forward CT calculation as done in AthenaK
-  // doing CT in Athena++ is more complicated due to its generality
+
+  Field *pf = pmb->pfield;
+  Coordinates *pco = pmb->pcoord;
+  AthenaArray<Real> &bcc_ = pf->bcc;
+
+  AthenaArray<Real> &e3x1_ = pmb->pfield->e3_x1f, &e2x1_ = pmb->pfield->e2_x1f;
+  AthenaArray<Real> &e1x2_ = pmb->pfield->e1_x2f, &e3x2_ = pmb->pfield->e3_x2f;
+  AthenaArray<Real> &e1x3_ = pmb->pfield->e1_x3f, &e2x3_ = pmb->pfield->e2_x3f;
+  // assuming cartesian
+  Real dtodx1 = beta_dt/pco->dx1v(is);
+  Real dtodx2 = beta_dt/pco->dx2v(js);
+  Real dtodx3 = beta_dt/pco->dx3v(ks);
   pf->CalculateCellCenteredField(pf->b1,bcctest_,pco,is,ie,js,je,ks,ke);
   for (int k=ks; k<=ke; ++k) {
     for (int j=js; j<=je; ++j) {
 #pragma omp simd
       for (int i=is; i<=ie; ++i) {
-        Real bcc1 = gam0*bcctest_(IB1,k,j,i) + gam1*bcc_(IB1,k,j,i);
-        Real bcc2 = gam0*bcctest_(IB2,k,j,i) + gam1*bcc_(IB2,k,j,i);
-        Real bcc3 = gam0*bcctest_(IB3,k,j,i) + gam1*bcc_(IB3,k,j,i);
-        Real e_mag = 0.5*(SQR(bcc1) + SQR(bcc2) + SQR(bcc3));
-        utest_(IEN,k,j,i) -= e_mag;
+        bcctest_(IB1,k,j,i) = gam0*bcctest_(IB1,k,j,i) + gam1*bcc_(IB1,k,j,i);
+        bcctest_(IB2,k,j,i) = gam0*bcctest_(IB2,k,j,i) + gam1*bcc_(IB2,k,j,i);
+        bcctest_(IB3,k,j,i) = gam0*bcctest_(IB3,k,j,i) + gam1*bcc_(IB3,k,j,i);
+
+        bcctest_(IB2,k,j,i) += dtodx1*(e3x1_(k,j,i+1) - e3x1_(k,j,i));
+        bcctest_(IB3,k,j,i) -= dtodx1*(e2x1_(k,j,i+1) - e2x1_(k,j,i));
+        if (pmb->pmy_mesh->f2) {
+          bcctest_(IB1,k,j,i) -= dtodx2*(e3x2_(k,j+1,i) - e3x2_(k,j,i));
+          bcctest_(IB3,k,j,i) += dtodx2*(e1x2_(k,j+1,i) - e1x2_(k,j,i));
+        }
+        if (pmb->pmy_mesh->f3) {
+          bcctest_(IB1,k,j,i) += dtodx3*(e2x3_(k+1,j,i) - e2x3_(k,j,i));
+          bcctest_(IB2,k,j,i) -= dtodx3*(e1x3_(k+1,j,i) - e1x3_(k,j,i));
+        }
       }
     }
   }
@@ -90,7 +102,7 @@ void Hydro::FirstOrderFluxCorrection(Real gam0, Real gam1, Real beta) {
 
   // test only active zones
   // utest_(IEN) must be e_int + e_k excluding e_mag even if MHD
-  pmb->peos->ConservedToPrimitiveTest(utest_, is, ie, js, je, ks, ke);
+  pmb->peos->ConservedToPrimitiveTest(utest_, bcctest_, is, ie, js, je, ks, ke);
 
   // now replace fluxes with first-order fluxes
   for (int k=ks; k<=ke; ++k) {

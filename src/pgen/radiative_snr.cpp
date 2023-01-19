@@ -169,22 +169,56 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real rho_0 = nH_0*pcool->pcf->nH_to_code_den; // to code units
   pgas_0 *= pcool->pcf->pok_to_code_press; // to code units
 
+  Real gamma = peos->GetGamma();
+  Real gm1 = gamma - 1.0;
+
   // Initialize primitive values
   for (int k = kl; k <= ku; ++k) {
     for (int j = jl; j <= ju; ++j) {
       for (int i = il; i <= iu; ++i) {
-        phydro->w(IDN,k,j,i) = rho_0;
-        phydro->w(IPR,k,j,i) = pgas_0;
-        phydro->w(IVX,k,j,i) = 0.0;
-        phydro->w(IVY,k,j,i) = 0.0;
-        phydro->w(IVZ,k,j,i) = 0.0;
+        phydro->u(IDN,k,j,i) = rho_0;
+        phydro->u(IEN,k,j,i) = pgas_0/gm1;
+        phydro->u(IM1,k,j,i) = 0.0;
+        phydro->u(IM2,k,j,i) = 0.0;
+        phydro->u(IM3,k,j,i) = 0.0;
       }
     }
   }
 
-  // Initialize conserved values
-  AthenaArray<Real> b;
-  peos->PrimitiveToConserved(phydro->w, b, phydro->u, pcoord, il, iu, jl, ju, kl, ku);
+  // initialize interface B and total energy
+  if (MAGNETIC_FIELDS_ENABLED) {
+    Real b0 = pin->GetReal("problem", "B_0"); // in uG
+    b0 *= 1.e-6/punit->MagneticField;
+    std::cout<< "B0 (code) = " << b0 << std::endl;
+    for (int k=ks; k<=ke; ++k) {
+      for (int j=js; j<=je; ++j) {
+        for (int i=is; i<=ie+1; ++i) {
+          pfield->b.x1f(k,j,i) = 0.0;
+        }
+      }
+    }
+    for (int k=ks; k<=ke; ++k) {
+      for (int j=js; j<=je+1; ++j) {
+        for (int i=is; i<=ie; ++i) {
+          pfield->b.x2f(k,j,i) = b0;
+        }
+      }
+    }
+    for (int k=ks; k<=ke+1; ++k) {
+      for (int j=js; j<=je; ++j) {
+        for (int i=is; i<=ie; ++i) {
+          pfield->b.x3f(k,j,i) = 0.0;
+        }
+      }
+    }
+    for (int k=ks; k<=ke; ++k) {
+      for (int j=js; j<=je; ++j) {
+        for (int i=is; i<=ie; ++i) {
+          phydro->u(IEN,k,j,i) += 0.5*b0*b0;
+        }
+      }
+    }
+  }
 
   return;
 }

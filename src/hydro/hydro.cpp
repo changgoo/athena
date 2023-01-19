@@ -147,6 +147,7 @@ Hydro::Hydro(MeshBlock *pmb, ParameterInput *pin) :
 
   if (fofc_enabled) {
     utest_.NewAthenaArray(NHYDRO, nc3, nc2, nc1);
+    if (MAGNETIC_FIELDS_ENABLED) bcctest_.NewAthenaArray(nc3, nc2, nc1);
   }
 
   UserTimeStep_ = pmb->pmy_mesh->UserTimeStep_;

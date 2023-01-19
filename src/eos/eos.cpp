@@ -24,7 +24,8 @@
 //! \brief Just for test. cons(IEN) only contains e_int + e_k even if it is MHD
 
 void EquationOfState::ConservedToPrimitiveTest(
-    const AthenaArray<Real> &cons, int il, int iu, int jl, int ju, int kl, int ku) {
+    const AthenaArray<Real> &cons, const AthenaArray<Real> &bcc,
+    int il, int iu, int jl, int ju, int kl, int ku) {
   Real gm1 = GetGamma() - 1.0;
   int nbad_d = 0, nbad_p = 0;
 
@@ -37,12 +38,19 @@ void EquationOfState::ConservedToPrimitiveTest(
         Real u_m2 = cons(IM2,k,j,i);
         Real u_m3 = cons(IM3,k,j,i);
         Real u_e  = cons(IEN,k,j,i);
+        Real e_mag = 0.0;
+        if (MAGNETIC_FIELDS_ENABLED) {
+          Real bcc1 = bcc(IB1,k,j,i);
+          Real bcc2 = bcc(IB2,k,j,i);
+          Real bcc3 = bcc(IB3,k,j,i);
+          e_mag = 0.5*(SQR(bcc1) + SQR(bcc2) + SQR(bcc3));
+        }
 
         Real w_d, w_vx, w_vy, w_vz, w_p, dp;
         bool dfloor_used = false, pfloor_used = false;
-        SingleConservativeToPrimitiveHydro(u_d, u_m1, u_m2, u_m3, u_e,
+        SingleConservativeToPrimitiveMHD(u_d, u_m1, u_m2, u_m3, u_e,
                                            w_d, w_vx, w_vy, w_vz, w_p,
-                                           dp, dfloor_used, pfloor_used);
+                                           dp, dfloor_used, pfloor_used, e_mag);
         fofc_(k,j,i) = dfloor_used || pfloor_used;
         if (dfloor_used) nbad_d++;
         if (pfloor_used) nbad_p++;
@@ -50,6 +58,8 @@ void EquationOfState::ConservedToPrimitiveTest(
     }
   }
 
+  // if (nbad_d > 0) std::cout << nbad_d << " negative d cells tagged for FOFC" << std::endl;
+  // if (nbad_p > 0) std::cout << nbad_p << " negative P cells tagged for FOFC" << std::endl;
   return;
 }
 

@@ -140,6 +140,11 @@ void EquationOfState::ConservedToPrimitive(
     }
   }
 
+  // updated number of bad cells in the mesh block
+  // to be used elsewhere for diagnosing purposes
+  pmy_block_->nbad_d = nbad_d;
+  pmy_block_->nbad_p = nbad_p;
+
   return;
 }
 

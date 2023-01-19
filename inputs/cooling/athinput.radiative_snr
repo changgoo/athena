@@ -84,6 +84,7 @@ rseed         = 1
 <problem>
 nH_0          = 1.       # initial number density in cm^-3
 pgas_0        = 3000     # initial gas pressure meant to be in kB K cm^-3
+B_0           = 10       # initial B_y in uG
 r_SN          = 5
 t_SN          = 0.0
 amp_den       = 0.0      # non zero to turn on
