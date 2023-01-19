@@ -88,7 +88,7 @@ class Hydro {
       AthenaArray<Real> &wl, AthenaArray<Real> &wr, AthenaArray<Real> &flx,
       AthenaArray<Real> &ey, AthenaArray<Real> &ez,
       AthenaArray<Real> &wct, const AthenaArray<Real> &dxw);
-  void SingleStateLLF_MHD(Real wli[], Real wri[], Real flx[]);
+  void SingleStateLLF_MHD(Real wli[], Real wri[], Real bxi, Real flx[]);
 #endif
   void CalculateVelocityDifferences(const int k, const int j, const int il, const int iu,
     const int ivx, AthenaArray<Real> &dvn, AthenaArray<Real> &dvt);
