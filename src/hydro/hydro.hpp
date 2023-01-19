@@ -80,7 +80,8 @@ class Hydro {
       const int ivx,
       AthenaArray<Real> &wl, AthenaArray<Real> &wr, AthenaArray<Real> &flx,
       const AthenaArray<Real> &dxw);
-  void SingleStateLLF_Hyd(Real wli[], Real wri[], Real flx[]);
+  void SingleStateLLF_Hydro(Real wli[], Real wri[], Real flx[]);
+  void ApplyFOFC_Hydro(int i, int j, int k);
 #else  // MHD:
   void RiemannSolver(
       const int k, const int j, const int il, const int iu,
@@ -89,6 +90,7 @@ class Hydro {
       AthenaArray<Real> &ey, AthenaArray<Real> &ez,
       AthenaArray<Real> &wct, const AthenaArray<Real> &dxw);
   void SingleStateLLF_MHD(Real wli[], Real wri[], Real bxi, Real flx[]);
+  void ApplyFOFC_MHD(int i, int j, int k);
 #endif
   void CalculateVelocityDifferences(const int k, const int j, const int il, const int iu,
     const int ivx, AthenaArray<Real> &dvn, AthenaArray<Real> &dvt);

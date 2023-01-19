@@ -31,7 +31,7 @@
 //! \fn void Hydro::SingleStateLLF_Hyd
 //! \brief The LLF Riemann solver for hydrodynamics (both adiabatic and isothermal)
 
-void Hydro::SingleStateLLF_Hyd(Real wli[], Real wri[], Real flx[]) {
+void Hydro::SingleStateLLF_Hydro(Real wli[], Real wri[], Real flx[]) {
   Real fl[(NHYDRO)],fr[(NHYDRO)],du[(NHYDRO)];
   Real gm1 = pmy_block->peos->GetGamma() - 1.0;
   Real iso_cs = pmy_block->peos->GetIsoSoundSpeed();
