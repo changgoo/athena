@@ -75,52 +75,49 @@ void EquationOfState::ConservedToPrimitive(
         SingleConservativeToPrimitiveMHD(u_d, u_m1, u_m2, u_m3, u_e,
                                          w_d, w_vx, w_vy, w_vz, w_p,
                                          dp, dfloor_used, pfloor_used, e_mag);
-        if (test_flag) {
-          fofc_(k,j,i) = dfloor_used || pfloor_used;
-          if (dfloor_used) nbad_d++;
-          if (pfloor_used) nbad_p++;
-        } else {
-          // update counter, reset conserved if floor was used
-          if (neighbor_flooring_) nbavg_(k,j,i) = dfloor_used || pfloor_used;
 
-          if (dfloor_used) {
-            cons(IDN,k,j,i) = u_d;
-            nbad_d++;
-          }
-          if (pfloor_used) {
-            if (bookkeeping) efloor(k,j,i) += beta*dp/gm1;
-            cons(IEN,k,j,i) = u_e;
-            nbad_p++;
-          }
-          // update primitives
-          prim(IDN,k,j,i) = w_d;
-          prim(IVX,k,j,i) = w_vx;
-          prim(IVY,k,j,i) = w_vy;
-          prim(IVZ,k,j,i) = w_vz;
-          prim(IEN,k,j,i) = w_p;
+        // update counter, reset conserved if floor was used
+        if (neighbor_flooring_) {
+          nbavg_d_(k,j,i) = dfloor_used;
+          nbavg_p_(k,j,i) = pfloor_used;
         }
+
+        if (dfloor_used) {
+          cons(IDN,k,j,i) = u_d;
+          nbad_d++;
+        }
+        if (pfloor_used) {
+          if (bookkeeping) efloor(k,j,i) += beta*dp/gm1;
+          cons(IEN,k,j,i) = u_e;
+          nbad_p++;
+        }
+        // update primitives
+        prim(IDN,k,j,i) = w_d;
+        prim(IVX,k,j,i) = w_vx;
+        prim(IVY,k,j,i) = w_vy;
+        prim(IVZ,k,j,i) = w_vz;
+        prim(IEN,k,j,i) = w_p;
       }
     }
   }
 
   // apply neighbor averaging
-  if (neighbor_flooring_ && (!test_flag)) {
+  if (neighbor_flooring_) {
     for (int k=kl; k<=ku; ++k) {
       for (int j=jl; j<=ju; ++j) {
         for (int i=il; i<=iu; ++i) {
-          // if (nbavg_(k,j,i)) {
-          //   // if density is bad
-          //   Real eint_prev = prim(IEN,k,j,i)*gm1;
-          //   AthenaArray<Real> cons_avg(NHYDRO), prim_avg(NHYDRO);
-          //   NeighborAveragingConserved(cons,bcc,cons_avg,prim_avg,
-          //                              k,j,i,il,iu,jl,ju,kl,ku);
-          //   for (int n=0; n<NHYDRO; ++n) {
-          //     cons(n,k,j,i) = cons_avg(n);
-          //     prim(n,k,j,i) = prim_avg(n);
-          //   }
-          //   if (bookkeeping) efloor(k,j,i) += (prim_avg(IEN)*gm1 - eint_prev)*beta;
-          // }
-          if (nbavg_(k,j,i)) {
+          if (nbavg_d_(k,j,i)) {
+            // if density is bad
+            Real eint_prev = prim(IPR,k,j,i)*gm1;
+            AthenaArray<Real> cons_avg(NHYDRO), prim_avg(NHYDRO);
+            NeighborAveragingConserved(cons,bcc,cons_avg,prim_avg,
+                                       k,j,i,il,iu,jl,ju,kl,ku);
+            for (int n=0; n<NHYDRO; ++n) {
+              cons(n,k,j,i) = cons_avg(n);
+              prim(n,k,j,i) = prim_avg(n);
+            }
+            if (bookkeeping) efloor(k,j,i) += (prim_avg(IPR)*gm1 - eint_prev)*beta;
+          } else if (nbavg_p_(k,j,i)) {
             // this only handless the pressure floor case
             Real u_d  = cons(IDN,k,j,i);
             Real u_m1 = cons(IM1,k,j,i);

@@ -45,6 +45,8 @@ class EquationOfState {
       AthenaArray<Real> &cons, const AthenaArray<Real> &prim_old, const FaceField &b,
       AthenaArray<Real> &prim, AthenaArray<Real> &bcc,
       Coordinates *pco, int il, int iu, int jl, int ju, int kl, int ku);
+  void ConservedToPrimitiveTest(const AthenaArray<Real> &cons,
+      int il, int iu, int jl, int ju, int kl, int ku);
   void SingleConservativeToPrimitiveHydro(
       Real &u_d, Real &u_m1, Real &u_m2, Real &u_m3, Real &u_e,
       Real &w_d, Real &w_vx, Real &w_vy, Real &w_vz, Real &w_p,
@@ -172,7 +174,7 @@ class EquationOfState {
 #endif
 
   Real beta;
-  bool bookkeeping, test_flag;
+  bool bookkeeping;
   AthenaArray<Real> efloor;
 
  private:

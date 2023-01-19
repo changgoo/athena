@@ -62,7 +62,7 @@ class HydroDiffusion {
   // See note in hydro_diffusion.cpp.
   void AddDiffusionFlux(AthenaArray<Real> *flx_src, AthenaArray<Real> *flx_des);
   void AddDiffusionEnergyFlux(AthenaArray<Real> *flux_src, AthenaArray<Real> *flux_des);
-  void AddDiffusionFluxSingleCell(AthenaArray<Real> *flx_src, AthenaArray<Real> *flx_des
+  void AddDiffusionFluxSingleCell(AthenaArray<Real> *flx_src, AthenaArray<Real> *flx_des,
                                   int i, int j, int k);
   void AddDiffusionEnergyFluxSingleCell(AthenaArray<Real> *flux_src,
                                         AthenaArray<Real> *flux_des, int i, int j, int k);

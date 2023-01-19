@@ -17,6 +17,43 @@
 #include "eos.hpp"
 
 //----------------------------------------------------------------------------------------
+//! \fn void EquationOfState::ConservedToPrimitiveTest(AthenaArray<Real> &cons,
+//!   const AthenaArray<Real> &prim_old, const FaceField &b,
+//!   AthenaArray<Real> &prim, AthenaArray<Real> &bcc, Coordinates *pco,
+//!   int il, int iu, int jl, int ju, int kl, int ku);
+//! \brief Just for test. cons(IEN) only contains e_int + e_k even if it is MHD
+
+void EquationOfState::ConservedToPrimitiveTest(
+    const AthenaArray<Real> &cons, int il, int iu, int jl, int ju, int kl, int ku) {
+  Real gm1 = GetGamma() - 1.0;
+  int nbad_d = 0, nbad_p = 0;
+
+  for (int k=kl; k<=ku; ++k) {
+    for (int j=jl; j<=ju; ++j) {
+#pragma omp simd
+      for (int i=il; i<=iu; ++i) {
+        Real u_d  = cons(IDN,k,j,i);
+        Real u_m1 = cons(IM1,k,j,i);
+        Real u_m2 = cons(IM2,k,j,i);
+        Real u_m3 = cons(IM3,k,j,i);
+        Real u_e  = cons(IEN,k,j,i);
+
+        Real w_d, w_vx, w_vy, w_vz, w_p, dp;
+        bool dfloor_used = false, pfloor_used = false;
+        SingleConservativeToPrimitiveHydro(u_d, u_m1, u_m2, u_m3, u_e,
+                                           w_d, w_vx, w_vy, w_vz, w_p,
+                                           dp, dfloor_used, pfloor_used);
+        fofc_(k,j,i) = dfloor_used || pfloor_used;
+        if (dfloor_used) nbad_d++;
+        if (pfloor_used) nbad_p++;
+      }
+    }
+  }
+
+  return;
+}
+
+//----------------------------------------------------------------------------------------
 //! \fn void EquationOfState::SingleConservativeToPrimitive(
 //!  Real &u_d, Real &u_m1, Real &u_m2, Real &u_m3, Real &u_e,
 //!  Real &w_d, Real &w_vx, Real &w_vy, Real &w_vz, Real &w_p,

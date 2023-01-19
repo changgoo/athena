@@ -239,6 +239,8 @@ void FieldDiffusion::AddPoyntingFluxSingleCell(FaceField &p_src, int i, int j, i
   AthenaArray<Real> &x1flux = pmb->phydro->flux[X1DIR];
   AthenaArray<Real> &x2flux = pmb->phydro->flux[X2DIR];
   AthenaArray<Real> &x3flux = pmb->phydro->flux[X3DIR];
+  int is = pmb->is; int js = pmb->js; int ks = pmb->ks;
+  int ie = pmb->ie; int je = pmb->je; int ke = pmb->ke;
 
   AthenaArray<Real> &f1 = p_src.x1f, &f2 = p_src.x2f, &f3 = p_src.x3f;
 

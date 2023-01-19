@@ -225,7 +225,8 @@ void HydroDiffusion::AddDiffusionFlux(AthenaArray<Real> *flux_src,
 //! \brief Adds all componenets of diffusion flux to hydro flux on 6 sides of one cell
 
 void HydroDiffusion::AddDiffusionFluxSingleCell(AthenaArray<Real> *flux_src,
-                                                AthenaArray<Real> *flux_des) {
+                                                AthenaArray<Real> *flux_des,
+                                                int i, int j, int k) {
   AthenaArray<Real> &x1flux = flux_des[X1DIR];
   AthenaArray<Real> &x2flux = flux_des[X2DIR];
   AthenaArray<Real> &x3flux = flux_des[X3DIR];

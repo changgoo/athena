@@ -67,39 +67,33 @@ void EquationOfState::ConservedToPrimitive(
         SingleConservativeToPrimitiveHydro(u_d, u_m1, u_m2, u_m3, u_e,
                                            w_d, w_vx, w_vy, w_vz, w_p,
                                            dp, dfloor_used, pfloor_used);
-        if (test_flag) {
-          fofc_(k,j,i) = dfloor_used || pfloor_used;
-          if (dfloor_used) nbad_d++;
-          if (pfloor_used) nbad_p++;
-        } else {
-          // update counter, reset conserved if floor was used
-          if (neighbor_flooring_) {
-            nbavg_d_(k,j,i) = dfloor_used;
-            nbavg_p_(k,j,i) = pfloor_used;
-          }
-
-          if (dfloor_used) {
-            cons(IDN,k,j,i) = u_d;
-            nbad_d++;
-          }
-          if (pfloor_used) {
-            if (bookkeeping) efloor(k,j,i) += beta*dp/gm1;
-            cons(IEN,k,j,i) = u_e;
-            nbad_p++;
-          }
-          // update primitives
-          prim(IDN,k,j,i) = w_d;
-          prim(IVX,k,j,i) = w_vx;
-          prim(IVY,k,j,i) = w_vy;
-          prim(IVZ,k,j,i) = w_vz;
-          prim(IPR,k,j,i) = w_p;
+        // update counter, reset conserved if floor was used
+        if (neighbor_flooring_) {
+          nbavg_d_(k,j,i) = dfloor_used;
+          nbavg_p_(k,j,i) = pfloor_used;
         }
+
+        if (dfloor_used) {
+          cons(IDN,k,j,i) = u_d;
+          nbad_d++;
+        }
+        if (pfloor_used) {
+          if (bookkeeping) efloor(k,j,i) += beta*dp/gm1;
+          cons(IEN,k,j,i) = u_e;
+          nbad_p++;
+        }
+        // update primitives
+        prim(IDN,k,j,i) = w_d;
+        prim(IVX,k,j,i) = w_vx;
+        prim(IVY,k,j,i) = w_vy;
+        prim(IVZ,k,j,i) = w_vz;
+        prim(IPR,k,j,i) = w_p;
       }
     }
   }
 
   // apply neighbor averaging
-  if (neighbor_flooring_ && (!test_flag)) {
+  if (neighbor_flooring_) {
     for (int k=kl; k<=ku; ++k) {
       for (int j=jl; j<=ju; ++j) {
         for (int i=il; i<=iu; ++i) {
@@ -134,9 +128,6 @@ void EquationOfState::ConservedToPrimitive(
       }
     }
   }
-
-  // reset test flag for FOFC
-  if (test_flag) test_flag = false;
 
   // updated number of bad cells in the mesh block
   // to be used elsewhere for diagnosing purposes
