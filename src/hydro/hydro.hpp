@@ -95,6 +95,7 @@ class Hydro {
   void CalculateVelocityDifferences(const int k, const int j, const int il, const int iu,
     const int ivx, AthenaArray<Real> &dvn, AthenaArray<Real> &dvt);
   void FirstOrderFluxCorrection(Real gam0, Real gam1, Real beta);
+
  private:
   AthenaArray<Real> dt1_, dt2_, dt3_;  // scratch arrays used in NewTimeStep
   // scratch space used to compute fluxes

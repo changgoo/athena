@@ -62,7 +62,7 @@ void Hydro::SingleStateLLF_MHD(Real wli[], Real wri[], Real bxi, Real flx[]) {
   fr[IVZ] = mxr*wri[IVZ] - bxi*wri[IBZ];
 
   Real el,er;
- if (NON_BAROTROPIC_EOS) {
+  if (NON_BAROTROPIC_EOS) {
     el = wli[IPR]/gm1 + 0.5*wli[IDN]*(SQR(wli[IVX])+SQR(wli[IVY])+SQR(wli[IVZ])) + pbl;
     er = wri[IPR]/gm1 + 0.5*wri[IDN]*(SQR(wri[IVX])+SQR(wri[IVY])+SQR(wri[IVZ])) + pbr;
     fl[IVX] += wli[IPR];

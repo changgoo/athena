@@ -58,8 +58,6 @@ void EquationOfState::ConservedToPrimitiveTest(
     }
   }
 
-  // if (nbad_d > 0) std::cout << nbad_d << " negative d cells tagged for FOFC" << std::endl;
-  // if (nbad_p > 0) std::cout << nbad_p << " negative P cells tagged for FOFC" << std::endl;
   return;
 }
 
