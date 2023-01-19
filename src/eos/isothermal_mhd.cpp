@@ -32,7 +32,7 @@ EquationOfState::EquationOfState(MeshBlock *pmb, ParameterInput *pin) :
   if (pmb->phydro->fofc_enabled)
     fofc_.NewAthenaArray(pmb->ncells3, pmb->ncells2, pmb->ncells1);
   if (neighbor_flooring_)
-    nbavg_.NewAthenaArray(pmb->ncells3, pmb->ncells2, pmb->ncells1);
+    nbavg_d_.NewAthenaArray(pmb->ncells3, pmb->ncells2, pmb->ncells1);
 }
 
 //----------------------------------------------------------------------------------------
@@ -74,7 +74,7 @@ void EquationOfState::ConservedToPrimitive(
           if (dfloor_used) nbad_d++;
         } else {
           // update counter
-          if (neighbor_flooring_) nbavg_(k,j,i) = dfloor_used;
+          if (neighbor_flooring_) nbavg_d_(k,j,i) = dfloor_used;
 
           if (dfloor_used) {
             cons(IDN,k,j,i) = u_d;
@@ -96,7 +96,7 @@ void EquationOfState::ConservedToPrimitive(
     for (int k=kl; k<=ku; ++k) {
       for (int j=jl; j<=ju; ++j) {
         for (int i=il; i<=iu; ++i) {
-          if (nbavg_(k,j,i)) {
+          if (nbavg_d_(k,j,i)) {
             AthenaArray<Real> cons_avg(NHYDRO), prim_avg(NHYDRO);
             NeighborAveragingConserved(cons,bcc,cons_avg,prim_avg,
                                        k,j,i,il,iu,jl,ju,kl,ku);

@@ -33,8 +33,10 @@ EquationOfState::EquationOfState(MeshBlock *pmb, ParameterInput *pin) :
     scalar_floor_{pin->GetOrAddReal("hydro", "sfloor", std::sqrt(1024*float_min))} {
   if (pmb->phydro->fofc_enabled)
     fofc_.NewAthenaArray(pmb->ncells3, pmb->ncells2, pmb->ncells1);
-  if (neighbor_flooring_)
-    nbavg_.NewAthenaArray(pmb->ncells3, pmb->ncells2, pmb->ncells1);
+  if (neighbor_flooring_) {
+    nbavg_d_.NewAthenaArray(pmb->ncells3, pmb->ncells2, pmb->ncells1);
+    nbavg_p_.NewAthenaArray(pmb->ncells3, pmb->ncells2, pmb->ncells1);
+  }
 }
 
 //----------------------------------------------------------------------------------------

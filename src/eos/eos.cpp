@@ -121,7 +121,7 @@ void EquationOfState::NeighborAveragingConserved(
     if ((i0<il) || (i0>iu) || (j0<jl) || (j0>ju) || (k0<kl) || (k0>ku)) continue;
 
     // check if neighbor is good
-    if (!nbavg_(k0,j0,i0)) {
+    if (!nbavg_d_(k0,j0,i0)) {
       Real vol = 1.0; // will change to real cell volume
       vol_neighbors += vol;
       // sum density and momentum
@@ -181,7 +181,7 @@ void EquationOfState::NeighborAveragingEint(const AthenaArray<Real> &cons,
     // skip idices outside mesh block
     if ((i0<il) || (i0>iu) || (j0<jl) || (j0>ju) || (k0<kl) || (k0 >ku)) continue;
 
-    if (!nbavg_(k0,j0,i0)) {
+    if (!nbavg_p_(k0,j0,i0)) {
       // calculate internal energy only if the neighboring cell is good
       Real nu_d  = cons(IDN,k0,j0,i0);
       Real nu_m1 = cons(IM1,k0,j0,i0);

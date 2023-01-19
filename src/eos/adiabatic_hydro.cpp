@@ -32,8 +32,10 @@ EquationOfState::EquationOfState(MeshBlock *pmb, ParameterInput *pin) :
     scalar_floor_{pin->GetOrAddReal("hydro", "sfloor", std::sqrt(1024*float_min))} {
   if (pmb->phydro->fofc_enabled)
     fofc_.NewAthenaArray(pmb->ncells3, pmb->ncells2, pmb->ncells1);
-  if (neighbor_flooring_)
-    nbavg_.NewAthenaArray(pmb->ncells3, pmb->ncells2, pmb->ncells1);
+  if (neighbor_flooring_) {
+    nbavg_d_.NewAthenaArray(pmb->ncells3, pmb->ncells2, pmb->ncells1);
+    nbavg_p_.NewAthenaArray(pmb->ncells3, pmb->ncells2, pmb->ncells1);
+  }
 }
 
 //----------------------------------------------------------------------------------------
@@ -71,7 +73,10 @@ void EquationOfState::ConservedToPrimitive(
           if (pfloor_used) nbad_p++;
         } else {
           // update counter, reset conserved if floor was used
-          if (neighbor_flooring_) nbavg_(k,j,i) = dfloor_used || pfloor_used;
+          if (neighbor_flooring_) {
+            nbavg_d_(k,j,i) = dfloor_used;
+            nbavg_p_(k,j,i) = pfloor_used;
+          }
 
           if (dfloor_used) {
             cons(IDN,k,j,i) = u_d;
@@ -87,7 +92,7 @@ void EquationOfState::ConservedToPrimitive(
           prim(IVX,k,j,i) = w_vx;
           prim(IVY,k,j,i) = w_vy;
           prim(IVZ,k,j,i) = w_vz;
-          prim(IEN,k,j,i) = w_p;
+          prim(IPR,k,j,i) = w_p;
         }
       }
     }
@@ -98,19 +103,18 @@ void EquationOfState::ConservedToPrimitive(
     for (int k=kl; k<=ku; ++k) {
       for (int j=jl; j<=ju; ++j) {
         for (int i=il; i<=iu; ++i) {
-          // if (nbavg_(k,j,i)) {
-          //   // if density is bad
-          //   Real eint_prev = prim(IEN,k,j,i)*gm1;
-          //   AthenaArray<Real> cons_avg(NHYDRO), prim_avg(NHYDRO);
-          //   NeighborAveragingConserved(cons,bcc,cons_avg,prim_avg,
-          //                              k,j,i,il,iu,jl,ju,kl,ku);
-          //   for (int n=0; n<NHYDRO; ++n) {
-          //     cons(n,k,j,i) = cons_avg(n);
-          //     prim(n,k,j,i) = prim_avg(n);
-          //   }
-          //   if (bookkeeping) efloor(k,j,i) += (prim_avg(IEN)*gm1 - eint_prev)*beta;
-          // }
-          if (nbavg_(k,j,i)) {
+          if (nbavg_d_(k,j,i)) {
+            // if density is bad
+            Real eint_prev = prim(IPR,k,j,i)*gm1;
+            AthenaArray<Real> cons_avg(NHYDRO), prim_avg(NHYDRO);
+            NeighborAveragingConserved(cons,bcc,cons_avg,prim_avg,
+                                       k,j,i,il,iu,jl,ju,kl,ku);
+            for (int n=0; n<NHYDRO; ++n) {
+              cons(n,k,j,i) = cons_avg(n);
+              prim(n,k,j,i) = prim_avg(n);
+            }
+            if (bookkeeping) efloor(k,j,i) += (prim_avg(IPR)*gm1 - eint_prev)*beta;
+          } else if (nbavg_p_(k,j,i)) {
             // this only handless the pressure floor case
             Real u_d  = cons(IDN,k,j,i);
             Real u_m1 = cons(IM1,k,j,i);
@@ -124,7 +128,7 @@ void EquationOfState::ConservedToPrimitive(
             NeighborAveragingEint(cons,bcc,eint_avg,k,j,i,il,iu,jl,ju,kl,ku);
             if (bookkeeping) efloor(k,j,i) += (eint_avg - eint_prev)*beta;
             cons(IEN,k,j,i) = eint_avg + e_k;
-            prim(IEN,k,j,i) = eint_avg/gm1;
+            prim(IPR,k,j,i) = eint_avg/gm1;
           }
         }
       }
