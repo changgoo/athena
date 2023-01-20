@@ -420,12 +420,14 @@ void CollectCounters(Mesh *pm) {
 
   // calculate total feedback region volume
 #ifdef MPI_PARALLEL
-  MPI_Allreduce(MPI_IN_PLACE, &nbad_d, 1, MPI_ATHENA_INT, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce(MPI_IN_PLACE, &nbad_p, 1, MPI_ATHENA_INT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &nbad_d, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &nbad_p, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 #endif
 
-  if (nbad_p > 0) std::cout << nbad_p << " cells had negative pressure" << std::endl;
-  if (nbad_d > 0) std::cout << nbad_d << " cells had negative density" << std::endl;
+  if (Globals::my_rank == 0) {
+    if (nbad_p > 0) std::cerr << nbad_p << " cells had negative pressure" << std::endl;
+    if (nbad_d > 0) std::cerr << nbad_d << " cells had negative density" << std::endl;
+  }
 }
 
 //========================================================================================
