@@ -53,7 +53,7 @@ void EquationOfState::ConservedToPrimitive(
   // apply floor or flag for neighbor averaging or flag for FOFC
   for (int k=kl; k<=ku; ++k) {
     for (int j=jl; j<=ju; ++j) {
-=      for (int i=il; i<=iu; ++i) {
+      for (int i=il; i<=iu; ++i) {
         Real u_d  = cons(IDN,k,j,i);
         Real u_m1 = cons(IM1,k,j,i);
         Real u_m2 = cons(IM2,k,j,i);

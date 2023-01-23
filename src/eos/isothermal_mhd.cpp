@@ -49,7 +49,8 @@ void EquationOfState::ConservedToPrimitive(
     Coordinates *pco, int il, int iu, int jl, int ju, int kl, int ku) {
   int nbad_d = 0;
   // for isothermal eos, cons-->prim doesn't use B information
-  // pmy_block_->pfield->CalculateCellCenteredField(b,bcc,pco,il,iu,jl,ju,kl,ku);
+  // but still need to call this as here is the only place where bcc is updated.
+  pmy_block_->pfield->CalculateCellCenteredField(b,bcc,pco,il,iu,jl,ju,kl,ku);
 
   // Convert to Primitives
   for (int k=kl; k<=ku; ++k) {
@@ -66,8 +67,8 @@ void EquationOfState::ConservedToPrimitive(
 
         // for isothermal eos, cons-->prim doesn't use B information
         SingleConservativeToPrimitiveMHD(u_d, u_m1, u_m2, u_m3, u_e,
-                                           w_d, w_vx, w_vy, w_vz, w_p,
-                                           dp, dfloor_used, pfloor_used, e_mag);
+                                         w_d, w_vx, w_vy, w_vz, w_p,
+                                         dp, dfloor_used, pfloor_used, e_mag);
 
         // update counter
         if (neighbor_flooring_) nbavg_d_(k,j,i) = dfloor_used;

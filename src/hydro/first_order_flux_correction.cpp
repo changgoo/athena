@@ -39,7 +39,7 @@
 // (may rename to AddHydroFluxDivergence and AddScalarsFluxDivergence, if
 // the implementations remain completely independent / no inheritance is
 // used)
-void Hydro::FirstOrderFluxCorrection(Real gam0, Real gam1, Real beta) {
+void Hydro::FirstOrderFluxCorrection(Real delta, Real gam0, Real gam1, Real beta) {
   MeshBlock *pmb = pmy_block;
 
   int is = pmb->is; int js = pmb->js; int ks = pmb->ks;
@@ -55,7 +55,12 @@ void Hydro::FirstOrderFluxCorrection(Real gam0, Real gam1, Real beta) {
       for (int j=js; j<=je; ++j) {
 #pragma omp simd
         for (int i=is; i<=ie; ++i) {
-          utest_(n,k,j,i) = gam0*u1(n,k,j,i) + gam1*u(n,k,j,i);
+          // the integration step consists of two steps:
+          // u1 = u1 + delta*u
+          // u = gam0*u + gam1*u1 + beta*dt*F(u)
+          // This line handles the update except term F(u) term:
+          // utest = gam0*u + gam1*(u1+delta*u)
+          utest_(n,k,j,i) = gam0*u(n,k,j,i) + gam1*(u1(n,k,j,i)+delta*u(n,k,j,i));
         }
       }
     }
@@ -81,9 +86,12 @@ void Hydro::FirstOrderFluxCorrection(Real gam0, Real gam1, Real beta) {
     for (int j=js; j<=je; ++j) {
 #pragma omp simd
       for (int i=is; i<=ie; ++i) {
-        bcctest_(IB1,k,j,i) = gam0*bcctest_(IB1,k,j,i) + gam1*bcc_(IB1,k,j,i);
-        bcctest_(IB2,k,j,i) = gam0*bcctest_(IB2,k,j,i) + gam1*bcc_(IB2,k,j,i);
-        bcctest_(IB3,k,j,i) = gam0*bcctest_(IB3,k,j,i) + gam1*bcc_(IB3,k,j,i);
+        Real b1old = bcctest_(IB1,k,j,i);
+        Real b2old = bcctest_(IB2,k,j,i);
+        Real b3old = bcctest_(IB3,k,j,i);
+        bcctest_(IB1,k,j,i) = gam0*bcc_(IB1,k,j,i) + gam1*(b1old + delta*bcc_(IB1,k,j,i));
+        bcctest_(IB2,k,j,i) = gam0*bcc_(IB2,k,j,i) + gam1*(b2old + delta*bcc_(IB2,k,j,i));
+        bcctest_(IB3,k,j,i) = gam0*bcc_(IB3,k,j,i) + gam1*(b3old + delta*bcc_(IB3,k,j,i));
 
         bcctest_(IB2,k,j,i) += dtodx1*(e3x1_(k,j,i+1) - e3x1_(k,j,i));
         bcctest_(IB3,k,j,i) -= dtodx1*(e2x1_(k,j,i+1) - e2x1_(k,j,i));
