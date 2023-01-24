@@ -253,6 +253,7 @@ void CoolingSolver::OperatorSplitSolver(MeshBlock *pmb) {
 
         Real& w_d  = pmb->phydro->w(IDN,k,j,i);
         Real& w_p  = pmb->phydro->w(IPR,k,j,i);
+
         // find non-thermal part of energy to keep it the same
         Real e_non_thermal = u_e - w_p*igm1;
 

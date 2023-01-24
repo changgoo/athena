@@ -33,6 +33,7 @@
 
 // user function
 void AddSupernova(Mesh *pm);
+void CollectCounters(Mesh *pm);
 
 // user history
 Real CoolingLosses(MeshBlock *pmb, int iout);
@@ -168,22 +169,56 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real rho_0 = nH_0*pcool->pcf->nH_to_code_den; // to code units
   pgas_0 *= pcool->pcf->pok_to_code_press; // to code units
 
+  Real gamma = peos->GetGamma();
+  Real gm1 = gamma - 1.0;
+
   // Initialize primitive values
   for (int k = kl; k <= ku; ++k) {
     for (int j = jl; j <= ju; ++j) {
       for (int i = il; i <= iu; ++i) {
-        phydro->w(IDN,k,j,i) = rho_0;
-        phydro->w(IPR,k,j,i) = pgas_0;
-        phydro->w(IVX,k,j,i) = 0.0;
-        phydro->w(IVY,k,j,i) = 0.0;
-        phydro->w(IVZ,k,j,i) = 0.0;
+        phydro->u(IDN,k,j,i) = rho_0;
+        phydro->u(IEN,k,j,i) = pgas_0/gm1;
+        phydro->u(IM1,k,j,i) = 0.0;
+        phydro->u(IM2,k,j,i) = 0.0;
+        phydro->u(IM3,k,j,i) = 0.0;
       }
     }
   }
 
-  // Initialize conserved values
-  AthenaArray<Real> b;
-  peos->PrimitiveToConserved(phydro->w, b, phydro->u, pcoord, il, iu, jl, ju, kl, ku);
+  // initialize interface B and total energy
+  if (MAGNETIC_FIELDS_ENABLED) {
+    Real b0 = pin->GetReal("problem", "B_0"); // in uG
+    b0 *= 1.e-6/punit->MagneticField;
+    std::cout<< "B0 (code) = " << b0 << std::endl;
+    for (int k=ks; k<=ke; ++k) {
+      for (int j=js; j<=je; ++j) {
+        for (int i=is; i<=ie+1; ++i) {
+          pfield->b.x1f(k,j,i) = 0.0;
+        }
+      }
+    }
+    for (int k=ks; k<=ke; ++k) {
+      for (int j=js; j<=je+1; ++j) {
+        for (int i=is; i<=ie; ++i) {
+          pfield->b.x2f(k,j,i) = b0;
+        }
+      }
+    }
+    for (int k=ks; k<=ke+1; ++k) {
+      for (int j=js; j<=je; ++j) {
+        for (int i=is; i<=ie; ++i) {
+          pfield->b.x3f(k,j,i) = 0.0;
+        }
+      }
+    }
+    for (int k=ks; k<=ke; ++k) {
+      for (int j=js; j<=je; ++j) {
+        for (int i=is; i<=ie; ++i) {
+          phydro->u(IEN,k,j,i) += 0.5*b0*b0;
+        }
+      }
+    }
+  }
 
   return;
 }
@@ -277,6 +312,8 @@ void Mesh::UserWorkInLoop() {
       std::cout << "SN exploded at " << time
                 << " --> next SN will be at " << t_SN << std::endl;
   }
+  // check number of bad cells
+  CollectCounters(this);
 }
 
 //========================================================================================
@@ -364,6 +401,32 @@ void AddSupernova(Mesh *pm) {
         }
       }
     }
+  }
+}
+
+//========================================================================================
+//! \fn void CollectCounters(Mesh *pm)
+//! \brief collect counters
+//========================================================================================
+void CollectCounters(Mesh *pm) {
+  int nbad_d=0, nbad_p=0;
+
+  // summing up over meshblocks within the rank
+  for (int b=0; b<pm->nblocal; ++b) {
+    MeshBlock *pmb = pm->my_blocks(b);
+    nbad_d += pmb->nbad_d;
+    nbad_p += pmb->nbad_p;
+  }
+
+  // calculate total feedback region volume
+#ifdef MPI_PARALLEL
+  MPI_Allreduce(MPI_IN_PLACE, &nbad_d, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce(MPI_IN_PLACE, &nbad_p, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+#endif
+
+  if (Globals::my_rank == 0) {
+    if (nbad_p > 0) std::cerr << nbad_p << " cells had negative pressure" << std::endl;
+    if (nbad_d > 0) std::cerr << nbad_d << " cells had negative density" << std::endl;
   }
 }
 

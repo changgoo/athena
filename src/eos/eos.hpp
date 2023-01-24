@@ -45,7 +45,16 @@ class EquationOfState {
       AthenaArray<Real> &cons, const AthenaArray<Real> &prim_old, const FaceField &b,
       AthenaArray<Real> &prim, AthenaArray<Real> &bcc,
       Coordinates *pco, int il, int iu, int jl, int ju, int kl, int ku);
-
+  void ConservedToPrimitiveTest(const AthenaArray<Real> &cons,
+      const AthenaArray<Real> &bcc, int il, int iu, int jl, int ju, int kl, int ku);
+  void SingleConservativeToPrimitiveHydro(
+      Real &u_d, Real &u_m1, Real &u_m2, Real &u_m3, Real &u_e,
+      Real &w_d, Real &w_vx, Real &w_vy, Real &w_vz, Real &w_p,
+      Real &dp, bool &dfloor_used, bool &pfloor_used);
+  void SingleConservativeToPrimitiveMHD(
+      Real &u_d, Real &u_m1, Real &u_m2, Real &u_m3, Real &u_e,
+      Real &w_d, Real &w_vx, Real &w_vy, Real &w_vz, Real &w_p,
+      Real &dp, bool &dfloor_used, bool &pfloor_used, const Real e_mag);
   // void PrimitiveToConservedCellAverage(const AthenaArray<Real> &prim,
   //   const AthenaArray<Real> &bc, AthenaArray<Real> &cons, Coordinates *pco, int il,
   //   int iu, int jl, int ju, int kl, int ku);
@@ -62,11 +71,14 @@ class EquationOfState {
     AthenaArray<Real> &s, const AthenaArray<Real> &r_old, AthenaArray<Real> &r,
     Coordinates *pco, int il, int iu, int jl, int ju, int kl, int ku);
 
-  bool ApplyNeighborFloorsDensity(AthenaArray<Real> &cons, AthenaArray<Real> &bcc,
-    int k, int j, int i, int il, int iu, int jl, int ju, int kl, int ku);
+  void NeighborAveragingConserved(const AthenaArray<Real> &cons,
+    const AthenaArray<Real> &bcc, AthenaArray<Real> &cons_avg,
+    AthenaArray<Real> &prim_avg, int k, int j, int i,
+    int il, int iu, int jl, int ju, int kl, int ku);
 
-  bool ApplyNeighborFloorsPressure(AthenaArray<Real> &cons, AthenaArray<Real> &bcc,
-    int k, int j, int i, int il, int iu, int jl, int ju, int kl, int ku);
+  void NeighborAveragingEint(const AthenaArray<Real> &cons,
+    const AthenaArray<Real> &bcc, Real &eint_avg, int k, int j, int i,
+    int il, int iu, int jl, int ju, int kl, int ku);
 
   // pass k, j, i to following 2x functions even though x1-sliced input array is expected
   // in order to accomodate position-dependent floors
@@ -181,6 +193,7 @@ class EquationOfState {
   Real rho_unit_, inv_rho_unit_;         // physical unit/sim unit for mass density
   Real egas_unit_, inv_egas_unit_;       // physical unit/sim unit for energy density
   Real vsqr_unit_, inv_vsqr_unit_;       // physical unit/sim unit for speed^2
+  AthenaArray<bool> fofc_, nbavg_d_, nbavg_p_;
   AthenaArray<Real> g_, g_inv_;          // metric and its inverse, used in GR
   AthenaArray<Real> normal_dd_;          // normal-frame densities, used in relativity
   AthenaArray<Real> normal_ee_;          // normal-frame energies, used in relativity
