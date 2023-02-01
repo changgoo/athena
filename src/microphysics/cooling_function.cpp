@@ -307,7 +307,7 @@ int TigressClassic::get_Tidx(const Real T1) {
 
   idx = static_cast<int>(std::log10(T1/Tmin_tbl)/dlnT_tbl);
   ireturn = T1 < Tmin_tbl ? 0 : idx;
-  ireturn = T1 > Tmax_tbl ? NTBL-2 : idx;
+  ireturn = T1 > Tmax_tbl ? NTBL-2 : ireturn;
 
   return ireturn;
 }
