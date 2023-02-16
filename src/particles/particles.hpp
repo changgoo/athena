@@ -380,4 +380,30 @@ class StarParticles : public Particles {
   int imetal, iage, ifgas;            // indices for:
 };
 
+//--------------------------------------------------------------------------------------
+//! \class SinkParticles
+//! \brief defines the class for Star particles
+
+class SinkParticles : public StarParticles {
+ public:
+  // Constructor
+  SinkParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp);
+
+  // Destructor
+  ~SinkParticles();
+
+  // Methods (interface)
+  void AccreteMass();
+
+  // Data members
+  // shorthand for additional properties
+
+ private:
+  // Methods (implementation)
+//  void AssignShorthandsForDerived() override;
+
+  // Data members
+  // indicies for additional shorthands
+};
+
 #endif  // PARTICLES_PARTICLES_HPP_
