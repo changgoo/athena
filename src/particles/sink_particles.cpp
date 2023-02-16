@@ -31,6 +31,10 @@ SinkParticles::~SinkParticles() {
   return;
 }
 
+//--------------------------------------------------------------------------------------
+//! \fn SinkParticles::AccreteMass()
+//! \brief accrete gas from neighboring cells
+
 void SinkParticles::AccreteMass() {
   // loop over all particles
   for (int idx=0; idx<npar_; ++idx) {
@@ -50,23 +54,90 @@ void SinkParticles::AccreteMass() {
     // yielding
     //   dM_sink = M^{n+1} - M^{n+1}_ctrl  -- (3)
 
+    // Step 0. Prepare
+
+    // find the indices of the particle-containing cell.
+    int ip = GetCellIndex1(idx);
+    int jp = GetCellIndex2(idx);
+    int kp = GetCellIndex3(idx);
+
+    AthenaArray<Real> &cons = pmy_block->phydro->u;
+
+    if (COORDINATE_SYSTEM != "cartesian") {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in function [SinkParticles::AccreteMass]" << std::endl
+          << "Only Cartesian coordinate system is supported " << std::endl;
+      ATHENA_ERROR(msg);
+    }
+
     // Step 1. Calculate total mass in the control volume M^{n+1} updated by hydro
     // integrator, before applying extrapolation.
 
+    Real m{0.}, M1{0.}, M2{0.}, M3{0.};
+    for (int k=kp-rctrl_; k<=kp+rctrl_; ++k) {
+      for (int j=jp-rctrl_; j<=jp+rctrl_; ++j) {
+        for (int i=ip-rctrl_; i<=ip+rctrl_; ++i) {
+          Real dV = pmy_block->pcoord->GetCellVolume(k,j,i);
+          m += cons(IDN,k,j,i)*dV;
+          M1 += cons(IM1,k,j,i)*dV;
+          M2 += cons(IM2,k,j,i)*dV;
+          M3 += cons(IM3,k,j,i)*dV;
+        }
+      }
+    }
+
     // Step 2. Reset the density inside the control volume by extrapolation
+    SetGhostRegion(cons, ip, jp, kp);
 
     // Step 3. Calculate M^{n+1}_ctrl
 
+    Real mext{0.}, M1ext{0.}, M2ext{0.}, M3ext{0.};
+    for (int k=kp-rctrl_; k<=kp+rctrl_; ++k) {
+      for (int j=jp-rctrl_; j<=jp+rctrl_; ++j) {
+        for (int i=ip-rctrl_; i<=ip+rctrl_; ++i) {
+          Real dV = pmy_block->pcoord->GetCellVolume(k,j,i);
+          mext += cons(IDN,k,j,i)*dV;
+          M1ext += cons(IM1,k,j,i)*dV;
+          M2ext += cons(IM2,k,j,i)*dV;
+          M3ext += cons(IM3,k,j,i)*dV;
+        }
+      }
+    }
+
     // Step 4. Calculate dM_sink by subtracting M^{n+1}_ctrl from M^{n+1}
+
+    Real dm = m - mext;
+    Real dM1 = M1 - M1ext;
+    Real dM2 = M2 - M2ext;
+    Real dM3 = M3 - M3ext;
 
     // Step 5. Check whether the particle has crossed the grid boundaries
 
     // Step 6... Do corrections for grid crossing.
 
-// Update mass and velocity of the particle
-//    mass(idx) += dm;
-//    vpx(idx) += dvx;
-//    vpy(idx) += dvy;
-//    vpz(idx) += dvz;
+    // Update mass and velocity of the particle
+    Real minv = 1.0 / (mass(idx) + dm);
+    vpx(idx) = (mass(idx)*vpx(idx) + dM1)*minv;
+    vpy(idx) = (mass(idx)*vpy(idx) + dM2)*minv;
+    vpz(idx) = (mass(idx)*vpz(idx) + dM3)*minv;
+    mass(idx) += dm;
+  } // end of the loop over particles
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn SinkParticles::SetGhostRegion(AthenaArray<Real> &cons, int ip, int jp, int kp)
+//! \brief set control volume quantities by extrapolating from neighboring active cells.
+
+void SinkParticles::SetGhostRegion(AthenaArray<Real> &cons, int ip, int jp, int kp) {
+  for (int k=kp-rctrl_; k<=kp+rctrl_; ++k) {
+    for (int j=jp-rctrl_; j<=jp+rctrl_; ++j) {
+      for (int i=ip-rctrl_; i<=ip+rctrl_; ++i) {
+        // temporary implementation
+        cons(IDN,k,j,i) = 1.0;
+        cons(IM1,k,j,i) = 0.0;
+        cons(IM2,k,j,i) = 0.0;
+        cons(IM3,k,j,i) = 0.0;
+      }
+    }
   }
 }

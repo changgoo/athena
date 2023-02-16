@@ -397,6 +397,7 @@ class SinkParticles : public StarParticles {
 
   // Methods (interface)
   void AccreteMass();
+  void SetGhostRegion(AthenaArray<Real> &cons, int ip, int jp, int kp);
 
   // Data members
   // shorthand for additional properties
@@ -406,6 +407,8 @@ class SinkParticles : public StarParticles {
 //  void AssignShorthandsForDerived() override;
 
   // Data members
+  const int rctrl_ = 1; // Extent of the control volume. The side length of the control
+                        // volume is 2*rctrl_ + 1.
 };
 
 #endif  // PARTICLES_PARTICLES_HPP_
