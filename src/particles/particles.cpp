@@ -310,6 +310,33 @@ std::size_t Particles::GetSizeInBytes() const {
 }
 
 //--------------------------------------------------------------------------------------
+//! \fn int Particles::GetCellIndex1()
+//! \brief returns the x1 index of the particle-containing cell.
+
+int Particles::GetCellIndex1(int pidx) const {
+  int ip = static_cast<int>(std::floor(xi1_(pidx)));
+  return ip;
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn int Particles::GetCellIndex2()
+//! \brief returns the x2 index of the particle-containing cell.
+
+int Particles::GetCellIndex2(int pidx) const {
+  int jp = static_cast<int>(std::floor(xi2_(pidx)));
+  return jp;
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn int Particles::GetCellIndex3()
+//! \brief returns the x3 index of the particle-containing cell.
+
+int Particles::GetCellIndex3(int pidx) const {
+  int kp = static_cast<int>(std::floor(xi3_(pidx)));
+  return kp;
+}
+
+//--------------------------------------------------------------------------------------
 //! \fn Particles::UnpackParticlesForRestart()
 //! \brief reads the particle data from the restart file.
 

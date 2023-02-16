@@ -83,6 +83,9 @@ friend class ParticleMesh;
   std::size_t GetSizeInBytes() const;
   bool IsGravity() const { return isgravity_; }
   int GetNumPar() const { return npar_; }
+  int GetCellIndex1(int pidx) const;
+  int GetCellIndex2(int pidx) const;
+  int GetCellIndex3(int pidx) const;
 
   // Input/Output interface
   void UnpackParticlesForRestart(char *mbdata, std::size_t &os);
@@ -403,7 +406,6 @@ class SinkParticles : public StarParticles {
 //  void AssignShorthandsForDerived() override;
 
   // Data members
-  // indicies for additional shorthands
 };
 
 #endif  // PARTICLES_PARTICLES_HPP_
