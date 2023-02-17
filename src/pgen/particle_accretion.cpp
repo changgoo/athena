@@ -137,12 +137,20 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   // Particle mass is set to the mass contained inside r=r_ctrl of the Shu77
   // similarity solution (see Gong & Ostriker 2013)
   if (pmy_mesh->particle) {
+    if (ppars[0]->partype != "sink") {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in function [MeshBlock::ProblemGenerator]" << std::endl
+          << "Only sink particle is allowed. " << std::endl;
+      ATHENA_ERROR(msg);
+    }
+    SinkParticles *ppar = dynamic_cast<SinkParticles*>(ppars[0]);
+
+    // Create a sink particle
     set_shu77_ic(res, xi0, A);
     xi = SimilarityVar(rctrl, t0, cs);
     boost::numeric::odeint::integrate(shu77, res, xi0, xi, step);
     Real mstar = SQR(xi)*res[0]*(xi - res[1]); // Eq. (10) in Shu (1977)
     mstar *= std::pow(cs,3)*t0/pgrav->gconst; // Eq. (8) in Shu (1977)
-    SinkParticles *ppar = dynamic_cast<SinkParticles*>(ppars[0]);
     ppar->AddOneParticle(mstar,0,0,0,0,0,0);
     ppar->ToggleParHstOutFlag();
   }
@@ -173,28 +181,32 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
 //========================================================================================
 
 void MeshBlock::UserWorkInLoop() {
-  // Temporary sink accretion.
-  // To be replace with ppar->AccreteMass()
-  // Think about where to call AccreteMass().
-  // Currently, Integrate() is inside the time integrator task list.
-  // We may put AccreteMass there. In any case, mass accretion must be done
-  // after hydro update (see Kim & Ostriker 2017)
   if (pmy_mesh->particle) {
+    // TODO move this to Integrate() stage 2
     SinkParticles *ppar = dynamic_cast<SinkParticles*>(ppars[0]);
-    if (ppar->GetNumPar() == 0) return;
-    for (int k=ks; k<=ke; k++) {
-      Real z = pcoord->x3v(k);
-      for (int j=js; j<=je; j++) {
-        Real y = pcoord->x2v(j);
-        for (int i=is; i<=ie; i++) {
-          Real x = pcoord->x1v(i);
-          Real r = std::sqrt(SQR(x) + SQR(y) + SQR(z));
-          if (r <= rctrl) {
-            ppar->mass(0) += (phydro->u(IDN,k,j,i) - dctrl)*pcoord->GetCellVolume(k,j,i);
-            phydro->u(IDN,k,j,i) = dctrl;
-          }
-        }
-      }
-    }
+    ppar->AccreteMass();
+
+    // Temporary sink accretion.
+    // To be replace with ppar->AccreteMass()
+    // Think about where to call AccreteMass().
+    // Currently, Integrate() is inside the time integrator task list.
+    // We may put AccreteMass there. In any case, mass accretion must be done
+    // after hydro update (see Kim & Ostriker 2017)
+//    SinkParticles *ppar = dynamic_cast<SinkParticles*>(ppars[0]);
+//    if (ppar->GetNumPar() == 0) return;
+//    for (int k=ks; k<=ke; k++) {
+//      Real z = pcoord->x3v(k);
+//      for (int j=js; j<=je; j++) {
+//        Real y = pcoord->x2v(j);
+//        for (int i=is; i<=ie; i++) {
+//          Real x = pcoord->x1v(i);
+//          Real r = std::sqrt(SQR(x) + SQR(y) + SQR(z));
+//          if (r <= rctrl) {
+//            ppar->mass(0) += (phydro->u(IDN,k,j,i) - dctrl)*pcoord->GetCellVolume(k,j,i);
+//            phydro->u(IDN,k,j,i) = dctrl;
+//          }
+//        }
+//      }
+//    }
   }
 }
