@@ -15,6 +15,10 @@
 #include "../hydro/hydro.hpp"
 #include "particles.hpp"
 
+int sgn(int val) {
+  return (0 < val) - (val < 0);
+}
+
 //--------------------------------------------------------------------------------------
 //! \fn SinkParticles::SinkParticles(MeshBlock *pmb, ParameterInput *pin)
 //! \brief constructs a SinkParticles instance.
@@ -53,6 +57,7 @@ void SinkParticles::AccreteMass() {
     // we can use eq. (2) to substitute dM_flux in eq. (1) with M^{n+1} - M^{n}_ctrl,
     // yielding
     //   dM_sink = M^{n+1} - M^{n+1}_ctrl  -- (3)
+    // TODO AMR compatibility?
 
     // Step 0. Prepare
 
@@ -129,15 +134,153 @@ void SinkParticles::AccreteMass() {
 //! \brief set control volume quantities by extrapolating from neighboring active cells.
 
 void SinkParticles::SetGhostRegion(AthenaArray<Real> &cons, int ip, int jp, int kp) {
-  for (int k=kp-rctrl_; k<=kp+rctrl_; ++k) {
-    for (int j=jp-rctrl_; j<=jp+rctrl_; ++j) {
-      for (int i=ip-rctrl_; i<=ip+rctrl_; ++i) {
-        // temporary implementation
-        cons(IDN,k,j,i) = 1.0;
-        cons(IM1,k,j,i) = 0.0;
-        cons(IM2,k,j,i) = 0.0;
-        cons(IM3,k,j,i) = 0.0;
+  // Do extrapolation using "face-neighbors", that is, neighboring cells
+  // that are outside the control volume and share a cell face with the
+  // cell being extrapolated.
+  // In Athena-TIGRESS, larger stencil that include edge- and corner-neighbors
+  // were not compatible with shearing box. Is that true also in athena++?
+  // TODO AMR compatibility?
+
+  // Start extrapolation from the outermost shell, marching inward
+  for (int s=rctrl_; s>=1; --s) {
+    // 6 front faces
+    // Each has one neighbor. Do simple copy.
+
+    // x1-face
+    for (int k=kp-s+1; k<=kp+s-1; ++k) {
+      for (int j=jp-s+1; j<=jp+s-1; ++j) {
+        for (int i=ip-s; i<=ip+s; i+=2*s) {
+          int ioff = sgn(i-ip);
+          cons(IDN,k,j,i) = cons(IDN,k,j,i+ioff);
+          cons(IM1,k,j,i) = cons(IM1,k,j,i+ioff);
+          cons(IM2,k,j,i) = cons(IM2,k,j,i+ioff);
+          cons(IM3,k,j,i) = cons(IM3,k,j,i+ioff);
+        }
+      }
+    }
+    // x2-face
+    for (int k=kp-s+1; k<=kp+s-1; ++k) {
+      for (int j=jp-s; j<=jp+s; j+=2*s) {
+        for (int i=ip-s+1; i<=ip+s-1; ++i) {
+          int joff = sgn(j-jp);
+          cons(IDN,k,j,i) = cons(IDN,k,j+joff,i);
+          cons(IM1,k,j,i) = cons(IM1,k,j+joff,i);
+          cons(IM2,k,j,i) = cons(IM2,k,j+joff,i);
+          cons(IM3,k,j,i) = cons(IM3,k,j+joff,i);
+        }
+      }
+    }
+    // x3-face
+    for (int k=kp-s; k<=kp+s; k+=2*s) {
+      for (int j=jp-s+1; j<=jp+s-1; ++j) {
+        for (int i=ip-s+1; i<=ip+s-1; ++i) {
+          int koff = sgn(k-kp);
+          cons(IDN,k,j,i) = cons(IDN,k+koff,j,i);
+          cons(IM1,k,j,i) = cons(IM1,k+koff,j,i);
+          cons(IM2,k,j,i) = cons(IM2,k+koff,j,i);
+          cons(IM3,k,j,i) = cons(IM3,k+koff,j,i);
+        }
+      }
+    }
+
+    // 8 corners
+    // Each has three neighbors. Average them.
+    for (int k=kp-s; k<=kp+s; k+=2*s) {
+      for (int j=jp-s; j<=jp+s; j+=2*s) {
+        for (int i=ip-s; i<=ip+s; i+=2*s) {
+          int koff = sgn(k-kp);
+          int joff = sgn(j-jp);
+          int ioff = sgn(i-ip);
+          Real davg = ONE_3RD*(cons(IDN,k     ,j     ,i+ioff) +
+                               cons(IDN,k     ,j+joff,i     ) +
+                               cons(IDN,k+koff,j     ,i     ));
+          Real M1avg = ONE_3RD*(cons(IM1,k     ,j     ,i+ioff) +
+                                cons(IM1,k     ,j+joff,i     ) +
+                                cons(IM1,k+koff,j     ,i     ));
+          Real M2avg = ONE_3RD*(cons(IM2,k     ,j     ,i+ioff) +
+                                cons(IM2,k     ,j+joff,i     ) +
+                                cons(IM2,k+koff,j     ,i     ));
+          Real M3avg = ONE_3RD*(cons(IM3,k     ,j     ,i+ioff) +
+                                cons(IM3,k     ,j+joff,i     ) +
+                                cons(IM3,k+koff,j     ,i     ));
+          cons(IDN,k,j,i) = davg;
+          cons(IM1,k,j,i) = M1avg;
+          cons(IM2,k,j,i) = M2avg;
+          cons(IM3,k,j,i) = M3avg;
+        }
+      }
+    }
+
+    // 4 sides for 3 middle-slices
+    // Each has two neighbors. Average them.
+
+    // x1-slice
+    for (int k=kp-s; k<=kp+s; k+=2*s) {
+      for (int j=jp-s; j<=jp+s; j+=2*s) {
+        for (int i=ip-s+1; i<=ip+s-1; ++i) {
+          int koff = sgn(k-kp);
+          int joff = sgn(j-jp);
+          Real davg = 0.5*(cons(IDN,k+koff,j,i) + cons(IDN,k,j+joff,i));
+          Real M1avg = 0.5*(cons(IM1,k+koff,j,i) + cons(IM1,k,j+joff,i));
+          Real M2avg = 0.5*(cons(IM2,k+koff,j,i) + cons(IM2,k,j+joff,i));
+          Real M3avg = 0.5*(cons(IM3,k+koff,j,i) + cons(IM3,k,j+joff,i));
+          cons(IDN,k,j,i) = davg;
+          cons(IM1,k,j,i) = M1avg;
+          cons(IM2,k,j,i) = M2avg;
+          cons(IM3,k,j,i) = M3avg;
+        }
+      }
+    }
+    // x2-slice
+    for (int k=kp-s; k<=kp+s; k+=2*s) {
+      for (int j=jp-s+1; j<=jp+s-1; ++j) {
+        for (int i=ip-s; i<=ip+s; i+=2*s) {
+          int koff = sgn(k-kp);
+          int ioff = sgn(i-ip);
+          Real davg = 0.5*(cons(IDN,k+koff,j,i) + cons(IDN,k,j,i+ioff));
+          Real M1avg = 0.5*(cons(IM1,k+koff,j,i) + cons(IM1,k,j,i+ioff));
+          Real M2avg = 0.5*(cons(IM2,k+koff,j,i) + cons(IM2,k,j,i+ioff));
+          Real M3avg = 0.5*(cons(IM3,k+koff,j,i) + cons(IM3,k,j,i+ioff));
+          cons(IDN,k,j,i) = davg;
+          cons(IM1,k,j,i) = M1avg;
+          cons(IM2,k,j,i) = M2avg;
+          cons(IM3,k,j,i) = M3avg;
+        }
+      }
+    }
+    // x3-slice
+    for (int k=kp-s+1; k<=kp+s-1; ++k) {
+      for (int j=jp-s; j<=jp+s; j+=2*s) {
+        for (int i=ip-s; i<=ip+s; i+=2*s) {
+          int joff = sgn(j-jp);
+          int ioff = sgn(i-ip);
+          Real davg = 0.5*(cons(IDN,k,j,i+ioff) + cons(IDN,k,j+joff,i));
+          Real M1avg = 0.5*(cons(IM1,k,j,i+ioff) + cons(IM1,k,j+joff,i));
+          Real M2avg = 0.5*(cons(IM2,k,j,i+ioff) + cons(IM2,k,j+joff,i));
+          Real M3avg = 0.5*(cons(IM3,k,j,i+ioff) + cons(IM3,k,j+joff,i));
+          cons(IDN,k,j,i) = davg;
+          cons(IM1,k,j,i) = M1avg;
+          cons(IM2,k,j,i) = M2avg;
+          cons(IM3,k,j,i) = M3avg;
+        }
       }
     }
   }
+  // finally, fill the central cell containing the particle
+  Real davg = (cons(IDN,kp,jp,ip-1) + cons(IDN,kp,jp,ip+1) +
+               cons(IDN,kp,jp-1,ip) + cons(IDN,kp,jp+1,ip) +
+               cons(IDN,kp-1,jp,ip) + cons(IDN,kp+1,jp,ip))/6.;
+  Real M1avg = (cons(IM1,kp,jp,ip-1) + cons(IM1,kp,jp,ip+1) +
+                cons(IM1,kp,jp-1,ip) + cons(IM1,kp,jp+1,ip) +
+                cons(IM1,kp-1,jp,ip) + cons(IM1,kp+1,jp,ip))/6.;
+  Real M2avg = (cons(IM2,kp,jp,ip-1) + cons(IM2,kp,jp,ip+1) +
+                cons(IM2,kp,jp-1,ip) + cons(IM2,kp,jp+1,ip) +
+                cons(IM2,kp-1,jp,ip) + cons(IM2,kp+1,jp,ip))/6.;
+  Real M3avg = (cons(IM3,kp,jp,ip-1) + cons(IM3,kp,jp,ip+1) +
+                cons(IM3,kp,jp-1,ip) + cons(IM3,kp,jp+1,ip) +
+                cons(IM3,kp-1,jp,ip) + cons(IM3,kp+1,jp,ip))/6.;
+  cons(IDN,kp,jp,ip) = davg;
+  cons(IM1,kp,jp,ip) = M1avg;
+  cons(IM2,kp,jp,ip) = M2avg;
+  cons(IM3,kp,jp,ip) = M3avg;
 }
