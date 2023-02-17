@@ -191,6 +191,8 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
         newppar = new TracerParticles(this, pin, &pp);
       } else if (pp.partype.compare("star") == 0) {
         newppar = new StarParticles(this, pin, &pp);
+      } else if (pp.partype.compare("sink") == 0) {
+        newppar = new SinkParticles(this, pin, &pp);
       } else {
         std::stringstream msg;
         msg << "### FATAL ERROR in MeshBlock::MeshBlock" << std::endl
@@ -337,6 +339,8 @@ MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
         newppar = new TracerParticles(this, pin, &pp);
       } else if (pp.partype.compare("star") == 0) {
         newppar = new StarParticles(this, pin, &pp);
+      } else if (pp.partype.compare("sink") == 0) {
+        newppar = new SinkParticles(this, pin, &pp);
       } else {
         std::stringstream msg;
         msg << "### FATAL ERROR in MeshBlock::MeshBlock" << std::endl

@@ -63,7 +63,7 @@ gconst        = 3.141592653589793
 grav_bc       = open
 
 <particle1>
-type        = star
+type        = sink
 gravity     = true
 
 <problem>

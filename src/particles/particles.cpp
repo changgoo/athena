@@ -846,12 +846,13 @@ void Particles::Initialize(Mesh *pm, ParameterInput *pin) {
       pp.block_number = atoi(parn.c_str());
       pp.block_name.assign(pib->block_name);
 
-      // set particle type = [tracer, star, dust, none]
+      // set particle type = [tracer, star, sink, dust, none]
       pp.partype = pin->GetString(pp.block_name, "type");
       if (pp.partype.compare("none") != 0) { // skip input block if the type is none
         if ((pp.partype.compare("dust") == 0) ||
             (pp.partype.compare("tracer") == 0) ||
-            (pp.partype.compare("star") == 0)) {
+            (pp.partype.compare("star") == 0) ||
+            (pp.partype.compare("sink") == 0)) {
           pp.ipar = num_particles++;
           idmax.push_back(0); // initialize idmax with 0
           pp.table_output = pin->GetOrAddBoolean(pp.block_name,"output",false);
