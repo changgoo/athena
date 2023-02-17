@@ -31,7 +31,7 @@
 Gravity::Gravity(MeshBlock *pmb, ParameterInput *pin) :
     pmy_block(pmb), phi(pmb->ncells3, pmb->ncells2, pmb->ncells1),
     empty_flux{AthenaArray<Real>(), AthenaArray<Real>(), AthenaArray<Real>()},
-    four_pi_G(pmb->pmy_mesh->four_pi_G_),
+    four_pi_G(pmb->pmy_mesh->four_pi_G_), gconst(pmb->pmy_mesh->four_pi_G_/4./PI),
     gbvar(pmb, &phi, nullptr, empty_flux) {
   if (four_pi_G == 0.0) {
     std::stringstream msg;
