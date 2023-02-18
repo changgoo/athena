@@ -75,9 +75,8 @@ void SinkParticles::AccreteMass() {
       ATHENA_ERROR(msg);
     }
 
-    // Step 1. Calculate total mass in the control volume M^{n+1} updated by hydro
+    // Step 1(a). Calculate total mass in the control volume M^{n+1} updated by hydro
     // integrator, before applying extrapolation.
-
     Real m{0.}, M1{0.}, M2{0.}, M3{0.};
     for (int k=kp-rctrl_; k<=kp+rctrl_; ++k) {
       for (int j=jp-rctrl_; j<=jp+rctrl_; ++j) {
@@ -90,12 +89,9 @@ void SinkParticles::AccreteMass() {
         }
       }
     }
-
-    // Step 2. Reset the density inside the control volume by extrapolation
+    // Step 1(b). Reset the density inside the control volume by extrapolation
     SetGhostRegion(cons, ip, jp, kp);
-
-    // Step 3. Calculate M^{n+1}_ctrl
-
+    // Step 1(c). Calculate M^{n+1}_ctrl
     Real mext{0.}, M1ext{0.}, M2ext{0.}, M3ext{0.};
     for (int k=kp-rctrl_; k<=kp+rctrl_; ++k) {
       for (int j=jp-rctrl_; j<=jp+rctrl_; ++j) {
@@ -108,19 +104,55 @@ void SinkParticles::AccreteMass() {
         }
       }
     }
-
-    // Step 4. Calculate dM_sink by subtracting M^{n+1}_ctrl from M^{n+1}
-
+    // Step 1(d). Calculate dM_sink by subtracting M^{n+1}_ctrl from M^{n+1}
     Real dm = m - mext;
     Real dM1 = M1 - M1ext;
     Real dM2 = M2 - M2ext;
     Real dM3 = M3 - M3ext;
 
-    // Step 5. Check whether the particle has crossed the grid boundaries
+    // Check whether the particle has crossed the grid boundaries.
+    // If so, reset the old control volume and add that change to the sink particle
+    // SMOON: No need to avoid double counting if not for performance reasons; because
+    // we reset overlap region again, the additional change in the overlap region should
+    // be accounted in the sink accretion.
+    if ((ip != ip0) || (jp != jp0) || (kp != kp0)) {
+      // Step 2(a). Calculate total mass in the control volume M^{n+1} updated by hydro
+      // integrator, before applying extrapolation.
+      Real m{0.}, M1{0.}, M2{0.}, M3{0.};
+      for (int k=kp0-rctrl_; k<=kp0+rctrl_; ++k) {
+        for (int j=jp0-rctrl_; j<=jp0+rctrl_; ++j) {
+          for (int i=ip0-rctrl_; i<=ip0+rctrl_; ++i) {
+            Real dV = pmy_block->pcoord->GetCellVolume(k,j,i);
+            m += cons(IDN,k,j,i)*dV;
+            M1 += cons(IM1,k,j,i)*dV;
+            M2 += cons(IM2,k,j,i)*dV;
+            M3 += cons(IM3,k,j,i)*dV;
+          }
+        }
+      }
+      // Step 2(b). Reset the density inside the control volume by extrapolation
+      SetGhostRegion(cons, ip0, jp0, kp0);
+      // Step 2(c). Calculate M^{n+1}_ctrl
+      Real mext{0.}, M1ext{0.}, M2ext{0.}, M3ext{0.};
+      for (int k=kp0-rctrl_; k<=kp0+rctrl_; ++k) {
+        for (int j=jp0-rctrl_; j<=jp0+rctrl_; ++j) {
+          for (int i=ip0-rctrl_; i<=ip0+rctrl_; ++i) {
+            Real dV = pmy_block->pcoord->GetCellVolume(k,j,i);
+            mext += cons(IDN,k,j,i)*dV;
+            M1ext += cons(IM1,k,j,i)*dV;
+            M2ext += cons(IM2,k,j,i)*dV;
+            M3ext += cons(IM3,k,j,i)*dV;
+          }
+        }
+      }
+      // Step 2(d). Calculate dM_sink by subtracting M^{n+1}_ctrl from M^{n+1}
+      dm += m - mext;
+      dM1 += M1 - M1ext;
+      dM2 += M2 - M2ext;
+      dM3 += M3 - M3ext;
+    }
 
-    // Step 6... Do corrections for grid crossing.
-
-    // Update mass and velocity of the particle
+    // Step 3. Update mass and velocity of the particle
     Real minv = 1.0 / (mass(idx) + dm);
     vpx(idx) = (mass(idx)*vpx(idx) + dM1)*minv;
     vpy(idx) = (mass(idx)*vpy(idx) + dM2)*minv;
