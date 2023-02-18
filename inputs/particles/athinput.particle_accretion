@@ -18,6 +18,11 @@ variable   = prim
 dt         = 0.1
 
 <output3>
+file_type  = partab
+variable   = prim
+dt         = 0.1
+
+<output4>
 file_type  = rst
 dt         = 1.0
 
@@ -50,9 +55,9 @@ ox3_bc     = outflow    # outer-X3 boundary flag
 refinement = none
 
 <meshblock>
-nx1        = 135
-nx2        = 135
-nx3        = 135
+nx1        = 45
+nx2        = 45
+nx3        = 45
 
 <hydro>
 gamma           = 1.666666666667 # gamma = C_p/C_v
@@ -65,7 +70,9 @@ grav_bc       = open
 <particle1>
 type        = sink
 gravity     = true
+output      = true
 
 <problem>
 A = 2.0004
 t0 = 0.43
+vadv = 0.0

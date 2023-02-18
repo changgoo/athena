@@ -5,7 +5,6 @@
 //========================================================================================
 //! \file particle_accretion.cpp
 //! \brief Problem generator to sink particle accretion
-// TODO: implement sink particles to replace sink cell
 
 // C headers
 
@@ -67,8 +66,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   const Real rmax = 0.75*pmy_mesh->mesh_size.x1max;
   const Real t0 = pin->GetOrAddReal("problem","t0",0.43);
   const Real A = pin->GetOrAddReal("problem","A",2.0004);
+  //TODO retire this input parameter; implement sink creation
   rctrl = pin->GetOrAddReal("problem","rctrl",1.5)*pcoord->dx1f(0);
   const Real cs = peos->GetIsoSoundSpeed();
+  Real vadv = pin->GetOrAddReal("problem","vadv",0)*cs;
   const Real density_scale = 1.0/pgrav->four_pi_G/SQR(t0);
   const Real velocity_scale = cs;
   const Real xi0 = 10; // initial location to integrate shu77 ODE
@@ -76,6 +77,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real xi;
   state_type res(2);
 
+  // TODO retire this; instead, initialize density all the way down to the center
+  // and reset the control volume using sink creation method
   // Set dctrl = self-similar solution at r=rctrl
   set_shu77_ic(res, xi0, A);
   xi = SimilarityVar(rctrl, t0, cs);
@@ -109,7 +112,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         r = std::min(r, rmax); // pressure confinement - constant beyond the cloud radius
         if (r <= rctrl) {
           phydro->u(IDN,k,j,i) = dctrl;
-          phydro->u(IM1,k,j,i) = 0.0;
+          phydro->u(IM1,k,j,i) = dctrl*vadv;
           phydro->u(IM2,k,j,i) = 0.0;
           phydro->u(IM3,k,j,i) = 0.0;
         } else {
@@ -117,11 +120,11 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           xi = SimilarityVar(r, t0, cs);
           boost::numeric::odeint::integrate(shu77, res, xi0, xi, step);
           Real rho = density_scale*res[0];
-          Real pr = rho*velocity_scale*res[1];
+          Real vr = velocity_scale*res[1];
           phydro->u(IDN,k,j,i) = rho;
-          phydro->u(IM1,k,j,i) = pr*sinth*cosph;
-          phydro->u(IM2,k,j,i) = pr*sinth*sinph;
-          phydro->u(IM3,k,j,i) = pr*costh;
+          phydro->u(IM1,k,j,i) = rho*(vr*sinth*cosph + vadv);
+          phydro->u(IM2,k,j,i) = rho*(vr*sinth*sinph);
+          phydro->u(IM3,k,j,i) = rho*(vr*costh);
         }
         if (NON_BAROTROPIC_EOS) {
           std::stringstream msg;
@@ -151,7 +154,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     boost::numeric::odeint::integrate(shu77, res, xi0, xi, step);
     Real mstar = SQR(xi)*res[0]*(xi - res[1]); // Eq. (10) in Shu (1977)
     mstar *= std::pow(cs,3)*t0/pgrav->gconst; // Eq. (8) in Shu (1977)
-    ppar->AddOneParticle(mstar,0,0,0,0,0,0);
+    ppar->AddOneParticle(mstar,0,0,0,vadv,0,0);
     ppar->ToggleParHstOutFlag();
   }
 }
