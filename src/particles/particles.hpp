@@ -83,9 +83,7 @@ friend class ParticleMesh;
   std::size_t GetSizeInBytes() const;
   bool IsGravity() const { return isgravity_; }
   int GetNumPar() const { return npar_; }
-  int GetCellIndex1(int pidx) const;
-  int GetCellIndex2(int pidx) const;
-  int GetCellIndex3(int pidx) const;
+  void GridIndex(Real xp, Real yp, Real zp, int &ip, int &jp, int &kp) const;
 
   // Input/Output interface
   void UnpackParticlesForRestart(char *mbdata, std::size_t &os);
@@ -226,7 +224,7 @@ friend class ParticleMesh;
   int nwork;         //!> number of working arrays for particles
   int nint_buf, nreal_buf; //!> number of properties for buffer
 
-  // indices for integer shorthands
+  // indices for intprop shorthands
   int ipid;                 // index for the particle ID
   int ish;                  // index for shear boundary flag
 

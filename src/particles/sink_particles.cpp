@@ -62,9 +62,9 @@ void SinkParticles::AccreteMass() {
     // Step 0. Prepare
 
     // find the indices of the particle-containing cell.
-    int ip = GetCellIndex1(idx);
-    int jp = GetCellIndex2(idx);
-    int kp = GetCellIndex3(idx);
+    int ip, jp, kp, ip0, jp0, kp0;
+    GridIndex(xp(idx), yp(idx), zp(idx), ip, jp, kp);
+    GridIndex(xp0(idx), yp0(idx), zp0(idx), ip0, jp0, kp0);
 
     AthenaArray<Real> &cons = pmy_block->phydro->u;
 

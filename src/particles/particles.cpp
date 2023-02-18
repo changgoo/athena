@@ -310,30 +310,20 @@ std::size_t Particles::GetSizeInBytes() const {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn int Particles::GetCellIndex1()
-//! \brief returns the x1 index of the particle-containing cell.
+//! \fn int Particles::GridIndex()
+//! \brief returns the integer indices of the particle-containing cell.
 
-int Particles::GetCellIndex1(int pidx) const {
-  int ip = static_cast<int>(std::floor(xi1_(pidx)));
-  return ip;
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn int Particles::GetCellIndex2()
-//! \brief returns the x2 index of the particle-containing cell.
-
-int Particles::GetCellIndex2(int pidx) const {
-  int jp = static_cast<int>(std::floor(xi2_(pidx)));
-  return jp;
-}
-
-//--------------------------------------------------------------------------------------
-//! \fn int Particles::GetCellIndex3()
-//! \brief returns the x3 index of the particle-containing cell.
-
-int Particles::GetCellIndex3(int pidx) const {
-  int kp = static_cast<int>(std::floor(xi3_(pidx)));
-  return kp;
+void Particles::GridIndex(Real xp, Real yp, Real zp, int &ip, int &jp, int &kp) const {
+  // Convert to the Mesh coordinates.
+  Real x1, x2, x3;
+  pmy_block->pcoord->CartesianToMeshCoords(xp, yp, zp, x1, x2, x3);
+  // Convert to the index space.
+  Real x1i, x2i, x3i;
+  pmy_block->pcoord->MeshCoordsToIndices(x1, x2, x3, x1i, x2i, x3i);
+  // Convert to the integer indices
+  ip = static_cast<int>(std::floor(x1i));
+  jp = static_cast<int>(std::floor(x2i));
+  kp = static_cast<int>(std::floor(x3i));
 }
 
 //--------------------------------------------------------------------------------------
