@@ -383,7 +383,7 @@ class StarParticles : public Particles {
 
 //--------------------------------------------------------------------------------------
 //! \class SinkParticles
-//! \brief defines the class for Star particles
+//! \brief defines the class for Sink particles
 
 class SinkParticles : public StarParticles {
  public:

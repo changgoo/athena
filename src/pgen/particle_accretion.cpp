@@ -65,6 +65,9 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   const Real rmax = 0.75*pmy_mesh->mesh_size.x1max;
   const Real t0 = pin->GetOrAddReal("problem","t0",0.43);
+  const Real x0 = pin->GetOrAddReal("problem","x0",0.0);
+  const Real y0 = pin->GetOrAddReal("problem","y0",0.0);
+  const Real z0 = pin->GetOrAddReal("problem","z0",0.0);
   const Real A = pin->GetOrAddReal("problem","A",2.0004);
   //TODO retire this input parameter; implement sink creation
   rctrl = pin->GetOrAddReal("problem","rctrl",1.5)*pcoord->dx1f(0);
@@ -86,11 +89,11 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   dctrl = density_scale*res[0];
 
   for (int k=ks; k<=ke; k++) {
-    Real z = pcoord->x3v(k);
+    Real z = pcoord->x3v(k) - z0;
     for (int j=js; j<=je; j++) {
-      Real y = pcoord->x2v(j);
+      Real y = pcoord->x2v(j) - y0;
         for (int i=is; i<=ie; i++) {
-        Real x = pcoord->x1v(i);
+        Real x = pcoord->x1v(i) - x0;
         Real R = std::sqrt(SQR(x) + SQR(y));
         Real r = std::sqrt(SQR(R) + SQR(z));
         Real sinth, costh, sinph, cosph;
@@ -154,7 +157,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     boost::numeric::odeint::integrate(shu77, res, xi0, xi, step);
     Real mstar = SQR(xi)*res[0]*(xi - res[1]); // Eq. (10) in Shu (1977)
     mstar *= std::pow(cs,3)*t0/pgrav->gconst; // Eq. (8) in Shu (1977)
-    ppar->AddOneParticle(mstar,0,0,0,vadv,0,0);
+    ppar->AddOneParticle(mstar,x0,y0,z0,vadv,0,0);
     ppar->ToggleParHstOutFlag();
   }
 }
