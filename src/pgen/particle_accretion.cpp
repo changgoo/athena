@@ -187,32 +187,4 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
 //========================================================================================
 
 void MeshBlock::UserWorkInLoop() {
-  if (pmy_mesh->particle) {
-    // TODO move this to Integrate() stage 2
-    SinkParticles *ppar = dynamic_cast<SinkParticles*>(ppars[0]);
-    ppar->AccreteMass();
-
-    // Temporary sink accretion.
-    // To be replace with ppar->AccreteMass()
-    // Think about where to call AccreteMass().
-    // Currently, Integrate() is inside the time integrator task list.
-    // We may put AccreteMass there. In any case, mass accretion must be done
-    // after hydro update (see Kim & Ostriker 2017)
-//    SinkParticles *ppar = dynamic_cast<SinkParticles*>(ppars[0]);
-//    if (ppar->GetNumPar() == 0) return;
-//    for (int k=ks; k<=ke; k++) {
-//      Real z = pcoord->x3v(k);
-//      for (int j=js; j<=je; j++) {
-//        Real y = pcoord->x2v(j);
-//        for (int i=is; i<=ie; i++) {
-//          Real x = pcoord->x1v(i);
-//          Real r = std::sqrt(SQR(x) + SQR(y) + SQR(z));
-//          if (r <= rctrl) {
-//            ppar->mass(0) += (phydro->u(IDN,k,j,i) - dctrl)*pcoord->GetCellVolume(k,j,i);
-//            phydro->u(IDN,k,j,i) = dctrl;
-//          }
-//        }
-//      }
-//    }
-  }
 }

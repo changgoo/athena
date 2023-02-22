@@ -84,6 +84,7 @@ friend class ParticleMesh;
   bool IsGravity() const { return isgravity_; }
   int GetNumPar() const { return npar_; }
   void GridIndex(Real xp, Real yp, Real zp, int &ip, int &jp, int &kp) const;
+  virtual void InteractWithMesh() {};
 
   // Input/Output interface
   void UnpackParticlesForRestart(char *mbdata, std::size_t &os);
@@ -394,8 +395,7 @@ class SinkParticles : public StarParticles {
   ~SinkParticles();
 
   // Methods (interface)
-  void AccreteMass();
-  void SetGhostRegion(AthenaArray<Real> &cons, int ip, int jp, int kp);
+  void InteractWithMesh() override;
 
   // Data members
   // shorthand for additional properties
@@ -403,6 +403,8 @@ class SinkParticles : public StarParticles {
  private:
   // Methods (implementation)
 //  void AssignShorthandsForDerived() override;
+  void AccreteMass();
+  void SetGhostRegion(AthenaArray<Real> &cons, int ip, int jp, int kp);
 
   // Data members
   const int rctrl_ = 1; // Extent of the control volume. The side length of the control

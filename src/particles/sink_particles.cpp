@@ -35,6 +35,15 @@ SinkParticles::~SinkParticles() {
   return;
 }
 
+
+//--------------------------------------------------------------------------------------
+//! \fn SinkParticles::InteractWithMesh()
+//! \brief Interact with Mesh variables (e.g., feedback, accretion)
+
+void SinkParticles::InteractWithMesh() {
+  AccreteMass();
+}
+
 //--------------------------------------------------------------------------------------
 //! \fn SinkParticles::AccreteMass()
 //! \brief accrete gas from neighboring cells

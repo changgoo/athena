@@ -181,6 +181,7 @@ class TimeIntegratorTaskList : public TaskList {
   TaskStatus IntegrateParticles(MeshBlock *pmb, int step);
   TaskStatus SendParticles(MeshBlock *pmb, int step);
   TaskStatus ReceiveParticles(MeshBlock *pmb, int step);
+  TaskStatus InteractWithMesh(MeshBlock *pmb, int step);
   TaskStatus SendParticleMesh(MeshBlock *pmb, int step);
   TaskStatus ReceiveParticleMesh(MeshBlock *pmb, int step);
   TaskStatus SetBoundariesParticleMesh(MeshBlock *pmb, int step);
@@ -396,12 +397,13 @@ const TaskID CR_OPACITY(80);
 const TaskID INT_PAR(81);
 const TaskID SEND_PAR(82);
 const TaskID RECV_PAR(83);
-const TaskID SEND_PM(84);
-const TaskID RECV_PM(85);
-const TaskID SETB_PM(86);
-const TaskID SEND_PARSH(87);
-const TaskID RECV_PARSH(88);
-const TaskID SEND_PMSH(89);
-const TaskID RECV_PMSH(90);
+const TaskID INTERACT(84);
+const TaskID SEND_PM(85);
+const TaskID RECV_PM(86);
+const TaskID SETB_PM(87);
+const TaskID SEND_PARSH(88);
+const TaskID RECV_PARSH(89);
+const TaskID SEND_PMSH(90);
+const TaskID RECV_PMSH(91);
 }  // namespace HydroIntegratorTaskNames
 #endif  // TASK_LIST_TASK_LIST_HPP_
