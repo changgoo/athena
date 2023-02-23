@@ -1041,29 +1041,7 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
       }
     }
 
-    // evolve particles
-    if (PARTICLES) {
-      AddTask(INT_PAR, NONE);
-      AddTask(SEND_PAR, INT_PAR);
-      AddTask(RECV_PAR, NONE);
-      TaskID parcomm=(SEND_PAR|RECV_PAR);
-
-      if (SHEAR_PERIODIC) {
-        AddTask(SEND_PARSH, RECV_PAR);
-        AddTask(RECV_PARSH, SEND_PARSH);
-        parcomm=(parcomm|SEND_PARSH|RECV_PARSH);
-      }
-
-      AddTask(INTERACT, parcomm);
-      AddTask(SEND_PM, INTERACT);
-      AddTask(RECV_PM, SEND_PM);
-      AddTask(SETB_PM, RECV_PM);
-      if (SHEAR_PERIODIC) {
-        AddTask(SEND_PMSH, SETB_PM);
-        AddTask(RECV_PMSH, SEND_PMSH);
-      }
-    }
-
+    TaskID before_prim = NONE;
     if (MAGNETIC_FIELDS_ENABLED) { // MHD
       // compute MHD fluxes, integrate field
       AddTask(CALC_FLDFLX,CALC_HYDFLX);
@@ -1119,20 +1097,16 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
             AddTask(PROLONG,setb);
           }
         }
-        AddTask(CONS2PRIM,PROLONG);
+        before_prim = PROLONG;
       } else {
         if (SHEAR_PERIODIC) {
-          if (NSCALARS > 0) {
-            AddTask(CONS2PRIM,(RECV_HYDSH|RECV_FLDSH|RECV_SCLRSH));
-          } else {
-            AddTask(CONS2PRIM,(RECV_HYDSH|RECV_FLDSH));
-          }
+          before_prim = (RECV_HYDSH|RECV_FLDSH);
+          if (NSCALARS > 0)
+            before_prim = (before_prim|RECV_SCLRSH);
         } else {
-          if (NSCALARS > 0) {
-            AddTask(CONS2PRIM,(SETB_HYD|SETB_FLD|SETB_SCLR));
-          } else {
-            AddTask(CONS2PRIM,(SETB_HYD|SETB_FLD));
-          }
+          before_prim = (SETB_HYD|SETB_FLD);
+          if (NSCALARS > 0)
+            before_prim = (before_prim|SETB_SCLR);
         }
       }
     } else {  // HYDRO
@@ -1157,23 +1131,52 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
             AddTask(PROLONG,setb);
           }
         }
-        AddTask(CONS2PRIM,PROLONG);
+        before_prim = PROLONG;
       } else {
         if (SHEAR_PERIODIC) {
-          if (NSCALARS > 0) {
-            AddTask(CONS2PRIM,(RECV_HYDSH|RECV_SCLRSH));
-          } else {
-            AddTask(CONS2PRIM,RECV_HYDSH);
-          }
+          before_prim = RECV_HYDSH;
+          if (NSCALARS > 0)
+            before_prim = (before_prim|RECV_SCLRSH);
         } else {
-          if (NSCALARS > 0) {
-            AddTask(CONS2PRIM,(SETB_HYD|SETB_SCLR));
-          } else {
-            AddTask(CONS2PRIM,SETB_HYD);
-          }
+          before_prim = SETB_HYD;
+          if (NSCALARS > 0)
+            before_prim = (before_prim|SETB_SCLR);
         }
       }
     }
+
+    // evolve particles
+    if (PARTICLES) {
+      // SMOON: note that INT_PAR does not depend on INT_HYD;
+      // This is okay if we use previous primitive variables to integrate particles,
+      // because CONS2PRIM is not yet called.
+      // If conservative variables are used, INT_PAR becomes nondeterministic.
+      AddTask(INT_PAR, NONE);
+      AddTask(SEND_PAR, INT_PAR);
+      AddTask(RECV_PAR, NONE);
+      TaskID parcomm=(SEND_PAR|RECV_PAR);
+
+      if (SHEAR_PERIODIC) {
+        AddTask(SEND_PARSH, RECV_PAR);
+        AddTask(RECV_PARSH, SEND_PARSH);
+        parcomm=(parcomm|SEND_PARSH|RECV_PARSH);
+      }
+
+      // SMOON: gas-particle interaction must use updated conservative variables
+      // in order to be operator split (note that INTERACT operates only at last stage).
+      AddTask(INTERACT, (parcomm|before_prim));
+      AddTask(SEND_PM, INTERACT);
+      AddTask(RECV_PM, SEND_PM);
+      AddTask(SETB_PM, RECV_PM);
+      if (SHEAR_PERIODIC) {
+        AddTask(SEND_PMSH, SETB_PM);
+        AddTask(RECV_PMSH, SEND_PMSH);
+      }
+      before_prim = (before_prim|INTERACT);
+    }
+
+    // When particles modify conservative variables, CONS2PRIM must come after.
+    AddTask(CONS2PRIM,before_prim);
 
     // everything else
     TaskID before_bval = CONS2PRIM;
@@ -2385,16 +2388,16 @@ TaskStatus TimeIntegratorTaskList::ReceiveParticleMesh(MeshBlock *pmb, int stage
 }
 
 TaskStatus TimeIntegratorTaskList::InteractWithMesh(MeshBlock *pmb, int stage) {
-  if (integrator == "vl2") {
-    if (stage == 1) {
-      return TaskStatus::success;
-    } else if (stage == 2) {
-      for (Particles *ppar : pmb->ppars)
-        ppar->InteractWithMesh();
-      return TaskStatus::success;
-    }
+  if (stage == nstages) {
+    // only at the last stage (operator split)
+    for (Particles *ppar : pmb->ppars)
+      ppar->InteractWithMesh();
+    return TaskStatus::success;
+  } else if (stage < nstages) {
+    return TaskStatus::success;
+  } else {
+    return TaskStatus::fail;
   }
-  return TaskStatus::fail;
 }
 
 TaskStatus TimeIntegratorTaskList::SetBoundariesParticleMesh(MeshBlock *pmb, int stage) {
