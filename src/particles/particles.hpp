@@ -99,7 +99,7 @@ friend class ParticleMesh;
   void ClearNeighbors();
   void LinkNeighbors(MeshBlockTree &tree, int64_t nrbx1, int64_t nrbx2, int64_t nrbx3,
                      int root_level);
-  void LoadParticleBuffer(ParticleBuffer *ppb, int k);
+  void LoadParticleBuffer(ParticleBuffer *ppb, int k, bool ghost=false);
 #ifdef MPI_PARALLEL
   void SendParticleBuffer(ParticleBuffer& send, int dst);
   void ReceiveParticleBuffer(int nb_rank, ParticleBuffer& recv,
