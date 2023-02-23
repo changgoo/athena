@@ -2325,16 +2325,12 @@ TaskStatus TimeIntegratorTaskList::IntegrateParticles(MeshBlock *pmb, int stage)
 }
 
 TaskStatus TimeIntegratorTaskList::SendParticles(MeshBlock *pmb, int stage) {
-  if (Globals::my_rank==0)
-    std::cout << "SendParticles for stage " << stage << std::endl;
   for (Particles *ppar : pmb->ppars)
     ppar->SendToNeighbors();
   return TaskStatus::success;
 }
 
 TaskStatus TimeIntegratorTaskList::ReceiveParticles(MeshBlock *pmb, int stage) {
-  if (Globals::my_rank==0)
-    std::cout << "ReceiveParticles for stage " << stage << std::endl;
   bool ret_all(true), ret(false);
   for (Particles *ppar : pmb->ppars) {
     ret = ppar->ReceiveFromNeighbors();
@@ -2366,8 +2362,6 @@ TaskStatus TimeIntegratorTaskList::ReceiveParticlesShear(MeshBlock *pmb, int sta
 }
 
 TaskStatus TimeIntegratorTaskList::SendParticleMesh(MeshBlock *pmb, int stage) {
-  if (Globals::my_rank==0)
-    std::cout << "SendPM for stage " << stage << std::endl;
   for (Particles *ppar : pmb->ppars) {
     if (ppar->IsGravity()) ppar->ppm->ComputePMDensity();
     if (ppar->ppm->updated) ppar->ppm->pmbvar->SendBoundaryBuffers();

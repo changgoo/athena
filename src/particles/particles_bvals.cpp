@@ -103,7 +103,7 @@ void Particles::ClearBoundary() {
     if (nb.snb.rank != Globals::my_rank) {
       ParticleBuffer& recv = recv_[nb.bufid];
       recv.flagn = recv.flagi = recv.flagr = 0;
-      send_[nb.bufid].npar_ = send_[nb.bufid].nghost_ = 0;
+      send_[nb.bufid].npar_ = 0;
     }
 #endif
   }
@@ -292,10 +292,9 @@ void Particles::SendToNeighbors() {
     int dst = nb.snb.rank;
     if (dst == Globals::my_rank) {
       Particles *ppar = pmy_mesh_->FindMeshBlock(nb.snb.gid)->ppars[ipar];
-      ParticleBuffer& recv = ppar->recv_[nb.targetid];
-      int npartot = recv.npar_ + recv.nghost_;
-      ppar->bstatus_[nb.targetid] = npartot > 0 ? BoundaryStatus::arrived
-                                                : BoundaryStatus::completed;
+      ppar->bstatus_[nb.targetid] =
+          (ppar->recv_[nb.targetid].npar_ > 0) ? BoundaryStatus::arrived
+                                              : BoundaryStatus::completed;
     } else {
 #ifdef MPI_PARALLEL
       ParticleBuffer& send = send_[nb.bufid];
@@ -311,10 +310,9 @@ void Particles::SendToNeighbors() {
 
 #ifdef MPI_PARALLEL
 void Particles::SendParticleBuffer(ParticleBuffer& send, int dst) {
-  int npsend = send.npar_ + send.nghost_;
+  int npsend = send.npar_;
   int sendtag = send.tag;
-  int nparbuf[2] = {send.npar_, send.nghost_};
-  MPI_Send(nparbuf, 2, MPI_INT, dst, sendtag, my_comm);
+  MPI_Send(&npsend, 1, MPI_INT, dst, sendtag, my_comm);
   if (npsend > 0) {
     MPI_Request req = MPI_REQUEST_NULL;
     MPI_Isend(send.ibuf, npsend * nint_buf, MPI_INT,
@@ -337,22 +335,20 @@ void Particles::ReceiveParticleBuffer(int nb_rank, ParticleBuffer& recv,
                                       enum BoundaryStatus& bstatus) {
   // Communicate with neighbor processes.
   if (nb_rank != Globals::my_rank && bstatus == BoundaryStatus::waiting) {
-    int nprecv = 0;
     if (!recv.flagn) {
-      int nparbuf[2] = {0,0};
       // Get the number of incoming particles.
       if (recv.reqn == MPI_REQUEST_NULL)
-        MPI_Irecv(nparbuf, 2, MPI_INT, nb_rank, recv.tag, my_comm, &recv.reqn);
+        MPI_Irecv(&recv.npar_, 1, MPI_INT, nb_rank, recv.tag, my_comm, &recv.reqn);
       else
         MPI_Test(&recv.reqn, &recv.flagn, MPI_STATUS_IGNORE);
-      if (recv.flagn) { // if the message is received
-        recv.npar_ = nparbuf[0];
-        recv.nghost_ = nparbuf[1];
-        nprecv = recv.npar_ + recv.nghost_;
-        if (nprecv > 0) {
+      if (recv.flagn) {
+        if (recv.npar_ > 0) {
           // Check the buffer size.
+          int nprecv = recv.npar_;
           if (nprecv > recv.nparmax_) {
+            recv.npar_ = 0;
             recv.Reallocate(2 * nprecv - recv.nparmax_, nint_buf, nreal_buf);
+            recv.npar_ = nprecv;
           }
         } else {
           // No incoming particles.
@@ -360,18 +356,18 @@ void Particles::ReceiveParticleBuffer(int nb_rank, ParticleBuffer& recv,
         }
       }
     }
-    if (recv.flagn && nprecv > 0) {
+    if (recv.flagn && recv.npar_ > 0) {
       // Receive data from the neighbor.
       if (!recv.flagi) {
         if (recv.reqi == MPI_REQUEST_NULL)
-          MPI_Irecv(recv.ibuf, nprecv * nint_buf, MPI_INT,
+          MPI_Irecv(recv.ibuf, recv.npar_ * nint_buf, MPI_INT,
                     nb_rank, recv.tag + 1, my_comm, &recv.reqi);
         else
           MPI_Test(&recv.reqi, &recv.flagi, MPI_STATUS_IGNORE);
       }
       if (!recv.flagr) {
         if (recv.reqr == MPI_REQUEST_NULL)
-          MPI_Irecv(recv.rbuf, nprecv * nreal_buf, MPI_ATHENA_REAL,
+          MPI_Irecv(recv.rbuf, recv.npar_ * nreal_buf, MPI_ATHENA_REAL,
                     nb_rank, recv.tag + 2, my_comm, &recv.reqr);
         else
           MPI_Test(&recv.reqr, &recv.flagr, MPI_STATUS_IGNORE);
@@ -531,7 +527,7 @@ struct Neighbor* Particles::FindTargetNeighbor(
 
 void Particles::FlushReceiveBuffer(ParticleBuffer& recv) {
   // Check the memory size.
-  int nprecv = recv.npar_ + recv.nghost_;
+  int nprecv = recv.npar_;
   if (npar_ + nprecv > nparmax_)
     UpdateCapacity(nparmax_ + 2 * (npar_ + nprecv - nparmax_));
 
@@ -558,9 +554,8 @@ void Particles::FlushReceiveBuffer(ParticleBuffer& recv) {
   UpdatePositionIndices(nprecv, xps, yps, zps, xi1s, xi2s, xi3s);
 
   // Clear the receive buffers.
-  npar_ += recv.npar_;
-  nghost_ = recv.nghost_;
-  recv.npar_ = recv.nghost_ = 0;
+  npar_ += nprecv;
+  recv.npar_ = 0;
 }
 
 
@@ -568,33 +563,21 @@ void Particles::FlushReceiveBuffer(ParticleBuffer& recv) {
 //! \fn void Particles::LoadParticleBuffer(ParticleBuffer& recv)
 //! \brief load the k-th particle to the particle buffer.
 
-void Particles::LoadParticleBuffer(ParticleBuffer *ppb, int k, bool ghost) {
-  int npartot = ppb->npar_ + ppb->nghost_;
+void Particles::LoadParticleBuffer(ParticleBuffer *ppb, int k) {
   // Check the buffer size.
-  if (npartot >= ppb->nparmax_)
+  if (ppb->npar_ >= ppb->nparmax_)
     ppb->Reallocate((ppb->nparmax_ > 0) ? 2 * ppb->nparmax_ : 1, nint_buf, nreal_buf);
 
   // Copy the properties of the particle to the buffer.
-  int *pi = ppb->ibuf + nint_buf * npartot;
+  int *pi = ppb->ibuf + nint_buf * ppb->npar_;
   for (int j = 0; j < nint; ++j)
     *pi++ = intprop(j,k);
-  Real *pr = ppb->rbuf + nreal_buf * npartot;
+  Real *pr = ppb->rbuf + nreal_buf * ppb->npar_;
   for (int j = 0; j < nreal; ++j)
     *pr++ = realprop(j,k);
   for (int j = 0; j < naux; ++j)
     *pr++ = auxprop(j,k);
-  if (ghost) {
-    ++ppb->nghost_;
-  } else if (ppb->nghost_ > 0) {
-    std::stringstream msg;
-    msg << "### FATAL ERROR in function [Particles::LoadParticleBuffer]"
-        << "You are trying to load active particles on top of ghost particles."
-        << "This is strictly prohibited; Particle buffer should be first loaded"
-        << " with the active particles, followed by ghost particles.";
-    ATHENA_ERROR(msg);
-  } else {
-    ++ppb->npar_;
-  }
+  ++ppb->npar_;
 }
 
 //--------------------------------------------------------------------------------------
@@ -873,7 +856,7 @@ void Particles::ClearBoundaryShear() {
         ParticleBuffer& recv = recv_sh_[n+upper*4];
         ParticleBuffer& send = send_sh_[n+upper*4];
         recv.flagn = recv.flagi = recv.flagr = 0;
-        send.npar_ = send.nghost_ = 0;
+        send.npar_ = 0;
         bstatus_send_sh_[n+upper*4] = BoundaryStatus::completed;
 #endif
       }
