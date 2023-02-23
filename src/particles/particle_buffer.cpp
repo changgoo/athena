@@ -22,7 +22,7 @@
 ParticleBuffer::ParticleBuffer() {
   ibuf = NULL;
   rbuf = NULL;
-  nparmax_ = npar_ = 0;
+  nparmax_ = npar_ = nghost_ = 0;
 #ifdef MPI_PARALLEL
   reqn = reqi = reqr = MPI_REQUEST_NULL;
   flagn = flagi = flagr = 0;
@@ -44,7 +44,7 @@ ParticleBuffer::ParticleBuffer(int nparmax0, int nint, int nreal) {
 
     ibuf = NULL;
     rbuf = NULL;
-    nparmax_ = npar_ = 0;
+    nparmax_ = npar_ = nghost_ = 0;
     return;
   }
 
@@ -52,7 +52,7 @@ ParticleBuffer::ParticleBuffer(int nparmax0, int nint, int nreal) {
   nparmax_ = nparmax0;
   ibuf = new int[nint * nparmax_];
   rbuf = new Real[nreal * nparmax_];
-  npar_ = 0;
+  npar_ = nghost_ = 0;
 #ifdef MPI_PARALLEL
   reqn = reqi = reqr = MPI_REQUEST_NULL;
   flagn = flagi = flagr = 0;
@@ -87,10 +87,10 @@ void ParticleBuffer::Reallocate(int new_nparmax, int nint, int nreal) {
     ATHENA_ERROR(msg);
     return;
   }
-  if (new_nparmax < npar_) {
+  if (new_nparmax < npar_ + nghost_) {
     std::stringstream msg;
     msg << "### FATAL ERROR in function [ParticleBuffer::Reallocate]" << std::endl
-        << "new_nparmax = " << new_nparmax << " < npar = " << npar_ << std::endl;
+        << "new_nparmax = " << new_nparmax << " < npar + nghost = " << npar_ + nghost_ << std::endl;
     ATHENA_ERROR(msg);
     return;
   }
@@ -110,9 +110,9 @@ void ParticleBuffer::Reallocate(int new_nparmax, int nint, int nreal) {
   Real *rbuf_new = new Real[nreal * nparmax_];
 
   // Move existing data.
-  if (npar_ > 0) {
-    std::memcpy(ibuf_new, ibuf, nint * npar_ * sizeof(int));
-    std::memcpy(rbuf_new, rbuf, nreal * npar_ * sizeof(Real));
+  if (npar_ + nghost_ > 0) {
+    std::memcpy(ibuf_new, ibuf, nint * (npar_ + nghost_) * sizeof(int));
+    std::memcpy(rbuf_new, rbuf, nreal * (npar_ + nghost_) * sizeof(Real));
   }
 
   // Delete old space.

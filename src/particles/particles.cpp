@@ -46,7 +46,7 @@ MPI_Comm Particles::my_comm = MPI_COMM_NULL;
 
 Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp) :
   ipar(pp->ipar), input_block_name(pp->block_name), partype(pp->partype),
-  npar_(0), nparmax_(1),
+  npar_(0), nghost_(0), nparmax_(1),
   nint(0), nreal(0), naux(0), nwork(0),
   ipid(-1), ish(-1),
   imass(-1), ixp(-1), iyp(-1), izp(-1), ivpx(-1), ivpy(-1), ivpz(-1),

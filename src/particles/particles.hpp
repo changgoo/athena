@@ -156,6 +156,7 @@ friend class ParticleMesh;
   void UpdatePositionIndices();
 
   int npar_;     //!> number of particles
+  int nghost_;     //!> number of ghost particles
   int nparmax_;  //!> maximum number of particles per meshblock
   Real cfl_par_;  //!> CFL number for particles
 
