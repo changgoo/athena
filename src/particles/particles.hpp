@@ -256,7 +256,7 @@ friend class ParticleMesh;
   enum BoundaryStatus bstatus_[56], bstatus_recv_sh_[8];  //!> boundary status
 #ifdef MPI_PARALLEL
   static MPI_Comm my_comm;   //!> my MPI communicator
-  ParticleBuffer send_[56],send_sh_[8];  //!> particle send buffers
+  ParticleBuffer send_[56], send_gh_[56], send_sh_[8];  //!> particle send buffers
   enum BoundaryStatus bstatus_send_sh_[8];  //!> comm. flags
 #endif
 };
