@@ -22,7 +22,7 @@
 ParticleBuffer::ParticleBuffer() {
   ibuf = NULL;
   rbuf = NULL;
-  nparmax_ = npar_ = nghost_ = 0;
+  nparmax_ = npar_ = nghost_ = nint_ = nreal_ = 0;
 #ifdef MPI_PARALLEL
   reqn = reqi = reqr = MPI_REQUEST_NULL;
   flagn = flagi = flagr = 0;
@@ -31,7 +31,7 @@ ParticleBuffer::ParticleBuffer() {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn ParticleBuffer::ParticleBuffer(int nparmax0)
+//! \fn ParticleBuffer::ParticleBuffer(int nparmax0, int nint, int nreal)
 //! \brief initiates a new instance of ParticleBuffer with nparmax = nparmax0.
 
 ParticleBuffer::ParticleBuffer(int nparmax0, int nint, int nreal) {
@@ -50,6 +50,8 @@ ParticleBuffer::ParticleBuffer(int nparmax0, int nint, int nreal) {
 
   // Initialize the instance variables.
   nparmax_ = nparmax0;
+  nint_ = nint;
+  nreal_ = nreal;
   ibuf = new int[nint * nparmax_];
   rbuf = new Real[nreal * nparmax_];
   npar_ = nghost_ = 0;
@@ -61,7 +63,7 @@ ParticleBuffer::ParticleBuffer(int nparmax0, int nint, int nreal) {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn ParticleBuffer::ParticleBuffer(int nparmax0)
+//! \fn ParticleBuffer::ParticleBuffer()
 //! \brief destroys an instance of ParticleBuffer.
 
 ParticleBuffer::~ParticleBuffer() {
@@ -75,7 +77,7 @@ ParticleBuffer::~ParticleBuffer() {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void ParticleBuffer::Reallocate(int new_nparmax)
+//! \fn void ParticleBuffer::Reallocate(int new_nparmax, int nint, int nreal)
 //! \brief reallocates the buffers; the old content is preserved.
 
 void ParticleBuffer::Reallocate(int new_nparmax, int nint, int nreal) {
@@ -106,12 +108,13 @@ void ParticleBuffer::Reallocate(int new_nparmax, int nint, int nreal) {
 #endif
 
   // Allocate new space.
-  nparmax_ = new_nparmax;
-  int *ibuf_new = new int[nint * nparmax_];
-  Real *rbuf_new = new Real[nreal * nparmax_];
+  nint_ = nint;
+  nreal_ = nreal;
+  int *ibuf_new = new int[nint * new_nparmax];
+  Real *rbuf_new = new Real[nreal * new_nparmax];
 
   // Move existing data.
-  if (npartot > 0) {
+  if ((npartot > 0)&&(nparmax_ > 0)) {
     std::memcpy(ibuf_new, ibuf, nint * npartot * sizeof(int));
     std::memcpy(rbuf_new, rbuf, nreal * npartot * sizeof(Real));
   }
@@ -121,4 +124,56 @@ void ParticleBuffer::Reallocate(int new_nparmax, int nint, int nreal) {
   if (rbuf != NULL) delete [] rbuf;
   ibuf = ibuf_new;
   rbuf = rbuf_new;
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void ParticleBuffer::Append(const ParticleBuffer& pbin)
+//! \brief Append another ParticleBuffer to this
+
+void ParticleBuffer::Append(const ParticleBuffer& pb) {
+  if (pb.npar_ + pb.nghost_ == 0)
+    // nothing to append
+    return;
+  if ((nghost_ > 0)&&(pb.npar_ > 0)) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in function [ParticleBuffer::Append]" << std::endl
+        << "You are trying to append active particles on top of ghost particles; "
+        << "This is prohibited." << std::endl;
+    ATHENA_ERROR(msg);
+    return;
+  }
+  if (nparmax_ == 0) {
+    // if this buffer is not allocated, allocate it using incoming buffer info
+    Reallocate(1, pb.nint_, pb.nreal_);
+  } else if ((nint_ != pb.nint_)||(nreal_ != pb.nreal_)) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in function [ParticleBuffer::Append]" << std::endl
+        << "Cannot append a ParticleBuffer with different nint or nreal." << std::endl
+        << "This buffer: nparmax = " << nparmax_ << ", npar = " << npar_
+            << ", nghost = " << nghost_ << ", nint = " << nint_
+            << ", nreal = "<< nreal_ << std::endl
+        << "buffer to be appended: nparmax = " << pb.nparmax_ << ", npar = " << pb.npar_
+            << ", nghost = " << pb.nghost_ << ", nint = " << pb.nint_
+            << ", nreal = " << pb.nreal_ << std::endl;
+    ATHENA_ERROR(msg);
+    return;
+  }
+
+  // check size
+  int new_npartot = npar_ + nghost_ + pb.npar_ + pb.nghost_;
+  if (new_npartot > nparmax_)
+    Reallocate(new_npartot, nint_, nreal_);
+
+  int offset, cnt;
+  // append int buffer
+  offset = nint_*(npar_ + nghost_);
+  cnt = pb.nint_*(pb.npar_ + pb.nghost_)*sizeof(int);
+  std::memcpy(ibuf + offset, pb.ibuf, cnt);
+  // append real buffer
+  offset = nreal_*(npar_ + nghost_);
+  cnt = pb.nreal_*(pb.npar_ + pb.nghost_)*sizeof(Real);
+  std::memcpy(rbuf + offset, pb.rbuf, cnt);
+  // update number of particles
+  npar_ += pb.npar_;
+  nghost_ += pb.nghost_;
 }

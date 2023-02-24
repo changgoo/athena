@@ -31,6 +31,7 @@ friend class Particles;
 
   // Instance method
   void Reallocate(int new_nparmax, int nint, int nreal);
+  void Append(const ParticleBuffer& pbin);
 
  protected:
   // Instance variables
@@ -38,6 +39,7 @@ friend class Particles;
   int* ibuf;   //!> ptr to integer buffer
   Real* rbuf;   //!> ptr to real buffer
   int nparmax_;  //!> maximum number of particles
+  int nint_, nreal_; //!> number of int and real properties
   int npar_;     //!> actual number of particles in the buffer
   int nghost_;     //!> number of ghost particles in the buffer
 #ifdef MPI_PARALLEL
