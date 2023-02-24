@@ -206,7 +206,7 @@ friend class ParticleMesh;
 
   // boundary conditions (implemented in particles_bvals.cpp)
   void ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3);
-  void FlushReceiveBuffer(ParticleBuffer& recv);
+  void FlushReceiveBuffer(ParticleBuffer& recv, bool ghost=false);
   struct Neighbor* FindTargetNeighbor(
       int ox1, int ox2, int ox3, int xi1, int xi2, int xi3);
   void ApplyBoundaryConditionsShear(int k, Real &x1, Real &x2, Real &x3);
