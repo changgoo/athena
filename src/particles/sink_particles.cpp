@@ -49,7 +49,7 @@ void SinkParticles::InteractWithMesh() {
 //! \brief accrete gas from neighboring cells
 
 void SinkParticles::AccreteMass() {
-  // loop over all particles
+  // loop over all active particles
   for (int idx=0; idx<npar_; ++idx) {
     // Determine the dM_sink accreted by the sink particle.
     // Because we reset the density in the control volume by extrapolating from the
@@ -168,6 +168,19 @@ void SinkParticles::AccreteMass() {
     vpz(idx) = (mass(idx)*vpz(idx) + dM3)*minv;
     mass(idx) += dm;
   } // end of the loop over particles
+
+  // loop over all ghost particles and reset the control volume
+  for (int idx=npar_; idx<npar_+nghost_; ++idx) {
+    // find the indices of the particle-containing cell.
+    int ip, jp, kp, ip0, jp0, kp0;
+    GridIndex(xp(idx), yp(idx), zp(idx), ip, jp, kp);
+    GridIndex(xp0(idx), yp0(idx), zp0(idx), ip0, jp0, kp0);
+    AthenaArray<Real> &cons = pmy_block->phydro->u;
+
+    SetGhostRegion(cons, ip, jp, kp);
+    if ((ip != ip0) || (jp != jp0) || (kp != kp0))
+      SetGhostRegion(cons, ip0, jp0, kp0);
+  }
 }
 
 //--------------------------------------------------------------------------------------
