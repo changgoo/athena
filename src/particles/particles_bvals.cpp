@@ -257,9 +257,9 @@ void Particles::SendToNeighbors() {
       if (!active2_) ox2 = 0;
       if (!active3_) ox3 = 0;
       // Find the all neighbor blocks to send a particle to.
-      for (int iox1=0; iox1<=ox1; ++iox1) {
-        for (int iox2=0; iox2<=ox2; ++iox2) {
-          for (int iox3=0; iox3<=ox3; ++iox3) {
+      for (int iox1=0; std::abs(iox1)<=std::abs(ox1); iox1+=SIGN(ox1)) {
+        for (int iox2=0; std::abs(iox2)<=std::abs(ox2); iox2+=SIGN(ox2)) {
+          for (int iox3=0; std::abs(iox3)<=std::abs(ox3); iox3+=SIGN(ox3)) {
             if ((iox1==0)&&(iox2==0)&&(iox3==0)) continue;
             Neighbor *pn = FindTargetNeighbor(iox1, iox2, iox3, x1i, x2i, x3i);
             NeighborBlock *pnb = pn->pnb;
