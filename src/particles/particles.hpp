@@ -205,7 +205,7 @@ friend class ParticleMesh;
   void OutputOneParticle(std::ostream &os, int k, bool header);
 
   // boundary conditions (implemented in particles_bvals.cpp)
-  void ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3);
+  void ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3, bool ghost=false);
   void FlushReceiveBuffer(ParticleBuffer& recv, bool ghost=false);
   struct Neighbor* FindTargetNeighbor(
       int ox1, int ox2, int ox3, int xi1, int xi2, int xi3);

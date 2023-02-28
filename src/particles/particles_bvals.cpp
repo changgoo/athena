@@ -103,9 +103,9 @@ void Particles::ClearBoundary() {
       ParticleBuffer& recv = recv_[nb.bufid];
       recv.flagn = recv.flagi = recv.flagr = 0;
       send_[nb.bufid].npar_ = send_[nb.bufid].nghost_ = 0;
-      send_gh_[nb.bufid].npar_ = send_gh_[nb.bufid].nghost_ = 0;
     }
 #endif
+    send_gh_[nb.bufid].npar_ = send_gh_[nb.bufid].nghost_ = 0;
   }
 
   // clear boundary information for shear
@@ -265,11 +265,6 @@ void Particles::SendToNeighbors() {
             NeighborBlock *pnb = pn->pnb;
             if (pnb == NULL) {
               // do nothing if there is no neighboring block
-              ++k;
-              continue;
-            }
-            // No need to send if back to the same block.
-            if (pnb->snb.gid == pmy_block->gid) {
               ++k;
               continue;
             }
@@ -488,7 +483,7 @@ bool Particles::ReceiveFromNeighbors() {
 //! \todo (ccyang):
 //! - implement nonperiodic boundary conditions.
 
-void Particles::ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3) {
+void Particles::ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3, bool ghost) {
   bool flag = false;
   RegionSize& mesh_size = pmy_mesh_->mesh_size;
   Coordinates *pcoord = pmy_block->pcoord;
@@ -507,15 +502,31 @@ void Particles::ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3) {
   pcoord->CartesianToMeshCoordsVector(xp0(k), yp0(k), zp0(k),
                                       vpx0(k), vpy0(k), vpz0(k), vp10, vp20, vp30);
 
+  Real x1min(mesh_size.x1min), x1max(mesh_size.x1max);
+  Real x2min(mesh_size.x2min), x2max(mesh_size.x2max);
+  Real x3min(mesh_size.x3min), x3max(mesh_size.x3max);
+  // For ghost particles, periodic boundary condition should be applied
+  // when they enter the ghost zones of "neighbors".
+  // TODO Mesh refinement
+  if (ghost) {
+    x1min += NGHOST*(pcoord->GetEdge1Length(0,0,0));
+    x1max -= NGHOST*(pcoord->GetEdge1Length(0,0,0));
+    x2min += NGHOST*(pcoord->GetEdge2Length(0,0,0));
+    x2max -= NGHOST*(pcoord->GetEdge2Length(0,0,0));
+    x3min += NGHOST*(pcoord->GetEdge3Length(0,0,0));
+    x3max -= NGHOST*(pcoord->GetEdge3Length(0,0,0));
+  }
+
   // Apply periodic boundary conditions in X1.
-  if (x1 < mesh_size.x1min) {
+  if (x1 < x1min) {
     // Inner x1
     x1 += mesh_size.x1len;
     x10 += mesh_size.x1len;
     // the particle has crossed shear boundary to the left
     if (pmy_mesh_->shear_periodic) sh(k) = -1;
     flag = true;
-  } else if (x1 >= mesh_size.x1max) {
+  // TODO SMOON is this boundary case (i.e., x1=x1max) consistent with other part?
+  } else if (x1 >= x1max) {
     // Outer x1
     x1 -= mesh_size.x1len;
     x10 -= mesh_size.x1len;
@@ -525,12 +536,12 @@ void Particles::ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3) {
   }
 
   // Apply periodic boundary conditions in X2.
-  if (x2 < mesh_size.x2min) {
+  if (x2 < x2min) {
     // Inner x2
     x2 += mesh_size.x2len;
     x20 += mesh_size.x2len;
     flag = true;
-  } else if (x2 >= mesh_size.x2max) {
+  } else if (x2 >= x2max) {
     // Outer x2
     x2 -= mesh_size.x2len;
     x20 -= mesh_size.x2len;
@@ -538,12 +549,12 @@ void Particles::ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3) {
   }
 
   // Apply periodic boundary conditions in X3.
-  if (x3 < mesh_size.x3min) {
+  if (x3 < x3min) {
     // Inner x3
     x3 += mesh_size.x3len;
     x30 += mesh_size.x3len;
     flag = true;
-  } else if (x3 >= mesh_size.x3max) {
+  } else if (x3 >= x3max) {
     // Outer x3
     x3 -= mesh_size.x3len;
     x30 -= mesh_size.x3len;
@@ -628,6 +639,8 @@ void Particles::FlushReceiveBuffer(ParticleBuffer& recv, bool ghost) {
   }
 
   // Find their position indices.
+  // Need to do this because we have applied periodic boundary conditions only to
+  // particle positions, not to position indices.
   AthenaArray<Real> xps, yps, zps, xi1s, xi2s, xi3s;
   xps.InitWithShallowSlice(xp, 1, npartot, nprecv);
   yps.InitWithShallowSlice(yp, 1, npartot, nprecv);
@@ -635,6 +648,13 @@ void Particles::FlushReceiveBuffer(ParticleBuffer& recv, bool ghost) {
   xi1s.InitWithShallowSlice(xi1_, 1, npartot, nprecv);
   xi2s.InitWithShallowSlice(xi2_, 1, npartot, nprecv);
   xi3s.InitWithShallowSlice(xi3_, 1, npartot, nprecv);
+  if (ghost) {
+    Real x1, x2, x3;
+    // apply periodic boundary conditions here for ghost particles
+    for (int k = npartot; k < npartot + nprecv; ++k) {
+      ApplyBoundaryConditions(k, x1, x2, x3, true);
+    }
+  }
   UpdatePositionIndices(nprecv, xps, yps, zps, xi1s, xi2s, xi3s);
 
   // Clear the receive buffers.
