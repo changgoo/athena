@@ -102,17 +102,17 @@ void Particles::ClearBoundary() {
     if (nb.snb.rank != Globals::my_rank) {
       ParticleBuffer& recv = recv_[nb.bufid];
       recv.flagn = recv.flagi = recv.flagr = 0;
-      send_[nb.bufid].npar_ = send_[nb.bufid].nghost_ = 0;
+      send_[nb.bufid].npar_ = send_[nb.bufid].npar_gh_ = 0;
     }
 #endif
-    send_gh_[nb.bufid].npar_ = send_gh_[nb.bufid].nghost_ = 0;
+    send_gh_[nb.bufid].npar_ = send_gh_[nb.bufid].npar_gh_ = 0;
   }
 
   // clear boundary information for shear
   ClearBoundaryShear();
 
   // purge all ghost particles
-  nghost_ = 0;
+  npar_gh_ = 0;
 }
 
 //--------------------------------------------------------------------------------------
@@ -329,7 +329,7 @@ void Particles::SendToNeighbors() {
       ParticleBuffer& recv = ppar->recv_[nb.targetid];
       // Append ghost particles in the target receive buffer
       recv.Append(send_gh_[nb.bufid]);
-      int npartot = recv.npar_ + recv.nghost_;
+      int npartot = recv.npar_ + recv.npar_gh_;
       ppar->bstatus_[nb.targetid] = npartot > 0 ? BoundaryStatus::arrived
                                                 : BoundaryStatus::completed;
     } else {
@@ -349,10 +349,10 @@ void Particles::SendToNeighbors() {
 
 #ifdef MPI_PARALLEL
 void Particles::SendParticleBuffer(ParticleBuffer& send, int dst) {
-  int npsend = send.npar_ + send.nghost_;
+  int npsend = send.npar_ + send.npar_gh_;
   int sendtag = send.tag;
   send.nparbuf[0] = send.npar_;
-  send.nparbuf[1] = send.nghost_;
+  send.nparbuf[1] = send.npar_gh_;
   MPI_Send(send.nparbuf, 2, MPI_INT, dst, sendtag, my_comm);
   if (npsend > 0) {
     MPI_Request req = MPI_REQUEST_NULL;
@@ -376,7 +376,7 @@ void Particles::ReceiveParticleBuffer(int nb_rank, ParticleBuffer& recv,
                                       enum BoundaryStatus& bstatus) {
   // Communicate with neighbor processes.
   if (nb_rank != Globals::my_rank && bstatus == BoundaryStatus::waiting) {
-    int nprecv = recv.npar_ + recv.nghost_;
+    int nprecv = recv.npar_ + recv.npar_gh_;
     if (!recv.flagn) {
       // Get the number of incoming particles.
       if (recv.reqn == MPI_REQUEST_NULL)
@@ -385,8 +385,8 @@ void Particles::ReceiveParticleBuffer(int nb_rank, ParticleBuffer& recv,
         MPI_Test(&recv.reqn, &recv.flagn, MPI_STATUS_IGNORE);
       if (recv.flagn) { // if the message is arrived
         recv.npar_ = recv.nparbuf[0];
-        recv.nghost_ = recv.nparbuf[1];
-        nprecv = recv.npar_ + recv.nghost_;
+        recv.npar_gh_ = recv.nparbuf[1];
+        nprecv = recv.npar_ + recv.npar_gh_;
         if (nprecv > 0) {
           // Check the buffer size.
           if (nprecv > recv.nparmax_) {
@@ -428,10 +428,10 @@ void Particles::ReceiveParticleBuffer(int nb_rank, ParticleBuffer& recv,
 //!        if all receives are completed.
 
 bool Particles::ReceiveFromNeighbors() {
-  if (nghost_ > 0) {
+  if (npar_gh_ > 0) {
     std::stringstream msg;
     msg << "### FATAL ERROR in function [ParticleBuffer::FlushReceiveBuffer]" << std::endl
-        << "There are already " << nghost_ << " ghost particles before receive."
+        << "There are already " << npar_gh_ << " ghost particles before receive."
         << " Something must be wrong." << std::endl;
     ATHENA_ERROR(msg);
     return false;
@@ -607,7 +607,7 @@ struct Neighbor* Particles::FindTargetNeighbor(
 //!        If ghost=true(false), add ghost(active) particles.
 
 void Particles::FlushReceiveBuffer(ParticleBuffer& recv, bool ghost) {
-  if ((nghost_ > 0)&&(not ghost)) {
+  if ((npar_gh_ > 0)&&(not ghost)) {
     std::stringstream msg;
     msg << "### FATAL ERROR in function [ParticleBuffer::FlushReceiveBuffer]" << std::endl
         << "You are trying to flush active particles on top of ghost particles;"
@@ -615,8 +615,8 @@ void Particles::FlushReceiveBuffer(ParticleBuffer& recv, bool ghost) {
     ATHENA_ERROR(msg);
     return;
   }
-  int npartot = npar_ + nghost_; // will be equal to npar_ when ghost=false
-  int nprecv = ghost ? recv.nghost_ : recv.npar_;
+  int npartot = npar_ + npar_gh_; // will be equal to npar_ when ghost=false
+  int nprecv = ghost ? recv.npar_gh_ : recv.npar_;
   int *pi = recv.ibuf;
   Real *pr = recv.rbuf;
   if (ghost) {
@@ -659,8 +659,8 @@ void Particles::FlushReceiveBuffer(ParticleBuffer& recv, bool ghost) {
 
   // Clear the receive buffers.
   if (ghost) {
-    nghost_ += recv.nghost_;
-    recv.nghost_ = 0;
+    npar_gh_ += recv.npar_gh_;
+    recv.npar_gh_ = 0;
   } else {
     npar_ += recv.npar_;
     recv.npar_ = 0;
@@ -674,7 +674,7 @@ void Particles::FlushReceiveBuffer(ParticleBuffer& recv, bool ghost) {
 //!        If ghost=True, load as a ghost particle.
 
 void Particles::LoadParticleBuffer(ParticleBuffer *ppb, int k, bool ghost) {
-  int npartot = ppb->npar_ + ppb->nghost_;
+  int npartot = ppb->npar_ + ppb->npar_gh_;
   // Check the buffer size.
   if (npartot >= ppb->nparmax_)
     ppb->Reallocate((ppb->nparmax_ > 0) ? 2 * ppb->nparmax_ : 1, nint_buf, nreal_buf);
@@ -689,8 +689,8 @@ void Particles::LoadParticleBuffer(ParticleBuffer *ppb, int k, bool ghost) {
   for (int j = 0; j < naux; ++j)
     *pr++ = auxprop(j,k);
   if (ghost) {
-    ++ppb->nghost_;
-  } else if (ppb->nghost_ > 0) {
+    ++ppb->npar_gh_;
+  } else if (ppb->npar_gh_ > 0) {
     std::stringstream msg;
     msg << "### FATAL ERROR in function [Particles::LoadParticleBuffer]"
         << "You are trying to load active particles on top of ghost particles."
@@ -978,7 +978,7 @@ void Particles::ClearBoundaryShear() {
         ParticleBuffer& recv = recv_sh_[n+upper*4];
         ParticleBuffer& send = send_sh_[n+upper*4];
         recv.flagn = recv.flagi = recv.flagr = 0;
-        send.npar_ = send.nghost_ = 0;
+        send.npar_ = send.npar_gh_ = 0;
         bstatus_send_sh_[n+upper*4] = BoundaryStatus::completed;
 #endif
       }

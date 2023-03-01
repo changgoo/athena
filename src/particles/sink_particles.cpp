@@ -170,7 +170,7 @@ void SinkParticles::AccreteMass() {
   } // end of the loop over particles
 
   // loop over all ghost particles and reset the control volume
-  for (int idx=npar_; idx<npar_+nghost_; ++idx) {
+  for (int idx=npar_; idx<npar_+npar_gh_; ++idx) {
     // find the indices of the particle-containing cell.
     int ip, jp, kp, ip0, jp0, kp0;
     GridIndex(xp(idx), yp(idx), zp(idx), ip, jp, kp);
