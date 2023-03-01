@@ -13,6 +13,7 @@
 #include "../coordinates/coordinates.hpp"
 #include "../gravity/gravity.hpp"
 #include "../hydro/hydro.hpp"
+#include "../reconstruct/reconstruction.hpp"
 #include "particles.hpp"
 
 int sgn(int val) {
@@ -24,7 +25,24 @@ int sgn(int val) {
 //! \brief constructs a SinkParticles instance.
 
 SinkParticles::SinkParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp)
-  : StarParticles(pmb, pin, pp) {}
+  : StarParticles(pmb, pin, pp) {
+  int xorder = pmb->precon->xorder;
+  if (xorder + rctrl_ != nghost_) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in SinkParticles constructor" << std::endl
+      << "Control volume radius = " << rctrl_ << " plus the required number of ghost"
+      << " cells for hydro/MHD = " << xorder << " does not match with the number of"
+      << " ghost cells for ghost particle exchange = " << nghost_ << std::endl;
+    ATHENA_ERROR(msg);
+  }
+  if (xorder + 1 > NGHOST) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in SinkParticles constructor" << std::endl
+      << "At least " << xorder + 1 << " ghost cells are required to extrapolate the"
+      << " control volume." << std::endl;
+    ATHENA_ERROR(msg);
+  }
+}
 
 //--------------------------------------------------------------------------------------
 //! \fn SinkParticles::~SinkParticles()

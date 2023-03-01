@@ -244,9 +244,9 @@ void Particles::SendToNeighbors() {
     if (ox1 == 0 && ox2 == 0 && ox3 == 0) {
       // This particle is inside the active zone.
       // Check if a particle is inside the ghost zones of neighbor blocks.
-      ox1 = CheckSide(x1i, IS+NGHOST, IE-NGHOST),
-      ox2 = CheckSide(x2i, JS+NGHOST, JE-NGHOST),
-      ox3 = CheckSide(x3i, KS+NGHOST, KE-NGHOST);
+      ox1 = CheckSide(x1i, IS+nghost_, IE-nghost_),
+      ox2 = CheckSide(x2i, JS+nghost_, JE-nghost_),
+      ox3 = CheckSide(x3i, KS+nghost_, KE-nghost_);
       if (ox1 == 0 && ox2 == 0 && ox3 == 0) {
         // do nothing if a particle does not overlap with any ghost zone of neighbors
         ++k;
@@ -509,12 +509,12 @@ void Particles::ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3, boo
   // when they enter the ghost zones of "neighbors".
   // TODO Mesh refinement
   if (ghost) {
-    x1min += NGHOST*(pcoord->GetEdge1Length(0,0,0));
-    x1max -= NGHOST*(pcoord->GetEdge1Length(0,0,0));
-    x2min += NGHOST*(pcoord->GetEdge2Length(0,0,0));
-    x2max -= NGHOST*(pcoord->GetEdge2Length(0,0,0));
-    x3min += NGHOST*(pcoord->GetEdge3Length(0,0,0));
-    x3max -= NGHOST*(pcoord->GetEdge3Length(0,0,0));
+    x1min += nghost_*(pcoord->GetEdge1Length(0,0,0));
+    x1max -= nghost_*(pcoord->GetEdge1Length(0,0,0));
+    x2min += nghost_*(pcoord->GetEdge2Length(0,0,0));
+    x2max -= nghost_*(pcoord->GetEdge2Length(0,0,0));
+    x3min += nghost_*(pcoord->GetEdge3Length(0,0,0));
+    x3max -= nghost_*(pcoord->GetEdge3Length(0,0,0));
   }
 
   // Apply periodic boundary conditions in X1.

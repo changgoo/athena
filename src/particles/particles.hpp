@@ -48,12 +48,13 @@ struct Neighbor {
 //! \brief container for parameters read from `<particle?>` block in the input file
 
 struct ParticleParameters {
-  int block_number, ipar;
+  int block_number, ipar, nghost;
   bool table_output, gravity;
   std::string block_name;
   std::string partype;
   // TODO(SMOON) Add nhistory variable
-  ParticleParameters() : block_number(0), ipar(-1), table_output(false), gravity(false) {}
+  ParticleParameters() : block_number(0), ipar(-1), nghost(0), table_output(false),
+                         gravity(false) {}
 };
 
 //--------------------------------------------------------------------------------------
@@ -158,6 +159,7 @@ friend class ParticleMesh;
   int npar_;     //!> number of particles
   int npar_gh_;     //!> number of ghost particles
   int nparmax_;  //!> maximum number of particles per meshblock
+  const int nghost_; //!> number of ghost cells within which ghost particles are communicated
   Real cfl_par_;  //!> CFL number for particles
 
   ParticleGravity *ppgrav; //!> ptr to particle-gravity
