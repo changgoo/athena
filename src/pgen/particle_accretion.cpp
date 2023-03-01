@@ -72,7 +72,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   //TODO retire this input parameter; implement sink creation
   rctrl = pin->GetOrAddReal("problem","rctrl",1.5)*pcoord->dx1f(0);
   const Real cs = peos->GetIsoSoundSpeed();
-  Real vadv = pin->GetOrAddReal("problem","vadv",0)*cs;
+  Real vadvx = pin->GetOrAddReal("problem","vadvx",0)*cs;
+  Real vadvy = pin->GetOrAddReal("problem","vadvy",0)*cs;
+  Real vadvz = pin->GetOrAddReal("problem","vadvz",0)*cs;
   const Real density_scale = 1.0/pgrav->four_pi_G/SQR(t0);
   const Real velocity_scale = cs;
   const Real xi0 = 10; // initial location to integrate shu77 ODE
@@ -115,9 +117,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         r = std::min(r, rmax); // pressure confinement - constant beyond the cloud radius
         if (r <= rctrl) {
           phydro->u(IDN,k,j,i) = dctrl;
-          phydro->u(IM1,k,j,i) = dctrl*vadv;
-          phydro->u(IM2,k,j,i) = 0.0;
-          phydro->u(IM3,k,j,i) = 0.0;
+          phydro->u(IM1,k,j,i) = dctrl*vadvx;
+          phydro->u(IM2,k,j,i) = dctrl*vadvy;
+          phydro->u(IM3,k,j,i) = dctrl*vadvz;
         } else {
           set_shu77_ic(res, xi0, A);
           xi = SimilarityVar(r, t0, cs);
@@ -125,9 +127,9 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           Real rho = density_scale*res[0];
           Real vr = velocity_scale*res[1];
           phydro->u(IDN,k,j,i) = rho;
-          phydro->u(IM1,k,j,i) = rho*(vr*sinth*cosph + vadv);
-          phydro->u(IM2,k,j,i) = rho*(vr*sinth*sinph);
-          phydro->u(IM3,k,j,i) = rho*(vr*costh);
+          phydro->u(IM1,k,j,i) = rho*(vr*sinth*cosph + vadvx);
+          phydro->u(IM2,k,j,i) = rho*(vr*sinth*sinph + vadvy);
+          phydro->u(IM3,k,j,i) = rho*(vr*costh + vadvz);
         }
         if (NON_BAROTROPIC_EOS) {
           std::stringstream msg;
@@ -157,7 +159,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     boost::numeric::odeint::integrate(shu77, res, xi0, xi, step);
     Real mstar = SQR(xi)*res[0]*(xi - res[1]); // Eq. (10) in Shu (1977)
     mstar *= std::pow(cs,3)*t0/pgrav->gconst; // Eq. (8) in Shu (1977)
-    ppar->AddOneParticle(mstar,x0,y0,z0,vadv,0,0);
+    ppar->AddOneParticle(mstar,x0,y0,z0,vadvx,vadvy,vadvz);
     ppar->ToggleParHstOutFlag();
   }
 }
