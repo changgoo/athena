@@ -486,6 +486,7 @@ bool Particles::ReceiveFromNeighbors() {
 void Particles::ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3, bool ghost) {
   bool flag = false;
   RegionSize& mesh_size = pmy_mesh_->mesh_size;
+  RegionSize& block_size = pmy_block->block_size;
   Coordinates *pcoord = pmy_block->pcoord;
 
   // Find the mesh coordinates.
@@ -501,64 +502,97 @@ void Particles::ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3, boo
                                       vpx(k), vpy(k), vpz(k), vp1, vp2, vp3);
   pcoord->CartesianToMeshCoordsVector(xp0(k), yp0(k), zp0(k),
                                       vpx0(k), vpy0(k), vpz0(k), vp10, vp20, vp30);
-
-  Real x1min(mesh_size.x1min), x1max(mesh_size.x1max);
-  Real x2min(mesh_size.x2min), x2max(mesh_size.x2max);
-  Real x3min(mesh_size.x3min), x3max(mesh_size.x3max);
-  // For ghost particles, periodic boundary condition should be applied
-  // when they enter the ghost zones of "neighbors".
-  // TODO Mesh refinement
   if (ghost) {
-    x1min += nghost_*(pcoord->GetEdge1Length(0,0,0));
-    x1max -= nghost_*(pcoord->GetEdge1Length(0,0,0));
-    x2min += nghost_*(pcoord->GetEdge2Length(0,0,0));
-    x2max -= nghost_*(pcoord->GetEdge2Length(0,0,0));
-    x3min += nghost_*(pcoord->GetEdge3Length(0,0,0));
-    x3max -= nghost_*(pcoord->GetEdge3Length(0,0,0));
-  }
-
-  // Apply periodic boundary conditions in X1.
-  if (x1 < x1min) {
-    // Inner x1
-    x1 += mesh_size.x1len;
-    x10 += mesh_size.x1len;
-    // the particle has crossed shear boundary to the left
-    if (pmy_mesh_->shear_periodic) sh(k) = -1;
-    flag = true;
-  // TODO SMOON is this boundary case (i.e., x1=x1max) consistent with other part?
-  } else if (x1 >= x1max) {
-    // Outer x1
-    x1 -= mesh_size.x1len;
-    x10 -= mesh_size.x1len;
-    // the particle has crossed shear boundary to the right
-    if (pmy_mesh_->shear_periodic) sh(k) = 1;
-    flag = true;
-  }
-
-  // Apply periodic boundary conditions in X2.
-  if (x2 < x2min) {
-    // Inner x2
-    x2 += mesh_size.x2len;
-    x20 += mesh_size.x2len;
-    flag = true;
-  } else if (x2 >= x2max) {
-    // Outer x2
-    x2 -= mesh_size.x2len;
-    x20 -= mesh_size.x2len;
-    flag = true;
-  }
-
-  // Apply periodic boundary conditions in X3.
-  if (x3 < x3min) {
-    // Inner x3
-    x3 += mesh_size.x3len;
-    x30 += mesh_size.x3len;
-    flag = true;
-  } else if (x3 >= x3max) {
-    // Outer x3
-    x3 -= mesh_size.x3len;
-    x30 -= mesh_size.x3len;
-    flag = true;
+    // For ghost particles, periodic boundary condition should be applied
+    // when they enter the ghost zones of "neighbors".
+    // TODO Mesh refinement
+    Real x1min = mesh_size.x1min + nghost_*(pcoord->GetEdge1Length(0,0,0));
+    Real x1max = mesh_size.x1max - nghost_*(pcoord->GetEdge1Length(0,0,0));
+    Real x2min = mesh_size.x2min + nghost_*(pcoord->GetEdge2Length(0,0,0));
+    Real x2max = mesh_size.x2max - nghost_*(pcoord->GetEdge2Length(0,0,0));
+    Real x3min = mesh_size.x3min + nghost_*(pcoord->GetEdge3Length(0,0,0));
+    Real x3max = mesh_size.x3max - nghost_*(pcoord->GetEdge3Length(0,0,0));
+    // Apply periodic boundary conditions in X1.
+    if ((x1 < x1min)&&(x1 < block_size.x1min)) {
+      // Inner x1
+      x1 += mesh_size.x1len;
+      x10 += mesh_size.x1len;
+      // the particle has crossed shear boundary to the left
+      if (pmy_mesh_->shear_periodic) sh(k) = -1;
+      flag = true;
+    } else if ((x1 >= x1max)&&(x1 >= block_size.x1max)) {
+      // Outer x1
+      x1 -= mesh_size.x1len;
+      x10 -= mesh_size.x1len;
+      // the particle has crossed shear boundary to the right
+      if (pmy_mesh_->shear_periodic) sh(k) = 1;
+      flag = true;
+    }
+    // Apply periodic boundary conditions in X2.
+    if ((x2 < x2min)&&(x2 < block_size.x2min)) {
+      // Inner x2
+      x2 += mesh_size.x2len;
+      x20 += mesh_size.x2len;
+      flag = true;
+    } else if ((x2 >= x2max)&&(x2 >= block_size.x2max)) {
+      // Outer x2
+      x2 -= mesh_size.x2len;
+      x20 -= mesh_size.x2len;
+      flag = true;
+    }
+    // Apply periodic boundary conditions in X3.
+    if ((x3 < x3min)&&(x3 < block_size.x3min)) {
+      // Inner x3
+      x3 += mesh_size.x3len;
+      x30 += mesh_size.x3len;
+      flag = true;
+    } else if ((x3 >= x3max)&&(x3 >= block_size.x3max)) {
+      // Outer x3
+      x3 -= mesh_size.x3len;
+      x30 -= mesh_size.x3len;
+      flag = true;
+    }
+  } else {
+    // Apply periodic boundary conditions in X1.
+    if (x1 < mesh_size.x1min) {
+      // Inner x1
+      x1 += mesh_size.x1len;
+      x10 += mesh_size.x1len;
+      // the particle has crossed shear boundary to the left
+      if (pmy_mesh_->shear_periodic) sh(k) = -1;
+      flag = true;
+    } else if (x1 >= mesh_size.x1max) {
+      // Outer x1
+      x1 -= mesh_size.x1len;
+      x10 -= mesh_size.x1len;
+      // the particle has crossed shear boundary to the right
+      if (pmy_mesh_->shear_periodic) sh(k) = 1;
+      flag = true;
+    }
+    // Apply periodic boundary conditions in X2.
+    if (x2 < mesh_size.x2min) {
+      // Inner x2
+      x2 += mesh_size.x2len;
+      x20 += mesh_size.x2len;
+      flag = true;
+    } else if (x2 >= mesh_size.x2max) {
+      // Outer x2
+      x2 -= mesh_size.x2len;
+      x20 -= mesh_size.x2len;
+      flag = true;
+    }
+    // Apply periodic boundary conditions in X3.
+    if (x3 < mesh_size.x3min) {
+      // Inner x3
+      x3 += mesh_size.x3len;
+      x30 += mesh_size.x3len;
+      flag = true;
+    } else if (x3 >= mesh_size.x3max) {
+      // Outer x3
+      x3 -= mesh_size.x3len;
+      x30 -= mesh_size.x3len;
+      flag = true;
+    }
   }
 
   if (flag) {
