@@ -407,7 +407,7 @@ class SinkParticles : public StarParticles {
   // Methods (implementation)
 //  void AssignShorthandsForDerived() override;
   void AccreteMass();
-  void SetGhostRegion(AthenaArray<Real> &cons, int ip, int jp, int kp);
+  void SetControlVolume(AthenaArray<Real> &cons, int ip, int jp, int kp);
 
   // Data members
   const int rctrl_ = 1; // Extent of the control volume. The side length of the control

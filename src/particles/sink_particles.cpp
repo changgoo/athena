@@ -117,7 +117,7 @@ void SinkParticles::AccreteMass() {
       }
     }
     // Step 1(b). Reset the density inside the control volume by extrapolation
-    SetGhostRegion(cons, ip, jp, kp);
+    SetControlVolume(cons, ip, jp, kp);
     // Step 1(c). Calculate M^{n+1}_ctrl
     Real mext{0.}, M1ext{0.}, M2ext{0.}, M3ext{0.};
     for (int k=kp-rctrl_; k<=kp+rctrl_; ++k) {
@@ -158,7 +158,7 @@ void SinkParticles::AccreteMass() {
         }
       }
       // Step 2(b). Reset the density inside the control volume by extrapolation
-      SetGhostRegion(cons, ip0, jp0, kp0);
+      SetControlVolume(cons, ip0, jp0, kp0);
       // Step 2(c). Calculate M^{n+1}_ctrl
       Real mext{0.}, M1ext{0.}, M2ext{0.}, M3ext{0.};
       for (int k=kp0-rctrl_; k<=kp0+rctrl_; ++k) {
@@ -195,17 +195,17 @@ void SinkParticles::AccreteMass() {
     GridIndex(xp0(idx), yp0(idx), zp0(idx), ip0, jp0, kp0);
     AthenaArray<Real> &cons = pmy_block->phydro->u;
 
-    SetGhostRegion(cons, ip, jp, kp);
+    SetControlVolume(cons, ip, jp, kp);
     if ((ip != ip0) || (jp != jp0) || (kp != kp0))
-      SetGhostRegion(cons, ip0, jp0, kp0);
+      SetControlVolume(cons, ip0, jp0, kp0);
   }
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn SinkParticles::SetGhostRegion(AthenaArray<Real> &cons, int ip, int jp, int kp)
+//! \fn SinkParticles::SetControlVolume(AthenaArray<Real> &cons, int ip, int jp, int kp)
 //! \brief set control volume quantities by extrapolating from neighboring active cells.
 
-void SinkParticles::SetGhostRegion(AthenaArray<Real> &cons, int ip, int jp, int kp) {
+void SinkParticles::SetControlVolume(AthenaArray<Real> &cons, int ip, int jp, int kp) {
   // Do extrapolation using "face-neighbors", that is, neighboring cells
   // that are outside the control volume and share a cell face with the
   // cell being extrapolated.
