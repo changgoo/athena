@@ -114,7 +114,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           sinph = y/R;
           cosph = x/R;
         }
-        r = std::min(r, rmax); // pressure confinement - constant beyond the cloud radius
         if (r <= rctrl) {
           phydro->u(IDN,k,j,i) = dctrl;
           phydro->u(IM1,k,j,i) = dctrl*vadvx;
@@ -122,10 +121,11 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           phydro->u(IM3,k,j,i) = dctrl*vadvz;
         } else {
           set_shu77_ic(res, xi0, A);
-          xi = SimilarityVar(r, t0, cs);
+          Real rtrunc = std::min(r, rmax); // pressure confinement - constant beyond the cloud radius
+          xi = SimilarityVar(rtrunc, t0, cs);
           boost::numeric::odeint::integrate(shu77, res, xi0, xi, step);
           Real rho = density_scale*res[0];
-          Real vr = velocity_scale*res[1];
+          Real vr = r <= rmax ? velocity_scale*res[1] : 0;
           phydro->u(IDN,k,j,i) = rho;
           phydro->u(IM1,k,j,i) = rho*(vr*sinth*cosph + vadvx);
           phydro->u(IM2,k,j,i) = rho*(vr*sinth*sinph + vadvy);
