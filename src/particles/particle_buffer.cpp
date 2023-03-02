@@ -119,6 +119,8 @@ void ParticleBuffer::Reallocate(int new_nparmax, int nint, int nreal) {
     std::memcpy(rbuf_new, rbuf, nreal * npartot * sizeof(Real));
   }
 
+  nparmax_ = new_nparmax;
+
   // Delete old space.
   if (ibuf != NULL) delete [] ibuf;
   if (rbuf != NULL) delete [] rbuf;
