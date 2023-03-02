@@ -213,15 +213,36 @@ void SinkParticles::SetGhostRegion(AthenaArray<Real> &cons, int ip, int jp, int 
   // were not compatible with shearing box. Is that true also in athena++?
   // TODO AMR compatibility?
 
+  int xorder = pmy_block->precon->xorder;
+  const int is(pmy_block->is), ie(pmy_block->ie);
+  const int js(pmy_block->js), je(pmy_block->je);
+  const int ks(pmy_block->ks), ke(pmy_block->ke);
+  const int il(is - xorder), iu(ie + xorder);
+  const int jl(js - xorder), ju(je + xorder);
+  const int kl(ks - xorder), ku(ke + xorder);
+  int cil, ciu, cjl, cju, ckl, cku;
+
   // Start extrapolation from the outermost shell, marching inward
   for (int s=rctrl_; s>=1; --s) {
     // 6 front faces
     // Each has one neighbor. Do simple copy.
 
     // x1-face
-    for (int k=kp-s+1; k<=kp+s-1; ++k) {
-      for (int j=jp-s+1; j<=jp+s-1; ++j) {
-        for (int i=ip-s; i<=ip+s; i+=2*s) {
+    // SMOON: these loop limits restricts the cells to be modified to be within
+    // [is - nghost, ie + nghost], etc., where nghost is the number of ghost cells
+    // that are required for the hydro/MHD integrator, which could be different
+    // from NGHOST variable. This is because 1) only these cells need to be updated
+    // and 2) otherwise loop indices go beyond the proper limits of "cons" array,
+    // particularly for ghost particles.
+    ckl = std::max(kp-s+1, kl);
+    cjl = std::max(jp-s+1, jl);
+    cil = std::max(ip-s,   il);
+    cku = std::min(kp+s-1, ku);
+    cju = std::min(jp+s-1, ju);
+    ciu = std::min(ip+s  , iu);
+    for (int k=ckl; k<=cku; ++k) {
+      for (int j=cjl; j<=cju; ++j) {
+        for (int i=cil; i<=ciu; i+=2*s) {
           int ioff = sgn(i-ip);
           cons(IDN,k,j,i) = cons(IDN,k,j,i+ioff);
           cons(IM1,k,j,i) = cons(IM1,k,j,i+ioff);
@@ -231,9 +252,15 @@ void SinkParticles::SetGhostRegion(AthenaArray<Real> &cons, int ip, int jp, int 
       }
     }
     // x2-face
-    for (int k=kp-s+1; k<=kp+s-1; ++k) {
-      for (int j=jp-s; j<=jp+s; j+=2*s) {
-        for (int i=ip-s+1; i<=ip+s-1; ++i) {
+    ckl = std::max(kp-s+1, kl);
+    cjl = std::max(jp-s  , jl);
+    cil = std::max(ip-s+1, il);
+    cku = std::min(kp+s-1, ku);
+    cju = std::min(jp+s  , ju);
+    ciu = std::min(ip+s-1, iu);
+    for (int k=ckl; k<=cku; ++k) {
+      for (int j=cjl; j<=cju; j+=2*s) {
+        for (int i=cil; i<=ciu; ++i) {
           int joff = sgn(j-jp);
           cons(IDN,k,j,i) = cons(IDN,k,j+joff,i);
           cons(IM1,k,j,i) = cons(IM1,k,j+joff,i);
@@ -243,9 +270,15 @@ void SinkParticles::SetGhostRegion(AthenaArray<Real> &cons, int ip, int jp, int 
       }
     }
     // x3-face
-    for (int k=kp-s; k<=kp+s; k+=2*s) {
-      for (int j=jp-s+1; j<=jp+s-1; ++j) {
-        for (int i=ip-s+1; i<=ip+s-1; ++i) {
+    ckl = std::max(kp-s  , kl);
+    cjl = std::max(jp-s+1, jl);
+    cil = std::max(ip-s+1, il);
+    cku = std::min(kp+s  , ku);
+    cju = std::min(jp+s-1, ju);
+    ciu = std::min(ip+s-1, iu);
+    for (int k=ckl; k<=cku; k+=2*s) {
+      for (int j=cjl; j<=cju; ++j) {
+        for (int i=cil; i<=ciu; ++i) {
           int koff = sgn(k-kp);
           cons(IDN,k,j,i) = cons(IDN,k+koff,j,i);
           cons(IM1,k,j,i) = cons(IM1,k+koff,j,i);
@@ -257,9 +290,15 @@ void SinkParticles::SetGhostRegion(AthenaArray<Real> &cons, int ip, int jp, int 
 
     // 8 corners
     // Each has three neighbors. Average them.
-    for (int k=kp-s; k<=kp+s; k+=2*s) {
-      for (int j=jp-s; j<=jp+s; j+=2*s) {
-        for (int i=ip-s; i<=ip+s; i+=2*s) {
+    ckl = std::max(kp-s, kl);
+    cjl = std::max(jp-s, jl);
+    cil = std::max(ip-s, il);
+    cku = std::min(kp+s, ku);
+    cju = std::min(jp+s, ju);
+    ciu = std::min(ip+s, iu);
+    for (int k=ckl; k<=cku; k+=2*s) {
+      for (int j=cjl; j<=cju; j+=2*s) {
+        for (int i=cil; i<=ciu; i+=2*s) {
           int koff = sgn(k-kp);
           int joff = sgn(j-jp);
           int ioff = sgn(i-ip);
@@ -287,9 +326,15 @@ void SinkParticles::SetGhostRegion(AthenaArray<Real> &cons, int ip, int jp, int 
     // Each has two neighbors. Average them.
 
     // x1-slice
-    for (int k=kp-s; k<=kp+s; k+=2*s) {
-      for (int j=jp-s; j<=jp+s; j+=2*s) {
-        for (int i=ip-s+1; i<=ip+s-1; ++i) {
+    ckl = std::max(kp-s  , kl);
+    cjl = std::max(jp-s  , jl);
+    cil = std::max(ip-s+1, il);
+    cku = std::min(kp+s  , ku);
+    cju = std::min(jp+s  , ju);
+    ciu = std::min(ip+s-1, iu);
+    for (int k=ckl; k<=cku; k+=2*s) {
+      for (int j=cjl; j<=cju; j+=2*s) {
+        for (int i=cil; i<=ciu; ++i) {
           int koff = sgn(k-kp);
           int joff = sgn(j-jp);
           Real davg = 0.5*(cons(IDN,k+koff,j,i) + cons(IDN,k,j+joff,i));
@@ -304,9 +349,15 @@ void SinkParticles::SetGhostRegion(AthenaArray<Real> &cons, int ip, int jp, int 
       }
     }
     // x2-slice
-    for (int k=kp-s; k<=kp+s; k+=2*s) {
-      for (int j=jp-s+1; j<=jp+s-1; ++j) {
-        for (int i=ip-s; i<=ip+s; i+=2*s) {
+    ckl = std::max(kp-s  , kl);
+    cjl = std::max(jp-s+1, jl);
+    cil = std::max(ip-s  , il);
+    cku = std::min(kp+s  , ku);
+    cju = std::min(jp+s-1, ju);
+    ciu = std::min(ip+s  , iu);
+    for (int k=ckl; k<=cku; k+=2*s) {
+      for (int j=cjl; j<=cju; ++j) {
+        for (int i=cil; i<=ciu; i+=2*s) {
           int koff = sgn(k-kp);
           int ioff = sgn(i-ip);
           Real davg = 0.5*(cons(IDN,k+koff,j,i) + cons(IDN,k,j,i+ioff));
@@ -321,9 +372,15 @@ void SinkParticles::SetGhostRegion(AthenaArray<Real> &cons, int ip, int jp, int 
       }
     }
     // x3-slice
-    for (int k=kp-s+1; k<=kp+s-1; ++k) {
-      for (int j=jp-s; j<=jp+s; j+=2*s) {
-        for (int i=ip-s; i<=ip+s; i+=2*s) {
+    ckl = std::max(kp-s+1, kl);
+    cjl = std::max(jp-s  , jl);
+    cil = std::max(ip-s  , il);
+    cku = std::min(kp+s-1, ku);
+    cju = std::min(jp+s  , ju);
+    ciu = std::min(ip+s  , iu);
+    for (int k=ckl; k<=cku; ++k) {
+      for (int j=cjl; j<=cju; j+=2*s) {
+        for (int i=cil; i<=ciu; i+=2*s) {
           int joff = sgn(j-jp);
           int ioff = sgn(i-ip);
           Real davg = 0.5*(cons(IDN,k,j,i+ioff) + cons(IDN,k,j+joff,i));
@@ -338,21 +395,23 @@ void SinkParticles::SetGhostRegion(AthenaArray<Real> &cons, int ip, int jp, int 
       }
     }
   }
-  // finally, fill the central cell containing the particle
-  Real davg = (cons(IDN,kp,jp,ip-1) + cons(IDN,kp,jp,ip+1) +
-               cons(IDN,kp,jp-1,ip) + cons(IDN,kp,jp+1,ip) +
-               cons(IDN,kp-1,jp,ip) + cons(IDN,kp+1,jp,ip))/6.;
-  Real M1avg = (cons(IM1,kp,jp,ip-1) + cons(IM1,kp,jp,ip+1) +
-                cons(IM1,kp,jp-1,ip) + cons(IM1,kp,jp+1,ip) +
-                cons(IM1,kp-1,jp,ip) + cons(IM1,kp+1,jp,ip))/6.;
-  Real M2avg = (cons(IM2,kp,jp,ip-1) + cons(IM2,kp,jp,ip+1) +
-                cons(IM2,kp,jp-1,ip) + cons(IM2,kp,jp+1,ip) +
-                cons(IM2,kp-1,jp,ip) + cons(IM2,kp+1,jp,ip))/6.;
-  Real M3avg = (cons(IM3,kp,jp,ip-1) + cons(IM3,kp,jp,ip+1) +
-                cons(IM3,kp,jp-1,ip) + cons(IM3,kp,jp+1,ip) +
-                cons(IM3,kp-1,jp,ip) + cons(IM3,kp+1,jp,ip))/6.;
-  cons(IDN,kp,jp,ip) = davg;
-  cons(IM1,kp,jp,ip) = M1avg;
-  cons(IM2,kp,jp,ip) = M2avg;
-  cons(IM3,kp,jp,ip) = M3avg;
+  if ((kp>=kl)&&(kp<=ku)&&(jp>=jl)&&(jp<=ju)&&(ip>=il)&&(ip<=iu)) {
+    // finally, fill the central cell containing the particle
+    Real davg = (cons(IDN,kp,jp,ip-1) + cons(IDN,kp,jp,ip+1) +
+                 cons(IDN,kp,jp-1,ip) + cons(IDN,kp,jp+1,ip) +
+                 cons(IDN,kp-1,jp,ip) + cons(IDN,kp+1,jp,ip))/6.;
+    Real M1avg = (cons(IM1,kp,jp,ip-1) + cons(IM1,kp,jp,ip+1) +
+                  cons(IM1,kp,jp-1,ip) + cons(IM1,kp,jp+1,ip) +
+                  cons(IM1,kp-1,jp,ip) + cons(IM1,kp+1,jp,ip))/6.;
+    Real M2avg = (cons(IM2,kp,jp,ip-1) + cons(IM2,kp,jp,ip+1) +
+                  cons(IM2,kp,jp-1,ip) + cons(IM2,kp,jp+1,ip) +
+                  cons(IM2,kp-1,jp,ip) + cons(IM2,kp+1,jp,ip))/6.;
+    Real M3avg = (cons(IM3,kp,jp,ip-1) + cons(IM3,kp,jp,ip+1) +
+                  cons(IM3,kp,jp-1,ip) + cons(IM3,kp,jp+1,ip) +
+                  cons(IM3,kp-1,jp,ip) + cons(IM3,kp+1,jp,ip))/6.;
+    cons(IDN,kp,jp,ip) = davg;
+    cons(IM1,kp,jp,ip) = M1avg;
+    cons(IM2,kp,jp,ip) = M2avg;
+    cons(IM3,kp,jp,ip) = M3avg;
+  }
 }
