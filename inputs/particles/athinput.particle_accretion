@@ -1,7 +1,7 @@
 <comment>
 problem   = sink particle accretion
 reference = Gong & Ostriker (2013), Shu (1977)
-configure = --prob particle_accretion --eos isothermal --grav blockfft -mpi -hdf5
+configure = --prob particle_accretion --nghost=3 --eos isothermal --grav blockfft -mpi -hdf5
 
 
 <job>
@@ -29,7 +29,7 @@ dt         = 1.0
 <time>
 cfl_number = 0.3        # The Courant, Friedrichs, & Lewy (CFL) Number
 nlim       = -1         # cycle limit
-tlim       = 1.592        # time limit
+tlim       = 3          # time limit
 integrator  = vl2       # time integration algorithm
 xorder      = 2         # order of spatial reconstruction
 
@@ -75,4 +75,6 @@ output      = true
 <problem>
 A = 2.0004
 t0 = 0.43
-vadv = 0.0
+vadvx = 0.0
+vadvy = 0.0
+vadvz = 0.0
