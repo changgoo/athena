@@ -42,9 +42,6 @@ Real SimilarityVar(Real r, Real t, Real cs) {
   return xi;
 }
 
-Real rctrl; // radius of the control volume
-Real dctrl; // density in the control volume
-
 //========================================================================================
 //! \fn void Mesh::InitUserMeshData(ParameterInput *pin)
 //! \brief
@@ -69,8 +66,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   const Real y0 = pin->GetOrAddReal("problem","y0",0.0);
   const Real z0 = pin->GetOrAddReal("problem","z0",0.0);
   const Real A = pin->GetOrAddReal("problem","A",2.0004);
-  //TODO retire this input parameter; implement sink creation
-  rctrl = pin->GetOrAddReal("problem","rctrl",1.5)*pcoord->dx1f(0);
   const Real cs = peos->GetIsoSoundSpeed();
   Real vadvx = pin->GetOrAddReal("problem","vadvx",0)*cs;
   Real vadvy = pin->GetOrAddReal("problem","vadvy",0)*cs;
@@ -82,13 +77,6 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real xi;
   state_type res(2);
 
-  // TODO retire this; instead, initialize density all the way down to the center
-  // and reset the control volume using sink creation method
-  // Set dctrl = self-similar solution at r=rctrl
-  set_shu77_ic(res, xi0, A);
-  xi = SimilarityVar(rctrl, t0, cs);
-  boost::numeric::odeint::integrate(shu77, res, xi0, xi, step);
-  dctrl = density_scale*res[0];
 
   for (int k=ks; k<=ke; k++) {
     Real z = pcoord->x3v(k) - z0;
@@ -114,11 +102,12 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           sinph = y/R;
           cosph = x/R;
         }
-        if (r <= rctrl) {
-          phydro->u(IDN,k,j,i) = dctrl;
-          phydro->u(IM1,k,j,i) = dctrl*vadvx;
-          phydro->u(IM2,k,j,i) = dctrl*vadvy;
-          phydro->u(IM3,k,j,i) = dctrl*vadvz;
+        if (r == 0) {
+          // avoid singularity; will be resetted by sink particle anyway
+          phydro->u(IDN,k,j,i) = 1.0;
+          phydro->u(IM1,k,j,i) = 0.0;
+          phydro->u(IM2,k,j,i) = 0.0;
+          phydro->u(IM3,k,j,i) = 0.0;
         } else {
           set_shu77_ic(res, xi0, A);
           Real rtrunc = std::min(r, rmax); // pressure confinement - constant beyond the cloud radius
@@ -152,6 +141,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       ATHENA_ERROR(msg);
     }
     SinkParticles *ppar = dynamic_cast<SinkParticles*>(ppars[0]);
+    // TODO(SMOON) AMR
+    Real rctrl = (static_cast<Real>(ppar->rctrl)+0.5)*pcoord->dx1f(0);
 
     // Create a sink particle
     set_shu77_ic(res, xi0, A);
@@ -161,6 +152,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     mstar *= std::pow(cs,3)*t0/pgrav->gconst; // Eq. (8) in Shu (1977)
     ppar->AddOneParticle(mstar,x0,y0,z0,vadvx,vadvy,vadvz);
     ppar->ToggleParHstOutFlag();
+    ppar->SetControlVolume();
   }
 }
 
