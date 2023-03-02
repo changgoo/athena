@@ -450,6 +450,9 @@ void Particles::OutputParticles(bool header) {
 //! \fn Particles::OutputParticles()
 //! \brief outputs the particle data in tabulated format.
 void Particles::OutputParticles(bool header, int kid) {
+  // TODO(SMOON) currently, OutputParticles is called in Mesh::UserWorkInLoop, which is
+  // called before the mesh time is updated in main.cpp. Therefore, the "time" in the
+  // individual particle output is incorrect; they must be shifted by dt.
   std::stringstream fname, msg;
   std::ofstream os;
   std::string file_basename = pinput->GetString("job","problem_id");
