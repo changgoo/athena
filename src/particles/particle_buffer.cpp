@@ -93,7 +93,7 @@ void ParticleBuffer::Reallocate(int new_nparmax, int nint, int nreal) {
   if (new_nparmax < npartot) {
     std::stringstream msg;
     msg << "### FATAL ERROR in function [ParticleBuffer::Reallocate]" << std::endl
-        << "new_nparmax = " << new_nparmax << " < npar + nghost = " << npartot << std::endl;
+        << "new_nparmax = " << new_nparmax << " < npar + npar_gh = " << npartot << std::endl;
     ATHENA_ERROR(msg);
     return;
   }
