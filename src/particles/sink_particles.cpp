@@ -27,10 +27,10 @@ int sgn(int val) {
 SinkParticles::SinkParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp)
   : StarParticles(pmb, pin, pp) {
   int xorder = pmb->precon->xorder;
-  if (xorder + rctrl_ != nghost_) {
+  if (xorder + rctrl != nghost_) {
     std::stringstream msg;
     msg << "### FATAL ERROR in SinkParticles constructor" << std::endl
-      << "Control volume radius = " << rctrl_ << " plus the required number of ghost"
+      << "Control volume radius = " << rctrl << " plus the required number of ghost"
       << " cells for hydro/MHD = " << xorder << " does not match with the number of"
       << " ghost cells for ghost particle exchange = " << nghost_ << std::endl;
     ATHENA_ERROR(msg);
@@ -63,10 +63,34 @@ void SinkParticles::InteractWithMesh() {
 }
 
 //--------------------------------------------------------------------------------------
+//! \fn SinkParticles::SetControlVolume()
+//! \brief Interface to set current control volume of all particles
+
+void SinkParticles::SetControlVolume() {
+  AthenaArray<Real> &cons = pmy_block->phydro->u;
+  // loop over all active plus ghost particles
+  for (int idx=0; idx<npar_+npar_gh_; ++idx) {
+    // find the indices of the particle-containing cell.
+    int ip, jp, kp, ip0, jp0, kp0;
+    GridIndex(xp(idx), yp(idx), zp(idx), ip, jp, kp);
+    SetControlVolume(cons, ip, jp, kp);
+  }
+}
+
+
+//--------------------------------------------------------------------------------------
 //! \fn SinkParticles::AccreteMass()
 //! \brief accrete gas from neighboring cells
 
 void SinkParticles::AccreteMass() {
+  if (COORDINATE_SYSTEM != "cartesian") {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in function [SinkParticles::AccreteMass]" << std::endl
+        << "Only Cartesian coordinate system is supported " << std::endl;
+    ATHENA_ERROR(msg);
+  }
+  AthenaArray<Real> &cons = pmy_block->phydro->u;
+
   // loop over all active particles
   for (int idx=0; idx<npar_; ++idx) {
     // Determine the dM_sink accreted by the sink particle.
@@ -93,21 +117,12 @@ void SinkParticles::AccreteMass() {
     GridIndex(xp(idx), yp(idx), zp(idx), ip, jp, kp);
     GridIndex(xp0(idx), yp0(idx), zp0(idx), ip0, jp0, kp0);
 
-    AthenaArray<Real> &cons = pmy_block->phydro->u;
-
-    if (COORDINATE_SYSTEM != "cartesian") {
-      std::stringstream msg;
-      msg << "### FATAL ERROR in function [SinkParticles::AccreteMass]" << std::endl
-          << "Only Cartesian coordinate system is supported " << std::endl;
-      ATHENA_ERROR(msg);
-    }
-
     // Step 1(a). Calculate total mass in the control volume M^{n+1} updated by hydro
     // integrator, before applying extrapolation.
     Real m{0.}, M1{0.}, M2{0.}, M3{0.};
-    for (int k=kp-rctrl_; k<=kp+rctrl_; ++k) {
-      for (int j=jp-rctrl_; j<=jp+rctrl_; ++j) {
-        for (int i=ip-rctrl_; i<=ip+rctrl_; ++i) {
+    for (int k=kp-rctrl; k<=kp+rctrl; ++k) {
+      for (int j=jp-rctrl; j<=jp+rctrl; ++j) {
+        for (int i=ip-rctrl; i<=ip+rctrl; ++i) {
           Real dV = pmy_block->pcoord->GetCellVolume(k,j,i);
           m += cons(IDN,k,j,i)*dV;
           M1 += cons(IM1,k,j,i)*dV;
@@ -120,9 +135,9 @@ void SinkParticles::AccreteMass() {
     SetControlVolume(cons, ip, jp, kp);
     // Step 1(c). Calculate M^{n+1}_ctrl
     Real mext{0.}, M1ext{0.}, M2ext{0.}, M3ext{0.};
-    for (int k=kp-rctrl_; k<=kp+rctrl_; ++k) {
-      for (int j=jp-rctrl_; j<=jp+rctrl_; ++j) {
-        for (int i=ip-rctrl_; i<=ip+rctrl_; ++i) {
+    for (int k=kp-rctrl; k<=kp+rctrl; ++k) {
+      for (int j=jp-rctrl; j<=jp+rctrl; ++j) {
+        for (int i=ip-rctrl; i<=ip+rctrl; ++i) {
           Real dV = pmy_block->pcoord->GetCellVolume(k,j,i);
           mext += cons(IDN,k,j,i)*dV;
           M1ext += cons(IM1,k,j,i)*dV;
@@ -146,9 +161,9 @@ void SinkParticles::AccreteMass() {
       // Step 2(a). Calculate total mass in the control volume M^{n+1} updated by hydro
       // integrator, before applying extrapolation.
       Real m{0.}, M1{0.}, M2{0.}, M3{0.};
-      for (int k=kp0-rctrl_; k<=kp0+rctrl_; ++k) {
-        for (int j=jp0-rctrl_; j<=jp0+rctrl_; ++j) {
-          for (int i=ip0-rctrl_; i<=ip0+rctrl_; ++i) {
+      for (int k=kp0-rctrl; k<=kp0+rctrl; ++k) {
+        for (int j=jp0-rctrl; j<=jp0+rctrl; ++j) {
+          for (int i=ip0-rctrl; i<=ip0+rctrl; ++i) {
             Real dV = pmy_block->pcoord->GetCellVolume(k,j,i);
             m += cons(IDN,k,j,i)*dV;
             M1 += cons(IM1,k,j,i)*dV;
@@ -161,9 +176,9 @@ void SinkParticles::AccreteMass() {
       SetControlVolume(cons, ip0, jp0, kp0);
       // Step 2(c). Calculate M^{n+1}_ctrl
       Real mext{0.}, M1ext{0.}, M2ext{0.}, M3ext{0.};
-      for (int k=kp0-rctrl_; k<=kp0+rctrl_; ++k) {
-        for (int j=jp0-rctrl_; j<=jp0+rctrl_; ++j) {
-          for (int i=ip0-rctrl_; i<=ip0+rctrl_; ++i) {
+      for (int k=kp0-rctrl; k<=kp0+rctrl; ++k) {
+        for (int j=jp0-rctrl; j<=jp0+rctrl; ++j) {
+          for (int i=ip0-rctrl; i<=ip0+rctrl; ++i) {
             Real dV = pmy_block->pcoord->GetCellVolume(k,j,i);
             mext += cons(IDN,k,j,i)*dV;
             M1ext += cons(IM1,k,j,i)*dV;
@@ -193,8 +208,6 @@ void SinkParticles::AccreteMass() {
     int ip, jp, kp, ip0, jp0, kp0;
     GridIndex(xp(idx), yp(idx), zp(idx), ip, jp, kp);
     GridIndex(xp0(idx), yp0(idx), zp0(idx), ip0, jp0, kp0);
-    AthenaArray<Real> &cons = pmy_block->phydro->u;
-
     SetControlVolume(cons, ip, jp, kp);
     if ((ip != ip0) || (jp != jp0) || (kp != kp0))
       SetControlVolume(cons, ip0, jp0, kp0);
@@ -223,7 +236,7 @@ void SinkParticles::SetControlVolume(AthenaArray<Real> &cons, int ip, int jp, in
   int cil, ciu, cjl, cju, ckl, cku;
 
   // Start extrapolation from the outermost shell, marching inward
-  for (int s=rctrl_; s>=1; --s) {
+  for (int s=rctrl; s>=1; --s) {
     // 6 front faces
     // Each has one neighbor. Do simple copy.
 

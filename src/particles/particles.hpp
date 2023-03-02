@@ -399,19 +399,18 @@ class SinkParticles : public StarParticles {
 
   // Methods (interface)
   void InteractWithMesh() override;
+  void SetControlVolume();
 
   // Data members
-  // shorthand for additional properties
+  const int rctrl = 1; // Extent of the control volume. The side length of the control
+                       // volume is 2*rctrl + 1.
 
  private:
   // Methods (implementation)
-//  void AssignShorthandsForDerived() override;
   void AccreteMass();
   void SetControlVolume(AthenaArray<Real> &cons, int ip, int jp, int kp);
 
   // Data members
-  const int rctrl_ = 1; // Extent of the control volume. The side length of the control
-                        // volume is 2*rctrl_ + 1.
 };
 
 #endif  // PARTICLES_PARTICLES_HPP_

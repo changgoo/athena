@@ -127,7 +127,7 @@ void ParticleBuffer::Reallocate(int new_nparmax, int nint, int nreal) {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void ParticleBuffer::Append(const ParticleBuffer& pbin)
+//! \fn void ParticleBuffer::Append(const ParticleBuffer& pb)
 //! \brief Append another ParticleBuffer to this
 
 void ParticleBuffer::Append(const ParticleBuffer& pb) {
