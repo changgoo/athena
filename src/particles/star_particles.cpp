@@ -21,7 +21,7 @@
 //! \brief constructs a StarParticles instance.
 
 StarParticles::StarParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp)
-  : Particles(pmb, pin, pp), imetal(-1), iage(-1), ifgas(-1) {
+  : Particles(pmb, pin, pp), dt_old(0), imetal(-1), iage(-1), ifgas(-1) {
   // Add metal mass
   imetal = AddRealProperty();
   realpropname.push_back("metal");
@@ -85,9 +85,9 @@ void StarParticles::Integrate(int stage) {
       ppgrav->InterpolateGravitationalForce();
     }
 
-    // kick by 0.5*dth
+    // closing kick by 0.5*dt_old
     // this kick has to be skipped for new particles
-    Kick(t,0.5*dth,pmy_block->phydro->w);
+    Kick(t,0.5*dt_old,pmy_block->phydro->w);
     // x -> x0, v -> v0
     SaveStatus();
     // a temporary heck; later we will have a flag for new particles
@@ -95,8 +95,8 @@ void StarParticles::Integrate(int stage) {
     Age(t,dt);
     // Boris push for velocity dependent terms: Coriolis force
     if (pmy_mesh_->shear_periodic) BorisKick(t,dth);
-    // kick by another 0.5*dth
-    Kick(t,0.5*dth,pmy_block->phydro->w);
+    // opening kick by 0.5*dt
+    Kick(t,0.5*dt,pmy_block->phydro->w);
     // drift from t^n to t^n+1
     Drift(t,dt);
 
