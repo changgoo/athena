@@ -27,12 +27,12 @@ int sgn(int val) {
 SinkParticles::SinkParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp)
   : StarParticles(pmb, pin, pp) {
   int xorder = pmb->precon->xorder;
-  if (xorder + rctrl != nghost_) {
+  if (xorder + rctrl != noverlap_) {
     std::stringstream msg;
     msg << "### FATAL ERROR in SinkParticles constructor" << std::endl
       << "Control volume radius = " << rctrl << " plus the required number of ghost"
       << " cells for hydro/MHD = " << xorder << " does not match with the number of"
-      << " ghost cells for ghost particle exchange = " << nghost_ << std::endl;
+      << " overlapping cells for ghost particle exchange = " << noverlap_ << std::endl;
     ATHENA_ERROR(msg);
   }
   if (xorder + 1 > NGHOST) {

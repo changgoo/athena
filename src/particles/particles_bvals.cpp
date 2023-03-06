@@ -243,12 +243,12 @@ void Particles::SendToNeighbors() {
 
     if (ox1 == 0 && ox2 == 0 && ox3 == 0) {
       // This particle is inside the active zone.
-      // Check if a particle is inside the ghost zones of neighbor blocks.
-      ox1 = CheckSide(x1i, IS+nghost_, IE-nghost_),
-      ox2 = CheckSide(x2i, JS+nghost_, JE-nghost_),
-      ox3 = CheckSide(x3i, KS+nghost_, KE-nghost_);
+      // Check if a particle is inside the overlapping region
+      ox1 = CheckSide(x1i, IS+noverlap_, IE-noverlap_),
+      ox2 = CheckSide(x2i, JS+noverlap_, JE-noverlap_),
+      ox3 = CheckSide(x3i, KS+noverlap_, KE-noverlap_);
       if (ox1 == 0 && ox2 == 0 && ox3 == 0) {
-        // do nothing if a particle does not overlap with any ghost zone of neighbors
+        // This particle would not influence neighbors. No need to send.
         ++k;
         continue;
       }
@@ -504,14 +504,14 @@ void Particles::ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3, boo
                                       vpx0(k), vpy0(k), vpz0(k), vp10, vp20, vp30);
   if (ghost) {
     // For ghost particles, periodic boundary condition should be applied
-    // when they enter the ghost zones of "neighbors".
+    // when they enter the overlapping region.
     // TODO Mesh refinement
-    Real x1min = mesh_size.x1min + nghost_*(pcoord->GetEdge1Length(0,0,0));
-    Real x1max = mesh_size.x1max - nghost_*(pcoord->GetEdge1Length(0,0,0));
-    Real x2min = mesh_size.x2min + nghost_*(pcoord->GetEdge2Length(0,0,0));
-    Real x2max = mesh_size.x2max - nghost_*(pcoord->GetEdge2Length(0,0,0));
-    Real x3min = mesh_size.x3min + nghost_*(pcoord->GetEdge3Length(0,0,0));
-    Real x3max = mesh_size.x3max - nghost_*(pcoord->GetEdge3Length(0,0,0));
+    Real x1min = mesh_size.x1min + noverlap_*(pcoord->GetEdge1Length(0,0,0));
+    Real x1max = mesh_size.x1max - noverlap_*(pcoord->GetEdge1Length(0,0,0));
+    Real x2min = mesh_size.x2min + noverlap_*(pcoord->GetEdge2Length(0,0,0));
+    Real x2max = mesh_size.x2max - noverlap_*(pcoord->GetEdge2Length(0,0,0));
+    Real x3min = mesh_size.x3min + noverlap_*(pcoord->GetEdge3Length(0,0,0));
+    Real x3max = mesh_size.x3max - noverlap_*(pcoord->GetEdge3Length(0,0,0));
     // Apply periodic boundary conditions in X1.
     if ((x1 < x1min)&&(x1 < block_size.x1min)) {
       // Inner x1

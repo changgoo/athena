@@ -46,7 +46,7 @@ MPI_Comm Particles::my_comm = MPI_COMM_NULL;
 
 Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp) :
   ipar(pp->ipar), input_block_name(pp->block_name), partype(pp->partype),
-  npar_(0), npar_gh_(0), nparmax_(1), nghost_(pp->nghost),
+  npar_(0), npar_gh_(0), nparmax_(1), noverlap_(pp->noverlap),
   nint(0), nreal(0), naux(0), nwork(0),
   ipid(-1), ish(-1),
   imass(-1), ixp(-1), iyp(-1), izp(-1), ivpx(-1), ivpy(-1), ivpz(-1),
@@ -852,14 +852,10 @@ void Particles::Initialize(Mesh *pm, ParameterInput *pin) {
           pp.gravity = pin->GetOrAddBoolean(pp.block_name,"gravity",false);
           if (pp.table_output) num_particles_output++;
           if (pp.gravity) num_particles_grav++;
-          // Set the number of ghost zones for ghost particle exchange.
-          // For example, particles that are within [is, is+nghost] will be copied
-          // to the neighboring MeshBlock in negative-x1 direction as a "ghost"
-          // particles.
-          // In most cases, nghost would be equal to
-          // (NGHOST required for hydro/MHD) + (radius of influence of a particle).
+          // Set the number of overlapping cells for ghost particle exchange.
+          // See the comments in the header file for more information.
           if (pp.partype.compare("sink") == 0) {
-            pp.nghost = 3;
+            pp.noverlap = 3;
           }
           pm->particle_params.push_back(pp);
         } else { // unsupported particle type

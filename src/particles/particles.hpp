@@ -48,12 +48,12 @@ struct Neighbor {
 //! \brief container for parameters read from `<particle?>` block in the input file
 
 struct ParticleParameters {
-  int block_number, ipar, nghost;
+  int block_number, ipar, noverlap;
   bool table_output, gravity;
   std::string block_name;
   std::string partype;
   // TODO(SMOON) Add nhistory variable
-  ParticleParameters() : block_number(0), ipar(-1), nghost(0), table_output(false),
+  ParticleParameters() : block_number(0), ipar(-1), noverlap(0), table_output(false),
                          gravity(false) {}
 };
 
@@ -159,7 +159,19 @@ friend class ParticleMesh;
   int npar_;     //!> number of particles
   int npar_gh_;     //!> number of ghost particles
   int nparmax_;  //!> maximum number of particles per meshblock
-  const int nghost_; //!> number of ghost cells within which ghost particles are communicated
+  const int noverlap_; //!> minimum number of "overlapping cells" for ghost particles
+  // When a particle enters the "overlap region" where the active cells overlap with the
+  // ghost cells of neighboring MeshBlock, that particle is sent to the overlapping
+  // MeshBlock as a "ghost particle". The variable "noverlap_" defines the thickness of
+  // the overlap region, such that the overlap region in the x1 direction is:
+  //   [is, is+noverlap_-1] and [ie-noverlap_+1, ie].
+  // For example, consider a star particle with the feedback radius = 1. When it explodes
+  // at i = ie - 2 in MeshBlock "A", it modifies the active cell i = ie - 1 of the
+  // MeshBlock A, which corresponds to the ghost cell i = is - 2 of the neighboring
+  // MeshBlock "B". In this case, MeshBlock B needs noverlap_ >= 3 to receive the ghost
+  // particle from MeshBlock A to update its NGHOST = 2 ghost cells.
+  // In general, noverlap_ should be set to at least
+  // (number of ghost cells required for hydro/MHD) + (radius of influence of a particle).
   Real cfl_par_;  //!> CFL number for particles
 
   ParticleGravity *ppgrav; //!> ptr to particle-gravity
