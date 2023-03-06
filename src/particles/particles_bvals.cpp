@@ -437,7 +437,8 @@ bool Particles::ReceiveFromNeighbors() {
     return false;
   }
 
-  bool flag = true;
+  bool all_received = true;
+  bool something_arrived = false;
   for (int i = 0; i < pbval_->nneighbor; ++i) {
     NeighborBlock& nb = pbval_->neighbor[i];
     enum BoundaryStatus& bstatus = bstatus_[nb.bufid];
@@ -445,13 +446,21 @@ bool Particles::ReceiveFromNeighbors() {
 #ifdef MPI_PARALLEL
     ReceiveParticleBuffer(nb.snb.rank, recv, bstatus);
 #endif
-    if (bstatus == BoundaryStatus::waiting)
-      flag = false;
+    switch (bstatus) {
+      case BoundaryStatus::completed:
+        break;
+      case BoundaryStatus::waiting:
+        all_received = false;
+        break;
+      case BoundaryStatus::arrived:
+        something_arrived = true;
+        break;
+    }
   }
 
   // Wait until receiving particles from all neighbors. Then flush all active particles,
   // and attach ghost particles at the end.
-  if (flag) {
+  if ((all_received)&&(something_arrived)) {
     // Flush active particles.
     for (int i = 0; i < pbval_->nneighbor; ++i) {
       NeighborBlock& nb = pbval_->neighbor[i];
@@ -473,7 +482,7 @@ bool Particles::ReceiveFromNeighbors() {
     }
   }
 
-  return flag;
+  return all_received;
 }
 
 //--------------------------------------------------------------------------------------
