@@ -48,12 +48,12 @@ struct Neighbor {
 //! \brief container for parameters read from `<particle?>` block in the input file
 
 struct ParticleParameters {
-  int block_number, ipar, noverlap;
+  int block_number, ipar, max_rinfl;
   bool table_output, gravity;
   std::string block_name;
   std::string partype;
   // TODO(SMOON) Add nhistory variable
-  ParticleParameters() : block_number(0), ipar(-1), noverlap(0), table_output(false),
+  ParticleParameters() : block_number(0), ipar(-1), max_rinfl(0), table_output(false),
                          gravity(false) {}
 };
 
@@ -159,9 +159,10 @@ friend class ParticleMesh;
   int npar_;     //!> number of particles
   int npar_gh_;     //!> number of ghost particles
   int nparmax_;  //!> maximum number of particles per meshblock
-  const int noverlap_; //!> minimum number of "overlapping cells" for ghost particles
-  // When a particle enters the "overlap region" where the active cells overlap with the
-  // ghost cells of neighboring MeshBlock, that particle is sent to the overlapping
+  const int req_nghost_; //!> required number of ghost cells for hydro/MHD
+  const int noverlap_; //!> minimum thickness of the overlap region
+  // When a particle enters the "overlap region" where its region of influence overlaps
+  // with the ghost cells of neighboring MeshBlock, that particle is sent to the neighbor
   // MeshBlock as a "ghost particle". The variable "noverlap_" defines the thickness of
   // the overlap region, such that the overlap region in the x1 direction is:
   //   [is, is+noverlap_-1] and [ie-noverlap_+1, ie].

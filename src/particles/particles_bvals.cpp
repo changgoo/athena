@@ -243,7 +243,7 @@ void Particles::SendToNeighbors() {
 
     if (ox1 == 0 && ox2 == 0 && ox3 == 0) {
       // This particle is inside the active zone.
-      // Check if a particle is inside the overlapping region
+      // Check if a particle is inside the overlap region
       ox1 = CheckSide(x1i, IS+noverlap_, IE-noverlap_),
       ox2 = CheckSide(x2i, JS+noverlap_, JE-noverlap_),
       ox3 = CheckSide(x3i, KS+noverlap_, KE-noverlap_);
@@ -504,7 +504,7 @@ void Particles::ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3, boo
                                       vpx0(k), vpy0(k), vpz0(k), vp10, vp20, vp30);
   if (ghost) {
     // For ghost particles, periodic boundary condition should be applied
-    // when they enter the overlapping region.
+    // when they enter the overlap region.
     // TODO Mesh refinement
     Real x1min = mesh_size.x1min + noverlap_*(pcoord->GetEdge1Length(0,0,0));
     Real x1max = mesh_size.x1max - noverlap_*(pcoord->GetEdge1Length(0,0,0));

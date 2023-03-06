@@ -26,20 +26,19 @@ int sgn(int val) {
 
 SinkParticles::SinkParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp)
   : StarParticles(pmb, pin, pp) {
-  int xorder = pmb->precon->xorder;
-  if (xorder + rctrl != noverlap_) {
+  if (rctrl > pp->max_rinfl) {
     std::stringstream msg;
     msg << "### FATAL ERROR in SinkParticles constructor" << std::endl
-      << "Control volume radius = " << rctrl << " plus the required number of ghost"
-      << " cells for hydro/MHD = " << xorder << " does not match with the number of"
-      << " overlapping cells for ghost particle exchange = " << noverlap_ << std::endl;
+      << "Control volume radius = " << rctrl << " is larger than the maximum radius of "
+      << "influence = " << pp->max_rinfl << std::endl;
     ATHENA_ERROR(msg);
   }
-  if (xorder + 1 > NGHOST) {
+  if (NGHOST < req_nghost_ + 1) {
     std::stringstream msg;
     msg << "### FATAL ERROR in SinkParticles constructor" << std::endl
-      << "At least " << xorder + 1 << " ghost cells are required to extrapolate the"
-      << " control volume." << std::endl;
+      << req_nghost_ << " ghost cells are required for hydro/MHD, "
+      << "but sink particle needs one more ghost cell to extrapolate from." << std::endl
+      << "Reconfigure with --nghost=XXX with XXX > " << req_nghost_ + 1 << std::endl;
     ATHENA_ERROR(msg);
   }
 }
@@ -226,13 +225,12 @@ void SinkParticles::SetControlVolume(AthenaArray<Real> &cons, int ip, int jp, in
   // were not compatible with shearing box. Is that true also in athena++?
   // TODO AMR compatibility?
 
-  int xorder = pmy_block->precon->xorder;
   const int is(pmy_block->is), ie(pmy_block->ie);
   const int js(pmy_block->js), je(pmy_block->je);
   const int ks(pmy_block->ks), ke(pmy_block->ke);
-  const int il(is - xorder), iu(ie + xorder);
-  const int jl(js - xorder), ju(je + xorder);
-  const int kl(ks - xorder), ku(ke + xorder);
+  const int il(is - req_nghost_), iu(ie + req_nghost_);
+  const int jl(js - req_nghost_), ju(je + req_nghost_);
+  const int kl(ks - req_nghost_), ku(ke + req_nghost_);
   int cil, ciu, cjl, cju, ckl, cku;
 
   // Start extrapolation from the outermost shell, marching inward

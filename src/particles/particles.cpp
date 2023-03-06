@@ -27,6 +27,7 @@
 #include "../coordinates/coordinates.hpp"
 #include "../globals.hpp"
 #include "../hydro/hydro.hpp"
+#include "../reconstruct/reconstruction.hpp"
 #include "particles.hpp"
 
 // Class variable initialization
@@ -41,12 +42,49 @@ MPI_Comm Particles::my_comm = MPI_COMM_NULL;
 #endif
 
 //--------------------------------------------------------------------------------------
+//! \fn ComputeReqNGHOST(int xorder, int rinfl)
+//! \brief helpfer function to initialize const member req_nghost_
+
+int ComputeReqNGHOST(int xorder) {
+  int req_nghost(0); // required number of ghost cells for hydro/MHD
+  switch (xorder) {
+    case 1:
+      req_nghost = 1;
+      break;
+    case 2:
+      req_nghost = 2;
+      break;
+    case 3:
+      req_nghost = 3;
+      break;
+    case 4:
+      req_nghost = 4;
+      if (MAGNETIC_FIELDS_ENABLED)
+        req_nghost += 2;
+      break;
+  }
+  return req_nghost;
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn ComputeOverlap(int xorder, int rinfl)
+//! \brief helpfer function to initialize const member noverlap_
+
+int ComputeOverlap(int xorder, int rinfl) {
+  // Set the thickness of the overlap region for ghost particle exchange.
+  // See the comments in the header file for more information.
+  int noverlap = ComputeReqNGHOST(xorder) + rinfl;
+  return noverlap;
+}
+
+//--------------------------------------------------------------------------------------
 //! \fn Particles::Particles(MeshBlock *pmb, ParameterInput *pin)
 //! \brief constructs a Particles instance.
 
 Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp) :
   ipar(pp->ipar), input_block_name(pp->block_name), partype(pp->partype),
-  npar_(0), npar_gh_(0), nparmax_(1), noverlap_(pp->noverlap),
+  npar_(0), npar_gh_(0), nparmax_(1), req_nghost_(ComputeReqNGHOST(pmb->precon->xorder)),
+  noverlap_(ComputeOverlap(pmb->precon->xorder, pp->max_rinfl)),
   nint(0), nreal(0), naux(0), nwork(0),
   ipid(-1), ish(-1),
   imass(-1), ixp(-1), iyp(-1), izp(-1), ivpx(-1), ivpy(-1), ivpz(-1),
@@ -852,10 +890,10 @@ void Particles::Initialize(Mesh *pm, ParameterInput *pin) {
           pp.gravity = pin->GetOrAddBoolean(pp.block_name,"gravity",false);
           if (pp.table_output) num_particles_output++;
           if (pp.gravity) num_particles_grav++;
-          // Set the number of overlapping cells for ghost particle exchange.
-          // See the comments in the header file for more information.
+          // Set the maximum radius of influence
+          // This determines the thickness of overlap region.
           if (pp.partype.compare("sink") == 0) {
-            pp.noverlap = 3;
+            pp.max_rinfl = 1;
           }
           pm->particle_params.push_back(pp);
         } else { // unsupported particle type
