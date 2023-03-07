@@ -270,9 +270,6 @@ void Particles::RemoveOneParticle(int k) {
   }
   npar_--;
   if ((0 <= k) && (k < npar_)) {
-    xi1_(k) = xi1_(npar_);
-    xi2_(k) = xi2_(npar_);
-    xi3_(k) = xi3_(npar_);
     for (int j = 0; j < nint; ++j)
       intprop(j,k) = intprop(j,npar_);
     for (int j = 0; j < nreal; ++j)
@@ -282,9 +279,6 @@ void Particles::RemoveOneParticle(int k) {
   }
   // If there are ghost particles, rearrange the last one to fill the vacancy
   if (npar_gh_ > 0) {
-    xi1_(npar_) = xi1_(npar_+npar_gh_);
-    xi2_(npar_) = xi2_(npar_+npar_gh_);
-    xi3_(npar_) = xi3_(npar_+npar_gh_);
     for (int j = 0; j < nint; ++j)
       intprop(j,npar_) = intprop(j,npar_+npar_gh_);
     for (int j = 0; j < nreal; ++j)
