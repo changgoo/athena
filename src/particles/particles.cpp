@@ -262,7 +262,14 @@ int Particles::AddOneParticle(Real mp, Real x1, Real x2, Real x3,
 //! \brief removes particle k in the block.
 
 void Particles::RemoveOneParticle(int k) {
-  if (0 <= k && k < npar_ && --npar_ != k) {
+  if ((k < 0) || (k >= npar_)) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in function [Particles::RemoveOneParticle]" << std::endl
+        << "Cannot remove a particle outside the range [0, npar_)" << std::endl;
+    ATHENA_ERROR(msg);
+  }
+  npar_--;
+  if ((0 <= k) && (k < npar_)) {
     xi1_(k) = xi1_(npar_);
     xi2_(k) = xi2_(npar_);
     xi3_(k) = xi3_(npar_);
@@ -272,6 +279,18 @@ void Particles::RemoveOneParticle(int k) {
       realprop(j,k) = realprop(j,npar_);
     for (int j = 0; j < naux; ++j)
       auxprop(j,k) = auxprop(j,npar_);
+  }
+  // If there are ghost particles, rearrange the last one to fill the vacancy
+  if (npar_gh_ > 0) {
+    xi1_(npar_) = xi1_(npar_+npar_gh_);
+    xi2_(npar_) = xi2_(npar_+npar_gh_);
+    xi3_(npar_) = xi3_(npar_+npar_gh_);
+    for (int j = 0; j < nint; ++j)
+      intprop(j,npar_) = intprop(j,npar_+npar_gh_);
+    for (int j = 0; j < nreal; ++j)
+      realprop(j,npar_) = realprop(j,npar_+npar_gh_);
+    for (int j = 0; j < naux; ++j)
+      auxprop(j,npar_) = auxprop(j,npar_+npar_gh_);
   }
 }
 
