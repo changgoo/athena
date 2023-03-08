@@ -73,7 +73,7 @@ int ComputeReqNGHOST(int xorder) {
 int ComputeOverlap(int xorder, int rinfl) {
   // Set the thickness of the overlap region for ghost particle exchange.
   // See the comments in the header file for more information.
-  int noverlap = ComputeReqNGHOST(xorder) + rinfl;
+  int noverlap = rinfl > 0 ? ComputeReqNGHOST(xorder) + rinfl : 0;
   return noverlap;
 }
 

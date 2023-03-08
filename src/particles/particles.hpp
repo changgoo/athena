@@ -85,7 +85,7 @@ friend class ParticleMesh;
   bool IsGravity() const { return isgravity_; }
   int GetNumPar() const { return npar_; }
   void GridIndex(Real xp, Real yp, Real zp, int &ip, int &jp, int &kp) const;
-  virtual void InteractWithMesh() {};
+  virtual void InteractWithMesh() {}
 
   // Input/Output interface
   void UnpackParticlesForRestart(char *mbdata, std::size_t &os);
@@ -100,7 +100,7 @@ friend class ParticleMesh;
   void ClearNeighbors();
   void LinkNeighbors(MeshBlockTree &tree, int64_t nrbx1, int64_t nrbx2, int64_t nrbx3,
                      int root_level);
-  void LoadParticleBuffer(ParticleBuffer *ppb, int k, bool ghost=false);
+  void LoadParticleBuffer(ParticleBuffer *ppb, int k);
 #ifdef MPI_PARALLEL
   void SendParticleBuffer(ParticleBuffer& send, int dst);
   void ReceiveParticleBuffer(int nb_rank, ParticleBuffer& recv,
@@ -269,8 +269,9 @@ friend class ParticleMesh;
   // MeshBlock-to-MeshBlock communication:
   BoundaryValues *pbval_;                            //!> ptr to my BoundaryValues
   Neighbor neighbor_[3][3][3];                       //!> links to neighbors
-  ParticleBuffer recv_[56], recv_gh_[56], recv_sh_[8];             //!> particle receive buffers
-  enum BoundaryStatus bstatus_[56], bstatus_gh_[56], bstatus_recv_sh_[8];  //!> boundary status
+  ParticleBuffer recv_[56], recv_gh_[56], recv_sh_[8];   //!> particle receive buffers
+  enum BoundaryStatus bstatus_[56], bstatus_gh_[56];  //!> boundary status
+  enum BoundaryStatus bstatus_recv_sh_[8];            //!> boundary status for shearing BC
 
 #ifdef MPI_PARALLEL
   static MPI_Comm my_comm;   //!> my MPI communicator

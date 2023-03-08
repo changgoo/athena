@@ -551,7 +551,7 @@ void Particles::ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3, boo
   if (ghost) {
     // For ghost particles, periodic boundary condition should be applied
     // when they enter the overlap region.
-    // TODO Mesh refinement
+    // TODO(SMOON) Mesh refinement
     Real x1min = mesh_size.x1min + noverlap_*(pcoord->GetEdge1Length(0,0,0));
     Real x1max = mesh_size.x1max - noverlap_*(pcoord->GetEdge1Length(0,0,0));
     Real x2min = mesh_size.x2min + noverlap_*(pcoord->GetEdge2Length(0,0,0));
@@ -687,7 +687,7 @@ struct Neighbor* Particles::FindTargetNeighbor(
 //!        If ghost=true(false), add ghost(active) particles.
 
 void Particles::FlushReceiveBuffer(ParticleBuffer& recv, bool ghost) {
-  if ((npar_gh_ > 0)&&(not ghost)) {
+  if ((npar_gh_ > 0)&&(!ghost)) {
     std::stringstream msg;
     msg << "### FATAL ERROR in function [ParticleBuffer::FlushReceiveBuffer]" << std::endl
         << "You are trying to flush active particles on top of ghost particles;"
@@ -742,11 +742,10 @@ void Particles::FlushReceiveBuffer(ParticleBuffer& recv, bool ghost) {
 
 
 //--------------------------------------------------------------------------------------
-//! \fn void Particles::LoadParticleBuffer(ParticleBuffer& ppb, int k, bool ghost)
+//! \fn void Particles::LoadParticleBuffer(ParticleBuffer& ppb, int k)
 //! \brief Load the k-th particle to the particle buffer.
-//!        If ghost=True, load as a ghost particle.
 
-void Particles::LoadParticleBuffer(ParticleBuffer *ppb, int k, bool ghost) {
+void Particles::LoadParticleBuffer(ParticleBuffer *ppb, int k) {
   // Check the buffer size.
   if (ppb->npar_ >= ppb->nparmax_)
     ppb->Reallocate((ppb->nparmax_ > 0) ? 2 * ppb->nparmax_ : 1, nint_buf, nreal_buf);

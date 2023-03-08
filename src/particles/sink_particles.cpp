@@ -107,7 +107,7 @@ void SinkParticles::AccreteMass() {
     // we can use eq. (2) to substitute dM_flux in eq. (1) with M^{n+1} - M^{n}_ctrl,
     // yielding
     //   dM_sink = M^{n+1} - M^{n+1}_ctrl  -- (3)
-    // TODO AMR compatibility?
+    // TODO(SMOON) AMR compatibility?
 
     // Step 0. Prepare
 
@@ -223,7 +223,7 @@ void SinkParticles::SetControlVolume(AthenaArray<Real> &cons, int ip, int jp, in
   // cell being extrapolated.
   // In Athena-TIGRESS, larger stencil that include edge- and corner-neighbors
   // were not compatible with shearing box. Is that true also in athena++?
-  // TODO AMR compatibility?
+  // TODO(SMOON) AMR compatibility?
 
   const int is(pmy_block->is), ie(pmy_block->ie);
   const int js(pmy_block->js), je(pmy_block->je);

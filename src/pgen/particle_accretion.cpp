@@ -110,7 +110,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           phydro->u(IM3,k,j,i) = 0.0;
         } else {
           set_shu77_ic(res, xi0, A);
-          Real rtrunc = std::min(r, rmax); // pressure confinement - constant beyond the cloud radius
+          // pressure confinement - constant beyond the cloud radius
+          Real rtrunc = std::min(r, rmax);
           xi = SimilarityVar(rtrunc, t0, cs);
           boost::numeric::odeint::integrate(shu77, res, xi0, xi, step);
           Real rho = density_scale*res[0];
