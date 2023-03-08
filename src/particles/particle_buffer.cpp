@@ -79,7 +79,6 @@ ParticleBuffer::~ParticleBuffer() {
 //! \brief reallocates the buffers; the old content is preserved.
 
 void ParticleBuffer::Reallocate(int new_nparmax, int nint, int nreal) {
-  int npartot = npar_;
   // Sanity check
   if (new_nparmax <= 0) {
     std::stringstream msg;
@@ -88,10 +87,10 @@ void ParticleBuffer::Reallocate(int new_nparmax, int nint, int nreal) {
     ATHENA_ERROR(msg);
     return;
   }
-  if (new_nparmax < npartot) {
+  if (new_nparmax < npar_) {
     std::stringstream msg;
     msg << "### FATAL ERROR in function [ParticleBuffer::Reallocate]" << std::endl
-        << "new_nparmax = " << new_nparmax << " < npar + npar_gh = " << npartot << std::endl;
+        << "new_nparmax = " << new_nparmax << " < npar = " << npar_ << std::endl;
     ATHENA_ERROR(msg);
     return;
   }
@@ -109,12 +108,11 @@ void ParticleBuffer::Reallocate(int new_nparmax, int nint, int nreal) {
   int *ibuf_new = new int[nint * new_nparmax];
   Real *rbuf_new = new Real[nreal * new_nparmax];
 
-  // Move existing data.
-  if ((npartot > 0)&&(nparmax_ > 0)) {
-    std::memcpy(ibuf_new, ibuf, nint * npartot * sizeof(int));
-    std::memcpy(rbuf_new, rbuf, nreal * npartot * sizeof(Real));
+  // Move existing data
+  if ((npar_ > 0)&&(nparmax_ > 0)) {
+    std::memcpy(ibuf_new, ibuf, nint * npar_ * sizeof(int));
+    std::memcpy(rbuf_new, rbuf, nreal * npar_ * sizeof(Real));
   }
-
   nparmax_ = new_nparmax;
 
   // Delete old space.

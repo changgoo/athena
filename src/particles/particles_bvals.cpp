@@ -31,6 +31,7 @@
 
 // Local function prototypes
 static int CheckSide(int xi, int xi1, int xi2);
+
 //--------------------------------------------------------------------------------------
 //! \fn void Particles::AMRCoarseToFine(MeshBlock* pmbc, MeshBlock* pmbf)
 //! \brief load particles from a coarse meshblock to a fine meshblock.
@@ -234,9 +235,9 @@ void Particles::SendToNeighbors() {
     // (changgoo) not sure why indices have used instead of position
     // but must be equivalent
     // since UpdatePositionIndices are called just before this function call
-    const int x1i = static_cast<int>(xi1_(k)),
-              x2i = static_cast<int>(xi2_(k)),
-              x3i = static_cast<int>(xi3_(k));
+    int x1i = static_cast<int>(xi1_(k)),
+        x2i = static_cast<int>(xi2_(k)),
+        x3i = static_cast<int>(xi3_(k));
     int ox1 = CheckSide(x1i, IS, IE),
         ox2 = CheckSide(x2i, JS, JE),
         ox3 = CheckSide(x3i, KS, KE);
@@ -245,8 +246,8 @@ void Particles::SendToNeighbors() {
     if (pmy_mesh_->shear_periodic) sh(k) = 0;
 
     if (ox1 == 0 && ox2 == 0 && ox3 == 0) {
-        ++k;
-        continue;
+      ++k;
+      continue;
     }
 
     // Apply boundary conditions and find the mesh coordinates.
@@ -255,11 +256,10 @@ void Particles::SendToNeighbors() {
     Real x1, x2, x3;
     ApplyBoundaryConditions(k, x1, x2, x3);
 
-    // SMOON: is this needed?
+    // Find the neighbor block to send it to.
     if (!active1_) ox1 = 0;
     if (!active2_) ox2 = 0;
     if (!active3_) ox3 = 0;
-    // Find the neighbor block to send it to.
     Neighbor *pn = FindTargetNeighbor(ox1, ox2, ox3, x1i, x2i, x3i);
     NeighborBlock *pnb = pn->pnb;
     if (pnb == NULL) {
@@ -324,9 +324,9 @@ void Particles::SendGhostParticles() {
   const int KE = pmy_block->ke;
 
   for (int k = 0; k < npar_; ++k) {
-    const int x1i = static_cast<int>(xi1_(k)),
-              x2i = static_cast<int>(xi2_(k)),
-              x3i = static_cast<int>(xi3_(k));
+    int x1i = static_cast<int>(xi1_(k)),
+        x2i = static_cast<int>(xi2_(k)),
+        x3i = static_cast<int>(xi3_(k));
     // Check if a particle is inside the overlap region
     int ox1 = CheckSide(x1i, IS+noverlap_, IE-noverlap_),
         ox2 = CheckSide(x2i, JS+noverlap_, JE-noverlap_),
@@ -335,7 +335,6 @@ void Particles::SendGhostParticles() {
       // This particle does not overlap with neighbors. No need to send.
       continue;
     }
-    // SMOON: is this needed?
     if (!active1_) ox1 = 0;
     if (!active2_) ox2 = 0;
     if (!active3_) ox3 = 0;
@@ -377,7 +376,7 @@ void Particles::SendGhostParticles() {
       Particles *ppar = pmy_mesh_->FindMeshBlock(nb.snb.gid)->ppars[ipar];
       ppar->bstatus_gh_[nb.targetid] =
           (ppar->recv_gh_[nb.targetid].npar_ > 0) ? BoundaryStatus::arrived
-                                                    : BoundaryStatus::completed;
+                                                 : BoundaryStatus::completed;
     } else {
 #ifdef MPI_PARALLEL
       ParticleBuffer& send = send_gh_[nb.bufid];
@@ -395,8 +394,7 @@ void Particles::SendGhostParticles() {
 void Particles::SendParticleBuffer(ParticleBuffer& send, int dst) {
   int npsend = send.npar_;
   int sendtag = send.tag;
-  send.nparbuf[0] = send.npar_;
-  MPI_Send(send.nparbuf, 2, MPI_INT, dst, sendtag, my_comm);
+  MPI_Send(&npsend, 1, MPI_INT, dst, sendtag, my_comm);
   if (npsend > 0) {
     MPI_Request req = MPI_REQUEST_NULL;
     MPI_Isend(send.ibuf, npsend * nint_buf, MPI_INT,
@@ -419,45 +417,40 @@ void Particles::ReceiveParticleBuffer(int nb_rank, ParticleBuffer& recv,
                                       enum BoundaryStatus& bstatus) {
   // Communicate with neighbor processes.
   if (nb_rank != Globals::my_rank && bstatus == BoundaryStatus::waiting) {
-    int nprecv = recv.npar_;
     if (!recv.flagn) {
       // Get the number of incoming particles.
       if (recv.reqn == MPI_REQUEST_NULL)
-        MPI_Irecv(recv.nparbuf, 2, MPI_INT, nb_rank, recv.tag, my_comm, &recv.reqn);
+        MPI_Irecv(&recv.npar_, 1, MPI_INT, nb_rank, recv.tag, my_comm, &recv.reqn);
       else
         MPI_Test(&recv.reqn, &recv.flagn, MPI_STATUS_IGNORE);
-      if (recv.flagn) { // if the message is arrived
-        recv.npar_ = recv.nparbuf[0];
-        nprecv = recv.npar_;
-        if (nprecv > 0) {
+      if (recv.flagn) {
+        if (recv.npar_ > 0) {
           // Check the buffer size.
-          if (nprecv > recv.nparmax_)
-            recv.Reallocate(nprecv, nint_buf, nreal_buf);
+          if (recv.npar_ > recv.nparmax_)
+            recv.Reallocate(2*recv.npar_ - recv.nparmax_, nint_buf, nreal_buf);
         } else {
           // No incoming particles.
           bstatus = BoundaryStatus::completed;
         }
       }
-    } else if (nprecv > 0) {
+    } else if (recv.npar_ > 0) {
       // Receive data from the neighbor.
       if (!recv.flagi) {
         if (recv.reqi == MPI_REQUEST_NULL)
-          MPI_Irecv(recv.ibuf, nprecv * nint_buf, MPI_INT,
+          MPI_Irecv(recv.ibuf, recv.npar_ * nint_buf, MPI_INT,
                     nb_rank, recv.tag + 1, my_comm, &recv.reqi);
         else
           MPI_Test(&recv.reqi, &recv.flagi, MPI_STATUS_IGNORE);
       }
       if (!recv.flagr) {
         if (recv.reqr == MPI_REQUEST_NULL)
-          MPI_Irecv(recv.rbuf, nprecv * nreal_buf, MPI_ATHENA_REAL,
+          MPI_Irecv(recv.rbuf, recv.npar_ * nreal_buf, MPI_ATHENA_REAL,
                     nb_rank, recv.tag + 2, my_comm, &recv.reqr);
         else
           MPI_Test(&recv.reqr, &recv.flagr, MPI_STATUS_IGNORE);
       }
       if (recv.flagi && recv.flagr)
         bstatus = BoundaryStatus::arrived;
-    } else {
-      // nothing to receive
     }
   }
 }
@@ -702,16 +695,16 @@ void Particles::FlushReceiveBuffer(ParticleBuffer& recv, bool ghost) {
     ATHENA_ERROR(msg);
     return;
   }
-  int npartot = npar_ + npar_gh_; // will be equal to npar_ when ghost=false
-  int nprecv = recv.npar_;
-  int *pi = recv.ibuf;
-  Real *pr = recv.rbuf;
 
   // Check the memory size.
+  int nprecv = recv.npar_;
   if (npar_ + nprecv > nparmax_)
     UpdateCapacity(nparmax_ + 2 * (npar_ + nprecv - nparmax_));
 
   // Flush the receive buffers.
+  int *pi = recv.ibuf;
+  Real *pr = recv.rbuf;
+  int npartot = npar_ + npar_gh_;
   for (int k = npartot; k < npartot + nprecv; ++k) {
     for (int j = 0; j < nint; ++j)
       intprop(j,k) = *pi++;
@@ -719,6 +712,14 @@ void Particles::FlushReceiveBuffer(ParticleBuffer& recv, bool ghost) {
       realprop(j,k) = *pr++;
     for (int j = 0; j < naux; ++j)
       auxprop(j,k) = *pr++;
+  }
+
+  // Apply boundary conditions here for ghost particles
+  if (ghost) {
+    Real x1, x2, x3; // dummy variables
+    for (int k = npartot; k < npartot + nprecv; ++k) {
+      ApplyBoundaryConditions(k, x1, x2, x3, true);
+    }
   }
 
   // Find their position indices.
@@ -731,21 +732,11 @@ void Particles::FlushReceiveBuffer(ParticleBuffer& recv, bool ghost) {
   xi1s.InitWithShallowSlice(xi1_, 1, npartot, nprecv);
   xi2s.InitWithShallowSlice(xi2_, 1, npartot, nprecv);
   xi3s.InitWithShallowSlice(xi3_, 1, npartot, nprecv);
-  if (ghost) {
-    Real x1, x2, x3;
-    // apply periodic boundary conditions here for ghost particles
-    for (int k = npartot; k < npartot + nprecv; ++k) {
-      ApplyBoundaryConditions(k, x1, x2, x3, true);
-    }
-  }
   UpdatePositionIndices(nprecv, xps, yps, zps, xi1s, xi2s, xi3s);
 
   // Clear the receive buffers.
-  if (ghost) {
-    npar_gh_ += recv.npar_;
-  } else {
-    npar_ += recv.npar_;
-  }
+  int& npar = ghost ? npar_gh_ : npar_;
+  npar += recv.npar_;
   recv.npar_ = 0;
 }
 

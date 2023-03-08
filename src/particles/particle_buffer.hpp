@@ -35,7 +35,6 @@ friend class Particles;
 
  protected:
   // Instance variables
-  int nparbuf[2]; //!> number of particles buffer
   int* ibuf;   //!> ptr to integer buffer
   Real* rbuf;   //!> ptr to real buffer
   int nparmax_;  //!> maximum number of particles
