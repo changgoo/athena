@@ -108,6 +108,8 @@ friend class ParticleMesh;
 #endif
   void SendToNeighbors();
   bool ReceiveFromNeighbors();
+  void SendGhostParticles();
+  bool ReceiveGhostParticles();
   void StartReceivingParticlesShear();
   void SendParticlesShear();
   int FindTargetGidAlongX2(Real x2);
@@ -267,8 +269,9 @@ friend class ParticleMesh;
   // MeshBlock-to-MeshBlock communication:
   BoundaryValues *pbval_;                            //!> ptr to my BoundaryValues
   Neighbor neighbor_[3][3][3];                       //!> links to neighbors
-  ParticleBuffer recv_[56], recv_sh_[8];             //!> particle receive buffers
-  enum BoundaryStatus bstatus_[56], bstatus_recv_sh_[8];  //!> boundary status
+  ParticleBuffer recv_[56], recv_gh_[56], recv_sh_[8];             //!> particle receive buffers
+  enum BoundaryStatus bstatus_[56], bstatus_gh_[56], bstatus_recv_sh_[8];  //!> boundary status
+
 #ifdef MPI_PARALLEL
   static MPI_Comm my_comm;   //!> my MPI communicator
   ParticleBuffer send_[56], send_gh_[56], send_sh_[8];  //!> particle send buffers

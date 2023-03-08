@@ -98,14 +98,15 @@ void Particles::ClearBoundary() {
   for (int i = 0; i < pbval_->nneighbor; ++i) {
     NeighborBlock& nb = pbval_->neighbor[i];
     bstatus_[nb.bufid] = BoundaryStatus::waiting;
+    bstatus_gh_[nb.bufid] = BoundaryStatus::waiting;
 #ifdef MPI_PARALLEL
     if (nb.snb.rank != Globals::my_rank) {
-      ParticleBuffer& recv = recv_[nb.bufid];
-      recv.flagn = recv.flagi = recv.flagr = 0;
+      recv_[nb.bufid].flagn = recv_[nb.bufid].flagi = recv_[nb.bufid].flagr = 0;
       send_[nb.bufid].npar_ = send_[nb.bufid].npar_gh_ = 0;
+      recv_gh_[nb.bufid].flagn = recv_gh_[nb.bufid].flagi = recv_gh_[nb.bufid].flagr = 0;
+      send_gh_[nb.bufid].npar_ = send_gh_[nb.bufid].npar_gh_ = 0;
     }
 #endif
-    send_gh_[nb.bufid].npar_ = send_gh_[nb.bufid].npar_gh_ = 0;
   }
 
   // clear boundary information for shear
@@ -176,6 +177,8 @@ void Particles::LinkNeighbors(MeshBlockTree &tree,
       // + particle container id (3 bits) + npar,intprop,realprop(2 bits)
       send_[nb.bufid].tag = (snb.lid<<11) | (nb.targetid<<5) | (ipar << 2);
       recv_[nb.bufid].tag = (pmy_block->lid<<11) | (nb.bufid<<5) | (ipar << 2);
+      send_gh_[nb.bufid].tag = (snb.lid<<11) | (nb.targetid<<5) | (ipar << 2);
+      recv_gh_[nb.bufid].tag = (pmy_block->lid<<11) | (nb.bufid<<5) | (ipar << 2);
 #endif
     }
   }
@@ -242,81 +245,127 @@ void Particles::SendToNeighbors() {
     if (pmy_mesh_->shear_periodic) sh(k) = 0;
 
     if (ox1 == 0 && ox2 == 0 && ox3 == 0) {
-      // This particle is inside the active zone.
-      // Check if a particle is inside the overlap region
-      ox1 = CheckSide(x1i, IS+noverlap_, IE-noverlap_),
-      ox2 = CheckSide(x2i, JS+noverlap_, JE-noverlap_),
-      ox3 = CheckSide(x3i, KS+noverlap_, KE-noverlap_);
-      if (ox1 == 0 && ox2 == 0 && ox3 == 0) {
-        // This particle would not influence neighbors. No need to send.
+        ++k;
+        continue;
+    }
+
+    // Apply boundary conditions and find the mesh coordinates.
+    // After this function call, position/velocity vectors are updated
+    // but the indices remain the same to use in FindTargetNeighbor
+    Real x1, x2, x3;
+    ApplyBoundaryConditions(k, x1, x2, x3);
+
+    // SMOON: is this needed?
+    if (!active1_) ox1 = 0;
+    if (!active2_) ox2 = 0;
+    if (!active3_) ox3 = 0;
+    // Find the neighbor block to send it to.
+    Neighbor *pn = FindTargetNeighbor(ox1, ox2, ox3, x1i, x2i, x3i);
+    NeighborBlock *pnb = pn->pnb;
+    if (pnb == NULL) {
+      RemoveOneParticle(k);
+      continue;
+    }
+
+    // Determine which particle buffer to use.
+    ParticleBuffer *ppb = NULL;
+    if (pnb->snb.rank == Globals::my_rank) {
+      // No need to send if back to the same block.
+      if (pnb->snb.gid == pmy_block->gid) {
+        // Update particle indices for particles that are in the same block
+        pmy_block->pcoord->MeshCoordsToIndices(x1, x2, x3, xi1_(k), xi2_(k), xi3_(k));
         ++k;
         continue;
       }
-      // SMOON: is this needed?
-      if (!active1_) ox1 = 0;
-      if (!active2_) ox2 = 0;
-      if (!active3_) ox3 = 0;
-      // Find the all neighbor blocks to send a particle to.
-      for (int iox1=0; std::abs(iox1)<=std::abs(ox1); iox1+=SIGN(ox1)) {
-        for (int iox2=0; std::abs(iox2)<=std::abs(ox2); iox2+=SIGN(ox2)) {
-          for (int iox3=0; std::abs(iox3)<=std::abs(ox3); iox3+=SIGN(ox3)) {
-            if ((iox1==0)&&(iox2==0)&&(iox3==0)) continue;
-            Neighbor *pn = FindTargetNeighbor(iox1, iox2, iox3, x1i, x2i, x3i);
-            NeighborBlock *pnb = pn->pnb;
-            if (pnb == NULL) {
-              // do nothing if there is no neighboring block
-              ++k;
-              continue;
-            }
-            // Load the particle to ghost particle buffer
-            ParticleBuffer *ppb = &send_gh_[pnb->bufid];
-            LoadParticleBuffer(ppb, k, true);
-          }
-        }
-      }
-      ++k;
+      // Use the target receive buffer.
+      ppb = &pn->pmb->ppars[ipar]->recv_[pnb->targetid];
     } else {
-      // This particle has crossed the block boundary.
-
-      // Apply boundary conditions and find the mesh coordinates.
-      // After this function call, position/velocity vectors are updated
-      // but the indices remain the same to use in FindTargetNeighbor
-      Real x1, x2, x3;
-      ApplyBoundaryConditions(k, x1, x2, x3);
-
-      // SMOON: is this needed?
-      if (!active1_) ox1 = 0;
-      if (!active2_) ox2 = 0;
-      if (!active3_) ox3 = 0;
-      // Find the neighbor block to send it to.
-      Neighbor *pn = FindTargetNeighbor(ox1, ox2, ox3, x1i, x2i, x3i);
-      NeighborBlock *pnb = pn->pnb;
-      if (pnb == NULL) {
-        RemoveOneParticle(k);
-        continue;
-      }
-      // Determine which particle buffer to use.
-      ParticleBuffer *ppb = NULL;
-      if (pnb->snb.rank == Globals::my_rank) {
-        // No need to send if back to the same block.
-        if (pnb->snb.gid == pmy_block->gid) {
-          // Update particle indices for particles that are in the same block
-          pmy_block->pcoord->MeshCoordsToIndices(x1, x2, x3, xi1_(k), xi2_(k), xi3_(k));
-          ++k;
-          continue;
-        }
-        // Use the target receive buffer.
-        ppb = &pn->pmb->ppars[ipar]->recv_[pnb->targetid];
-      } else {
 #ifdef MPI_PARALLEL
-        // Use the send buffer.
-        ppb = &send_[pnb->bufid];
+      // Use the send buffer.
+      ppb = &send_[pnb->bufid];
 #endif
+    }
+
+    // Load the particle to particle buffer
+    LoadParticleBuffer(ppb, k);
+
+    // Pop the particle from the current MeshBlock.
+    RemoveOneParticle(k);
+  }
+
+  // Send to neighbor blocks and update boundary status.
+  for (int i = 0; i < pbval_->nneighbor; ++i) {
+    NeighborBlock& nb = pbval_->neighbor[i];
+    int dst = nb.snb.rank;
+    if (dst == Globals::my_rank) {
+      Particles *ppar = pmy_mesh_->FindMeshBlock(nb.snb.gid)->ppars[ipar];
+      ppar->bstatus_[nb.targetid] =
+          (ppar->recv_[nb.targetid].npar_ > 0) ? BoundaryStatus::arrived
+                                              : BoundaryStatus::completed;
+    } else {
+#ifdef MPI_PARALLEL
+      ParticleBuffer& send = send_[nb.bufid];
+      SendParticleBuffer(send, nb.snb.rank);
+#endif
+    }
+  }
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void Particles::SendGhostParticles()
+//! \brief sends particles in the overlap region to neighboring meshblocks as ghost ptcls.
+
+void Particles::SendGhostParticles() {
+  const int IS = pmy_block->is;
+  const int IE = pmy_block->ie;
+  const int JS = pmy_block->js;
+  const int JE = pmy_block->je;
+  const int KS = pmy_block->ks;
+  const int KE = pmy_block->ke;
+
+  for (int k = 0; k < npar_; ++k) {
+    const int x1i = static_cast<int>(xi1_(k)),
+              x2i = static_cast<int>(xi2_(k)),
+              x3i = static_cast<int>(xi3_(k));
+    // Check if a particle is inside the overlap region
+    int ox1 = CheckSide(x1i, IS+noverlap_, IE-noverlap_),
+        ox2 = CheckSide(x2i, JS+noverlap_, JE-noverlap_),
+        ox3 = CheckSide(x3i, KS+noverlap_, KE-noverlap_);
+    if (ox1 == 0 && ox2 == 0 && ox3 == 0) {
+      // This particle does not overlap with neighbors. No need to send.
+      continue;
+    }
+    // SMOON: is this needed?
+    if (!active1_) ox1 = 0;
+    if (!active2_) ox2 = 0;
+    if (!active3_) ox3 = 0;
+    // Find the all neighbor blocks to send a particle to.
+    for (int iox1=0; std::abs(iox1)<=std::abs(ox1); iox1+=SIGN(ox1)) {
+      for (int iox2=0; std::abs(iox2)<=std::abs(ox2); iox2+=SIGN(ox2)) {
+        for (int iox3=0; std::abs(iox3)<=std::abs(ox3); iox3+=SIGN(ox3)) {
+          if ((iox1==0)&&(iox2==0)&&(iox3==0)) continue;
+          Neighbor *pn = FindTargetNeighbor(iox1, iox2, iox3, x1i, x2i, x3i);
+          NeighborBlock *pnb = pn->pnb;
+          if (pnb == NULL) {
+            // do nothing if there is no neighboring block
+            continue;
+          }
+
+          // Determine which particle buffer to use.
+          ParticleBuffer *ppb = NULL;
+          if (pnb->snb.rank == Globals::my_rank) {
+            // Needs to send even if back to the same block.
+            // Use the target receive buffer.
+            ppb = &pn->pmb->ppars[ipar]->recv_gh_[pnb->targetid];
+          } else {
+#ifdef MPI_PARALLEL
+            // Use the send buffer.
+            ppb = &send_gh_[pnb->bufid];
+#endif
+          }
+          LoadParticleBuffer(ppb, k, true);
+        }
       }
-      // Load the particle to particle buffer
-      LoadParticleBuffer(ppb, k);
-      // Pop the particle from the current MeshBlock.
-      RemoveOneParticle(k);
     }
   }
 
@@ -326,17 +375,12 @@ void Particles::SendToNeighbors() {
     int dst = nb.snb.rank;
     if (dst == Globals::my_rank) {
       Particles *ppar = pmy_mesh_->FindMeshBlock(nb.snb.gid)->ppars[ipar];
-      ParticleBuffer& recv = ppar->recv_[nb.targetid];
-      // Append ghost particles in the target receive buffer
-      recv.Append(send_gh_[nb.bufid]);
-      int npartot = recv.npar_ + recv.npar_gh_;
-      ppar->bstatus_[nb.targetid] = npartot > 0 ? BoundaryStatus::arrived
-                                                : BoundaryStatus::completed;
+      ppar->bstatus_gh_[nb.targetid] =
+          (ppar->recv_gh_[nb.targetid].npar_gh_ > 0) ? BoundaryStatus::arrived
+                                                    : BoundaryStatus::completed;
     } else {
 #ifdef MPI_PARALLEL
-      ParticleBuffer& send = send_[nb.bufid];
-      // Append ghost particles in the send buffer
-      send.Append(send_gh_[nb.bufid]);
+      ParticleBuffer& send = send_gh_[nb.bufid];
       SendParticleBuffer(send, nb.snb.rank);
 #endif
     }
@@ -389,9 +433,8 @@ void Particles::ReceiveParticleBuffer(int nb_rank, ParticleBuffer& recv,
         nprecv = recv.npar_ + recv.npar_gh_;
         if (nprecv > 0) {
           // Check the buffer size.
-          if (nprecv > recv.nparmax_) {
+          if (nprecv > recv.nparmax_)
             recv.Reallocate(nprecv, nint_buf, nreal_buf);
-          }
         } else {
           // No incoming particles.
           bstatus = BoundaryStatus::completed;
@@ -428,17 +471,8 @@ void Particles::ReceiveParticleBuffer(int nb_rank, ParticleBuffer& recv,
 //!        if all receives are completed.
 
 bool Particles::ReceiveFromNeighbors() {
-  if (npar_gh_ > 0) {
-    std::stringstream msg;
-    msg << "### FATAL ERROR in function [ParticleBuffer::FlushReceiveBuffer]" << std::endl
-        << "There are already " << npar_gh_ << " ghost particles before receive."
-        << " Something must be wrong." << std::endl;
-    ATHENA_ERROR(msg);
-    return false;
-  }
+  bool flag = true;
 
-  bool all_received = true;
-  bool something_arrived = false;
   for (int i = 0; i < pbval_->nneighbor; ++i) {
     NeighborBlock& nb = pbval_->neighbor[i];
     enum BoundaryStatus& bstatus = bstatus_[nb.bufid];
@@ -449,40 +483,52 @@ bool Particles::ReceiveFromNeighbors() {
     switch (bstatus) {
       case BoundaryStatus::completed:
         break;
+
       case BoundaryStatus::waiting:
-        all_received = false;
+        flag = false;
         break;
+
       case BoundaryStatus::arrived:
-        something_arrived = true;
+        FlushReceiveBuffer(recv);
+        bstatus = BoundaryStatus::completed;
         break;
     }
   }
 
-  // Wait until receiving particles from all neighbors. Then flush all active particles,
-  // and attach ghost particles at the end.
-  if ((all_received)&&(something_arrived)) {
-    // Flush active particles.
-    for (int i = 0; i < pbval_->nneighbor; ++i) {
-      NeighborBlock& nb = pbval_->neighbor[i];
-      enum BoundaryStatus& bstatus = bstatus_[nb.bufid];
-      if (bstatus == BoundaryStatus::arrived) {
-        ParticleBuffer& recv = recv_[nb.bufid];
-        FlushReceiveBuffer(recv);
-      }
-    }
-    // Flush ghost particles on top of active particles.
-    for (int i = 0; i < pbval_->nneighbor; ++i) {
-      NeighborBlock& nb = pbval_->neighbor[i];
-      enum BoundaryStatus& bstatus = bstatus_[nb.bufid];
-      if (bstatus == BoundaryStatus::arrived) {
-        ParticleBuffer& recv = recv_[nb.bufid];
+  return flag;
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn bool Particles::ReceiveGhostParticles()
+//! \brief receives ghost particles from neighboring meshblocks and returns a flag
+//!        indicating if all receives are completed.
+
+bool Particles::ReceiveGhostParticles() {
+  bool flag = true;
+
+  for (int i = 0; i < pbval_->nneighbor; ++i) {
+    NeighborBlock& nb = pbval_->neighbor[i];
+    enum BoundaryStatus& bstatus = bstatus_gh_[nb.bufid];
+    ParticleBuffer& recv = recv_gh_[nb.bufid];
+#ifdef MPI_PARALLEL
+    ReceiveParticleBuffer(nb.snb.rank, recv, bstatus);
+#endif
+    switch (bstatus) {
+      case BoundaryStatus::completed:
+        break;
+
+      case BoundaryStatus::waiting:
+        flag = false;
+        break;
+
+      case BoundaryStatus::arrived:
         FlushReceiveBuffer(recv, true);
         bstatus = BoundaryStatus::completed;
-      }
+        break;
     }
   }
 
-  return all_received;
+  return flag;
 }
 
 //--------------------------------------------------------------------------------------
