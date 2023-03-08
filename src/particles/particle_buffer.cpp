@@ -22,7 +22,7 @@
 ParticleBuffer::ParticleBuffer() {
   ibuf = NULL;
   rbuf = NULL;
-  nparmax_ = npar_ = nint_ = nreal_ = 0;
+  nparmax_ = npar_ = 0;
 #ifdef MPI_PARALLEL
   reqn = reqi = reqr = MPI_REQUEST_NULL;
   flagn = flagi = flagr = 0;
@@ -50,8 +50,6 @@ ParticleBuffer::ParticleBuffer(int nparmax0, int nint, int nreal) {
 
   // Initialize the instance variables.
   nparmax_ = nparmax0;
-  nint_ = nint;
-  nreal_ = nreal;
   ibuf = new int[nint * nparmax_];
   rbuf = new Real[nreal * nparmax_];
   npar_ = 0;
@@ -108,8 +106,6 @@ void ParticleBuffer::Reallocate(int new_nparmax, int nint, int nreal) {
 #endif
 
   // Allocate new space.
-  nint_ = nint;
-  nreal_ = nreal;
   int *ibuf_new = new int[nint * new_nparmax];
   Real *rbuf_new = new Real[nreal * new_nparmax];
 
