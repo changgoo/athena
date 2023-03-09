@@ -367,10 +367,10 @@ std::size_t Particles::GetSizeInBytes() const {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn int Particles::GridIndex()
-//! \brief returns the integer indices of the particle-containing cell.
+//! \fn int Particles::MeshBlockIndex()
+//! \brief returns the local meshblock indices of the particle-containing cell.
 
-void Particles::GridIndex(Real xp, Real yp, Real zp, int &ip, int &jp, int &kp) const {
+void Particles::MeshBlockIndex(Real xp, Real yp, Real zp, int &ip, int &jp, int &kp) const {
   // Convert to the Mesh coordinates.
   Real x1, x2, x3;
   pmy_block->pcoord->CartesianToMeshCoords(xp, yp, zp, x1, x2, x3);

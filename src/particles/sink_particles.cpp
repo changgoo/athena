@@ -71,7 +71,7 @@ void SinkParticles::SetControlVolume() {
   for (int idx=0; idx<npar_+npar_gh_; ++idx) {
     // find the indices of the particle-containing cell.
     int ip, jp, kp, ip0, jp0, kp0;
-    GridIndex(xp(idx), yp(idx), zp(idx), ip, jp, kp);
+    MeshBlockIndex(xp(idx), yp(idx), zp(idx), ip, jp, kp);
     SetControlVolume(cons, ip, jp, kp);
   }
 }
@@ -113,8 +113,8 @@ void SinkParticles::AccreteMass() {
 
     // find the indices of the particle-containing cell.
     int ip, jp, kp, ip0, jp0, kp0;
-    GridIndex(xp(idx), yp(idx), zp(idx), ip, jp, kp);
-    GridIndex(xp0(idx), yp0(idx), zp0(idx), ip0, jp0, kp0);
+    MeshBlockIndex(xp(idx), yp(idx), zp(idx), ip, jp, kp);
+    MeshBlockIndex(xp0(idx), yp0(idx), zp0(idx), ip0, jp0, kp0);
 
     // Step 1(a). Calculate total mass in the control volume M^{n+1} updated by hydro
     // integrator, before applying extrapolation.
@@ -205,8 +205,8 @@ void SinkParticles::AccreteMass() {
   for (int idx=npar_; idx<npar_+npar_gh_; ++idx) {
     // find the indices of the particle-containing cell.
     int ip, jp, kp, ip0, jp0, kp0;
-    GridIndex(xp(idx), yp(idx), zp(idx), ip, jp, kp);
-    GridIndex(xp0(idx), yp0(idx), zp0(idx), ip0, jp0, kp0);
+    MeshBlockIndex(xp(idx), yp(idx), zp(idx), ip, jp, kp);
+    MeshBlockIndex(xp0(idx), yp0(idx), zp0(idx), ip0, jp0, kp0);
     SetControlVolume(cons, ip, jp, kp);
     if ((ip != ip0) || (jp != jp0) || (kp != kp0))
       SetControlVolume(cons, ip0, jp0, kp0);

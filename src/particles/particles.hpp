@@ -88,7 +88,7 @@ friend class ParticleMesh;
   std::size_t GetSizeInBytes() const;
   bool IsGravity() const { return isgravity_; }
   int GetNumPar() const { return npar_; }
-  void GridIndex(Real xp, Real yp, Real zp, int &ip, int &jp, int &kp) const;
+  void MeshBlockIndex(Real xp, Real yp, Real zp, int &ip, int &jp, int &kp) const;
   virtual void InteractWithMesh() {}
 
   // Input/Output interface
