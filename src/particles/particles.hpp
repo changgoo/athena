@@ -168,13 +168,25 @@ friend class ParticleMesh;
   // MeshBlock as a "ghost particle". The variable "noverlap_" defines the thickness of
   // the overlap region, such that the overlap region in the x1 direction is:
   //   [is, is+noverlap_-1] and [ie-noverlap_+1, ie].
+  //
   // For example, consider a star particle with the feedback radius = 1. When it explodes
-  // at i = ie - 2 in MeshBlock "A", it modifies the active cell i = ie - 1 of the
-  // MeshBlock A, which corresponds to the ghost cell i = is - 2 of the neighboring
-  // MeshBlock "B". In this case, MeshBlock B needs noverlap_ >= 3 to receive the ghost
-  // particle from MeshBlock A to update its NGHOST = 2 ghost cells.
-  // In general, noverlap_ should be set to at least
+  // at i = ie - 2 in MeshBlock "A" (see the diagram below), it modifies the active cell
+  // i = ie - 1 of the MeshBlock A, which corresponds to the ghost cell i = is - 2 of the
+  // neighboring MeshBlock "B".
+  //
+  //               --------- MeshBlock A ---|--- MeshBlock B -----
+  //  particle location |<---|--x-|--->|    |    |    |
+  //      index in A    |ie-3|ie-2|ie-1| ie |ie+1|ie+2|
+  //      index in B    |is-4|is-3|is-2|is-1| is |is+1|
+  //
+  // Because, e.g., PLM requires 2 ghost cells for hydro/MHD, MeshBlock B needs
+  // noverlap_ >= 3 to fully update its 2 ghost cells by receiving the ghost particle
+  // from MeshBlock A.
+  // In general, if particle modifies the fluid variable, noverlap_ should be at least:
   // (number of ghost cells required for hydro/MHD) + (radius of influence of a particle).
+  // It is developer's responsibility to set the maximum radius of influence in
+  // [Particles::Initialize].
+
   Real cfl_par_;  //!> CFL number for particles
 
   ParticleGravity *ppgrav; //!> ptr to particle-gravity

@@ -31,7 +31,6 @@ friend class Particles;
 
   // Instance method
   void Reallocate(int new_nparmax, int nint, int nreal);
-  void Append(const ParticleBuffer& pbin);
 
  protected:
   // Instance variables

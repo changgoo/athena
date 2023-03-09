@@ -314,6 +314,7 @@ void Particles::SendToNeighbors() {
 //--------------------------------------------------------------------------------------
 //! \fn void Particles::SendGhostParticles()
 //! \brief sends particles in the overlap region to neighboring meshblocks as ghost ptcls.
+//! TODO(SMOON) shearing BC?
 
 void Particles::SendGhostParticles() {
   const int IS = pmy_block->is;
@@ -324,6 +325,8 @@ void Particles::SendGhostParticles() {
   const int KE = pmy_block->ke;
 
   for (int k = 0; k < npar_; ++k) {
+    // (smoon) position indices xi1_, xi2_, xi3_ of the newly received active particles
+    // must be up-to-date.
     int x1i = static_cast<int>(xi1_(k)),
         x2i = static_cast<int>(xi2_(k)),
         x3i = static_cast<int>(xi3_(k));
@@ -339,6 +342,8 @@ void Particles::SendGhostParticles() {
     if (!active2_) ox2 = 0;
     if (!active3_) ox3 = 0;
     // Find the all neighbor blocks to send a particle to.
+    // (smoon) A particle in the overlap region can overlap with more than one MeshBlock;
+    // Need to send to all of them.
     for (int iox1=0; std::abs(iox1)<=std::abs(ox1); iox1+=SIGN(ox1)) {
       for (int iox2=0; std::abs(iox2)<=std::abs(ox2); iox2+=SIGN(ox2)) {
         for (int iox3=0; std::abs(iox3)<=std::abs(ox3); iox3+=SIGN(ox3)) {
@@ -349,11 +354,9 @@ void Particles::SendGhostParticles() {
             // do nothing if there is no neighboring block
             continue;
           }
-
           // Determine which particle buffer to use.
           ParticleBuffer *ppb = NULL;
           if (pnb->snb.rank == Globals::my_rank) {
-            // Needs to send even if back to the same block.
             // Use the target receive buffer.
             ppb = &pn->pmb->ppars[ipar]->recv_gh_[pnb->targetid];
           } else {
