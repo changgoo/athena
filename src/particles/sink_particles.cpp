@@ -82,7 +82,7 @@ void SinkParticles::SetControlVolume() {
 //! \brief accrete gas from neighboring cells
 
 void SinkParticles::AccreteMass() {
-  if (COORDINATE_SYSTEM != "cartesian") {
+  if (std::strcmp(COORDINATE_SYSTEM, "cartesian") != 0) {
     std::stringstream msg;
     msg << "### FATAL ERROR in function [SinkParticles::AccreteMass]" << std::endl
         << "Only Cartesian coordinate system is supported " << std::endl;
