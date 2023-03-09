@@ -48,12 +48,16 @@ struct Neighbor {
 //! \brief container for parameters read from `<particle?>` block in the input file
 
 struct ParticleParameters {
+  // max_rinfl is the maximum integer radius of influence of a particle.
+  // max_rinfl = -1 for a particle that has no influence at all, i.e., it does not modify
+  // the fluid variables at grid cells.
+  // max_rinfl = 0 means that a particle only modifies the cell in which it is contained.
   int block_number, ipar, max_rinfl;
   bool table_output, gravity;
   std::string block_name;
   std::string partype;
   // TODO(SMOON) Add nhistory variable
-  ParticleParameters() : block_number(0), ipar(-1), max_rinfl(0), table_output(false),
+  ParticleParameters() : block_number(0), ipar(-1), max_rinfl(-1), table_output(false),
                          gravity(false) {}
 };
 

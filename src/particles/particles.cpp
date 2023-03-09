@@ -72,8 +72,10 @@ int ComputeReqNGHOST(int xorder) {
 
 int ComputeOverlap(int xorder, int rinfl) {
   // Set the thickness of the overlap region for ghost particle exchange.
+  // rinfl = -1 means that the particle does not modify the fluid variable at all
+  // (e.g., tracer), and therefore does not require ghost particles.
   // See the comments in the header file for more information.
-  int noverlap = rinfl > 0 ? ComputeReqNGHOST(xorder) + rinfl : 0;
+  int noverlap = rinfl >= 0 ? ComputeReqNGHOST(xorder) + rinfl : 0;
   return noverlap;
 }
 
