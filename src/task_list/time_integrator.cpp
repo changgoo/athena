@@ -1154,21 +1154,23 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
       AddTask(INT_PAR, NONE);
       AddTask(SEND_PAR, INT_PAR);
       AddTask(RECV_PAR, NONE);
-      TaskID parcomm=RECV_PAR;
+      TaskID recvpar=RECV_PAR;
 
       if (SHEAR_PERIODIC) {
         AddTask(SEND_PARSH, RECV_PAR);
         AddTask(RECV_PARSH, SEND_PARSH);
-        parcomm=(parcomm|RECV_PARSH);
+        recvpar=(recvpar|RECV_PARSH);
       }
 
-      AddTask(SEND_GPAR, parcomm);
-      AddTask(RECV_GPAR, NONE);
-      parcomm=(parcomm|RECV_GPAR);
+      // need to post receive for ghost particles after receiving active particles
+      // to avoid wrong delivery due to the same MPI tags.
+      AddTask(SEND_GPAR, recvpar);
+      AddTask(RECV_GPAR, recvpar);
+      recvpar=(recvpar|RECV_GPAR);
 
       // SMOON: gas-particle interaction must use updated conservative variables
       // in order to be operator split (note that INTERACT operates only at last stage).
-      AddTask(INTERACT, (parcomm|before_prim));
+      AddTask(INTERACT, (recvpar|before_prim));
       AddTask(SEND_PM, INTERACT);
       AddTask(RECV_PM, SEND_PM);
       AddTask(SETB_PM, RECV_PM);
