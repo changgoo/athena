@@ -276,6 +276,8 @@ void Particles::RemoveOneParticle(int k) {
       realprop(j,k) = realprop(j,npar_);
     for (int j = 0; j < naux; ++j)
       auxprop(j,k) = auxprop(j,npar_);
+    for (int j = 0; j < nwork; ++j)
+      work(j,k) = work(j,npar_);
   }
   // If there are ghost particles, rearrange the last one to fill the vacancy
   if (npar_gh_ > 0) {
@@ -285,6 +287,8 @@ void Particles::RemoveOneParticle(int k) {
       realprop(j,npar_) = realprop(j,npar_+npar_gh_);
     for (int j = 0; j < naux; ++j)
       auxprop(j,npar_) = auxprop(j,npar_+npar_gh_);
+    for (int j = 0; j < nwork; ++j)
+      work(j,npar_) = work(j,npar_+npar_gh_);
   }
 }
 
