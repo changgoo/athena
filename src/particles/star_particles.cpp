@@ -21,7 +21,8 @@
 //! \brief constructs a StarParticles instance.
 
 StarParticles::StarParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp)
-  : Particles(pmb, pin, pp), dt_old(0), imetal(-1), iage(-1), ifgas(-1) {
+  : Particles(pmb, pin, pp), imetal(-1), iage(-1), ifgas(-1),
+    hydro_integrator(pin->GetOrAddString("time", "integrator", "vl2")) {
   // Add metal mass
   imetal = AddRealProperty();
   realpropname.push_back("metal");
@@ -64,52 +65,78 @@ void StarParticles::AssignShorthandsForDerived() {
 //! \fn void StarParticles::Integrate(int step)
 //! \brief updates all particle positions and velocities from t to t + dt.
 //!
-//! KDK Leapflog algorithm with Boris push; assuming integrator=vl2
-//! - kick from n-1/2->n+1/2 is done in stage 1
-//! - drift from n->n+1 is done in stage 2
-//! - temporary half time kick has to be done from n+1/2->n+1
-//!   for output (use ApplyUserWorkBeforeOutput or write an explicit function for it)
-void StarParticles::Integrate(int stage) {
-  Real t = 0, dt = 0, dth = 0;
 
-  // Determine the integration cofficients.
+void StarParticles::Integrate(int stage) {
+  if (hydro_integrator == "vl2") {
+    VL2DKD(stage);
+  } else if (hydro_integrator == "rk2") {
+    RK2KDK(stage);
+  } else {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in [StarParticles::Integrate]" << std::endl
+        << "integrator=" << hydro_integrator << " does not work with star particles."
+        << std::endl;
+    ATHENA_ERROR(msg);
+  }
+}
+
+
+//--------------------------------------------------------------------------------------
+//! \fn void StarParticles::VL2DKD(int step)
+//! \brief DKD leapfrog integrator to be coupled with VL2 integrator
+//!
+void StarParticles::VL2DKD(int stage) {
+  Real t = pmy_mesh_->time;
+  Real dt = pmy_mesh_->dt; // t^(n+1) - t^n;
+  Real hdt = 0.5*dt;
+
   switch (stage) {
   case 1:
-    t = pmy_mesh_->time;
-    dt = pmy_mesh_->dt; // t^(n+1)-t^n;
-    dth = 0.5*(dt + dt_old); // t^(n+1/2)-t^(n-1/2)
-
-    // Calculate force on particles at t = t^n
+    // Save position and velocity at t^n
+    SaveStatus();
+    // Step 1. Drift from x^n to x^(n+1/2)
+    Drift(t, hdt);
+    // Update the position index to be used in Poisson solver
+    UpdatePositionIndices();
+    break;
+  case 2:
+    // Calculate force on particles at t = t^(n+1/2)
     if (SELF_GRAVITY_ENABLED) {
       ppgrav->FindGravitationalForce(pmy_block->pgrav->phi);
       ppgrav->InterpolateGravitationalForce();
     }
 
-    // closing kick by 0.5*dt_old
-    // this kick has to be skipped for new particles
-    Kick(t,0.5*dt_old,pmy_block->phydro->w);
-    // x -> x0, v -> v0
-    SaveStatus();
-    // a temporary heck; later we will have a flag for new particles
-    // aging first to distinguish new particle
-    Age(t,dt);
-    // Boris push for velocity dependent terms: Coriolis force
-    if (pmy_mesh_->shear_periodic) BorisKick(t,dth);
-    // opening kick by 0.5*dt
-    Kick(t,0.5*dt,pmy_block->phydro->w);
-    // drift from t^n to t^n+1
-    Drift(t,dt);
+    // Step 2. Kick from v^n to v^(n+1)
+    // Boris algorithm splits the full kick into three consecutive kicks.
+    // v^n -> v^(-) -> v^(+) -> v^(n+1)
+    // See Appendix of Moon et al. (2021) for notations.
 
-    dt_old = dt; // save dt for the future use
-    // Update the position index.
+    // kick from v^n to v^(-) : gravity
+    Kick(t, hdt, pmy_block->phydro->w);
+    // rotation from v^(-) to v^(+) : Coriolis
+    if (pmy_mesh_->shear_periodic) BorisKick(t, dt);
+    // kick from v^(+) to v^(n+1) : gravity
+    Kick(t,0.5*dt,pmy_block->phydro->w);
+
+    // Step 3. Drift from x^(n+1/2) to x^n
+    Drift(t, hdt);
+    // Update the position index to be used in Poisson solver
     UpdatePositionIndices();
-    break;
-  case 2:
-    // particle --> mesh
-    ReactToMeshAux(t, dt, pmy_block->phydro->w);
+
+    // Update the age of the star particle
+    Age(t, dt);
     break;
   }
 }
+
+//--------------------------------------------------------------------------------------
+//! \fn void StarParticles::RK2KDK(int step)
+//! \brief KDK leapfrog integrator to be coupled with RK2 integrator
+//!
+void StarParticles::RK2KDK(int stage) {
+  // to be implemented
+}
+
 
 //--------------------------------------------------------------------------------------
 //! \fn void StarParticles::Age(Real t, Real dt)
@@ -127,9 +154,9 @@ void StarParticles::Age(Real t, Real dt) {
 void StarParticles::Drift(Real t, Real dt) {
   // drift position
   for (int k = 0; k < npar_; ++k) {
-    xp(k) = xp0(k) + dt * vpx(k);
-    yp(k) = yp0(k) + dt * vpy(k);
-    zp(k) = zp0(k) + dt * vpz(k);
+    xp(k) = xp(k) + dt * vpx(k);
+    yp(k) = yp(k) + dt * vpy(k);
+    zp(k) = zp(k) + dt * vpz(k);
   }
 }
 

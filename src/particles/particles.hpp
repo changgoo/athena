@@ -403,6 +403,8 @@ class StarParticles : public Particles {
   void UserSourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
   void ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
 
+  void VL2DKD(int step);
+  void RK2KDK(int step);
   void Kick(Real t, Real dt, const AthenaArray<Real>& meshsrc);
   void Drift(Real t, Real dt);
   void BorisKick(Real t, Real dt);
@@ -413,9 +415,8 @@ class StarParticles : public Particles {
   void ConstantAcceleration(Real t, Real dt, Real g1, Real g2, Real g3);
 
   // Data members
-  Real dt_old;
-  // indicies for additional shorthands
-  int imetal, iage, ifgas;            // indices for:
+  int imetal, iage, ifgas;  // indices for metalicity, age, and gas fraction
+  std::string hydro_integrator; // hydro integrator (vl2 or rk2)
 };
 
 //--------------------------------------------------------------------------------------

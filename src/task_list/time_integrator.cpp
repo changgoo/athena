@@ -2336,12 +2336,9 @@ TaskStatus TimeIntegratorTaskList::ReceiveEMFShear(MeshBlock *pmb, int stage) {
 // Functions to manage particles
 
 TaskStatus TimeIntegratorTaskList::IntegrateParticles(MeshBlock *pmb, int stage) {
-  if (integrator == "vl2") {
-    for (Particles *ppar : pmb->ppars)
-      ppar->Integrate(stage);
-    return TaskStatus::next;
-  }
-  return TaskStatus::fail;
+  for (Particles *ppar : pmb->ppars)
+    ppar->Integrate(stage);
+  return TaskStatus::next;
 }
 
 TaskStatus TimeIntegratorTaskList::SendParticles(MeshBlock *pmb, int stage) {
