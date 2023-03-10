@@ -31,7 +31,7 @@ ParticleBuffer::ParticleBuffer() {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn ParticleBuffer::ParticleBuffer(int nparmax0)
+//! \fn ParticleBuffer::ParticleBuffer(int nparmax0, int nint, int nreal)
 //! \brief initiates a new instance of ParticleBuffer with nparmax = nparmax0.
 
 ParticleBuffer::ParticleBuffer(int nparmax0, int nint, int nreal) {
@@ -61,7 +61,7 @@ ParticleBuffer::ParticleBuffer(int nparmax0, int nint, int nreal) {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn ParticleBuffer::ParticleBuffer(int nparmax0)
+//! \fn ParticleBuffer::ParticleBuffer()
 //! \brief destroys an instance of ParticleBuffer.
 
 ParticleBuffer::~ParticleBuffer() {
@@ -75,7 +75,7 @@ ParticleBuffer::~ParticleBuffer() {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void ParticleBuffer::Reallocate(int new_nparmax)
+//! \fn void ParticleBuffer::Reallocate(int new_nparmax, int nint, int nreal)
 //! \brief reallocates the buffers; the old content is preserved.
 
 void ParticleBuffer::Reallocate(int new_nparmax, int nint, int nreal) {
@@ -105,15 +105,15 @@ void ParticleBuffer::Reallocate(int new_nparmax, int nint, int nreal) {
 #endif
 
   // Allocate new space.
-  nparmax_ = new_nparmax;
-  int *ibuf_new = new int[nint * nparmax_];
-  Real *rbuf_new = new Real[nreal * nparmax_];
+  int *ibuf_new = new int[nint * new_nparmax];
+  Real *rbuf_new = new Real[nreal * new_nparmax];
 
-  // Move existing data.
-  if (npar_ > 0) {
+  // Move existing data
+  if ((npar_ > 0)&&(nparmax_ > 0)) {
     std::memcpy(ibuf_new, ibuf, nint * npar_ * sizeof(int));
     std::memcpy(rbuf_new, rbuf, nreal * npar_ * sizeof(Real));
   }
+  nparmax_ = new_nparmax;
 
   // Delete old space.
   if (ibuf != NULL) delete [] ibuf;

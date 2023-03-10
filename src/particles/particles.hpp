@@ -48,12 +48,17 @@ struct Neighbor {
 //! \brief container for parameters read from `<particle?>` block in the input file
 
 struct ParticleParameters {
-  int block_number, ipar;
+  // max_rinfl is the maximum integer radius of influence of a particle.
+  // max_rinfl = -1 for a particle that has no influence at all, i.e., it does not modify
+  // the fluid variables at grid cells.
+  // max_rinfl = 0 means that a particle only modifies the cell in which it is contained.
+  int block_number, ipar, max_rinfl;
   bool table_output, gravity;
   std::string block_name;
   std::string partype;
   // TODO(SMOON) Add nhistory variable
-  ParticleParameters() : block_number(0), ipar(-1), table_output(false), gravity(false) {}
+  ParticleParameters() : block_number(0), ipar(-1), max_rinfl(-1), table_output(false),
+                         gravity(false) {}
 };
 
 //--------------------------------------------------------------------------------------
@@ -83,6 +88,8 @@ friend class ParticleMesh;
   std::size_t GetSizeInBytes() const;
   bool IsGravity() const { return isgravity_; }
   int GetNumPar() const { return npar_; }
+  void MeshBlockIndex(Real xp, Real yp, Real zp, int &ip, int &jp, int &kp) const;
+  virtual void InteractWithMesh() {}
 
   // Input/Output interface
   void UnpackParticlesForRestart(char *mbdata, std::size_t &os);
@@ -105,6 +112,8 @@ friend class ParticleMesh;
 #endif
   void SendToNeighbors();
   bool ReceiveFromNeighbors();
+  void SendGhostParticles();
+  bool ReceiveGhostParticles();
   void StartReceivingParticlesShear();
   void SendParticlesShear();
   int FindTargetGidAlongX2(Real x2);
@@ -154,7 +163,34 @@ friend class ParticleMesh;
   void UpdatePositionIndices();
 
   int npar_;     //!> number of particles
+  int npar_gh_;     //!> number of ghost particles
   int nparmax_;  //!> maximum number of particles per meshblock
+  const int req_nghost_; //!> required number of ghost cells for hydro/MHD
+  const int noverlap_; //!> minimum thickness of the overlap region
+  // When a particle enters the "overlap region" where its region of influence overlaps
+  // with the ghost cells of neighboring MeshBlock, that particle is sent to the neighbor
+  // MeshBlock as a "ghost particle". The variable "noverlap_" defines the thickness of
+  // the overlap region, such that the overlap region in the x1 direction is:
+  //   [is, is+noverlap_-1] and [ie-noverlap_+1, ie].
+  //
+  // For example, consider a star particle with the feedback radius = 1. When it explodes
+  // at i = ie - 2 in MeshBlock "A" (see the diagram below), it modifies the active cell
+  // i = ie - 1 of the MeshBlock A, which corresponds to the ghost cell i = is - 2 of the
+  // neighboring MeshBlock "B".
+  //
+  //               --------- MeshBlock A ---|--- MeshBlock B -----
+  //  particle location |<---|--x-|--->|    |    |    |
+  //      index in A    |ie-3|ie-2|ie-1| ie |ie+1|ie+2|
+  //      index in B    |is-4|is-3|is-2|is-1| is |is+1|
+  //
+  // Because, e.g., PLM requires 2 ghost cells for hydro/MHD, MeshBlock B needs
+  // noverlap_ >= 3 to fully update its 2 ghost cells by receiving the ghost particle
+  // from MeshBlock A.
+  // In general, if particle modifies the fluid variable, noverlap_ should be at least:
+  // (number of ghost cells required for hydro/MHD) + (radius of influence of a particle).
+  // It is developer's responsibility to set the maximum radius of influence in
+  // [Particles::Initialize].
+
   Real cfl_par_;  //!> CFL number for particles
 
   ParticleGravity *ppgrav; //!> ptr to particle-gravity
@@ -202,8 +238,8 @@ friend class ParticleMesh;
   void OutputOneParticle(std::ostream &os, int k, bool header);
 
   // boundary conditions (implemented in particles_bvals.cpp)
-  void ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3);
-  void FlushReceiveBuffer(ParticleBuffer& recv);
+  void ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3, bool ghost=false);
+  void FlushReceiveBuffer(ParticleBuffer& recv, bool ghost=false);
   struct Neighbor* FindTargetNeighbor(
       int ox1, int ox2, int ox3, int xi1, int xi2, int xi3);
   void ApplyBoundaryConditionsShear(int k, Real &x1, Real &x2, Real &x3);
@@ -223,7 +259,7 @@ friend class ParticleMesh;
   int nwork;         //!> number of working arrays for particles
   int nint_buf, nreal_buf; //!> number of properties for buffer
 
-  // indices for integer shorthands
+  // indices for intprop shorthands
   int ipid;                 // index for the particle ID
   int ish;                  // index for shear boundary flag
 
@@ -249,11 +285,13 @@ friend class ParticleMesh;
   // MeshBlock-to-MeshBlock communication:
   BoundaryValues *pbval_;                            //!> ptr to my BoundaryValues
   Neighbor neighbor_[3][3][3];                       //!> links to neighbors
-  ParticleBuffer recv_[56], recv_sh_[8];             //!> particle receive buffers
-  enum BoundaryStatus bstatus_[56], bstatus_recv_sh_[8];  //!> boundary status
+  ParticleBuffer recv_[56], recv_gh_[56], recv_sh_[8];   //!> particle receive buffers
+  enum BoundaryStatus bstatus_[56], bstatus_gh_[56];  //!> boundary status
+  enum BoundaryStatus bstatus_recv_sh_[8];            //!> boundary status for shearing BC
+
 #ifdef MPI_PARALLEL
   static MPI_Comm my_comm;   //!> my MPI communicator
-  ParticleBuffer send_[56],send_sh_[8];  //!> particle send buffers
+  ParticleBuffer send_[56], send_gh_[56], send_sh_[8];  //!> particle send buffers
   enum BoundaryStatus bstatus_send_sh_[8];  //!> comm. flags
 #endif
 };
@@ -378,6 +416,34 @@ class StarParticles : public Particles {
   Real dt_old;
   // indicies for additional shorthands
   int imetal, iage, ifgas;            // indices for:
+};
+
+//--------------------------------------------------------------------------------------
+//! \class SinkParticles
+//! \brief defines the class for Sink particles
+
+class SinkParticles : public StarParticles {
+ public:
+  // Constructor
+  SinkParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp);
+
+  // Destructor
+  ~SinkParticles();
+
+  // Methods (interface)
+  void InteractWithMesh() override;
+  void SetControlVolume();
+
+  // Data members
+  const int rctrl = 1; // Extent of the control volume. The side length of the control
+                       // volume is 2*rctrl + 1.
+
+ private:
+  // Methods (implementation)
+  void AccreteMass();
+  void SetControlVolume(AthenaArray<Real> &cons, int ip, int jp, int kp);
+
+  // Data members
 };
 
 #endif  // PARTICLES_PARTICLES_HPP_

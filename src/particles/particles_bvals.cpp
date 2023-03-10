@@ -99,17 +99,22 @@ void Particles::ClearBoundary() {
   for (int i = 0; i < pbval_->nneighbor; ++i) {
     NeighborBlock& nb = pbval_->neighbor[i];
     bstatus_[nb.bufid] = BoundaryStatus::waiting;
+    bstatus_gh_[nb.bufid] = BoundaryStatus::waiting;
 #ifdef MPI_PARALLEL
     if (nb.snb.rank != Globals::my_rank) {
-      ParticleBuffer& recv = recv_[nb.bufid];
-      recv.flagn = recv.flagi = recv.flagr = 0;
+      recv_[nb.bufid].flagn = recv_[nb.bufid].flagi = recv_[nb.bufid].flagr = 0;
       send_[nb.bufid].npar_ = 0;
+      recv_gh_[nb.bufid].flagn = recv_gh_[nb.bufid].flagi = recv_gh_[nb.bufid].flagr = 0;
+      send_gh_[nb.bufid].npar_ = 0;
     }
 #endif
   }
 
   // clear boundary information for shear
   ClearBoundaryShear();
+
+  // purge all ghost particles
+  npar_gh_ = 0;
 }
 
 //--------------------------------------------------------------------------------------
@@ -173,6 +178,8 @@ void Particles::LinkNeighbors(MeshBlockTree &tree,
       // + particle container id (3 bits) + npar,intprop,realprop(2 bits)
       send_[nb.bufid].tag = (snb.lid<<11) | (nb.targetid<<5) | (ipar << 2);
       recv_[nb.bufid].tag = (pmy_block->lid<<11) | (nb.bufid<<5) | (ipar << 2);
+      send_gh_[nb.bufid].tag = (snb.lid<<11) | (nb.targetid<<5) | (ipar << 2);
+      recv_gh_[nb.bufid].tag = (pmy_block->lid<<11) | (nb.bufid<<5) | (ipar << 2);
 #endif
     }
   }
@@ -286,7 +293,7 @@ void Particles::SendToNeighbors() {
     RemoveOneParticle(k);
   }
 
-  // Send to neighbor processes and update boundary status.
+  // Send to neighbor blocks and update boundary status.
   for (int i = 0; i < pbval_->nneighbor; ++i) {
     NeighborBlock& nb = pbval_->neighbor[i];
     int dst = nb.snb.rank;
@@ -298,6 +305,84 @@ void Particles::SendToNeighbors() {
     } else {
 #ifdef MPI_PARALLEL
       ParticleBuffer& send = send_[nb.bufid];
+      SendParticleBuffer(send, nb.snb.rank);
+#endif
+    }
+  }
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn void Particles::SendGhostParticles()
+//! \brief sends particles in the overlap region to neighboring meshblocks as ghost ptcls.
+//! TODO(SMOON) shearing BC?
+
+void Particles::SendGhostParticles() {
+  const int IS = pmy_block->is;
+  const int IE = pmy_block->ie;
+  const int JS = pmy_block->js;
+  const int JE = pmy_block->je;
+  const int KS = pmy_block->ks;
+  const int KE = pmy_block->ke;
+
+  for (int k = 0; k < npar_; ++k) {
+    // (smoon) position indices xi1_, xi2_, xi3_ of the newly received active particles
+    // must be up-to-date.
+    int x1i = static_cast<int>(xi1_(k)),
+        x2i = static_cast<int>(xi2_(k)),
+        x3i = static_cast<int>(xi3_(k));
+    // Check if a particle is inside the overlap region
+    int ox1 = CheckSide(x1i, IS+noverlap_, IE-noverlap_),
+        ox2 = CheckSide(x2i, JS+noverlap_, JE-noverlap_),
+        ox3 = CheckSide(x3i, KS+noverlap_, KE-noverlap_);
+    if (ox1 == 0 && ox2 == 0 && ox3 == 0) {
+      // This particle does not overlap with neighbors. No need to send.
+      continue;
+    }
+    if (!active1_) ox1 = 0;
+    if (!active2_) ox2 = 0;
+    if (!active3_) ox3 = 0;
+    // Find the all neighbor blocks to send a particle to.
+    // (smoon) A particle in the overlap region can overlap with more than one MeshBlock;
+    // Need to send to all of them.
+    for (int iox1=0; std::abs(iox1)<=std::abs(ox1); iox1+=SIGN(ox1)) {
+      for (int iox2=0; std::abs(iox2)<=std::abs(ox2); iox2+=SIGN(ox2)) {
+        for (int iox3=0; std::abs(iox3)<=std::abs(ox3); iox3+=SIGN(ox3)) {
+          if ((iox1==0)&&(iox2==0)&&(iox3==0)) continue;
+          Neighbor *pn = FindTargetNeighbor(iox1, iox2, iox3, x1i, x2i, x3i);
+          NeighborBlock *pnb = pn->pnb;
+          if (pnb == NULL) {
+            // do nothing if there is no neighboring block
+            continue;
+          }
+          // Determine which particle buffer to use.
+          ParticleBuffer *ppb = NULL;
+          if (pnb->snb.rank == Globals::my_rank) {
+            // Use the target receive buffer.
+            ppb = &pn->pmb->ppars[ipar]->recv_gh_[pnb->targetid];
+          } else {
+#ifdef MPI_PARALLEL
+            // Use the send buffer.
+            ppb = &send_gh_[pnb->bufid];
+#endif
+          }
+          LoadParticleBuffer(ppb, k);
+        }
+      }
+    }
+  }
+
+  // Send to neighbor blocks and update boundary status.
+  for (int i = 0; i < pbval_->nneighbor; ++i) {
+    NeighborBlock& nb = pbval_->neighbor[i];
+    int dst = nb.snb.rank;
+    if (dst == Globals::my_rank) {
+      Particles *ppar = pmy_mesh_->FindMeshBlock(nb.snb.gid)->ppars[ipar];
+      ppar->bstatus_gh_[nb.targetid] =
+          (ppar->recv_gh_[nb.targetid].npar_ > 0) ? BoundaryStatus::arrived
+                                                 : BoundaryStatus::completed;
+    } else {
+#ifdef MPI_PARALLEL
+      ParticleBuffer& send = send_gh_[nb.bufid];
       SendParticleBuffer(send, nb.snb.rank);
 #endif
     }
@@ -344,19 +429,14 @@ void Particles::ReceiveParticleBuffer(int nb_rank, ParticleBuffer& recv,
       if (recv.flagn) {
         if (recv.npar_ > 0) {
           // Check the buffer size.
-          int nprecv = recv.npar_;
-          if (nprecv > recv.nparmax_) {
-            recv.npar_ = 0;
-            recv.Reallocate(2 * nprecv - recv.nparmax_, nint_buf, nreal_buf);
-            recv.npar_ = nprecv;
-          }
+          if (recv.npar_ > recv.nparmax_)
+            recv.Reallocate(2*recv.npar_ - recv.nparmax_, nint_buf, nreal_buf);
         } else {
           // No incoming particles.
           bstatus = BoundaryStatus::completed;
         }
       }
-    }
-    if (recv.flagn && recv.npar_ > 0) {
+    } else if (recv.npar_ > 0) {
       // Receive data from the neighbor.
       if (!recv.flagi) {
         if (recv.reqi == MPI_REQUEST_NULL)
@@ -413,15 +493,49 @@ bool Particles::ReceiveFromNeighbors() {
 }
 
 //--------------------------------------------------------------------------------------
+//! \fn bool Particles::ReceiveGhostParticles()
+//! \brief receives ghost particles from neighboring meshblocks and returns a flag
+//!        indicating if all receives are completed.
+
+bool Particles::ReceiveGhostParticles() {
+  bool flag = true;
+
+  for (int i = 0; i < pbval_->nneighbor; ++i) {
+    NeighborBlock& nb = pbval_->neighbor[i];
+    enum BoundaryStatus& bstatus = bstatus_gh_[nb.bufid];
+    ParticleBuffer& recv = recv_gh_[nb.bufid];
+#ifdef MPI_PARALLEL
+    ReceiveParticleBuffer(nb.snb.rank, recv, bstatus);
+#endif
+    switch (bstatus) {
+      case BoundaryStatus::completed:
+        break;
+
+      case BoundaryStatus::waiting:
+        flag = false;
+        break;
+
+      case BoundaryStatus::arrived:
+        FlushReceiveBuffer(recv, true);
+        bstatus = BoundaryStatus::completed;
+        break;
+    }
+  }
+
+  return flag;
+}
+
+//--------------------------------------------------------------------------------------
 //! \fn void Particles::ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3)
 //! \brief applies boundary conditions to particle k and returns its updated mesh
 //!        coordinates (x1,x2,x3).
 //! \todo (ccyang):
 //! - implement nonperiodic boundary conditions.
 
-void Particles::ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3) {
+void Particles::ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3, bool ghost) {
   bool flag = false;
   RegionSize& mesh_size = pmy_mesh_->mesh_size;
+  RegionSize& block_size = pmy_block->block_size;
   Coordinates *pcoord = pmy_block->pcoord;
 
   // Find the mesh coordinates.
@@ -437,48 +551,97 @@ void Particles::ApplyBoundaryConditions(int k, Real &x1, Real &x2, Real &x3) {
                                       vpx(k), vpy(k), vpz(k), vp1, vp2, vp3);
   pcoord->CartesianToMeshCoordsVector(xp0(k), yp0(k), zp0(k),
                                       vpx0(k), vpy0(k), vpz0(k), vp10, vp20, vp30);
-
-  // Apply periodic boundary conditions in X1.
-  if (x1 < mesh_size.x1min) {
-    // Inner x1
-    x1 += mesh_size.x1len;
-    x10 += mesh_size.x1len;
-    // the particle has crossed shear boundary to the left
-    if (pmy_mesh_->shear_periodic) sh(k) = -1;
-    flag = true;
-  } else if (x1 >= mesh_size.x1max) {
-    // Outer x1
-    x1 -= mesh_size.x1len;
-    x10 -= mesh_size.x1len;
-    // the particle has crossed shear boundary to the right
-    if (pmy_mesh_->shear_periodic) sh(k) = 1;
-    flag = true;
-  }
-
-  // Apply periodic boundary conditions in X2.
-  if (x2 < mesh_size.x2min) {
-    // Inner x2
-    x2 += mesh_size.x2len;
-    x20 += mesh_size.x2len;
-    flag = true;
-  } else if (x2 >= mesh_size.x2max) {
-    // Outer x2
-    x2 -= mesh_size.x2len;
-    x20 -= mesh_size.x2len;
-    flag = true;
-  }
-
-  // Apply periodic boundary conditions in X3.
-  if (x3 < mesh_size.x3min) {
-    // Inner x3
-    x3 += mesh_size.x3len;
-    x30 += mesh_size.x3len;
-    flag = true;
-  } else if (x3 >= mesh_size.x3max) {
-    // Outer x3
-    x3 -= mesh_size.x3len;
-    x30 -= mesh_size.x3len;
-    flag = true;
+  if (ghost) {
+    // For ghost particles, periodic boundary condition should be applied
+    // when they enter the overlap region.
+    // TODO(SMOON) Mesh refinement
+    Real x1min = mesh_size.x1min + noverlap_*(pcoord->GetEdge1Length(0,0,0));
+    Real x1max = mesh_size.x1max - noverlap_*(pcoord->GetEdge1Length(0,0,0));
+    Real x2min = mesh_size.x2min + noverlap_*(pcoord->GetEdge2Length(0,0,0));
+    Real x2max = mesh_size.x2max - noverlap_*(pcoord->GetEdge2Length(0,0,0));
+    Real x3min = mesh_size.x3min + noverlap_*(pcoord->GetEdge3Length(0,0,0));
+    Real x3max = mesh_size.x3max - noverlap_*(pcoord->GetEdge3Length(0,0,0));
+    // Apply periodic boundary conditions in X1.
+    if ((x1 < x1min)&&(x1 < block_size.x1min)) {
+      // Inner x1
+      x1 += mesh_size.x1len;
+      x10 += mesh_size.x1len;
+      // the particle has crossed shear boundary to the left
+      if (pmy_mesh_->shear_periodic) sh(k) = -1;
+      flag = true;
+    } else if ((x1 >= x1max)&&(x1 >= block_size.x1max)) {
+      // Outer x1
+      x1 -= mesh_size.x1len;
+      x10 -= mesh_size.x1len;
+      // the particle has crossed shear boundary to the right
+      if (pmy_mesh_->shear_periodic) sh(k) = 1;
+      flag = true;
+    }
+    // Apply periodic boundary conditions in X2.
+    if ((x2 < x2min)&&(x2 < block_size.x2min)) {
+      // Inner x2
+      x2 += mesh_size.x2len;
+      x20 += mesh_size.x2len;
+      flag = true;
+    } else if ((x2 >= x2max)&&(x2 >= block_size.x2max)) {
+      // Outer x2
+      x2 -= mesh_size.x2len;
+      x20 -= mesh_size.x2len;
+      flag = true;
+    }
+    // Apply periodic boundary conditions in X3.
+    if ((x3 < x3min)&&(x3 < block_size.x3min)) {
+      // Inner x3
+      x3 += mesh_size.x3len;
+      x30 += mesh_size.x3len;
+      flag = true;
+    } else if ((x3 >= x3max)&&(x3 >= block_size.x3max)) {
+      // Outer x3
+      x3 -= mesh_size.x3len;
+      x30 -= mesh_size.x3len;
+      flag = true;
+    }
+  } else {
+    // Apply periodic boundary conditions in X1.
+    if (x1 < mesh_size.x1min) {
+      // Inner x1
+      x1 += mesh_size.x1len;
+      x10 += mesh_size.x1len;
+      // the particle has crossed shear boundary to the left
+      if (pmy_mesh_->shear_periodic) sh(k) = -1;
+      flag = true;
+    } else if (x1 >= mesh_size.x1max) {
+      // Outer x1
+      x1 -= mesh_size.x1len;
+      x10 -= mesh_size.x1len;
+      // the particle has crossed shear boundary to the right
+      if (pmy_mesh_->shear_periodic) sh(k) = 1;
+      flag = true;
+    }
+    // Apply periodic boundary conditions in X2.
+    if (x2 < mesh_size.x2min) {
+      // Inner x2
+      x2 += mesh_size.x2len;
+      x20 += mesh_size.x2len;
+      flag = true;
+    } else if (x2 >= mesh_size.x2max) {
+      // Outer x2
+      x2 -= mesh_size.x2len;
+      x20 -= mesh_size.x2len;
+      flag = true;
+    }
+    // Apply periodic boundary conditions in X3.
+    if (x3 < mesh_size.x3min) {
+      // Inner x3
+      x3 += mesh_size.x3len;
+      x30 += mesh_size.x3len;
+      flag = true;
+    } else if (x3 >= mesh_size.x3max) {
+      // Outer x3
+      x3 -= mesh_size.x3len;
+      x30 -= mesh_size.x3len;
+      flag = true;
+    }
   }
 
   if (flag) {
@@ -522,10 +685,20 @@ struct Neighbor* Particles::FindTargetNeighbor(
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void Particles::FlushReceiveBuffer(ParticleBuffer& recv)
-//! \brief adds particles from the receive buffer.
+//! \fn void Particles::FlushReceiveBuffer(ParticleBuffer& recv, bool ghost)
+//! \brief Adds particles from the receive buffer.
+//!        If ghost=true(false), add ghost(active) particles.
 
-void Particles::FlushReceiveBuffer(ParticleBuffer& recv) {
+void Particles::FlushReceiveBuffer(ParticleBuffer& recv, bool ghost) {
+  if ((npar_gh_ > 0)&&(!ghost)) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in function [ParticleBuffer::FlushReceiveBuffer]" << std::endl
+        << "You are trying to flush active particles on top of ghost particles;"
+        << "This is prohibited." << std::endl;
+    ATHENA_ERROR(msg);
+    return;
+  }
+
   // Check the memory size.
   int nprecv = recv.npar_;
   if (npar_ + nprecv > nparmax_)
@@ -534,7 +707,8 @@ void Particles::FlushReceiveBuffer(ParticleBuffer& recv) {
   // Flush the receive buffers.
   int *pi = recv.ibuf;
   Real *pr = recv.rbuf;
-  for (int k = npar_; k < npar_ + nprecv; ++k) {
+  int npartot = npar_ + npar_gh_;
+  for (int k = npartot; k < npartot + nprecv; ++k) {
     for (int j = 0; j < nint; ++j)
       intprop(j,k) = *pi++;
     for (int j = 0; j < nreal; ++j)
@@ -543,25 +717,36 @@ void Particles::FlushReceiveBuffer(ParticleBuffer& recv) {
       auxprop(j,k) = *pr++;
   }
 
+  // Apply boundary conditions here for ghost particles
+  if (ghost) {
+    Real x1, x2, x3; // dummy variables
+    for (int k = npartot; k < npartot + nprecv; ++k) {
+      ApplyBoundaryConditions(k, x1, x2, x3, true);
+    }
+  }
+
   // Find their position indices.
+  // Need to do this because we have applied periodic boundary conditions only to
+  // particle positions, not to position indices.
   AthenaArray<Real> xps, yps, zps, xi1s, xi2s, xi3s;
-  xps.InitWithShallowSlice(xp, 1, npar_, nprecv);
-  yps.InitWithShallowSlice(yp, 1, npar_, nprecv);
-  zps.InitWithShallowSlice(zp, 1, npar_, nprecv);
-  xi1s.InitWithShallowSlice(xi1_, 1, npar_, nprecv);
-  xi2s.InitWithShallowSlice(xi2_, 1, npar_, nprecv);
-  xi3s.InitWithShallowSlice(xi3_, 1, npar_, nprecv);
+  xps.InitWithShallowSlice(xp, 1, npartot, nprecv);
+  yps.InitWithShallowSlice(yp, 1, npartot, nprecv);
+  zps.InitWithShallowSlice(zp, 1, npartot, nprecv);
+  xi1s.InitWithShallowSlice(xi1_, 1, npartot, nprecv);
+  xi2s.InitWithShallowSlice(xi2_, 1, npartot, nprecv);
+  xi3s.InitWithShallowSlice(xi3_, 1, npartot, nprecv);
   UpdatePositionIndices(nprecv, xps, yps, zps, xi1s, xi2s, xi3s);
 
   // Clear the receive buffers.
-  npar_ += nprecv;
+  int& npar = ghost ? npar_gh_ : npar_;
+  npar += recv.npar_;
   recv.npar_ = 0;
 }
 
 
 //--------------------------------------------------------------------------------------
-//! \fn void Particles::LoadParticleBuffer(ParticleBuffer& recv)
-//! \brief load the k-th particle to the particle buffer.
+//! \fn void Particles::LoadParticleBuffer(ParticleBuffer& ppb, int k)
+//! \brief Load the k-th particle to the particle buffer.
 
 void Particles::LoadParticleBuffer(ParticleBuffer *ppb, int k) {
   // Check the buffer size.

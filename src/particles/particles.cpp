@@ -27,6 +27,7 @@
 #include "../coordinates/coordinates.hpp"
 #include "../globals.hpp"
 #include "../hydro/hydro.hpp"
+#include "../reconstruct/reconstruction.hpp"
 #include "particles.hpp"
 
 // Class variable initialization
@@ -41,12 +42,51 @@ MPI_Comm Particles::my_comm = MPI_COMM_NULL;
 #endif
 
 //--------------------------------------------------------------------------------------
+//! \fn ComputeReqNGHOST(int xorder, int rinfl)
+//! \brief helpfer function to initialize const member req_nghost_
+
+int ComputeReqNGHOST(int xorder) {
+  int req_nghost(0); // required number of ghost cells for hydro/MHD
+  switch (xorder) {
+    case 1:
+      req_nghost = 1;
+      break;
+    case 2:
+      req_nghost = 2;
+      break;
+    case 3:
+      req_nghost = 3;
+      break;
+    case 4:
+      req_nghost = 4;
+      if (MAGNETIC_FIELDS_ENABLED)
+        req_nghost += 2;
+      break;
+  }
+  return req_nghost;
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn ComputeOverlap(int xorder, int rinfl)
+//! \brief helpfer function to initialize const member noverlap_
+
+int ComputeOverlap(int xorder, int rinfl) {
+  // Set the thickness of the overlap region for ghost particle exchange.
+  // rinfl = -1 means that the particle does not modify the fluid variable at all
+  // (e.g., tracer), and therefore does not require ghost particles.
+  // See the comments in the header file for more information.
+  int noverlap = rinfl >= 0 ? ComputeReqNGHOST(xorder) + rinfl : 0;
+  return noverlap;
+}
+
+//--------------------------------------------------------------------------------------
 //! \fn Particles::Particles(MeshBlock *pmb, ParameterInput *pin)
 //! \brief constructs a Particles instance.
 
 Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp) :
   ipar(pp->ipar), input_block_name(pp->block_name), partype(pp->partype),
-  npar_(0), nparmax_(1),
+  npar_(0), npar_gh_(0), nparmax_(1), req_nghost_(ComputeReqNGHOST(pmb->precon->xorder)),
+  noverlap_(ComputeOverlap(pmb->precon->xorder, pp->max_rinfl)),
   nint(0), nreal(0), naux(0), nwork(0),
   ipid(-1), ish(-1),
   imass(-1), ixp(-1), iyp(-1), izp(-1), ivpx(-1), ivpy(-1), ivpz(-1),
@@ -224,16 +264,33 @@ int Particles::AddOneParticle(Real mp, Real x1, Real x2, Real x3,
 //! \brief removes particle k in the block.
 
 void Particles::RemoveOneParticle(int k) {
-  if (0 <= k && k < npar_ && --npar_ != k) {
-    xi1_(k) = xi1_(npar_);
-    xi2_(k) = xi2_(npar_);
-    xi3_(k) = xi3_(npar_);
+  if ((k < 0) || (k >= npar_)) {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in function [Particles::RemoveOneParticle]" << std::endl
+        << "Cannot remove a particle outside the range [0, npar_)" << std::endl;
+    ATHENA_ERROR(msg);
+  }
+  npar_--;
+  if ((0 <= k) && (k < npar_)) {
     for (int j = 0; j < nint; ++j)
       intprop(j,k) = intprop(j,npar_);
     for (int j = 0; j < nreal; ++j)
       realprop(j,k) = realprop(j,npar_);
     for (int j = 0; j < naux; ++j)
       auxprop(j,k) = auxprop(j,npar_);
+    for (int j = 0; j < nwork; ++j)
+      work(j,k) = work(j,npar_);
+  }
+  // If there are ghost particles, rearrange the last one to fill the vacancy
+  if (npar_gh_ > 0) {
+    for (int j = 0; j < nint; ++j)
+      intprop(j,npar_) = intprop(j,npar_+npar_gh_);
+    for (int j = 0; j < nreal; ++j)
+      realprop(j,npar_) = realprop(j,npar_+npar_gh_);
+    for (int j = 0; j < naux; ++j)
+      auxprop(j,npar_) = auxprop(j,npar_+npar_gh_);
+    for (int j = 0; j < nwork; ++j)
+      work(j,npar_) = work(j,npar_+npar_gh_);
   }
 }
 
@@ -307,6 +364,24 @@ std::size_t Particles::GetSizeInBytes() const {
   std::size_t size = sizeof(npar_);
   if (npar_ > 0) size += npar_ * (nint * sizeof(int) + nreal * sizeof(Real));
   return size;
+}
+
+//--------------------------------------------------------------------------------------
+//! \fn int Particles::MeshBlockIndex()
+//! \brief returns the local meshblock indices of the particle-containing cell.
+
+void Particles::MeshBlockIndex(Real xp, Real yp, Real zp,
+  int &ip, int &jp, int &kp) const {
+  // Convert to the Mesh coordinates.
+  Real x1, x2, x3;
+  pmy_block->pcoord->CartesianToMeshCoords(xp, yp, zp, x1, x2, x3);
+  // Convert to the index space.
+  Real x1i, x2i, x3i;
+  pmy_block->pcoord->MeshCoordsToIndices(x1, x2, x3, x1i, x2i, x3i);
+  // Convert to the integer indices
+  ip = static_cast<int>(std::floor(x1i));
+  jp = static_cast<int>(std::floor(x2i));
+  kp = static_cast<int>(std::floor(x3i));
 }
 
 //--------------------------------------------------------------------------------------
@@ -433,6 +508,9 @@ void Particles::OutputParticles(bool header) {
 //! \fn Particles::OutputParticles()
 //! \brief outputs the particle data in tabulated format.
 void Particles::OutputParticles(bool header, int kid) {
+  // TODO(SMOON) currently, OutputParticles is called in Mesh::UserWorkInLoop, which is
+  // called before the mesh time is updated in main.cpp. Therefore, the "time" in the
+  // individual particle output is incorrect; they must be shifted by dt.
   std::stringstream fname, msg;
   std::ofstream os;
   std::string file_basename = pinput->GetString("job","problem_id");
@@ -819,18 +897,24 @@ void Particles::Initialize(Mesh *pm, ParameterInput *pin) {
       pp.block_number = atoi(parn.c_str());
       pp.block_name.assign(pib->block_name);
 
-      // set particle type = [tracer, star, dust, none]
+      // set particle type = [tracer, star, sink, dust, none]
       pp.partype = pin->GetString(pp.block_name, "type");
       if (pp.partype.compare("none") != 0) { // skip input block if the type is none
         if ((pp.partype.compare("dust") == 0) ||
             (pp.partype.compare("tracer") == 0) ||
-            (pp.partype.compare("star") == 0)) {
+            (pp.partype.compare("star") == 0) ||
+            (pp.partype.compare("sink") == 0)) {
           pp.ipar = num_particles++;
           idmax.push_back(0); // initialize idmax with 0
           pp.table_output = pin->GetOrAddBoolean(pp.block_name,"output",false);
           pp.gravity = pin->GetOrAddBoolean(pp.block_name,"gravity",false);
           if (pp.table_output) num_particles_output++;
           if (pp.gravity) num_particles_grav++;
+          // Set the maximum radius of influence
+          // This determines the thickness of overlap region.
+          if (pp.partype.compare("sink") == 0) {
+            pp.max_rinfl = 1;
+          }
           pm->particle_params.push_back(pp);
         } else { // unsupported particle type
           std::stringstream msg;

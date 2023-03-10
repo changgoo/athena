@@ -4,7 +4,7 @@
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //======================================================================================
 //! \file star_particles.cpp
-//! \brief implements functions in the starParticles class
+//! \brief implements functions in the StarParticles class
 
 // C++ headers
 #include <algorithm>  // min()
