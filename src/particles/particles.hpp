@@ -404,7 +404,7 @@ class StarParticles : public Particles {
   void ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc) override;
 
   void VL2DKD(int step);
-  void RK2KDK(int step);
+  void RK2(int step);
   void Kick(Real t, Real dt, const AthenaArray<Real>& meshsrc);
   void Drift(Real t, Real dt);
   void BorisKick(Real t, Real dt);

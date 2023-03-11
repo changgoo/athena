@@ -72,7 +72,7 @@ void SinkParticles::SetControlVolume() {
   // loop over all active plus ghost particles
   for (int idx=0; idx<npar_+npar_gh_; ++idx) {
     // find the indices of the particle-containing cell.
-    int ip, jp, kp, ip0, jp0, kp0;
+    int ip, jp, kp;
     MeshBlockIndex(xp(idx), yp(idx), zp(idx), ip, jp, kp);
     SetControlVolume(cons, ip, jp, kp);
   }

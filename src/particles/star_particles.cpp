@@ -70,7 +70,7 @@ void StarParticles::Integrate(int stage) {
   if (hydro_integrator == "vl2") {
     VL2DKD(stage);
   } else if (hydro_integrator == "rk2") {
-    RK2KDK(stage);
+    RK2(stage);
   } else {
     std::stringstream msg;
     msg << "### FATAL ERROR in [StarParticles::Integrate]" << std::endl
@@ -83,8 +83,11 @@ void StarParticles::Integrate(int stage) {
 
 //--------------------------------------------------------------------------------------
 //! \fn void StarParticles::VL2DKD(int step)
-//! \brief DKD leapfrog integrator to be coupled with VL2 integrator
+//! \brief DKD leapfrog integrator.
 //!
+//! Satisfying Newton's 3rd law when coupled with VL2 hydro integrator (gas->particle
+//! = particle->gas).
+
 void StarParticles::VL2DKD(int stage) {
   Real t = pmy_mesh_->time;
   Real dt = pmy_mesh_->dt; // t^(n+1) - t^n;
@@ -92,7 +95,7 @@ void StarParticles::VL2DKD(int stage) {
 
   switch (stage) {
   case 1:
-    // Save position and velocity at t^n
+    // Save position x^n and velocity v^n at time t^n
     SaveStatus();
     // Step 1. Drift from x^n to x^(n+1/2)
     Drift(t, hdt);
@@ -100,7 +103,7 @@ void StarParticles::VL2DKD(int stage) {
     UpdatePositionIndices();
     break;
   case 2:
-    // Calculate force on particles at t = t^(n+1/2)
+    // Calculate the acceleration g(u^(n+1/2), x^(n+1/2))
     if (SELF_GRAVITY_ENABLED) {
       ppgrav->FindGravitationalForce(pmy_block->pgrav->phi);
       ppgrav->InterpolateGravitationalForce();
@@ -130,11 +133,67 @@ void StarParticles::VL2DKD(int stage) {
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void StarParticles::RK2KDK(int step)
-//! \brief KDK leapfrog integrator to be coupled with RK2 integrator
+//! \fn void StarParticles::RK2(int step)
+//! \brief RK2 particle integrator
 //!
-void StarParticles::RK2KDK(int stage) {
-  // to be implemented
+//! Satisfying Newton's 3rd law when coupled with RK2 hydro integrator (gas->particle
+//! = particle->gas).
+//!
+//! Let q = (x, v) and u = (hydro conserved variable)
+//! q'  = q^n + dt*g(u^n, q^n)
+//! q'' = q'  + dt*g(u' , q' )
+//! q^(n+1) = 0.5*(q^n + q'') = q^n + dt*0.5*(g(u^n, q^n) + g(u', q'))
+
+void StarParticles::RK2(int stage) {
+  Real t = pmy_mesh_->time;
+  Real dt = pmy_mesh_->dt; // t^(n+1) - t^n;
+
+  switch (stage) {
+  case 1:
+    // Save position x^n and velocity v^n at time t^n
+    SaveStatus();
+
+    // Calculate the acceleration g(u^n, x^n)
+    if (SELF_GRAVITY_ENABLED) {
+      ppgrav->FindGravitationalForce(pmy_block->pgrav->phi);
+      ppgrav->InterpolateGravitationalForce();
+    }
+
+    // q^n -> q'
+    Drift(t, dt);
+    Kick(t, dt, pmy_block->phydro->w);
+
+    // Update the position index to be used in Poisson solver
+    UpdatePositionIndices();
+    break;
+  case 2:
+    // Calculate the acceleration g(u', x')
+    if (SELF_GRAVITY_ENABLED) {
+      ppgrav->FindGravitationalForce(pmy_block->pgrav->phi);
+      ppgrav->InterpolateGravitationalForce();
+    }
+
+    // q' -> q''
+    Drift(t, dt);
+    Kick(t, dt, pmy_block->phydro->w);
+
+    // q^(n+1) = 0.5*(q^n + q'')
+    for (int k = 0; k < npar_; ++k) {
+      xp(k) = 0.5*(xp0(k) + xp(k));
+      yp(k) = 0.5*(yp0(k) + yp(k));
+      zp(k) = 0.5*(zp0(k) + zp(k));
+      vpx(k) = 0.5*(vpx0(k) + vpx(k));
+      vpy(k) = 0.5*(vpy0(k) + vpy(k));
+      vpz(k) = 0.5*(vpz0(k) + vpz(k));
+    }
+
+    // Update the position index to be used in Poisson solver
+    UpdatePositionIndices();
+
+    // Update the age of the star particle
+    Age(t, dt);
+    break;
+  }
 }
 
 
@@ -154,9 +213,9 @@ void StarParticles::Age(Real t, Real dt) {
 void StarParticles::Drift(Real t, Real dt) {
   // drift position
   for (int k = 0; k < npar_; ++k) {
-    xp(k) = xp(k) + dt * vpx(k);
-    yp(k) = yp(k) + dt * vpy(k);
-    zp(k) = zp(k) + dt * vpz(k);
+    xp(k) += dt * vpx(k);
+    yp(k) += dt * vpy(k);
+    zp(k) += dt * vpz(k);
   }
 }
 
@@ -167,7 +226,7 @@ void StarParticles::Drift(Real t, Real dt) {
 //! forces from self gravity, external gravity, and tidal potential
 //! Coriolis force is treated by BorisKick
 //! dt must be the half dt
-
+// TODO(smoon) remove unused meshsrc argument
 void StarParticles::Kick(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
   // Integrate the source terms (e.g., acceleration).
   SourceTerms(t, dt, meshsrc);
@@ -208,6 +267,7 @@ void StarParticles::BorisKick(Real t, Real dt) {
 //! \note first kick (from n-1/2 to n) is skipped for the new particles
 
 void StarParticles::ExertTidalForce(Real t, Real dt) {
+  //TODO(smoon) remove age(k) > 0
   Real acc0 = 2*qshear_*SQR(Omega_0_);
   for (int k = 0; k < npar_; ++k) {
     Real acc = age(k) > 0 ? acc0*dt*xp(k) : 0.;

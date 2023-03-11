@@ -327,8 +327,8 @@ void Particles::SendGhostParticles() {
   const int KE = pmy_block->ke;
 
   for (int k = 0; k < npar_; ++k) {
-    // (smoon) position indices xi1_, xi2_, xi3_ of the newly received active particles
-    // must be up-to-date.
+    // Note that the position indices have been updated in Particles::FlushReceiveBuffer
+    // when receiving active particles.
     int x1i = static_cast<int>(xi1_(k)),
         x2i = static_cast<int>(xi2_(k)),
         x3i = static_cast<int>(xi3_(k));
