@@ -61,8 +61,6 @@ ix2_bc          = periodic
 ox2_bc          = periodic
 ix3_bc          = periodic
 ox3_bc          = periodic
-
-<self_gravity>
 grav_bc = periodic
 
 <problem>

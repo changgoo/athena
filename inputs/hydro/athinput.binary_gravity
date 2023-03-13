@@ -98,7 +98,7 @@ ox2_bc          = multipole
 ix3_bc          = multipole
 ox3_bc          = multipole
 mporder         = 4
+four_pi_G       = 12.5663706144
 
 <problem>
-four_pi_G       = 12.5663706144
 ncycle          = 10

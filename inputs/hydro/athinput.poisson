@@ -62,17 +62,15 @@ ix2_bc          = periodic
 ox2_bc          = periodic
 ix3_bc          = periodic
 ox3_bc          = periodic
+four_pi_G       = 12.5663706144
+grav_bc         = periodic
+green_function  = cell_averaged
 
 <orbital_advection>
 OAorder      = 0       # 0: w/o OA, 1: w/ OA (1st), 2: w/ OA (2nd)
 qshear       = 1.0     # shear rate
 Omega0       = 1.0   # angular velocity of the system
 shboxcoord   = 1       # 1=xy (default); 2=xz
-
-<self_gravity>
-four_pi_G       = 12.5663706144
-grav_bc         = periodic
-green_function  = cell_averaged
 
 <problem>
 iprob           = 1 # problem choice

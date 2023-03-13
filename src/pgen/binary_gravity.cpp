@@ -51,7 +51,7 @@
 Real four_pi_G;
 
 void Mesh::InitUserMeshData(ParameterInput *pin) {
-  four_pi_G = pin->GetReal("problem","four_pi_G");
+  four_pi_G = pin->GetReal("gravity", "four_pi_G");
   SetFourPiG(four_pi_G);
 }
 

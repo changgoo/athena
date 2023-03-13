@@ -43,10 +43,8 @@ TurbulenceDriver *ptrbd;
 //========================================================================================
 void Mesh::InitUserMeshData(ParameterInput *pin) {
   if (SELF_GRAVITY_ENABLED) {
-    Real four_pi_G = pin->GetReal("self_gravity","four_pi_G");
-    Real eps = pin->GetOrAddReal("self_gravity","grav_eps", 0.0);
+    Real four_pi_G = pin->GetReal("gravity","four_pi_G");
     SetFourPiG(four_pi_G);
-    SetGravityThreshold(eps);
   }
 
   return;
@@ -62,7 +60,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real fgas = pin->GetOrAddReal("problem", "fgas", 0.5);
   Real a = pin->GetOrAddReal("problem", "a", 1.0);
   Real x0=0.0, y0=0.0, z0=0.0;
-  Real four_pi_G = pin->GetReal("self_gravity","four_pi_G");
+  Real four_pi_G = pin->GetReal("gravity","four_pi_G");
   Real gconst = four_pi_G / (4.0*PI);
 
   for (int k=ks; k<=ke; k++) {

@@ -48,7 +48,7 @@ Real SimilarityVar(Real r, Real t, Real cs) {
 //========================================================================================
 void Mesh::InitUserMeshData(ParameterInput *pin) {
   if (SELF_GRAVITY_ENABLED) {
-    Real gconst = pin->GetReal("self_gravity","gconst");
+    Real gconst = pin->GetReal("gravity","gconst");
     SetGravitationalConstant(gconst);
   }
   return;
@@ -150,7 +150,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     xi = SimilarityVar(rctrl, t0, cs);
     boost::numeric::odeint::integrate(shu77, res, xi0, xi, step);
     Real mstar = SQR(xi)*res[0]*(xi - res[1]); // Eq. (10) in Shu (1977)
-    mstar *= std::pow(cs,3)*t0/pgrav->gconst; // Eq. (8) in Shu (1977)
+    mstar *= std::pow(cs,3)*t0/(pgrav->four_pi_G/(4.*PI)); // Eq. (8) in Shu (1977)
     ppar->AddOneParticle(mstar,x0,y0,z0,vadvx,vadvy,vadvz);
     ppar->ToggleParHstOutFlag();
     ppar->SetControlVolume();

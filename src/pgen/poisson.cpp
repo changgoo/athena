@@ -44,8 +44,10 @@
 #endif
 
 void Mesh::InitUserMeshData(ParameterInput *pin) {
-  Real four_pi_G = pin->GetReal("problem","four_pi_G");
-  SetFourPiG(four_pi_G);
+  if (SELF_GRAVITY_ENABLED) {
+    Real four_pi_G = pin->GetReal("gravity","four_pi_G");
+    SetFourPiG(four_pi_G);
+  }
 }
 
 //========================================================================================
@@ -64,8 +66,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real x2size = mesh_size.x2max - mesh_size.x2min;
   Real x3size = mesh_size.x3max - mesh_size.x3min;
 
-  Real four_pi_G = pin->GetReal("self_gravity","four_pi_G");
-  Real gconst = four_pi_G / (4.0*PI);
+  Real gconst = pgrav->four_pi_G / (4.0*PI);
 
   int iprob = pin->GetOrAddInteger("problem","iprob",1);
   int nlim = pin->GetInteger("time","nlim");
@@ -294,11 +295,10 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
       Real x1size = mesh_size.x1max - mesh_size.x1min;
       Real x2size = mesh_size.x2max - mesh_size.x2min;
       Real x3size = mesh_size.x3max - mesh_size.x3min;
-      Real four_pi_G = pin->GetReal("self_gravity", "four_pi_G");
       Real phiamp = SQR(TWO_PI/x1size);
       phiamp += SQR(TWO_PI/x2size);
       phiamp += SQR(TWO_PI/x3size);
-      phiamp = 1.0*four_pi_G/phiamp;
+      phiamp = 1.0*pmb->pgrav->four_pi_G/phiamp;
 
       if (Globals::my_rank == 0) {
         std::cout << std::scientific
