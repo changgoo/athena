@@ -28,10 +28,6 @@
 #include "../multigrid/multigrid.hpp"
 #include "../parameter_input.hpp"
 
-#if SELF_GRAVITY_ENABLED != 2
-#error "This problem generator requires Multigrid gravity solver."
-#endif
-
 #ifdef MPI_PARALLEL
 #include <mpi.h>
 #endif

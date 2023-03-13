@@ -40,14 +40,6 @@
 #include <mpi.h>
 #endif
 
-#if SELF_GRAVITY_ENABLED != 2
-#error "This problem generator requires Multigrid gravity solver."
-#endif
-
-#if MAGNETIC_FIELDS_ENABLED
-#error "This problem generator does not support magnetic fields."
-#endif
-
 Real four_pi_G;
 
 void Mesh::InitUserMeshData(ParameterInput *pin) {
