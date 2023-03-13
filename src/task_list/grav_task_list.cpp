@@ -154,11 +154,10 @@ void GravityBoundaryTaskList::StartupTaskList(MeshBlock *pmb, int stage) {
     Real dt_int  = pmb->pmy_mesh->dt*ebeta[stage-1];
     Real time = pmb->pmy_mesh->time;
     pmb->pbval->ComputeShear(time+dt_fc, time+dt_int);
+    pmb->pgrav->gbvar.StartReceivingShear(BoundaryCommSubset::all);
   }
 
   pmb->pgrav->gbvar.StartReceiving(BoundaryCommSubset::all);
-  if (shearing_box != 0) {
-    pmb->pgrav->gbvar.StartReceivingShear(BoundaryCommSubset::all);
   return;
 }
 
