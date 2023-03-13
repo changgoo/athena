@@ -4,7 +4,7 @@
 // Licensed under the 3-clause BSD License, see LICENSE file for details
 //========================================================================================
 //! \file bvals_refine.cpp
-//! \brief constructor/destructor and utility functions for BoundaryValues class
+//! \brief functions for prolongation at level boundaries
 //!
 //! SWITCHING BETWEEN PRIMITIVE VS. CONSERVED AND STANDARD VS. COARSE BUFFERS HERE:
 //! -----------
@@ -586,7 +586,7 @@ void BoundaryValues::ProlongateGhostCells(const NeighborBlock& nb,
                                   fsi, fei, fsj, fej, fsk, fek);
   if (NSCALARS > 0) {
     PassiveScalars *ps = pmb->pscalars;
-    pmb->peos->PassiveScalarPrimitiveToConserved(ps->r, ph->w, ps->s, pmb->pcoord,
+    pmb->peos->PassiveScalarPrimitiveToConserved(ps->r, ph->u, ps->s, pmb->pcoord,
                                                  fsi, fei, fsj, fej, fsk, fek);
   }
   return;

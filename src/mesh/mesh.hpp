@@ -81,11 +81,10 @@ class MeshBlock {
 
  public:
   MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_size,
-            BoundaryFlag *input_bcs, Mesh *pm, ParameterInput *pin, int igflag,
+            BoundaryFlag *input_bcs, Mesh *pm, ParameterInput *pin,
             bool ref_flag = false);
   MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin, LogicalLocation iloc,
-            RegionSize input_block, BoundaryFlag *input_bcs, double icost,
-            char *mbdata, int igflag);
+            RegionSize input_block, BoundaryFlag *input_bcs, double icost, char *mbdata);
   ~MeshBlock();
 
   // data
@@ -100,7 +99,6 @@ class MeshBlock {
   int is, ie, js, je, ks, ke;
   int gid, lid;
   int cis, cie, cjs, cje, cks, cke, cnghost;
-  int gflag;
   int nbad_d, nbad_p;
 
   // user output variables for analysis
@@ -238,7 +236,7 @@ class Mesh {
   my_blocks(0)->block_size.nx1*my_blocks(0)->block_size.nx2*my_blocks(0)->block_size.nx3;}
 
   // data
-  RegionSize mesh_size;
+  RegionSize mesh_size, block_size;
   BoundaryFlag mesh_bcs[6];
   const bool f2, f3; // flags indicating (at least) 2D or 3D Mesh
   const int ndim;     // number of dimensions
@@ -260,7 +258,6 @@ class Mesh {
   const bool cooling, fofc_enabled;
 
   int step_since_lb;
-  int gflag;
   bool amr_updated;
   EosTable *peos_table;
 
@@ -329,7 +326,7 @@ class Mesh {
   UserHistoryOperation *user_history_ops_;
 
   // global constants
-  Real four_pi_G_, grav_eps_;
+  Real four_pi_G_;
 
   // variables for load balancing control
   bool lb_flag_, lb_automatic_, lb_manual_;
@@ -350,6 +347,7 @@ class Mesh {
   OrbitalVelocityFunc OrbitalVelocity_, OrbitalVelocityDerivative_[2];
   MGBoundaryFunc MGGravityBoundaryFunction_[6];
   CRBoundaryFunc CRBoundaryFunc_[6];
+  MGSourceMaskFunc MGGravitySourceMaskFunction_;
 
   void AllocateRealUserMeshDataField(int n);
   void AllocateIntUserMeshDataField(int n);
@@ -388,11 +386,7 @@ class Mesh {
   void EnrollUserBoundaryFunction(BoundaryFace face, BValFunc my_func);
   void EnrollUserMGGravityBoundaryFunction(BoundaryFace dir, MGBoundaryFunc my_bc);
   void EnrollUserCRBoundaryFunction(BoundaryFace face, CRBoundaryFunc my_func);
-  //! \deprecated (felker):
-  //! * provide trivial overload for old-style BoundaryFace enum argument
-  void EnrollUserBoundaryFunction(int face, BValFunc my_func);
-  void EnrollUserMGGravityBoundaryFunction(int dir, MGBoundaryFunc my_bc);
-  void EnrollUserCRBoundaryFunction(int face, CRBoundaryFunc my_func);
+  void EnrollUserMGGravitySourceMaskFunction(MGSourceMaskFunc srcmask);
 
   void EnrollUserRefinementCondition(AMRFlagFunc amrflag);
   void EnrollUserMeshGenerator(CoordinateDirection dir, MeshGenFunc my_mg);
@@ -409,7 +403,6 @@ class Mesh {
   void EnrollOrbitalVelocityDerivative(int i, OrbitalVelocityFunc my_func);
   void SetGravitationalConstant(Real g) { four_pi_G_=4.0*PI*g; }
   void SetFourPiG(Real fpg) { four_pi_G_=fpg; }
-  void SetGravityThreshold(Real eps) { grav_eps_=eps; }
 };
 
 

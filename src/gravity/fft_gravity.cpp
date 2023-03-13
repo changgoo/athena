@@ -25,6 +25,7 @@
 #include "../mesh/mesh.hpp"
 #include "../particles/particles.hpp"
 #include "../task_list/fft_grav_task_list.hpp"
+#include "../task_list/grav_task_list.hpp"
 #include "fft_gravity.hpp"
 #include "gravity.hpp"
 
@@ -53,7 +54,7 @@ FFTGravityDriver::FFTGravityDriver(Mesh *pm, ParameterInput *pin)
 
   QuickCreatePlan();
 
-  gtlist_ = new FFTGravitySolverTaskList(pin, pm);
+  gtlist_ = new GravityBoundaryTaskList(pin, pm);
 }
 
 FFTGravityDriver::~FFTGravityDriver() {

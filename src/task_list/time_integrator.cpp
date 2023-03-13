@@ -985,9 +985,9 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
     }
 
     if (NSCALARS > 0) {
-      AddTask(SRCTERM_HYD,(INT_HYD|INT_SCLR));
+      AddTask(SRC_TERM,(INT_HYD|INT_SCLR));
     } else {
-      AddTask(SRCTERM_HYD,INT_HYD);
+      AddTask(SRC_TERM,INT_HYD);
     }
 
     TaskID src_term = SRCTERM_HYD;
@@ -1025,15 +1025,14 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
       } else {
         AddTask(INT_SCLR,CALC_SCLRFLX);
       }
-      // there is no SRCTERM_SCLR task
       if (ORBITAL_ADVECTION) {
         AddTask(SEND_SCLR,CALC_HYDORB);
         AddTask(RECV_SCLR,NONE);
         AddTask(SETB_SCLR,(RECV_SCLR|CALC_HYDORB));
       } else {
-        AddTask(SEND_SCLR,INT_SCLR);
+        AddTask(SEND_SCLR,SRC_TERM);
         AddTask(RECV_SCLR,NONE);
-        AddTask(SETB_SCLR,(RECV_SCLR|INT_SCLR));
+        AddTask(SETB_SCLR,(RECV_SCLR|SRC_TERM));
       }
       if (SHEAR_PERIODIC) {
         AddTask(SEND_SCLRSH,SETB_SCLR);
@@ -1233,7 +1232,7 @@ void TimeIntegratorTaskList::AddTask(const TaskID& id, const TaskID& dep) {
   //!   VerbObject() since "HydroFluxCalculate()" doesn't sound quite right.
   //! - There are exceptions to the "verb+object" convention in some TASK_NAMES and
   //!   TaskFunc, e.g. NEW_DT + NewBlockTimeStep() and AMR_FLAG + CheckRefinement(),
-  //!   SRCTERM_HYD and HydroSourceTerms(), USERWORK, PHY_BVAL, PROLONG, CONS2PRIM,
+  //!   SRC_TERM and SourceTerms(), USERWORK, PHY_BVAL, PROLONG, CONS2PRIM,
   //!   ... Although, AMR_FLAG = "flag blocks for AMR" should be FLAG_AMR in VERB_OBJECT
   using namespace HydroIntegratorTaskNames; // NOLINT (build/namespace)
   if (id == CLEAR_ALLBND) {
@@ -1293,7 +1292,7 @@ void TimeIntegratorTaskList::AddTask(const TaskID& id, const TaskID& dep) {
   } else if (id == SRCTERM_HYD) {
     task_list_[ntasks].TaskFunc=
         static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
-        (&TimeIntegratorTaskList::AddSourceTermsHydro);
+        (&TimeIntegratorTaskList::AddSourceTerms);
     task_list_[ntasks].lb_time = true;
     task_list_[ntasks].task_name.append("AddSourceTermsHydro");
   } else if (id == SEND_HYD) {
@@ -2034,7 +2033,7 @@ TaskStatus TimeIntegratorTaskList::IntegrateField(MeshBlock *pmb, int stage) {
 //----------------------------------------------------------------------------------------
 //! Functions to add source terms
 
-TaskStatus TimeIntegratorTaskList::AddSourceTermsHydro(MeshBlock *pmb, int stage) {
+TaskStatus TimeIntegratorTaskList::AddSourceTerms(MeshBlock *pmb, int stage) {
   Hydro *ph = pmb->phydro;
   Field *pf = pmb->pfield;
   PassiveScalars *ps = pmb->pscalars;
@@ -2054,7 +2053,7 @@ TaskStatus TimeIntegratorTaskList::AddSourceTermsHydro(MeshBlock *pmb, int stage
       // Scaled coefficient for RHS update
       Real dt = (stage_wghts[(stage-1)].beta)*(pmb->pmy_mesh->dt);
       // Evaluate the source terms at the time at the beginning of the stage
-      ph->hsrc.AddHydroSourceTerms(t_start_stage, dt, ph->flux, ph->w, ps->r, pf->bcc,
+      ph->hsrc.AddSourceTerms(t_start_stage, dt, ph->flux, ph->w, ps->r, pf->bcc,
                                    ph->u, ps->s);
     }
     return TaskStatus::next;
@@ -2557,8 +2556,12 @@ TaskStatus TimeIntegratorTaskList::Primitives(MeshBlock *pmb, int stage) {
       // Swap Hydro and (possibly) passive scalar quantities in BoundaryVariable interface
       // from conserved to primitive formulations:
       ph->hbvar.SwapHydroQuantity(ph->w1, HydroBoundaryQuantity::prim);
-      if (NSCALARS > 0)
+      if (NSCALARS > 0) {
         ps->sbvar.var_cc = &(ps->r);
+        if (pmb->pmy_mesh->multilevel) {
+          ps->sbvar.coarse_buf = &(ps->coarse_r_);
+        }
+      }
       pbval->ApplyPhysicalBoundaries(t_end_stage, dt, pmb->pbval->bvars_main_int);
       // Perform 4th order W(U)
       pmb->peos->ConservedToPrimitiveCellAverage(ph->u, ph->w, pf->b,
@@ -2593,8 +2596,12 @@ TaskStatus TimeIntegratorTaskList::PhysicalBoundary(MeshBlock *pmb, int stage) {
     // Swap Hydro and (possibly) passive scalar quantities in BoundaryVariable interface
     // from conserved to primitive formulations:
     ph->hbvar.SwapHydroQuantity(ph->w, HydroBoundaryQuantity::prim);
-    if (NSCALARS > 0)
+    if (NSCALARS > 0) {
       ps->sbvar.var_cc = &(ps->r);
+      if (pmb->pmy_mesh->multilevel) {
+        ps->sbvar.coarse_buf = &(ps->coarse_r_);
+      }
+    }
     pbval->ApplyPhysicalBoundaries(t_end_stage, dt, pmb->pbval->bvars_main_int);
     return TaskStatus::success;
   }
@@ -2716,6 +2723,9 @@ TaskStatus TimeIntegratorTaskList::SendScalars(MeshBlock *pmb, int stage) {
     // Swap PassiveScalars quantity in BoundaryVariable interface back to conserved var
     // formulation (also needed in SetBoundariesScalars() since the tasks are independent)
     pmb->pscalars->sbvar.var_cc = &(pmb->pscalars->s);
+    if (pmb->pmy_mesh->multilevel) {
+      pmb->pscalars->sbvar.coarse_buf = &(pmb->pscalars->coarse_s_);
+    }
     pmb->pscalars->sbvar.SendBoundaryBuffers();
   } else {
     return TaskStatus::fail;
@@ -2744,6 +2754,9 @@ TaskStatus TimeIntegratorTaskList::SetBoundariesScalars(MeshBlock *pmb, int stag
   if (stage <= nstages) {
     // Set PassiveScalars quantity in BoundaryVariable interface to cons var formulation
     pmb->pscalars->sbvar.var_cc = &(pmb->pscalars->s);
+    if (pmb->pmy_mesh->multilevel) {
+      pmb->pscalars->sbvar.coarse_buf = &(pmb->pscalars->coarse_s_);
+    }
     pmb->pscalars->sbvar.SetBoundaries();
     return TaskStatus::success;
   }
