@@ -113,9 +113,6 @@ BoundaryValues::BoundaryValues(MeshBlock *pmb, BoundaryFlag *input_bcs,
   if (STS_ENABLED) {
     bvars_sts.reserve(1);
   }
-  if (SELF_GRAVITY_ENABLED) {
-    bvars_fft_grav.reserve(1);
-  }
 
   // Matches initial value of Mesh::next_phys_id_
   // reserve phys=0 for former TAG_AMR=8; now hard-coded in Mesh::CreateAMRMPITag()

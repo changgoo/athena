@@ -79,7 +79,6 @@ Gravity::Gravity(MeshBlock *pmb, ParameterInput *pin) :
   // Enroll CellCenteredBoundaryVariable object
   gbvar.bvar_index = pmb->pbval->bvars.size();
   pmb->pbval->bvars.push_back(&gbvar);
-  pmb->pbval->bvars_fft_grav.push_back(&gbvar);
   pmb->pbval->pgbvar = &gbvar;
 }
 
