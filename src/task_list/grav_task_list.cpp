@@ -37,33 +37,36 @@ GravityBoundaryTaskList::GravityBoundaryTaskList(ParameterInput *pin, Mesh *pm) 
   // Read a flag for shear periodic
   SHEAR_PERIODIC = pm->shear_periodic;
 
-  if (integrator == "vl2") {
-    //! \note `integrator == "vl2"`
-    //! - VL: second-order van Leer integrator (Stone & Gardiner, NewA 14, 139 2009)
-    //! - Simple predictor-corrector scheme similar to MUSCL-Hancock
-    //! - Expressed in 2S or 3S* algorithm form
+  if (SHEAR_PERIODIC) {
+    if (integrator == "vl2") {
+      //! \note `integrator == "vl2"`
+      //! - VL: second-order van Leer integrator (Stone & Gardiner, NewA 14, 139 2009)
+      //! - Simple predictor-corrector scheme similar to MUSCL-Hancock
+      //! - Expressed in 2S or 3S* algorithm form
 
-    // set number of stages and time coeff.
-    if (ORBITAL_ADVECTION) {
+      // set number of stages and time coeff.
+      if (ORBITAL_ADVECTION) {
+        std::stringstream msg;
+        msg << "### FATAL ERROR in GravityBoundaryTaskList constructor" << std::endl
+            << "Gravity is not tested with orbital advection" << std::endl;
+        ATHENA_ERROR(msg);
+      } else { // w/o orbital advection
+        nstages = 2;
+        // To be fully consistent with the TimeIntegratorTaskList, sbeta and ebeta
+        // must be set identical to the corresponding values in
+        // TimeIntegratorTaskList::stage_wghts.
+        sbeta[0] = 0.0;
+        ebeta[0] = 0.5;
+        sbeta[1] = 0.5;
+        ebeta[1] = 1.0;
+      }
+    } else {
       std::stringstream msg;
       msg << "### FATAL ERROR in GravityBoundaryTaskList constructor" << std::endl
-          << "FFT gravity is not tested with orbital advection" << std::endl;
+          << "Gravity is not tested with integrator=" << integrator
+          << " in shearing-periodic BC" << std::endl;
       ATHENA_ERROR(msg);
-    } else { // w/o orbital advection
-      nstages = 2;
-      // To be fully consistent with the TimeIntegratorTaskList, sbeta and ebeta
-      // must be set identical to the corresponding values in
-      // TimeIntegratorTaskList::stage_wghts.
-      sbeta[0] = 0.0;
-      ebeta[0] = 0.5;
-      sbeta[1] = 0.5;
-      ebeta[1] = 1.0;
     }
-  } else {
-    std::stringstream msg;
-    msg << "### FATAL ERROR in GravityBoundaryTaskList constructor" << std::endl
-        << "integrator=" << integrator << " not tested with FFT gravity" << std::endl;
-    ATHENA_ERROR(msg);
   }
 
   // Now assemble list of tasks for each stage of time integrator
