@@ -66,7 +66,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real x2size = mesh_size.x2max - mesh_size.x2min;
   Real x3size = mesh_size.x3max - mesh_size.x3min;
 
-  Real gconst = pgrav->four_pi_G / (4.0*PI);
+  Real four_pi_G = pgrav->four_pi_G;
+  Real gconst = four_pi_G / (4.0*PI);
 
   int iprob = pin->GetOrAddInteger("problem","iprob",1);
   int nlim = pin->GetInteger("time","nlim");
