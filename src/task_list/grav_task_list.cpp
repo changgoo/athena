@@ -46,7 +46,7 @@ GravityBoundaryTaskList::GravityBoundaryTaskList(ParameterInput *pin, Mesh *pm) 
     // set number of stages and time coeff.
     if (ORBITAL_ADVECTION) {
       std::stringstream msg;
-      msg << "### FATAL ERROR in FFTGravitySolverTaskList constructor" << std::endl
+      msg << "### FATAL ERROR in GravityBoundaryTaskList constructor" << std::endl
           << "FFT gravity is not tested with orbital advection" << std::endl;
       ATHENA_ERROR(msg);
     } else { // w/o orbital advection
@@ -61,7 +61,7 @@ GravityBoundaryTaskList::GravityBoundaryTaskList(ParameterInput *pin, Mesh *pm) 
     }
   } else {
     std::stringstream msg;
-    msg << "### FATAL ERROR in FFTGravitySolverTaskList constructor" << std::endl
+    msg << "### FATAL ERROR in GravityBoundaryTaskList constructor" << std::endl
         << "integrator=" << integrator << " not tested with FFT gravity" << std::endl;
     ATHENA_ERROR(msg);
   }

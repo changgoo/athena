@@ -1,6 +1,6 @@
 <comment>
 problem   = Protostellar collapse
-reference = 
+reference =
 configure = --prob=collapse -b --grav mg -mpi -hdf5
 
 <job>

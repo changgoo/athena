@@ -68,5 +68,5 @@ const TaskID GRAV_PHYS_BND(6);
 
 const TaskID SEND_GRAV_SH(7);
 const TaskID RECV_GRAV_SH(8);
-} // namespace FFTGravitySolverTaskNames
+} // namespace GravityBoundaryTaskNames
 #endif // TASK_LIST_GRAV_TASK_LIST_HPP_

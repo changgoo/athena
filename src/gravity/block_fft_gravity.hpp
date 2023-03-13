@@ -19,7 +19,7 @@
 #include "../athena_arrays.hpp"
 #include "../fft/block_fft.hpp"
 #include "../hydro/hydro.hpp"
-#include "../task_list/fft_grav_task_list.hpp"
+#include "../task_list/grav_task_list.hpp"
 #include "gravity.hpp"
 
 //! identifiers for gravity boundary conditions
@@ -64,7 +64,7 @@ class BlockFFTGravity : public BlockFFT {
   void SetPhysicalBoundaries();
 
  private:
-  FFTGravitySolverTaskList *gtlist_;
+  GravityBoundaryTaskList *gtlist_;
   Real Omega_0_,qshear_,rshear_;
   Real dx1_,dx2_,dx3_;
   Real dx1sq_,dx2sq_,dx3sq_;

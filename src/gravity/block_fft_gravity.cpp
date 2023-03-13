@@ -49,7 +49,7 @@ BlockFFTGravity::BlockFFTGravity(MeshBlock *pmb, ParameterInput *pin)
       roll_buf(pmb->ncells3, pmb->ncells1, pmb->ncells2),
       send_buf(nx3*nx2), recv_buf(nx3*nx2), pflux(pmb->ncells2+1),
       send_gbuf(nx3*nx1*NGHOST), recv_gbuf(nx3*nx1*NGHOST) {
-  gtlist_ = new FFTGravitySolverTaskList(pin, pmb->pmy_mesh);
+  gtlist_ = new GravityBoundaryTaskList(pin, pmb->pmy_mesh);
   gbflag = GetGravityBoundaryFlag(pin->GetString("gravity", "grav_bc"));
   grfflag = GetGreenFuncFlag(pin->GetOrAddString("gravity", "green_function",
                                                  "cell_averaged"));
