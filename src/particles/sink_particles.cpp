@@ -33,12 +33,14 @@ SinkParticles::SinkParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParame
       << "influence = " << pp->max_rinfl << std::endl;
     ATHENA_ERROR(msg);
   }
-  if (NGHOST < req_nghost_ + 1) {
+  if (NGHOST < req_nghost_ + rctrl + 1) {
     std::stringstream msg;
     msg << "### FATAL ERROR in SinkParticles constructor" << std::endl
       << req_nghost_ << " ghost cells are required for hydro/MHD, "
-      << "but sink particle needs one more ghost cell to extrapolate from." << std::endl
-      << "Reconfigure with --nghost=XXX with XXX > " << req_nghost_ + 1 << std::endl;
+      << "but sink particle needs more ghost cells to fill the control volume"
+      << " overlaping with the required ghost cells." << std::endl
+      << "Reconfigure with --nghost=XXX with XXX >= " << req_nghost_ + rctrl + 1
+      << std::endl;
     ATHENA_ERROR(msg);
   }
 }
@@ -238,22 +240,23 @@ void SinkParticles::SetControlVolume(AthenaArray<Real> &cons, int ip, int jp, in
     // 6 front faces
     // Each has one neighbor. Do simple copy.
 
+    // (SMOON) The loop index limits are carefully chosen in order to
+    //         1. Avoid segfault,
+    //         2. Make active and corresponding (required) ghost cells consistent
+    //            between neighboring MeshBlocks,
+    //         fully considering the possibility of a particle crossing the cell boundary.
+    //         The logic is faily complicated to describe without visual aid.
+    //         This function requires NGHOST=4 for rctrl=1.
     // x1-face
-    // SMOON: these loop limits restricts the cells to be modified to be within
-    // [is - nghost, ie + nghost], etc., where nghost is the number of ghost cells
-    // that are required for the hydro/MHD integrator, which could be different
-    // from NGHOST variable. This is because 1) only these cells need to be updated
-    // and 2) otherwise loop indices go beyond the proper limits of "cons" array,
-    // particularly for ghost particles.
     ckl = std::max(kp-s+1, kl);
     cjl = std::max(jp-s+1, jl);
-    cil = std::max(ip-s,   il);
     cku = std::min(kp+s-1, ku);
     cju = std::min(jp+s-1, ju);
-    ciu = std::min(ip+s  , iu);
     for (int k=ckl; k<=cku; ++k) {
       for (int j=cjl; j<=cju; ++j) {
-        for (int i=cil; i<=ciu; i+=2*s) {
+        for (int i=ip-s; i<=ip+s; i+=2*s) {
+          if ((i < il-1)||(i > iu+1))
+            continue;
           int ioff = sgn(i-ip);
           cons(IDN,k,j,i) = cons(IDN,k,j,i+ioff);
           cons(IM1,k,j,i) = cons(IM1,k,j,i+ioff);
@@ -264,14 +267,14 @@ void SinkParticles::SetControlVolume(AthenaArray<Real> &cons, int ip, int jp, in
     }
     // x2-face
     ckl = std::max(kp-s+1, kl);
-    cjl = std::max(jp-s  , jl);
     cil = std::max(ip-s+1, il);
     cku = std::min(kp+s-1, ku);
-    cju = std::min(jp+s  , ju);
     ciu = std::min(ip+s-1, iu);
     for (int k=ckl; k<=cku; ++k) {
-      for (int j=cjl; j<=cju; j+=2*s) {
+      for (int j=jp-s; j<=jp+s; j+=2*s) {
         for (int i=cil; i<=ciu; ++i) {
+          if ((j < jl-1)||(j > ju+1))
+            continue;
           int joff = sgn(j-jp);
           cons(IDN,k,j,i) = cons(IDN,k,j+joff,i);
           cons(IM1,k,j,i) = cons(IM1,k,j+joff,i);
@@ -281,15 +284,15 @@ void SinkParticles::SetControlVolume(AthenaArray<Real> &cons, int ip, int jp, in
       }
     }
     // x3-face
-    ckl = std::max(kp-s  , kl);
     cjl = std::max(jp-s+1, jl);
     cil = std::max(ip-s+1, il);
-    cku = std::min(kp+s  , ku);
     cju = std::min(jp+s-1, ju);
     ciu = std::min(ip+s-1, iu);
-    for (int k=ckl; k<=cku; k+=2*s) {
+    for (int k=kp-s; k<=kp+s; k+=2*s) {
       for (int j=cjl; j<=cju; ++j) {
         for (int i=cil; i<=ciu; ++i) {
+          if ((k < kl-1)||(k > ku+1))
+            continue;
           int koff = sgn(k-kp);
           cons(IDN,k,j,i) = cons(IDN,k+koff,j,i);
           cons(IM1,k,j,i) = cons(IM1,k+koff,j,i);
@@ -301,15 +304,11 @@ void SinkParticles::SetControlVolume(AthenaArray<Real> &cons, int ip, int jp, in
 
     // 8 corners
     // Each has three neighbors. Average them.
-    ckl = std::max(kp-s, kl);
-    cjl = std::max(jp-s, jl);
-    cil = std::max(ip-s, il);
-    cku = std::min(kp+s, ku);
-    cju = std::min(jp+s, ju);
-    ciu = std::min(ip+s, iu);
-    for (int k=ckl; k<=cku; k+=2*s) {
-      for (int j=cjl; j<=cju; j+=2*s) {
-        for (int i=cil; i<=ciu; i+=2*s) {
+    for (int k=kp-s; k<=kp+s; k+=2*s) {
+      for (int j=jp-s; j<=jp+s; j+=2*s) {
+        for (int i=ip-s; i<=ip+s; i+=2*s) {
+          if ((i < il)||(i > iu)||(j < jl)||(j > ju)||(k < kl)||(k > ku))
+            continue;
           int koff = sgn(k-kp);
           int joff = sgn(j-jp);
           int ioff = sgn(i-ip);
@@ -337,14 +336,12 @@ void SinkParticles::SetControlVolume(AthenaArray<Real> &cons, int ip, int jp, in
     // Each has two neighbors. Average them.
 
     // x1-slice
-    ckl = std::max(kp-s  , kl);
-    cjl = std::max(jp-s  , jl);
     cil = std::max(ip-s+1, il);
-    cku = std::min(kp+s  , ku);
-    cju = std::min(jp+s  , ju);
     ciu = std::min(ip+s-1, iu);
-    for (int k=ckl; k<=cku; k+=2*s) {
-      for (int j=cjl; j<=cju; j+=2*s) {
+    for (int k=kp-s; k<=kp+s; k+=2*s) {
+      for (int j=jp-s; j<=jp+s; j+=2*s) {
+        if ((j < jl)||(j > ju)||(k < kl)||(k > ku))
+          continue;
         for (int i=cil; i<=ciu; ++i) {
           int koff = sgn(k-kp);
           int joff = sgn(j-jp);
@@ -360,15 +357,13 @@ void SinkParticles::SetControlVolume(AthenaArray<Real> &cons, int ip, int jp, in
       }
     }
     // x2-slice
-    ckl = std::max(kp-s  , kl);
     cjl = std::max(jp-s+1, jl);
-    cil = std::max(ip-s  , il);
-    cku = std::min(kp+s  , ku);
     cju = std::min(jp+s-1, ju);
-    ciu = std::min(ip+s  , iu);
-    for (int k=ckl; k<=cku; k+=2*s) {
-      for (int j=cjl; j<=cju; ++j) {
-        for (int i=cil; i<=ciu; i+=2*s) {
+    for (int k=kp-s; k<=kp+s; k+=2*s) {
+      for (int i=ip-s; i<=ip+s; i+=2*s) {
+        if ((i < il)||(i > iu)||(k < kl)||(k > ku))
+          continue;
+        for (int j=cjl; j<=cju; ++j) {
           int koff = sgn(k-kp);
           int ioff = sgn(i-ip);
           Real davg = 0.5*(cons(IDN,k+koff,j,i) + cons(IDN,k,j,i+ioff));
@@ -384,14 +379,12 @@ void SinkParticles::SetControlVolume(AthenaArray<Real> &cons, int ip, int jp, in
     }
     // x3-slice
     ckl = std::max(kp-s+1, kl);
-    cjl = std::max(jp-s  , jl);
-    cil = std::max(ip-s  , il);
     cku = std::min(kp+s-1, ku);
-    cju = std::min(jp+s  , ju);
-    ciu = std::min(ip+s  , iu);
-    for (int k=ckl; k<=cku; ++k) {
-      for (int j=cjl; j<=cju; j+=2*s) {
-        for (int i=cil; i<=ciu; i+=2*s) {
+    for (int j=jp-s; j<=jp+s; j+=2*s) {
+      for (int i=ip-s; i<=ip+s; i+=2*s) {
+        if ((i < il)||(i > iu)||(j < jl)||(j > ju))
+          continue;
+        for (int k=ckl; k<=cku; ++k) {
           int joff = sgn(j-jp);
           int ioff = sgn(i-ip);
           Real davg = 0.5*(cons(IDN,k,j,i+ioff) + cons(IDN,k,j+joff,i));
