@@ -32,7 +32,7 @@
 PerturbationBlock::PerturbationBlock(MeshBlock *pmb) :
     vec(3, pmb->ncells3, pmb->ncells2, pmb->ncells1),
     empty_flux{AthenaArray<Real>(), AthenaArray<Real>(), AthenaArray<Real>()},
-    ptbvar(pmb, &vec, nullptr, empty_flux) {
+    ptbvar(pmb, &vec, nullptr, empty_flux, false) {
   ptbvar.bvar_index = pmb->pbval->bvars.size();
   pmb->pbval->bvars.push_back(&ptbvar);
   scal.InitWithShallowSlice(vec,4,0,1);
