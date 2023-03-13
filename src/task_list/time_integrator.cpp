@@ -990,7 +990,7 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
       AddTask(SRC_TERM,INT_HYD);
     }
 
-    TaskID src_term = SRCTERM_HYD;
+    TaskID src_term = SRC_TERM;
     if (CR_ENABLED)
       src_term = (src_term | SRCTERM_CR);
 
@@ -1289,7 +1289,7 @@ void TimeIntegratorTaskList::AddTask(const TaskID& id, const TaskID& dep) {
         (&TimeIntegratorTaskList::IntegrateField);
     task_list_[ntasks].lb_time = true;
     task_list_[ntasks].task_name.append("IntegrateField");
-  } else if (id == SRCTERM_HYD) {
+  } else if (id == SRC_TERM) {
     task_list_[ntasks].TaskFunc=
         static_cast<TaskStatus (TaskList::*)(MeshBlock*,int)>
         (&TimeIntegratorTaskList::AddSourceTerms);
