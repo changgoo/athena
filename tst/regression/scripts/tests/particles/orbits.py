@@ -49,16 +49,16 @@ def analyze():
 
     logger.info("%g %g %g %g", err[0], err[1], err[2], err[3])
 
-    if err[0] > 1.00E-6:
+    if err[0] > 2.00E-6:
         logger.warning("circular orbit energy error is too large %g", err[0])
         analyze_status = False
-    if err[1] > 6.00E-5:
+    if err[1] > 2.00E-5:
         logger.warning("ellipse orbit energy error is too large %g", err[1])
         analyze_status = False
-    if err[2] > 3.00E-6:
+    if err[2] > 2.00E-6:
         logger.warning("epicyclic orbit energy error is too large %g", err[2])
         analyze_status = False
-    if err[3] > 2.00E-5:
+    if err[3] > 3.00E-6:
         logger.warning("off-center epicyclic orbit energy error is too large %g", err[3])
         analyze_status = False
 
