@@ -1187,6 +1187,7 @@ void Mesh::EnrollUserBoundaryFunction(BoundaryFace dir, BValFunc my_bc) {
   return;
 }
 
+// TODO(smoon) Add documentation here
 void Mesh::EnrollUserCRBoundaryFunction(BoundaryFace dir, CRBoundaryFunc my_bc) {
   std::stringstream msg;
   if (dir < 0 || dir > 5) {
@@ -1201,6 +1202,8 @@ void Mesh::EnrollUserCRBoundaryFunction(BoundaryFace dir, CRBoundaryFunc my_bc) 
     ATHENA_ERROR(msg);
   }
   CRBoundaryFunc_[static_cast<int>(dir)]=my_bc;
+  return;
+}
 
 //----------------------------------------------------------------------------------------
 //! \fn void Mesh::EnrollUserMGGravityBoundaryFunction(BoundaryFace dir,
