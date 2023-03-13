@@ -333,7 +333,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
       MPI_Allreduce(MPI_IN_PLACE, &SumRvy, 1, MPI_ATHENA_REAL, MPI_SUM, MPI_COMM_WORLD);
       MPI_Allreduce(MPI_IN_PLACE, &SumRvz, 1, MPI_ATHENA_REAL, MPI_SUM, MPI_COMM_WORLD);
 #endif
-      int cell_num = pmy_mesh->GetTotalCells();
+      std::int64_t cell_num = pmy_mesh->GetTotalCells();
       SumRvx /= SumRd*cell_num;
       SumRvy /= SumRd*cell_num;
       SumRvz /= SumRd*cell_num;
