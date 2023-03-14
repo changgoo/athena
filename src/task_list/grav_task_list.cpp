@@ -160,8 +160,9 @@ void GravityBoundaryTaskList::StartupTaskList(MeshBlock *pmb, int stage) {
   }
 
   pmb->pgrav->gbvar.StartReceiving(BoundaryCommSubset::all);
-  if (shearing_box != 0) {
+  if (SHEAR_PERIODIC) {
     pmb->pgrav->gbvar.StartReceivingShear(BoundaryCommSubset::all);
+  }
   return;
 }
 
