@@ -702,14 +702,14 @@ void Particles::FlushReceiveBuffer(ParticleBuffer& recv, bool ghost) {
   }
 
   // Check the memory size.
+  int npartot = npar_ + npar_gh_;
   int nprecv = recv.npar_;
-  if (npar_ + nprecv > nparmax_)
-    UpdateCapacity(nparmax_ + 2 * (npar_ + nprecv - nparmax_));
+  if (npartot + nprecv > nparmax_)
+    UpdateCapacity(nparmax_ + 2 * (npartot + nprecv - nparmax_));
 
   // Flush the receive buffers.
   int *pi = recv.ibuf;
   Real *pr = recv.rbuf;
-  int npartot = npar_ + npar_gh_;
   for (int k = npartot; k < npartot + nprecv; ++k) {
     for (int j = 0; j < nint; ++j)
       intprop(j,k) = *pi++;
