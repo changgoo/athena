@@ -11,6 +11,7 @@
 // C++ headers
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <cstring>    // memset
 #include <ctime>
 #include <iomanip>
@@ -42,15 +43,11 @@
 #include <mpi.h>
 #endif
 
-#if MAGNETIC_FIELDS_ENABLED
-#error "This problem generator does not support magnetic fields"
-#endif
-
 void Mesh::InitUserMeshData(ParameterInput *pin) {
-  Real four_pi_G = pin->GetReal("self_gravity","four_pi_G");
-  Real eps = pin->GetOrAddReal("self_gravity","grav_eps", 0.0);
-  SetFourPiG(four_pi_G);
-  SetGravityThreshold(eps);
+  if (SELF_GRAVITY_ENABLED) {
+    Real four_pi_G = pin->GetReal("gravity","four_pi_G");
+    SetFourPiG(four_pi_G);
+  }
 }
 
 //========================================================================================
@@ -69,7 +66,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real x2size = mesh_size.x2max - mesh_size.x2min;
   Real x3size = mesh_size.x3max - mesh_size.x3min;
 
-  Real four_pi_G = pin->GetReal("self_gravity","four_pi_G");
+  Real four_pi_G = pgrav->four_pi_G;
   Real gconst = four_pi_G / (4.0*PI);
 
   int iprob = pin->GetOrAddInteger("problem","iprob",1);
@@ -171,7 +168,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 //          }
         }
 
-        if (nlim > 0) {
+        if (nlim != 0) {
           phydro->u(IDN,k,j,i) = den;
           phydro->u(IM1,k,j,i) = 0.0;
           phydro->u(IM2,k,j,i) = 0.0;
@@ -206,7 +203,6 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
   int is = pmb->is, ie = pmb->ie;
   int js = pmb->js, je = pmb->je;
   int ks = pmb->ks, ke = pmb->ke;
-  int cnt = (ke-ks+1)*(je-js+1)*(ie-is+1);
 
   int nlim = pin->GetInteger("time","nlim");
 
@@ -228,7 +224,7 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
       for (int n=0; n < ncycle; n++) {
         for (int b=0; b<nblocal; ++b) {
           pmb = my_blocks(b);
-          std::memset(pmb->pgrav->phi.data(), 0, pmb->pgrav->phi.GetSizeInBytes());
+          pmb->pgrav->phi.ZeroClear();
         }
         if (SELF_GRAVITY_ENABLED == 1) pfgrd->Solve(1,0);
         else if (SELF_GRAVITY_ENABLED == 2) pmgrd->Solve(1);
@@ -295,17 +291,15 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
       MPI_Allreduce(MPI_IN_PLACE, &maxphi, 1, MPI_ATHENA_REAL, MPI_MAX, MPI_COMM_WORLD);
 #endif
 
-      err1 = err1/(static_cast<Real>(cnt*nbtotal));
-      // err2 = err2/cnt;
+      err1 = err1/static_cast<Real>(zones);
 
       Real x1size = mesh_size.x1max - mesh_size.x1min;
       Real x2size = mesh_size.x2max - mesh_size.x2min;
       Real x3size = mesh_size.x3max - mesh_size.x3min;
-      Real four_pi_G = pin->GetReal("self_gravity", "four_pi_G");
       Real phiamp = SQR(TWO_PI/x1size);
       phiamp += SQR(TWO_PI/x2size);
       phiamp += SQR(TWO_PI/x3size);
-      phiamp = 1.0*four_pi_G/phiamp;
+      phiamp = 1.0*pmb->pgrav->four_pi_G/phiamp;
 
       if (Globals::my_rank == 0) {
         std::cout << std::scientific

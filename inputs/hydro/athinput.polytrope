@@ -50,7 +50,7 @@ nx3 = 32
 gamma = 2            # gamma = C_p/C_v
 iso_sound_speed = 0.09003163161571062 # isothermal sound speed
 
-<self_gravity>
+<gravity>
 four_pi_G = 1.0
 grav_bc = open
 

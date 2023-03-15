@@ -47,9 +47,7 @@ bool InBoundary(Real x, Real y, Real z, Real x1min, Real x1max,
 void Mesh::InitUserMeshData(ParameterInput *pin) {
   if (SELF_GRAVITY_ENABLED) {
     Real four_pi_G = pin->GetOrAddReal("gravity","four_pi_G",1.0);
-    Real eps = pin->GetOrAddReal("gravity","grav_eps", 0.0);
     SetFourPiG(four_pi_G);
-    SetGravityThreshold(eps);
   }
   // std::stringstream hstr;
   // initial density

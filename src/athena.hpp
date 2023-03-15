@@ -51,6 +51,8 @@ class ParameterInput;
 class HydroDiffusion;
 class FieldDiffusion;
 class CosmicRay;
+struct MGCoordinates;
+
 class OrbitalAdvection;
 class Units;
 
@@ -180,7 +182,7 @@ enum CoordinateDirection {X1DIR=0, X2DIR=1, X3DIR=2};
 enum class BoundaryQuantity {cc, fc, cc_flcor, fc_flcor, mggrav,
                              mggrav_f, orbital_cc, orbital_fc};
 enum class HydroBoundaryQuantity {cons, prim};
-enum class BoundaryCommSubset {mesh_init, gr_amr, all, orbital, poisson, pm, pm_grav};
+enum class BoundaryCommSubset {mesh_init, gr_amr, all, orbital, pm, pm_grav};
 // TODO(felker): consider generalizing/renaming to QuantityFormulation
 enum class FluidFormulation {evolve, background, disabled, diffusion};
 enum class TaskType {op_split_before, main_int, op_split_after};
@@ -206,9 +208,9 @@ using MetricFunc = void (*)(
     AthenaArray<Real> &g, AthenaArray<Real> &g_inv,
     AthenaArray<Real> &dg_dx1, AthenaArray<Real> &dg_dx2, AthenaArray<Real> &dg_dx3);
 using MGBoundaryFunc = void (*)(
-    AthenaArray<Real> &dst,Real time, int nvar,
+    AthenaArray<Real> &dst, Real time, int nvar,
     int is, int ie, int js, int je, int ks, int ke, int ngh,
-    Real x0, Real y0, Real z0, Real dx, Real dy, Real dz);
+    const MGCoordinates &coord);
 using ViscosityCoeffFunc = void (*)(
     HydroDiffusion *phdif, MeshBlock *pmb,
     const  AthenaArray<Real> &w, const AthenaArray<Real> &bc,
@@ -235,6 +237,8 @@ using CRSrcTermFunc = void (*)(
     MeshBlock *pmb, const Real time, const Real dt,
     const AthenaArray<Real> &prim, const AthenaArray<Real> &bcc,
     AthenaArray<Real> &u_cr, AthenaArray<Real> &CRInjectionRate);
+using MGSourceMaskFunc = void (*)(AthenaArray<Real> &src,
+    int is, int ie, int js, int je, int ks, int ke, const MGCoordinates &coord);
 using OrbitalVelocityFunc = Real (*)(
     OrbitalAdvection *porb, Real x1, Real x2, Real x3);
 

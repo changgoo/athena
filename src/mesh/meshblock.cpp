@@ -49,10 +49,9 @@
 //!                        and mesh refinement objects.
 
 MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_block,
-                     BoundaryFlag *input_bcs, Mesh *pm, ParameterInput *pin,
-                     int igflag, bool ref_flag) :
+           BoundaryFlag *input_bcs, Mesh *pm, ParameterInput *pin, bool ref_flag) :
     pmy_mesh(pm), loc(iloc), block_size(input_block),
-    gid(igid), lid(ilid), gflag(igflag), nbad_d(0), nbad_p(0), nuser_out_var(),
+    gid(igid), lid(ilid), nbad_d(0), nbad_p(0), nuser_out_var(),
     pcool(pm->pcool), punit(pm->punit),
     new_block_dt_{}, new_block_dt_hyperbolic_{}, new_block_dt_parabolic_{},
     new_block_dt_user_{},
@@ -224,10 +223,9 @@ MeshBlock::MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_
 
 MeshBlock::MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
                      LogicalLocation iloc, RegionSize input_block,
-                     BoundaryFlag *input_bcs,
-                     double icost, char *mbdata, int igflag) :
+                     BoundaryFlag *input_bcs, double icost, char *mbdata) :
     pmy_mesh(pm), loc(iloc), block_size(input_block),
-    gid(igid), lid(ilid), gflag(igflag), nbad_d(0), nbad_p(0), nuser_out_var(),
+    gid(igid), lid(ilid), nbad_d(0), nbad_p(0), nuser_out_var(),
     pcool(pm->pcool), punit(pm->punit),
     new_block_dt_{}, new_block_dt_hyperbolic_{}, new_block_dt_parabolic_{},
     new_block_dt_user_{},
@@ -431,6 +429,7 @@ MeshBlock::~MeshBlock() {
   delete porb;
   if (SELF_GRAVITY_ENABLED) delete pgrav;
   if (SELF_GRAVITY_ENABLED == 3) delete pfft;
+  if (SELF_GRAVITY_ENABLED == 2) delete pmg;
   if (NSCALARS > 0) delete pscalars;
   if (CR_ENABLED) delete pcr;
 

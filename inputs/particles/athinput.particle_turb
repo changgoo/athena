@@ -59,6 +59,9 @@ nx3        = 16
 gamma           = 1.666666666667 # gamma = C_p/C_v
 iso_sound_speed = 1.00           # equavalent to sqrt(gamma*p/d) for p=0.1, d=1
 
+<gravity>
+four_pi_G  = 39.4784176 # 4*pi^2 for nJ = 1 if cs=d0=L=1
+
 <particle1>
 type        = tracer
 output      = true
@@ -66,7 +69,6 @@ gravity     = false
 np_per_cell = 2
 x1min       = -0.5
 x1max       = 0.0
-
 
 <particle2>
 type        = tracer
@@ -88,5 +90,4 @@ turb_flag  = 1    # 1 for decaying, 2 (impulsive) or 3 (continuous) for driven t
 dedt       = 10.0 # Energy injection rate (for driven) or Total energy (for decaying)
 tcorr      = 0.1  # correlation time for OU process (both impulsive and continuous)
 dtdrive    = 0.1  # time interval between perturbation (impulsive)
-four_pi_G  = 39.4784176 # 4*pi^2 for nJ = 1 if cs=d0=L=1
 compute_error = false

@@ -213,7 +213,7 @@ CosmicRay::CosmicRay(MeshBlock *pmb, ParameterInput *pin):
             AthenaArray<Real>::DataStatus::empty)}
     },
     pmy_block(pmb),
-    cr_bvar(pmb, &u_cr, &coarse_cr_, flux),
+    cr_bvar(pmb, &u_cr, &coarse_cr_, flux, true),
     UserSourceTerm_{} {
   Mesh *pm = pmy_block->pmy_mesh;
   // "Enroll" in S/AMR by adding to vector of tuples of pointers in MeshRefinement class

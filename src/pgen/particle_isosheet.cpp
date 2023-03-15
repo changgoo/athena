@@ -48,10 +48,8 @@ void FixedBoundary(MeshBlock *pmb, Coordinates *pcoord, AthenaArray<Real> &prim,
 //
 void Mesh::InitUserMeshData(ParameterInput *pin) {
   if (SELF_GRAVITY_ENABLED) {
-    Real four_pi_G = pin->GetReal("self_gravity","four_pi_G");
-    Real eps = pin->GetOrAddReal("self_gravity","grav_eps", 0.0);
+    Real four_pi_G = pin->GetReal("gravity","four_pi_G");
     SetFourPiG(four_pi_G);
-    SetGravityThreshold(eps);
   }
 
   if (mesh_bcs[BoundaryFace::inner_x3] == GetBoundaryFlag("user")) {
