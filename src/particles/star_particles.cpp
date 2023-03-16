@@ -147,6 +147,7 @@ void StarParticles::VL2DKD(int stage) {
 void StarParticles::RK2(int stage) {
   Real t = pmy_mesh_->time;
   Real dt = pmy_mesh_->dt; // t^(n+1) - t^n;
+  Real hdt = 0.5*dt;
 
   switch (stage) {
   case 1:
@@ -161,7 +162,20 @@ void StarParticles::RK2(int stage) {
 
     // q^n -> q'
     Drift(t, dt);
-    Kick(t, dt);
+
+    // Kick from v^n to v'
+    // Boris algorithm splits the full kick into three consecutive kicks.
+    // v^n -> v^(-) -> v^(+) -> v'
+    // See Appendix of Moon et al. (2021) for notations.
+    // Note that for RK2, the gravity is forward Euler whereas the Coriolis
+    // is semi-implicit.
+
+    // kick from v^n to v^(-) : gravity
+    Kick(t, hdt);
+    // rotation from v^(-) to v^(+) : Coriolis
+    if (pmy_mesh_->shear_periodic) BorisKick(t, dt);
+    // kick from v^(+) to v' : gravity
+    Kick(t, hdt);
 
     // Update the position index to be used in Poisson solver
     UpdatePositionIndices();
@@ -175,7 +189,9 @@ void StarParticles::RK2(int stage) {
 
     // q' -> q''
     Drift(t, dt);
-    Kick(t, dt);
+    Kick(t, hdt);
+    if (pmy_mesh_->shear_periodic) BorisKick(t, dt);
+    Kick(t, hdt);
 
     // q^(n+1) = 0.5*(q^n + q'')
     for (int k = 0; k < npar_; ++k) {
