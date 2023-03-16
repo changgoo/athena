@@ -115,11 +115,11 @@ void StarParticles::VL2DKD(int stage) {
     // See Appendix of Moon et al. (2021) for notations.
 
     // kick from v^n to v^(-) : gravity
-    Kick(t, hdt, pmy_block->phydro->w);
+    Kick(t, hdt);
     // rotation from v^(-) to v^(+) : Coriolis
     if (pmy_mesh_->shear_periodic) BorisKick(t, dt);
     // kick from v^(+) to v^(n+1) : gravity
-    Kick(t,0.5*dt,pmy_block->phydro->w);
+    Kick(t,0.5*dt);
 
     // Step 3. Drift from x^(n+1/2) to x^n
     Drift(t, hdt);
@@ -161,7 +161,7 @@ void StarParticles::RK2(int stage) {
 
     // q^n -> q'
     Drift(t, dt);
-    Kick(t, dt, pmy_block->phydro->w);
+    Kick(t, dt);
 
     // Update the position index to be used in Poisson solver
     UpdatePositionIndices();
@@ -175,7 +175,7 @@ void StarParticles::RK2(int stage) {
 
     // q' -> q''
     Drift(t, dt);
-    Kick(t, dt, pmy_block->phydro->w);
+    Kick(t, dt);
 
     // q^(n+1) = 0.5*(q^n + q'')
     for (int k = 0; k < npar_; ++k) {
@@ -226,11 +226,12 @@ void StarParticles::Drift(Real t, Real dt) {
 //! forces from self gravity, external gravity, and tidal potential
 //! Coriolis force is treated by BorisKick
 //! dt must be the half dt
-// TODO(smoon) remove unused meshsrc argument
-void StarParticles::Kick(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
+
+void StarParticles::Kick(Real t, Real dt) {
   // Integrate the source terms (e.g., acceleration).
-  SourceTerms(t, dt, meshsrc);
-  UserSourceTerms(t, dt, meshsrc);
+  AthenaArray<Real> emptyarray;
+  SourceTerms(t, dt, emptyarray);
+  UserSourceTerms(t, dt, emptyarray);
 }
 
 //--------------------------------------------------------------------------------------

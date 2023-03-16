@@ -405,7 +405,7 @@ class StarParticles : public Particles {
 
   void VL2DKD(int step);
   void RK2(int step);
-  void Kick(Real t, Real dt, const AthenaArray<Real>& meshsrc);
+  void Kick(Real t, Real dt);
   void Drift(Real t, Real dt);
   void BorisKick(Real t, Real dt);
   void Age(Real t, Real dt);
