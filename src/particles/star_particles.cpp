@@ -120,7 +120,7 @@ void StarParticles::VL2DKD(int stage) {
     // rotation from v^(-) to v^(+) : Coriolis
     if (pmy_mesh_->shear_periodic) BorisKick(t, dt);
     // kick from v^(+) to v^(n+1) : gravity
-    Kick(t,0.5*dt);
+    Kick(t, hdt);
 
     // Step 3. Drift from x^(n+1/2) to x^n
     Drift(t, hdt);
@@ -139,6 +139,7 @@ void StarParticles::VL2DKD(int stage) {
 //!
 //! Satisfying Newton's 3rd law when coupled with RK2 hydro integrator (gas->particle
 //! = particle->gas).
+//! Need to do the force interpolation in both stage (twice as many compared to VL2DKD).
 
 void StarParticles::RK2KDK(int stage) {
   Real t = pmy_mesh_->time;
