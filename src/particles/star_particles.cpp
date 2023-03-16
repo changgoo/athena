@@ -70,7 +70,8 @@ void StarParticles::Integrate(int stage) {
   if (hydro_integrator == "vl2") {
     VL2DKD(stage);
   } else if (hydro_integrator == "rk2") {
-    RK2(stage);
+//    RK2(stage);
+    RK2KDK(stage);
   } else {
     std::stringstream msg;
     msg << "### FATAL ERROR in [StarParticles::Integrate]" << std::endl
@@ -131,6 +132,59 @@ void StarParticles::VL2DKD(int stage) {
     break;
   }
 }
+
+//--------------------------------------------------------------------------------------
+//! \fn void StarParticles::RK2KDK(int step)
+//! \brief KDK particle integrator
+//!
+//! Satisfying Newton's 3rd law when coupled with RK2 hydro integrator (gas->particle
+//! = particle->gas).
+
+void StarParticles::RK2KDK(int stage) {
+  Real t = pmy_mesh_->time;
+  Real dt = pmy_mesh_->dt; // t^(n+1) - t^n;
+  Real hdt = 0.5*dt;
+
+  switch (stage) {
+  case 1:
+    // Save position x^n and velocity v^n at time t^n
+    SaveStatus();
+
+    // Calculate the acceleration g(u^n, x^n)
+    if (SELF_GRAVITY_ENABLED) {
+      ppgrav->FindGravitationalForce(pmy_block->pgrav->phi);
+      ppgrav->InterpolateGravitationalForce();
+    }
+
+    // Step 1. Opening kick from v^n to v^(n+1/2)
+    // Order is important!
+    if (pmy_mesh_->shear_periodic) BorisKick(t, hdt);
+    Kick(t, hdt);
+
+    // Step 2. Drift from x^n to x^(n+1)
+    Drift(t, dt);
+
+    // Update the position index to be used in Poisson solver
+    UpdatePositionIndices();
+    break;
+  case 2:
+    // Calculate the acceleration g(u', x^(n+1))
+    if (SELF_GRAVITY_ENABLED) {
+      ppgrav->FindGravitationalForce(pmy_block->pgrav->phi);
+      ppgrav->InterpolateGravitationalForce();
+    }
+
+    // Step 3. Closing kick from v^(n+1/2) to v^(n+1)
+    // Order is important!
+    Kick(t, hdt);
+    if (pmy_mesh_->shear_periodic) BorisKick(t, hdt);
+
+    // Update the age of the star particle
+    Age(t, dt);
+    break;
+  }
+}
+
 
 //--------------------------------------------------------------------------------------
 //! \fn void StarParticles::RK2(int step)
