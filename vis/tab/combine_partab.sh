@@ -15,6 +15,8 @@ OUTID=$2
 PARID=$3
 
 # Find the number of blocks.
+# TODO(smoon) When combine partab, remove, and restart, we do not always
+# have the initial *.00000.* snapshot. Need to count nblocks in more general way.
 read nblocks < <(ls $BASE.block*.$OUTID.00000.$PARID.tab | wc -l)
 
 # Find the number of snapshots.
@@ -30,4 +32,6 @@ for i in $(seq -f "%05g" 0 $((ntimes - 1))); do
 done
 
 # clean up
+# TODO(smoon) Need to add some safety block that checks whether the above
+# lines are correctly executed before executing this line
 #find . -name '$BASE.block*.$OUTID.*.$PARID.tab' -delete
