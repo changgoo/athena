@@ -334,15 +334,13 @@ void StarParticles::BorisKick(Real t, Real dt) {
 //! \brief force from tidal potential (qshear != 0)
 //!
 //! Phi_tidal = - q Omega^2 x^2
-//! acc = 2 q Omega^2 x xhat
-//! \note first kick (from n-1/2 to n) is skipped for the new particles
+//! g_x = 2 q Omega^2 x xhat
 
 void StarParticles::ExertTidalForce(Real t, Real dt) {
-  //TODO(smoon) remove age(k) > 0
-  Real acc0 = 2*qshear_*SQR(Omega_0_);
+  // Negative spring constant. Particles are pushed away from x=0.
+  Real kspring = -2*qshear_*SQR(Omega_0_);
   for (int k = 0; k < npar_; ++k) {
-    Real acc = age(k) > 0 ? acc0*dt*xp(k) : 0.;
-    vpx(k) += acc;
+    vpx(k) -= kspring*xp(k)*dt;
   }
 }
 
