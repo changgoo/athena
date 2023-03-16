@@ -197,7 +197,7 @@ void Particles::LinkNeighbors(MeshBlockTree &tree,
           if (pn->pnb == NULL) {
             int nblevel = pbval_->nblevel[n][m][l];
             if (0 <= nblevel && nblevel < my_level) {
-              // TODO(smoon) should we set amrflag=true here??
+              // TODO(SMOON) should we set amrflag=true here??
               int ngid = tree.FindNeighbor(pbval_->loc, l-1, m-1, n-1,
                                            pbval_->block_bcs)->GetGid();
               for (int i = 0; i < pbval_->nneighbor; ++i) {

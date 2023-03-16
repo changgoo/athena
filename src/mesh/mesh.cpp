@@ -1187,7 +1187,7 @@ void Mesh::EnrollUserBoundaryFunction(BoundaryFace dir, BValFunc my_bc) {
   return;
 }
 
-// TODO(smoon) Add documentation here
+// TODO(SMOON) Add documentation here
 void Mesh::EnrollUserCRBoundaryFunction(BoundaryFace dir, CRBoundaryFunc my_bc) {
   std::stringstream msg;
   if (dir < 0 || dir > 5) {

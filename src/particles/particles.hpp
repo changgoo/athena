@@ -83,7 +83,7 @@ friend class ParticleMesh;
   // Particle interface
   int AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1, Real v2, Real v3);
   void RemoveOneParticle(int k);
-  virtual void Integrate(int step); // TODO(SMOON) apply template pattern?
+  virtual void Integrate(int step);
   Real NewBlockTimeStep();
   std::size_t GetSizeInBytes() const;
   bool IsGravity() const { return isgravity_; }
@@ -142,8 +142,8 @@ friend class ParticleMesh;
   AthenaArray<Real> mass;                //!> mass
   AthenaArray<Real> xp, yp, zp;        //!> position
   AthenaArray<Real> vpx, vpy, vpz;     //!> velocity
-  AthenaArray<Real> xp0, yp0, zp0;     //!> beginning position (SMOON: What is this?)
-  AthenaArray<Real> vpx0, vpy0, vpz0;  //!> beginning velocity (SMOON: What is this?)
+  AthenaArray<Real> xp0, yp0, zp0;     //!> position at the previous timestep
+  AthenaArray<Real> vpx0, vpy0, vpz0;  //!> velocity at the previous timestep
 
  protected:
   // Protected interfaces (to be used by derived classes)
@@ -157,8 +157,6 @@ friend class ParticleMesh;
   int AddWorkingArray();
   void UpdateCapacity(int new_nparmax);  //!> Change the capacity of particle arrays
   bool CheckInMeshBlock(Real x1, Real x2, Real x3);
-  // TODO(SMOON) these two functions  can be moved to private once Integrate follows
-  // template design pattern.
   void SaveStatus(); // x->x0, v->v0
   void UpdatePositionIndices();
 
