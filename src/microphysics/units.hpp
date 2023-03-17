@@ -11,6 +11,7 @@
 // C headers
 
 // C++ headers
+#include <string>
 
 // Athena++ headers
 #include "../athena.hpp"
@@ -18,50 +19,66 @@
 
 //! \brief Physical constants defined in c.g.s.
 namespace Constants {
-static const Real G     = 6.67259e-8;
-static const Real Msun  = 1.9891e+33;
-static const Real Lsun  = 3.8268e+33;
-static const Real Myr   = 3.155815e+13;
-static const Real pc    = 3.085678e+18;
-static const Real kpc   = 3.085678e+21;
-static const Real kms   = 1.0e+5;
-static const Real mH    = 1.6733e-24;
-static const Real aR    = 7.5646e-15;
-static const Real kB    = 1.380658e-16;
-static const Real c     = 2.99792458e+10;
-static const Real e     = 4.80320427e-10;
+static const Real grav_const_cgs       = 6.67259e-8;
+static const Real solar_mass_cgs       = 1.9891e+33;
+static const Real solar_lum_cgs        = 3.8268e+33;
+static const Real yr_cgs               = 3.155815e+7;
+static const Real million_yr_cgs       = 3.155815e+13;
+static const Real pc_cgs               = 3.085678e+18;
+static const Real kpc_cgs              = 3.085678e+21;
+static const Real km_s_cgs             = 1.0e+5;
+static const Real hydrogen_mass_cgs    = 1.6733e-24;
+static const Real radiation_aconst_cgs = 7.5646e-15;
+static const Real k_boltzmann_cgs      = 1.380658e-16;
+static const Real speed_of_light_cgs   = 2.99792458e+10;
+static const Real echarge_cgs          = 4.80320427e-10;
+static const Real kelvin_cgs           = 1;
 } // namespace Constants
 
 //! \brief Class for units
 class Units {
  public:
   explicit Units(ParameterInput *pin);
-  Units(Real dunit, Real lunit, Real vunit);
 
   void SetUnitsConstants();
   void PrintCodeUnits();
   void PrintConstantsInCodeUnits();
 
-  Real Density, Length, Velocity;
-  Real Mass, Volume, Time;
-  Real EnergyDensity, Pressure;
-  Real MagneticField;
-  Real Temperature_mu;
+  // unit system
+  std::string unit_system;
 
-  Real gram, cm, second, dyne, erg, Kelvin, Gauss;
+  // code units in c.g.s.
+  // i.e. multiply this to convert quantities in c.g.s.
+  // public accessor for default MLT units
+  // ideally this should be accessor methods, but...
+  Real code_mass_cgs, code_length_cgs, code_time_cgs;
 
-  Real G_in_code;
-  Real Msun_in_code;
-  Real Lsun_in_code;
-  Real Myr_in_code;
-  Real pc_in_code;
-  Real kpc_in_code;
-  Real kms_in_code;
-  Real mH_in_code;
-  Real aR_in_code;
-  Real kB_in_code;
-  Real c_in_code;
-  Real e_in_code;
-  Real Bethe_in_code;
+  Real code_volume_cgs, code_density_cgs, code_velocity_cgs;
+  Real code_energydensity_cgs, code_pressure_cgs;
+  Real code_magneticfield_cgs;
+  Real code_temperature_mu_cgs; // T/mu
+
+  // c.g.s. units in code units
+  Real gram_code, cm_code, second_code, dyne_code, erg_code, kelvin_code;
+
+  // physical constants in code units
+  Real grav_const_code;
+  Real solar_mass_code;
+  Real solar_lum_code;
+  Real yr_code;
+  Real million_yr_code;
+  Real pc_code;
+  Real kpc_code;
+  Real km_s_code;
+  Real hydrogen_mass_code;
+  Real radiation_aconst_code; // aR
+  Real k_boltzmann_code; // k_B
+  Real speed_of_light_code;
+  Real echarge_code;
+  Real bethe_code; // 1.e51 erg
+
+ private:
+  // code MLT units in c.g.s.
+  Real code_mass_cgs_, code_length_cgs_, code_time_cgs_;
 };
 #endif // MICROPHYSICS_UNITS_HPP_

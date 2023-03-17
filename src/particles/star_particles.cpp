@@ -21,7 +21,8 @@
 //! \brief constructs a StarParticles instance.
 
 StarParticles::StarParticles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp)
-  : Particles(pmb, pin, pp), imetal(-1), iage(-1), ifgas(-1) {
+  : Particles(pmb, pin, pp), imetal(-1), iage(-1), ifgas(-1),
+    hydro_integrator(pin->GetOrAddString("time", "integrator", "vl2")) {
   // Add metal mass
   imetal = AddRealProperty();
   realpropname.push_back("metal");
@@ -64,52 +65,208 @@ void StarParticles::AssignShorthandsForDerived() {
 //! \fn void StarParticles::Integrate(int step)
 //! \brief updates all particle positions and velocities from t to t + dt.
 //!
-//! KDK Leapflog algorithm with Boris push; assuming integrator=vl2
-//! - kick from n-1/2->n+1/2 is done in stage 1
-//! - drift from n->n+1 is done in stage 2
-//! - temporary half time kick has to be done from n+1/2->n+1
-//!   for output (use ApplyUserWorkBeforeOutput or write an explicit function for it)
-void StarParticles::Integrate(int stage) {
-  Real t = 0, dt = 0, dth = 0;
 
-  // Determine the integration cofficients.
+void StarParticles::Integrate(int stage) {
+  if (hydro_integrator == "vl2") {
+    VL2DKD(stage);
+  } else if (hydro_integrator == "rk2") {
+//    RK2(stage);
+    RK2KDK(stage);
+  } else {
+    std::stringstream msg;
+    msg << "### FATAL ERROR in [StarParticles::Integrate]" << std::endl
+        << "integrator=" << hydro_integrator << " does not work with star particles."
+        << std::endl;
+    ATHENA_ERROR(msg);
+  }
+}
+
+
+//--------------------------------------------------------------------------------------
+//! \fn void StarParticles::VL2DKD(int step)
+//! \brief DKD leapfrog integrator.
+//!
+//! Satisfying Newton's 3rd law when coupled with VL2 hydro integrator (gas->particle
+//! = particle->gas).
+
+void StarParticles::VL2DKD(int stage) {
+  Real t = pmy_mesh_->time;
+  Real dt = pmy_mesh_->dt; // t^(n+1) - t^n;
+  Real hdt = 0.5*dt;
+
   switch (stage) {
   case 1:
-    t = pmy_mesh_->time;
-    dt = pmy_mesh_->dt; // t^(n+1)-t^n;
-    dth = 0.5*(dt + dt_old); // t^(n+1/2)-t^(n-1/2)
-
-    // Calculate force on particles at t = t^n
+    // Save position x^n and velocity v^n at time t^n
+    SaveStatus();
+    // Step 1. Drift from x^n to x^(n+1/2)
+    Drift(t, hdt);
+    // Update the position index to be used in Poisson solver
+    UpdatePositionIndices();
+    break;
+  case 2:
+    // Calculate the acceleration g(u^(n+1/2), x^(n+1/2))
     if (SELF_GRAVITY_ENABLED) {
       ppgrav->FindGravitationalForce(pmy_block->pgrav->phi);
       ppgrav->InterpolateGravitationalForce();
     }
 
-    // kick by 0.5*dth
-    // this kick has to be skipped for new particles
-    Kick(t,0.5*dth,pmy_block->phydro->w);
-    // x -> x0, v -> v0
-    SaveStatus();
-    // a temporary heck; later we will have a flag for new particles
-    // aging first to distinguish new particle
-    Age(t,dt);
-    // Boris push for velocity dependent terms: Coriolis force
-    if (pmy_mesh_->shear_periodic) BorisKick(t,dth);
-    // kick by another 0.5*dth
-    Kick(t,0.5*dth,pmy_block->phydro->w);
-    // drift from t^n to t^n+1
-    Drift(t,dt);
+    // Step 2. Kick from v^n to v^(n+1)
+    // Boris algorithm splits the full kick into three consecutive kicks.
+    // v^n -> v^(-) -> v^(+) -> v^(n+1)
+    // See Appendix of Moon et al. (2021) for notations.
 
-    dt_old = dt; // save dt for the future use
-    // Update the position index.
+    // kick from v^n to v^(-) : gravity
+    Kick(t, hdt);
+    // rotation from v^(-) to v^(+) : Coriolis
+    if (pmy_mesh_->shear_periodic) BorisKick(t, dt);
+    // kick from v^(+) to v^(n+1) : gravity
+    Kick(t, hdt);
+
+    // Step 3. Drift from x^(n+1/2) to x^n
+    Drift(t, hdt);
+    // Update the position index to be used in Poisson solver
     UpdatePositionIndices();
-    break;
-  case 2:
-    // particle --> mesh
-    ReactToMeshAux(t, dt, pmy_block->phydro->w);
+
+    // Update the age of the star particle
+    Age(t, dt);
     break;
   }
 }
+
+//--------------------------------------------------------------------------------------
+//! \fn void StarParticles::RK2KDK(int step)
+//! \brief KDK particle integrator
+//!
+//! Satisfying Newton's 3rd law when coupled with RK2 hydro integrator (gas->particle
+//! = particle->gas).
+//! Need to do the force interpolation in both stage (twice as many compared to VL2DKD).
+
+void StarParticles::RK2KDK(int stage) {
+  Real t = pmy_mesh_->time;
+  Real dt = pmy_mesh_->dt; // t^(n+1) - t^n;
+  Real hdt = 0.5*dt;
+
+  switch (stage) {
+  case 1:
+    // Save position x^n and velocity v^n at time t^n
+    SaveStatus();
+
+    // Calculate the acceleration g(u^n, x^n)
+    if (SELF_GRAVITY_ENABLED) {
+      ppgrav->FindGravitationalForce(pmy_block->pgrav->phi);
+      ppgrav->InterpolateGravitationalForce();
+    }
+
+    // Step 1. Opening kick from v^n to v^(n+1/2)
+    // Order is important!
+    if (pmy_mesh_->shear_periodic) BorisKick(t, hdt);
+    Kick(t, hdt);
+
+    // Step 2. Drift from x^n to x^(n+1)
+    Drift(t, dt);
+
+    // Update the position index to be used in Poisson solver
+    UpdatePositionIndices();
+    break;
+  case 2:
+    // Calculate the acceleration g(u', x^(n+1))
+    if (SELF_GRAVITY_ENABLED) {
+      ppgrav->FindGravitationalForce(pmy_block->pgrav->phi);
+      ppgrav->InterpolateGravitationalForce();
+    }
+
+    // Step 3. Closing kick from v^(n+1/2) to v^(n+1)
+    // Order is important!
+    Kick(t, hdt);
+    if (pmy_mesh_->shear_periodic) BorisKick(t, hdt);
+
+    // Update the age of the star particle
+    Age(t, dt);
+    break;
+  }
+}
+
+
+//--------------------------------------------------------------------------------------
+//! \fn void StarParticles::RK2(int step)
+//! \brief RK2 particle integrator
+//!
+//! Satisfying Newton's 3rd law when coupled with RK2 hydro integrator (gas->particle
+//! = particle->gas).
+//!
+//! Let q = (x, v) and u = (hydro conserved variable)
+//! q'  = q^n + dt*g(u^n, q^n)
+//! q'' = q'  + dt*g(u' , q' )
+//! q^(n+1) = 0.5*(q^n + q'') = q^n + dt*0.5*(g(u^n, q^n) + g(u', q'))
+
+void StarParticles::RK2(int stage) {
+  Real t = pmy_mesh_->time;
+  Real dt = pmy_mesh_->dt; // t^(n+1) - t^n;
+  Real hdt = 0.5*dt;
+
+  switch (stage) {
+  case 1:
+    // Save position x^n and velocity v^n at time t^n
+    SaveStatus();
+
+    // Calculate the acceleration g(u^n, x^n)
+    if (SELF_GRAVITY_ENABLED) {
+      ppgrav->FindGravitationalForce(pmy_block->pgrav->phi);
+      ppgrav->InterpolateGravitationalForce();
+    }
+
+    // q^n -> q'
+    Drift(t, dt);
+
+    // Kick from v^n to v'
+    // Boris algorithm splits the full kick into three consecutive kicks.
+    // v^n -> v^(-) -> v^(+) -> v'
+    // See Appendix of Moon et al. (2021) for notations.
+    // Note that for RK2, the gravity is forward Euler whereas the Coriolis
+    // is semi-implicit.
+
+    // kick from v^n to v^(-) : gravity
+    Kick(t, hdt);
+    // rotation from v^(-) to v^(+) : Coriolis
+    if (pmy_mesh_->shear_periodic) BorisKick(t, dt);
+    // kick from v^(+) to v' : gravity
+    Kick(t, hdt);
+
+    // Update the position index to be used in Poisson solver
+    UpdatePositionIndices();
+    break;
+  case 2:
+    // Calculate the acceleration g(u', x')
+    if (SELF_GRAVITY_ENABLED) {
+      ppgrav->FindGravitationalForce(pmy_block->pgrav->phi);
+      ppgrav->InterpolateGravitationalForce();
+    }
+
+    // q' -> q''
+    Drift(t, dt);
+    Kick(t, hdt);
+    if (pmy_mesh_->shear_periodic) BorisKick(t, dt);
+    Kick(t, hdt);
+
+    // q^(n+1) = 0.5*(q^n + q'')
+    for (int k = 0; k < npar_; ++k) {
+      xp(k) = 0.5*(xp0(k) + xp(k));
+      yp(k) = 0.5*(yp0(k) + yp(k));
+      zp(k) = 0.5*(zp0(k) + zp(k));
+      vpx(k) = 0.5*(vpx0(k) + vpx(k));
+      vpy(k) = 0.5*(vpy0(k) + vpy(k));
+      vpz(k) = 0.5*(vpz0(k) + vpz(k));
+    }
+
+    // Update the position index to be used in Poisson solver
+    UpdatePositionIndices();
+
+    // Update the age of the star particle
+    Age(t, dt);
+    break;
+  }
+}
+
 
 //--------------------------------------------------------------------------------------
 //! \fn void StarParticles::Age(Real t, Real dt)
@@ -127,9 +284,9 @@ void StarParticles::Age(Real t, Real dt) {
 void StarParticles::Drift(Real t, Real dt) {
   // drift position
   for (int k = 0; k < npar_; ++k) {
-    xp(k) = xp0(k) + dt * vpx(k);
-    yp(k) = yp0(k) + dt * vpy(k);
-    zp(k) = zp0(k) + dt * vpz(k);
+    xp(k) += dt * vpx(k);
+    yp(k) += dt * vpy(k);
+    zp(k) += dt * vpz(k);
   }
 }
 
@@ -141,10 +298,11 @@ void StarParticles::Drift(Real t, Real dt) {
 //! Coriolis force is treated by BorisKick
 //! dt must be the half dt
 
-void StarParticles::Kick(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
+void StarParticles::Kick(Real t, Real dt) {
   // Integrate the source terms (e.g., acceleration).
-  SourceTerms(t, dt, meshsrc);
-  UserSourceTerms(t, dt, meshsrc);
+  AthenaArray<Real> emptyarray;
+  SourceTerms(t, dt, emptyarray);
+  UserSourceTerms(t, dt, emptyarray);
 }
 
 //--------------------------------------------------------------------------------------
@@ -177,14 +335,13 @@ void StarParticles::BorisKick(Real t, Real dt) {
 //! \brief force from tidal potential (qshear != 0)
 //!
 //! Phi_tidal = - q Omega^2 x^2
-//! acc = 2 q Omega^2 x xhat
-//! \note first kick (from n-1/2 to n) is skipped for the new particles
+//! g_x = 2 q Omega^2 x xhat
 
 void StarParticles::ExertTidalForce(Real t, Real dt) {
-  Real acc0 = 2*qshear_*SQR(Omega_0_);
+  // Negative spring constant. Particles are pushed away from x=0.
+  Real kspring = -2*qshear_*SQR(Omega_0_);
   for (int k = 0; k < npar_; ++k) {
-    Real acc = age(k) > 0 ? acc0*dt*xp(k) : 0.;
-    vpx(k) += acc;
+    vpx(k) -= kspring*xp(k)*dt;
   }
 }
 

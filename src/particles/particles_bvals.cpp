@@ -197,7 +197,7 @@ void Particles::LinkNeighbors(MeshBlockTree &tree,
           if (pn->pnb == NULL) {
             int nblevel = pbval_->nblevel[n][m][l];
             if (0 <= nblevel && nblevel < my_level) {
-              // TODO(smoon) should we set amrflag=true here??
+              // TODO(SMOON) should we set amrflag=true here??
               int ngid = tree.FindNeighbor(pbval_->loc, l-1, m-1, n-1,
                                            pbval_->block_bcs)->GetGid();
               for (int i = 0; i < pbval_->nneighbor; ++i) {
@@ -327,8 +327,8 @@ void Particles::SendGhostParticles() {
   const int KE = pmy_block->ke;
 
   for (int k = 0; k < npar_; ++k) {
-    // (smoon) position indices xi1_, xi2_, xi3_ of the newly received active particles
-    // must be up-to-date.
+    // Note that the position indices have been updated in Particles::FlushReceiveBuffer
+    // when receiving active particles.
     int x1i = static_cast<int>(xi1_(k)),
         x2i = static_cast<int>(xi2_(k)),
         x3i = static_cast<int>(xi3_(k));
@@ -702,14 +702,14 @@ void Particles::FlushReceiveBuffer(ParticleBuffer& recv, bool ghost) {
   }
 
   // Check the memory size.
+  int npartot = npar_ + npar_gh_;
   int nprecv = recv.npar_;
-  if (npar_ + nprecv > nparmax_)
-    UpdateCapacity(nparmax_ + 2 * (npar_ + nprecv - nparmax_));
+  if (npartot + nprecv > nparmax_)
+    UpdateCapacity(nparmax_ + 2 * (npartot + nprecv - nparmax_));
 
   // Flush the receive buffers.
   int *pi = recv.ibuf;
   Real *pr = recv.rbuf;
-  int npartot = npar_ + npar_gh_;
   for (int k = npartot; k < npartot + nprecv; ++k) {
     for (int j = 0; j < nint; ++j)
       intprop(j,k) = *pi++;
