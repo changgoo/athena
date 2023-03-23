@@ -188,7 +188,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   // initialize interface B and total energy
   if (MAGNETIC_FIELDS_ENABLED) {
     Real b0 = pin->GetReal("problem", "B_0"); // in uG
-    b0 *= 1.e-6/punit->MagneticField;
+    b0 *= 1.e-6/punit->code_magneticfield_cgs;
     std::cout<< "B0 (code) = " << b0 << std::endl;
     for (int k=ks; k<=ke; ++k) {
       for (int j=js; j<=je; ++j) {
@@ -381,8 +381,8 @@ void AddSupernova(Mesh *pm) {
 #endif
   Units *punit = pm->punit;
   // get pressure fron SNe in the code unit
-  Real rhosn = M_ej*punit->Msun_in_code/my_vol;
-  Real usn = E_SN*punit->Bethe_in_code/my_vol;
+  Real rhosn = M_ej*punit->solar_mass_code/my_vol;
+  Real usn = E_SN*punit->bethe_code/my_vol;
 
   // add the SN energy
   for (int b=0; b<pm->nblocal; ++b) {

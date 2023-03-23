@@ -262,13 +262,13 @@ static Real OmegaG(MeshBlock *pmb, const Real rho, const Real Press, const Real 
   // density in nH
   Real nH = rho*pcf->code_den_to_nH;
   // Pressure in c.g.s
-  Real P = Press*punit->Pressure;
+  Real P = Press*punit->code_pressure_cgs;
   // sounds spped in c.g.s
-  Real cs = std::sqrt(pcf->gamma_adi*(Press/rho))*punit->Velocity;
+  Real cs = std::sqrt(pcf->gamma_adi*(Press/rho))*punit->code_velocity_cgs;
   // krho in c.g.s
   Real krho = gm1*nH*nH*pcf->Lambda_T(rho,Press)/(P*cs);
-  krho *= punit->Length; // krho in code units
-  cs /= punit->Velocity; // cs in code units
+  krho *= punit->code_length_cgs; // krho in code units
+  cs /= punit->code_velocity_cgs; // cs in code units
 
   // std::cout << "  cs = " << cs << std::endl;
   // std::cout << "  krho = " << krho << std::endl;
