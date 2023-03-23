@@ -38,9 +38,9 @@ CoolingFunctionBase::CoolingFunctionBase(ParameterInput *pin, Units *punit) :
 //! \brief initialize units and some conveinent conversion factors
 //========================================================================================
 void CoolingFunctionBase::Initialize(Real muH) {
-  mean_mass_per_H = muH*Constants::mH;
-  code_den_to_nH = punit->Density/mean_mass_per_H;
-  code_press_to_pok = punit->Pressure/Constants::kB;
+  mean_mass_per_H = muH*Constants::hydrogen_mass_cgs;
+  code_den_to_nH = punit->code_density_cgs/mean_mass_per_H;
+  code_press_to_pok = punit->code_pressure_cgs/Constants::k_boltzmann_cgs;
   nH_to_code_den = 1/code_den_to_nH;
   pok_to_code_press = 1/code_press_to_pok;
 }
@@ -56,9 +56,9 @@ Real CoolingFunctionBase::CoolingTime(const Real rho, const Real press) {
   Real nH = rho*code_den_to_nH;
   Real cool = nH*nH*Lambda_T(rho, press);
   Real heat = nH*Gamma_T(rho, press);
-  Real eint = press*punit->Pressure/(gamma_adi-1);
+  Real eint = press*punit->code_pressure_cgs/(gamma_adi-1);
   Real tcool = eint/(cool - heat);
-  return tcool/punit->Time;
+  return tcool/punit->code_time_cgs;
 }
 
 //========================================================================================
@@ -72,9 +72,9 @@ Real CoolingFunctionBase::NetCoolingTime(const Real rho, const Real press) {
   Real nH = rho*code_den_to_nH;
   Real cool = nH*nH*Lambda_T(rho, press);
   Real heat = nH*Gamma_T(rho, press);
-  Real eint = press*punit->Pressure/(gamma_adi-1);
+  Real eint = press*punit->code_pressure_cgs/(gamma_adi-1);
   Real tcool = eint/(std::abs(cool) + std::abs(heat));
-  return tcool/punit->Time;
+  return tcool/punit->code_time_cgs;
 }
 
 //========================================================================================
@@ -189,7 +189,7 @@ Real PiecewiseLinearFits::Gamma_T(const Real rho, const Real Press) {
 //! - a constant conversion factor is applied since mu is fixed
 //========================================================================================
 Real PiecewiseLinearFits::GetTemperature(const Real rho, const Real Press) {
-  return Press/rho*punit->Temperature_mu*mu;
+  return Press/rho*punit->code_temperature_mu_cgs*mu;
 }
 
 //========================================================================================
@@ -220,7 +220,7 @@ TigressClassic::TigressClassic(ParameterInput *pin, Units *punit) :
 //! - return Lambda in erg cm^3 / s
 //========================================================================================
 Real TigressClassic::Lambda_T(const Real rho, const Real Press) {
-  Real T1 = Press/rho*punit->Temperature_mu;
+  Real T1 = Press/rho*punit->code_temperature_mu_cgs;
   int T1idx = get_Tidx(T1);
   Real dTemp = (T1-T1_tbl[T1idx])/(T1_tbl[T1idx+1]-T1_tbl[T1idx]);
   Real cool = cool_table[T1idx]+(cool_table[T1idx+1]-cool_table[T1idx])*dTemp;
@@ -238,7 +238,7 @@ Real TigressClassic::Lambda_T(const Real rho, const Real Press) {
 //!   derivative in according to the tabulated values of the cooling function
 //========================================================================================
 Real TigressClassic::dlnL_dlnT(const Real rho, const Real Press) {
-  Real T1 = Press/rho*punit->Temperature_mu;
+  Real T1 = Press/rho*punit->code_temperature_mu_cgs;
   int T1idx = get_Tidx(T1);
   Real dLdT = (cool_table[T1idx+1]-cool_table[T1idx])/(T1_tbl[T1idx+1]-T1_tbl[T1idx]);
   Real dlnLdlnT = dLdT*T1/(cool_table[T1idx]+dLdT*(T1-T1_tbl[T1idx]));
@@ -254,7 +254,7 @@ Real TigressClassic::dlnL_dlnT(const Real rho, const Real Press) {
 //! - scaled by heat_ratio
 //========================================================================================
 Real TigressClassic::Gamma_T(const Real rho, const Real Press) {
-  Real T1 = Press/rho*punit->Temperature_mu;
+  Real T1 = Press/rho*punit->code_temperature_mu_cgs;
   int T1idx = get_Tidx(T1);
   Real dTemp = (T1-T1_tbl[T1idx])/(T1_tbl[T1idx+1]-T1_tbl[T1idx]);
   Real heat = heat_table[T1idx]+(heat_table[T1idx+1]-heat_table[T1idx])*dTemp;
@@ -270,7 +270,7 @@ Real TigressClassic::Gamma_T(const Real rho, const Real Press) {
 //! - use pre-tabulated relation for T1 --> T, where T1=P/rho*mH/k_B
 //========================================================================================
 Real TigressClassic::GetTemperature(const Real rho, const Real Press) {
-  Real T1 = Press / rho * punit->Temperature_mu;
+  Real T1 = Press / rho * punit->code_temperature_mu_cgs;
   int T1idx = get_Tidx(T1);
   Real T1i   = T1_tbl[T1idx  ];
   Real T1ip1 = T1_tbl[T1idx+1];
@@ -289,7 +289,7 @@ Real TigressClassic::GetTemperature(const Real rho, const Real Press) {
 //! - return mu = T/T1, T from GetTemperature function
 //========================================================================================
 Real TigressClassic::Get_mu(const Real rho, const Real Press) {
-  Real T1 = Press / rho * punit->Temperature_mu;
+  Real T1 = Press / rho * punit->code_temperature_mu_cgs;
   Real Temp = GetTemperature(rho, Press);
 
   return Temp/T1;

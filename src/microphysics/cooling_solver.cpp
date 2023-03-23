@@ -40,7 +40,7 @@ Real CoolingSolver::CoolingTimeStep(MeshBlock *pmb) {
       for (int i=pmb->is; i<=pmb->ie; ++i) {
         Real press = pmb->phydro->w(IPR,k,j,i);
         Real rho = pmb->phydro->w(IDN,k,j,i);
-        Real press_floor = rho*pcf->Get_Tfloor()/punit->Temperature_mu;
+        Real press_floor = rho*pcf->Get_Tfloor()/punit->code_temperature_mu_cgs;
         press = std::max(press,press_floor);
         Real dtcool = cfl_cool*std::abs(pcf->NetCoolingTime(rho,press));
         min_dt = std::min(min_dt, dtcool);
@@ -101,7 +101,7 @@ void CoolingSolver::CoolingSourceTerm(MeshBlock *pmb, const Real t, const Real d
 
         Real delta_press=0.0, delta_press_floor=0.0;
         // apply floor before solving the cooling
-        Real press_floor = rho*temp_floor/punit->Temperature_mu;
+        Real press_floor = rho*temp_floor/punit->code_temperature_mu_cgs;
         if (press < press_floor) delta_press_floor = press_floor-press;
         Real press_before = std::max(press,press_floor);
 
@@ -259,7 +259,7 @@ void CoolingSolver::OperatorSplitSolver(MeshBlock *pmb) {
 
         Real delta_press=0.0, delta_press_floor=0.0;
         // apply floor before solving the cooling
-        Real press_floor = w_d*temp_floor/punit->Temperature_mu;
+        Real press_floor = w_d*temp_floor/punit->code_temperature_mu_cgs;
         if (w_p < press_floor) delta_press_floor = press_floor-w_p;
         Real press_before = std::max(w_p,press_floor);
 
