@@ -214,6 +214,7 @@ CosmicRay::CosmicRay(MeshBlock *pmb, ParameterInput *pin):
     },
     pmy_block(pmb),
     cr_bvar(pmb, &u_cr, &coarse_cr_, flux, true),
+    punit(pmb->punit),
     UserSourceTerm_{} {
   Mesh *pm = pmy_block->pmy_mesh;
   // "Enroll" in S/AMR by adding to vector of tuples of pointers in MeshRefinement class
@@ -251,11 +252,11 @@ CosmicRay::CosmicRay(MeshBlock *pmb, ParameterInput *pin):
   self_consistent_flag = pin->GetOrAddInteger("cr","self_consistent_flag",0);
   if (self_consistent_flag) losses_flag = 1;
 
-  //Code units
-  DensityUnit = pin->GetOrAddReal("problem", "DensityUnit",1.);
-  LengthUnit = pin->GetOrAddReal("problem", "LengthUnit",1.);
-  VelocityUnit = pin->GetOrAddReal("problem", "VelocityUnit",1.);
-  punit = new Units(DensityUnit,LengthUnit,VelocityUnit);
+  // //Code units
+  // DensityUnit = pin->GetOrAddReal("problem", "DensityUnit",1.);
+  // LengthUnit = pin->GetOrAddReal("problem", "LengthUnit",1.);
+  // VelocityUnit = pin->GetOrAddReal("problem", "VelocityUnit",1.);
+  // punit = new Units(DensityUnit,LengthUnit,VelocityUnit);
 
   //Input parameters
   vmax = pin->GetOrAddReal("cr","vmax",1.0); //this should be in code units already
@@ -267,8 +268,8 @@ CosmicRay::CosmicRay(MeshBlock *pmb, ParameterInput *pin):
                   1e-4); //in cgs unit -- the dafault value assumes delta = -0.35
 
   sigma *= vmax;
-  sigma *= punit->second/(punit->cm*punit->cm);
-  lambdac /= punit->second;
+  sigma *= punit->second_code/(punit->cm_code*punit->cm_code);
+  lambdac /= punit->second_code;
 }
 
 CosmicRay::~CosmicRay() {

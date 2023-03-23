@@ -196,13 +196,13 @@ void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Rea
 
         if (pcr->losses_flag>0) {
           new_ec -= pcr->lambdac * new_ec * rho * dt;
-          //c_in_code can be used fro relativistic CRs only -> to be changed
+          //speed_of_light_code can be used for relativistic CRs only -> to be changed
           newfr1 -= pcr->lambdac * newfr1 * rho * dt
-            * std::pow(vlim/pcr->punit->c_in_code,2);
+            * std::pow(vlim/pcr->punit->speed_of_light_code,2);
           newfr2 -= pcr->lambdac * newfr2 * rho * dt
-            * std::pow(vlim/pcr->punit->c_in_code,2);
+            * std::pow(vlim/pcr->punit->speed_of_light_code,2);
           newfr3 -= pcr->lambdac * newfr3 * rho * dt
-            * std::pow(vlim/pcr->punit->c_in_code,2);
+            * std::pow(vlim/pcr->punit->speed_of_light_code,2);
         }
 
         // Add the energy source term

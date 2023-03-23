@@ -34,7 +34,7 @@ void DefaultTemperature(Units *punit, Real rho, Real Press,
                         Real &Temp, Real &mu, Real &muH) {
   mu = 1.27; //assuming neutral gas
   muH = 1.4272;
-  Temp = Press/rho*mu*punit->Temperature_mu;
+  Temp = Press/rho*mu*punit->code_temperature_mu_cgs;
 }
 
 Real CosmicRay::Get_SigmaParallel(Real rho, Real Press, Real ecr, Real grad_pc_par) {
@@ -45,17 +45,17 @@ Real CosmicRay::Get_SigmaParallel(Real rho, Real Press, Real ecr, Real grad_pc_p
   } else {
     //Self-conistent calculation of sigma_par
     Real nu = 3.e-9; //frequency of collisions between ions and neutrals
-    Real nu_in_code = nu*(1./punit->second);
+    Real nu_in_code = nu*(1./punit->second_code);
     Real cr_kinenergy = 1e9 * 1.6021773e-12; //1 GeV in erg
-    Real kinenergy_in_code = cr_kinenergy * punit->erg;
+    Real kinenergy_in_code = cr_kinenergy * punit->erg_code;
 
     Real mu, muH, Temp;
     UpdateTemperature(punit, rho, Press, Temp, mu, muH);
 
     // ion fraction; the value of the CR energy density in cgs
     // is required to calculate the CR ionization rate
-    Real ecr_in_cgs = ecr*punit->EnergyDensity;
-    if (ecr < TINY_NUMBER) ecr_in_cgs = TINY_NUMBER*punit->EnergyDensity;
+    Real ecr_in_cgs = ecr*punit->code_energydensity_cgs;
+    if (ecr < TINY_NUMBER) ecr_in_cgs = TINY_NUMBER*punit->code_energydensity_cgs;
     Real xion = Get_IonFraction(Temp, rho, ecr_in_cgs, ion_rate_norm);
 
     // ion mass-density
@@ -71,12 +71,12 @@ Real CosmicRay::Get_SigmaParallel(Real rho, Real Press, Real ecr, Real grad_pc_p
     // ion thermal velocity, assumed to be equal to the sound speed
     Real vi = std::sqrt(1.67*Press/rho);
 
-    Real sigma_in = 0.1 * 3. * PI / 16. * grad_pc_par * punit->e_in_code
-                    / punit->c_in_code / kinenergy_in_code /
+    Real sigma_in = 0.1 * 3. * PI / 16. * grad_pc_par * punit->echarge_code
+                    / punit->speed_of_light_code / kinenergy_in_code /
                     std::sqrt(rho_ion) * 2. / (nu_in_code * nn);
     Real sigma_nll = std::sqrt (0.1 * 3. * PI / 16. * grad_pc_par *
-                     punit->e_in_code/punit->c_in_code / kinenergy_in_code
-                     / std::sqrt(rho_ion) / (0.3 * vi * punit->c_in_code));
+                     punit->echarge_code/punit->speed_of_light_code / kinenergy_in_code
+                     / std::sqrt(rho_ion) / (0.3 * vi * punit->speed_of_light_code));
     sigma_par = std::min(sigma_nll,sigma_in) * vmax;
     sigma_par = std::min(sigma_par,sigma);
   }
@@ -91,8 +91,8 @@ Real CosmicRay::Get_IonDensity(Real rho, Real Press, Real ecr) {
 
   // ion fraction; the value of the CR energy density in cgs is
   // required to calculate the CR ionization rate
-  Real ecr_in_cgs = ecr*punit->EnergyDensity;
-  if (ecr < TINY_NUMBER) ecr_in_cgs = TINY_NUMBER*punit->EnergyDensity;
+  Real ecr_in_cgs = ecr*punit->code_energydensity_cgs;
+  if (ecr < TINY_NUMBER) ecr_in_cgs = TINY_NUMBER*punit->code_energydensity_cgs;
   Real xion = Get_IonFraction(Temp, rho, ecr_in_cgs, ion_rate_norm);
 
   Real ni = xion * rho;

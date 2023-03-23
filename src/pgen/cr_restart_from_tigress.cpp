@@ -159,15 +159,15 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 
 void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   if(CR_ENABLED) {
-    pcr->punit = punit;
+    // pcr->punit = punit;
     CalculateInjectionRate(pin,this,pcr->CRInjectionRate);
     pcr->EnrollUserCRSource(Source_CR);
     pcr->EnrollTemperatureFunction(TempCalculation);
-    pcr->sigma = pin->GetOrAddReal("cr","sigma",1.0);
-    pcr->sigma *= pcr->vmax;
-    pcr->sigma *= punit->second/(punit->cm*punit->cm);
-    pcr->lambdac = pin->GetOrAddReal("cr","lambdac",5.3e-16);
-    pcr->lambdac /= punit->second;
+    // pcr->sigma = pin->GetOrAddReal("cr","sigma",1.0);
+    // pcr->sigma *= pcr->vmax;
+    // pcr->sigma *= punit->second_code/(punit->cm*punit->cm_);
+    // pcr->lambdac = pin->GetOrAddReal("cr","lambdac",5.3e-16);
+    // pcr->lambdac /= punit->second;
   }
 }
 
@@ -244,13 +244,13 @@ void CalculateInjectionRate(ParameterInput *pin, MeshBlock *pmb,
   Units *punit = pmb->punit;
   for(size_t s=0; s<Nstars; ++s) {
     // convert the star age from code units in Myr
-    Real tstar = pList[s].mage / punit->Myr_in_code;
+    Real tstar = pList[s].mage / punit->million_yr_code;
     if (tstar<age_th && pList[s].m>0.) {
       tot_young_stars++;
       //Calculate the CR luminosity produced by each star cluster
       InjectionRate =  set_CR_Luminosity(tstar) * pList[s].m
-                       / (punit->Msun_in_code * punit->erg); //in cgs units
-      InjectionRate_in_code = InjectionRate / punit->Myr_in_code; //in code units
+                       / (punit->solar_mass_code * punit->erg_code); //in cgs units
+      InjectionRate_in_code = InjectionRate / punit->million_yr_code; //in code units
       tot_InjectionRate += InjectionRate_in_code;
 
       //Calculate the cell-centered grid position associated to each star cluster
@@ -1314,7 +1314,7 @@ Real set_CR_Luminosity(Real tage) {
   Real dage = 0.2; //Myr
   int const Narray = 201;
   Real N_SNe, CR_Lum;
-  Real SN_energy = pcool->punit->Bethe_in_code;
+  Real SN_energy = pcool->punit->bethe_code;
   Real CR_eff = 0.1;
 
   // SNRate for Msun cluster per Myr (Starburst99)
