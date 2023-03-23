@@ -159,15 +159,9 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 
 void MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   if(CR_ENABLED) {
-    // pcr->punit = punit;
     CalculateInjectionRate(pin,this,pcr->CRInjectionRate);
     pcr->EnrollUserCRSource(Source_CR);
     pcr->EnrollTemperatureFunction(TempCalculation);
-    // pcr->sigma = pin->GetOrAddReal("cr","sigma",1.0);
-    // pcr->sigma *= pcr->vmax;
-    // pcr->sigma *= punit->second_code/(punit->cm*punit->cm_);
-    // pcr->lambdac = pin->GetOrAddReal("cr","lambdac",5.3e-16);
-    // pcr->lambdac /= punit->second;
   }
 }
 

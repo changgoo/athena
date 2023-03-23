@@ -252,12 +252,6 @@ CosmicRay::CosmicRay(MeshBlock *pmb, ParameterInput *pin):
   self_consistent_flag = pin->GetOrAddInteger("cr","self_consistent_flag",0);
   if (self_consistent_flag) losses_flag = 1;
 
-  // //Code units
-  // DensityUnit = pin->GetOrAddReal("problem", "DensityUnit",1.);
-  // LengthUnit = pin->GetOrAddReal("problem", "LengthUnit",1.);
-  // VelocityUnit = pin->GetOrAddReal("problem", "VelocityUnit",1.);
-  // punit = new Units(DensityUnit,LengthUnit,VelocityUnit);
-
   //Input parameters
   vmax = pin->GetOrAddReal("cr","vmax",1.0); //this should be in code units already
   sigma = pin->GetOrAddReal("cr","sigma",1.0);
