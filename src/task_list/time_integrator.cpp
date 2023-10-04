@@ -1697,16 +1697,18 @@ TaskStatus TimeIntegratorTaskList::CalculateHydroFlux(MeshBlock *pmb, int stage)
       } else {
         phydro->CalculateFluxes(phydro->w,  pfield->b,  pfield->bcc, pmb->precon->xorder);
       }
-      if (phydro->fofc_enabled && (integrator == "vl2" || integrator == "rk2")) {
-        phydro->FirstOrderFluxCorrection(stage_wghts[stage-1].delta,
-                                         stage_wghts[stage-1].gamma_1,
-                                         stage_wghts[stage-1].gamma_2,
-                                         stage_wghts[stage-1].beta);
-      } else {
-        std::stringstream msg;
-        msg << "### FATAL ERROR " << std::endl
-            << "FOFC is only supported for the vl2 or rk2 integrators" << std::endl;
-        ATHENA_ERROR(msg);
+      if (phydro->fofc_enabled) {
+        if (integrator == "vl2" || integrator == "rk2") {
+          phydro->FirstOrderFluxCorrection(stage_wghts[stage-1].delta,
+                                          stage_wghts[stage-1].gamma_1,
+                                          stage_wghts[stage-1].gamma_2,
+                                          stage_wghts[stage-1].beta);
+        } else {
+          std::stringstream msg;
+          msg << "### FATAL ERROR " << std::endl
+              << "FOFC is only supported for the vl2 or rk2 integrators" << std::endl;
+          ATHENA_ERROR(msg);
+        }
       }
     }
     return TaskStatus::next;
