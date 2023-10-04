@@ -65,6 +65,12 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 //========================================================================================
 
 void MeshBlock::ProblemGenerator(ParameterInput *pin) {
+  Real b0, angle;
+  if (MAGNETIC_FIELDS_ENABLED) {
+    b0 = pin->GetReal("problem", "b0");
+    angle = (PI/180.0)*pin->GetReal("problem", "angle");
+  }
+
   for (int k=ks; k<=ke; k++) {
     for (int j=js; j<=je; j++) {
       for (int i=is; i<=ie; i++) {
@@ -76,6 +82,73 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
         if (NON_BAROTROPIC_EOS) {
           phydro->u(IEN,k,j,i) = 1.0;
+        }
+      }
+    }
+  }
+
+  // initialize interface B and total energy
+  if (MAGNETIC_FIELDS_ENABLED) {
+    for (int k=ks; k<=ke; ++k) {
+      for (int j=js; j<=je; ++j) {
+        for (int i=is; i<=ie+1; ++i) {
+          if (std::strcmp(COORDINATE_SYSTEM, "cartesian") == 0) {
+            pfield->b.x1f(k,j,i) = b0 * std::cos(angle);
+          } else if (std::strcmp(COORDINATE_SYSTEM, "cylindrical") == 0) {
+            Real phi = pcoord->x2v(j);
+            pfield->b.x1f(k,j,i) =
+                b0 * (std::cos(angle) * std::cos(phi) + std::sin(angle) * std::sin(phi));
+          } else { //if (std::strcmp(COORDINATE_SYSTEM, "spherical_polar") == 0) {
+            Real theta = pcoord->x2v(j);
+            Real phi = pcoord->x3v(k);
+            pfield->b.x1f(k,j,i) = b0 * std::abs(std::sin(theta))
+                                   * (std::cos(angle) * std::cos(phi)
+                                      + std::sin(angle) * std::sin(phi));
+          }
+        }
+      }
+    }
+    for (int k=ks; k<=ke; ++k) {
+      for (int j=js; j<=je+1; ++j) {
+        for (int i=is; i<=ie; ++i) {
+          if (std::strcmp(COORDINATE_SYSTEM, "cartesian") == 0) {
+            pfield->b.x2f(k,j,i) = b0 * std::sin(angle);
+          } else if (std::strcmp(COORDINATE_SYSTEM, "cylindrical") == 0) {
+            Real phi = pcoord->x2v(j);
+            pfield->b.x2f(k,j,i) =
+                b0 * (std::sin(angle) * std::cos(phi) - std::cos(angle) * std::sin(phi));
+          } else { //if (std::strcmp(COORDINATE_SYSTEM, "spherical_polar") == 0) {
+            Real theta = pcoord->x2v(j);
+            Real phi = pcoord->x3v(k);
+            pfield->b.x2f(k,j,i) = b0 * std::cos(theta)
+                                   * (std::cos(angle) * std::cos(phi)
+                                      + std::sin(angle) * std::sin(phi));
+            if (std::sin(theta) < 0.0)
+              pfield->b.x2f(k,j,i) *= -1.0;
+          }
+        }
+      }
+    }
+    for (int k=ks; k<=ke+1; ++k) {
+      for (int j=js; j<=je; ++j) {
+        for (int i=is; i<=ie; ++i) {
+          if (std::strcmp(COORDINATE_SYSTEM, "cartesian") == 0
+              || std::strcmp(COORDINATE_SYSTEM, "cylindrical") == 0) {
+            pfield->b.x3f(k,j,i) = 0.0;
+          } else { //if (std::strcmp(COORDINATE_SYSTEM, "spherical_polar") == 0) {
+            Real phi = pcoord->x3v(k);
+            pfield->b.x3f(k,j,i) =
+                b0 * (std::sin(angle) * std::cos(phi) - std::cos(angle) * std::sin(phi));
+          }
+        }
+      }
+    }
+    if (NON_BAROTROPIC_EOS) {
+      for (int k=ks; k<=ke; ++k) {
+        for (int j=js; j<=je; ++j) {
+          for (int i=is; i<=ie; ++i) {
+            phydro->u(IEN,k,j,i) += 0.5*b0*b0;
+          }
         }
       }
     }
