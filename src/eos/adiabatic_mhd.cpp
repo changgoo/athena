@@ -28,7 +28,11 @@ EquationOfState::EquationOfState(MeshBlock *pmb, ParameterInput *pin) :
     gamma_{pin->GetReal("hydro", "gamma")},
     density_floor_{pin->GetOrAddReal("hydro", "dfloor", std::sqrt(1024*float_min))},
     pressure_floor_{pin->GetOrAddReal("hydro", "pfloor", std::sqrt(1024*float_min))},
-    scalar_floor_{pin->GetOrAddReal("hydro", "sfloor", std::sqrt(1024*float_min))} {}
+    scalar_floor_{pin->GetOrAddReal("hydro", "sfloor", std::sqrt(1024*float_min))} {
+  // initialization of FOFC tagging array
+  if (pmb->phydro->fofc_enabled)
+    fofc_.NewAthenaArray(pmb->ncells3, pmb->ncells2, pmb->ncells1);
+}
 
 //----------------------------------------------------------------------------------------
 //! \fn void EquationOfState::ConservedToPrimitive(AthenaArray<Real> &cons,
@@ -43,6 +47,7 @@ void EquationOfState::ConservedToPrimitive(
     AthenaArray<Real> &prim, AthenaArray<Real> &bcc,
     Coordinates *pco, int il, int iu, int jl, int ju, int kl, int ku) {
   Real gm1 = GetGamma() - 1.0;
+  int nbad_d = 0, nbad_p = 0;
 
   pmy_block_->pfield->CalculateCellCenteredField(b,bcc,pco,il,iu,jl,ju,kl,ku);
 
@@ -55,37 +60,33 @@ void EquationOfState::ConservedToPrimitive(
         Real& u_m2 = cons(IVY,k,j,i);
         Real& u_m3 = cons(IVZ,k,j,i);
         Real& u_e  = cons(IEN,k,j,i);
+        const Real bcc1 = bcc(IB1,k,j,i);
+        const Real bcc2 = bcc(IB2,k,j,i);
+        const Real bcc3 = bcc(IB3,k,j,i);
+        Real e_mag = 0.5*(SQR(bcc1) + SQR(bcc2) + SQR(bcc3));
 
-        Real& w_d  = prim(IDN,k,j,i);
-        Real& w_vx = prim(IVX,k,j,i);
-        Real& w_vy = prim(IVY,k,j,i);
-        Real& w_vz = prim(IVZ,k,j,i);
-        Real& w_p  = prim(IPR,k,j,i);
+        Real w_d, w_vx, w_vy, w_vz, w_p, dp;
+        bool dfloor_used = false, pfloor_used = false;
+        SingleConservedToPrimitive(u_d, u_m1, u_m2, u_m3, u_e,
+                                   w_d, w_vx, w_vy, w_vz, w_p,
+                                   dp, dfloor_used, pfloor_used, e_mag);
+        if (dfloor_used) nbad_d++;
+        if (pfloor_used) nbad_p++;
 
-        // apply density floor, without changing momentum or energy
-        u_d = (u_d > density_floor_) ?  u_d : density_floor_;
-        w_d = u_d;
-
-        Real di = 1.0/u_d;
-        w_vx = u_m1*di;
-        w_vy = u_m2*di;
-        w_vz = u_m3*di;
-
-        const Real& bcc1 = bcc(IB1,k,j,i);
-        const Real& bcc2 = bcc(IB2,k,j,i);
-        const Real& bcc3 = bcc(IB3,k,j,i);
-
-        Real pb = 0.5*(SQR(bcc1) + SQR(bcc2) + SQR(bcc3));
-        Real e_k = 0.5*di*(SQR(u_m1) + SQR(u_m2) + SQR(u_m3));
-        w_p = gm1*(u_e - e_k - pb);
-
-        // apply pressure floor, correct total energy
-        u_e = (w_p > pressure_floor_) ?  u_e : ((pressure_floor_/gm1) + e_k + pb);
-        w_p = (w_p > pressure_floor_) ?  w_p : pressure_floor_;
+        // update primitives
+        prim(IDN,k,j,i) = w_d;
+        prim(IVX,k,j,i) = w_vx;
+        prim(IVY,k,j,i) = w_vy;
+        prim(IVZ,k,j,i) = w_vz;
+        prim(IPR,k,j,i) = w_p;
       }
     }
   }
 
+  if (nbad_d>0 || nbad_p>0)
+    std::cerr << "ncycle = " << pmy_block_->pmy_mesh->ncycle
+              << " [Cons2Prim] floored " << nbad_d << " bad density; "
+              << nbad_p << " bad pressure" << std::endl;
   return;
 }
 

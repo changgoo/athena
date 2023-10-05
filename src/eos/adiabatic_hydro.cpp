@@ -28,10 +28,10 @@ EquationOfState::EquationOfState(MeshBlock *pmb, ParameterInput *pin) :
     density_floor_{pin->GetOrAddReal("hydro", "dfloor", std::sqrt(1024*float_min))},
     pressure_floor_{pin->GetOrAddReal("hydro", "pfloor", std::sqrt(1024*float_min))},
     scalar_floor_{pin->GetOrAddReal("hydro", "sfloor", std::sqrt(1024*float_min))} {
-      // initialization of FOFC tagging array
-      if (pmb->phydro->fofc_enabled)
-        fofc_.NewAthenaArray(pmb->ncells3, pmb->ncells2, pmb->ncells1);
-    }
+  // initialization of FOFC tagging array
+  if (pmb->phydro->fofc_enabled)
+    fofc_.NewAthenaArray(pmb->ncells3, pmb->ncells2, pmb->ncells1);
+}
 
 //----------------------------------------------------------------------------------------
 //! \fn void EquationOfState::ConservedToPrimitive(AthenaArray<Real> &cons,

@@ -58,6 +58,31 @@ void EquationOfState::ConservedToPrimitiveTest(
 
 //----------------------------------------------------------------------------------------
 //! \fn void EquationOfState::SingleConservedToPrimitive(
+//!  Real &u_d, Real &u_m1, Real &u_m2, Real &u_m3,
+//!  Real &w_d, Real &w_vx, Real &w_vy, Real &w_vz,
+//!  bool &dfloor_used)
+//! \brief Converts single conserved variable into primitive variable in isothermal.
+//!        Checks floor needs
+void EquationOfState::SingleConservedToPrimitive(
+  Real &u_d, Real &u_m1, Real &u_m2, Real &u_m3,
+  Real &w_d, Real &w_vx, Real &w_vy, Real &w_vz,
+  bool &dfloor_used)  {
+  // apply density floor, without changing momentum or energy
+  if (u_d < density_floor_) {
+    u_d = density_floor_;
+    dfloor_used = true;
+  }
+
+  w_d = u_d;
+
+  Real di = 1.0/u_d;
+  w_vx = u_m1*di;
+  w_vy = u_m2*di;
+  w_vz = u_m3*di;
+}
+
+//----------------------------------------------------------------------------------------
+//! \fn void EquationOfState::SingleConservedToPrimitive(
 //!  Real &u_d, Real &u_m1, Real &u_m2, Real &u_m3, Real &u_e,
 //!  Real &w_d, Real &w_vx, Real &w_vy, Real &w_vz, Real &w_p,
 //!  Real &dp, bool &dfloor_used, bool &pfloor_used)

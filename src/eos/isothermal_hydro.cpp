@@ -27,10 +27,10 @@ EquationOfState::EquationOfState(MeshBlock *pmb, ParameterInput *pin) :
     iso_sound_speed_{pin->GetReal("hydro", "iso_sound_speed")},  // error if missing!
     density_floor_{pin->GetOrAddReal("hydro", "dfloor", std::sqrt(1024*float_min) )},
     scalar_floor_{pin->GetOrAddReal("hydro", "sfloor", std::sqrt(1024*float_min))} {
-      // initialization of FOFC tagging array
-      if (pmb->phydro->fofc_enabled)
-        fofc_.NewAthenaArray(pmb->ncells3, pmb->ncells2, pmb->ncells1);
-    }
+  // initialization of FOFC tagging array
+  if (pmb->phydro->fofc_enabled)
+    fofc_.NewAthenaArray(pmb->ncells3, pmb->ncells2, pmb->ncells1);
+}
 
 //----------------------------------------------------------------------------------------
 //! \fn void EquationOfState::ConservedToPrimitive(AthenaArray<Real> &cons,
@@ -52,12 +52,11 @@ void EquationOfState::ConservedToPrimitive(
         Real& u_m2 = cons(IM2,k,j,i);
         Real& u_m3 = cons(IM3,k,j,i);
 
-        Real w_d, w_vx, w_vy, w_vz, w_p, dp;
-        Real u_e; // garbage
-        bool dfloor_used = false, pfloor_used = false;
-        SingleConservedToPrimitive(u_d, u_m1, u_m2, u_m3, u_e,
-                                   w_d, w_vx, w_vy, w_vz, w_p,
-                                   dp, dfloor_used, pfloor_used);
+        Real w_d, w_vx, w_vy, w_vz;
+        bool dfloor_used = false;
+        SingleConservedToPrimitive(u_d, u_m1, u_m2, u_m3,
+                                   w_d, w_vx, w_vy, w_vz,
+                                   dfloor_used);
         if (dfloor_used) nbad_d++;
 
         prim(IDN,k,j,i) = w_d;
