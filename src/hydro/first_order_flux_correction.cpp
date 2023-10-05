@@ -119,6 +119,7 @@ void Hydro::FirstOrderFluxCorrection(Real delta, Real gam0, Real gam1, Real beta
 #pragma omp simd
       for (int i=is; i<=ie; ++i) {
         if (pmb->peos->fofc_(k,j,i)) {
+          std::cerr << "FOFC at i=" << i << " j=" << j << " k=" << k << std::endl;
         // if (true) {
           #if MAGNETIC_FIELDS_ENABLED
             ApplyFOFC_MHD(i,j,k);
@@ -330,6 +331,8 @@ void Hydro::ApplyFOFC_MHD(int i, int j, int k) {
 //! \brief ApplyFOFC for hydro
 void Hydro::ApplyFOFC_Hydro(int i, int j, int k) {
   MeshBlock *pmb = pmy_block;
+  int is = pmb->is; int js = pmb->js; int ks = pmb->ks;
+  int ie = pmb->ie; int je = pmb->je; int ke = pmb->ke;
 
   // apply FOFC
   Real wim1[NWAVE],wi[NWAVE],wip1[NWAVE],flx[NWAVE];
@@ -362,21 +365,25 @@ void Hydro::ApplyFOFC_Hydro(int i, int j, int k) {
   SingleStateLLF_Hydro(wim1, wi, flx);
 
   // replace fluxes at i
-  x1flux(IDN,k,j,i) = flx[IDN];
-  x1flux(IM1,k,j,i) = flx[IVX];
-  x1flux(IM2,k,j,i) = flx[IVY];
-  x1flux(IM3,k,j,i) = flx[IVZ];
-  if (NON_BAROTROPIC_EOS) x1flux(IEN,k,j,i) = flx[IEN];
+  if (i > is) {
+    x1flux(IDN,k,j,i) = flx[IDN];
+    x1flux(IM1,k,j,i) = flx[IVX];
+    x1flux(IM2,k,j,i) = flx[IVY];
+    x1flux(IM3,k,j,i) = flx[IVZ];
+    if (NON_BAROTROPIC_EOS) x1flux(IEN,k,j,i) = flx[IEN];
+  }
 
   // compute LLF flux at i+1
   SingleStateLLF_Hydro(wi, wip1, flx);
 
   // replace fluxes at i+1
-  x1flux(IDN,k,j,i+1) = flx[IDN];
-  x1flux(IM1,k,j,i+1) = flx[IVX];
-  x1flux(IM2,k,j,i+1) = flx[IVY];
-  x1flux(IM3,k,j,i+1) = flx[IVZ];
-  if (NON_BAROTROPIC_EOS) x1flux(IEN,k,j,i+1) = flx[IEN];
+  if (i < ie) {
+    x1flux(IDN,k,j,i+1) = flx[IDN];
+    x1flux(IM1,k,j,i+1) = flx[IVX];
+    x1flux(IM2,k,j,i+1) = flx[IVY];
+    x1flux(IM3,k,j,i+1) = flx[IVZ];
+    if (NON_BAROTROPIC_EOS) x1flux(IEN,k,j,i+1) = flx[IEN];
+  }
 
   if (pmb->pmy_mesh->f2) {
     // 2D
@@ -406,21 +413,24 @@ void Hydro::ApplyFOFC_Hydro(int i, int j, int k) {
     SingleStateLLF_Hydro(wim1, wi, flx);
 
     // replace fluxes at j
-    x2flux(IDN,k,j,i) = flx[IDN];
-    x2flux(IM2,k,j,i) = flx[IVX];
-    x2flux(IM3,k,j,i) = flx[IVY];
-    x2flux(IM1,k,j,i) = flx[IVZ];
-    if (NON_BAROTROPIC_EOS) x2flux(IEN,k,j,i) = flx[IEN];
-
+    if (j > js) {
+      x2flux(IDN,k,j,i) = flx[IDN];
+      x2flux(IM2,k,j,i) = flx[IVX];
+      x2flux(IM3,k,j,i) = flx[IVY];
+      x2flux(IM1,k,j,i) = flx[IVZ];
+      if (NON_BAROTROPIC_EOS) x2flux(IEN,k,j,i) = flx[IEN];
+    }
     // compute LLF flux at j+1
     SingleStateLLF_Hydro(wi, wip1, flx);
 
     // replace fluxes at j+1
-    x2flux(IDN,k,j+1,i) = flx[IDN];
-    x2flux(IM2,k,j+1,i) = flx[IVX];
-    x2flux(IM3,k,j+1,i) = flx[IVY];
-    x2flux(IM1,k,j+1,i) = flx[IVZ];
-    if (NON_BAROTROPIC_EOS) x2flux(IEN,k,j+1,i) = flx[IEN];
+    if (j < je) {
+      x2flux(IDN,k,j+1,i) = flx[IDN];
+      x2flux(IM2,k,j+1,i) = flx[IVX];
+      x2flux(IM3,k,j+1,i) = flx[IVY];
+      x2flux(IM1,k,j+1,i) = flx[IVZ];
+      if (NON_BAROTROPIC_EOS) x2flux(IEN,k,j+1,i) = flx[IEN];
+    }
   }
 
   if (pmb->pmy_mesh->f3) {
@@ -450,21 +460,25 @@ void Hydro::ApplyFOFC_Hydro(int i, int j, int k) {
     SingleStateLLF_Hydro(wim1, wi, flx);
 
     // replace fluxes at k
-    x3flux(IDN,k,j,i) = flx[IDN];
-    x3flux(IM3,k,j,i) = flx[IVX];
-    x3flux(IM1,k,j,i) = flx[IVY];
-    x3flux(IM2,k,j,i) = flx[IVZ];
-    if (NON_BAROTROPIC_EOS) x3flux(IEN,k,j,i) = flx[IEN];
+    if (k > ks) {
+      x3flux(IDN,k,j,i) = flx[IDN];
+      x3flux(IM3,k,j,i) = flx[IVX];
+      x3flux(IM1,k,j,i) = flx[IVY];
+      x3flux(IM2,k,j,i) = flx[IVZ];
+      if (NON_BAROTROPIC_EOS) x3flux(IEN,k,j,i) = flx[IEN];
+    }
 
     // compute LLF flux at k+1
     SingleStateLLF_Hydro(wi, wip1, flx);
 
     // replace fluxes at k+1
-    x3flux(IDN,k+1,j,i) = flx[IDN];
-    x3flux(IM3,k+1,j,i) = flx[IVX];
-    x3flux(IM1,k+1,j,i) = flx[IVY];
-    x3flux(IM2,k+1,j,i) = flx[IVZ];
-    if (NON_BAROTROPIC_EOS) x3flux(IEN,k+1,j,i) = flx[IEN];
+    if (k < ke) {
+      x3flux(IDN,k+1,j,i) = flx[IDN];
+      x3flux(IM3,k+1,j,i) = flx[IVX];
+      x3flux(IM1,k+1,j,i) = flx[IVY];
+      x3flux(IM2,k+1,j,i) = flx[IVZ];
+      if (NON_BAROTROPIC_EOS) x3flux(IEN,k+1,j,i) = flx[IEN];
+    }
   }
 }
 #endif
