@@ -110,15 +110,16 @@ void Hydro::FirstOrderFluxCorrection(Real delta, Real gam0, Real gam1, Real beta
 
   // test only active zones
   // utest_(IEN) must be e_int + e_k excluding e_mag even if MHD
-  // pmb->peos->ConservedToPrimitiveTest(utest_, bcctest_, is, ie, js, je, ks, ke);
+  pmb->peos->ConservedToPrimitiveTest(utest_, bcctest_, is, ie, js, je, ks, ke);
 
   // now replace fluxes with first-order fluxes
+  int nfofc = 0;
   for (int k=ks; k<=ke; ++k) {
     for (int j=js; j<=je; ++j) {
 #pragma omp simd
       for (int i=is; i<=ie; ++i) {
-        // if (pmb->peos->fofc_(k,j,i)) {
-        if (true) {
+        if (pmb->peos->fofc_(k,j,i)) {
+        // if (true) {
           #if MAGNETIC_FIELDS_ENABLED
             ApplyFOFC_MHD(i,j,k);
           #else
@@ -126,11 +127,14 @@ void Hydro::FirstOrderFluxCorrection(Real delta, Real gam0, Real gam1, Real beta
           #endif
           // diffusion fluxes needs to be added
           if (!STS_ENABLED) AddDiffusionFluxesSingleCell(i,j,k);
+          nfofc++;
         }
       }
     }
   }
-
+  if (nfofc>0)
+    std::cerr << "nstep = " << pmb->pmy_mesh->nstep
+              << "Applied FOFC " << nfofc << " times " << std::endl;
   return;
 }
 

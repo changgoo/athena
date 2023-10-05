@@ -45,6 +45,20 @@ class EquationOfState {
       AthenaArray<Real> &cons, const AthenaArray<Real> &prim_old, const FaceField &b,
       AthenaArray<Real> &prim, AthenaArray<Real> &bcc,
       Coordinates *pco, int il, int iu, int jl, int ju, int kl, int ku);
+  // testing bad primitive variables for FOFC
+  void ConservedToPrimitiveTest(const AthenaArray<Real> &cons,
+      const AthenaArray<Real> &bcc, int il, int iu, int jl, int ju, int kl, int ku);
+  // single cell conversion methods
+  // hydro
+  void SingleConservedToPrimitive(
+      Real &u_d, Real &u_m1, Real &u_m2, Real &u_m3, Real &u_e,
+      Real &w_d, Real &w_vx, Real &w_vy, Real &w_vz, Real &w_p,
+      Real &dp, bool &dfloor_used, bool &pfloor_used);
+  // mhd
+  void SingleConservedToPrimitive(
+      Real &u_d, Real &u_m1, Real &u_m2, Real &u_m3, Real &u_e,
+      Real &w_d, Real &w_vx, Real &w_vy, Real &w_vz, Real &w_p,
+      Real &dp, bool &dfloor_used, bool &pfloor_used, const Real e_mag);
 
   // void PrimitiveToConservedCellAverage(const AthenaArray<Real> &prim,
   //   const AthenaArray<Real> &bc, AthenaArray<Real> &cons, Coordinates *pco, int il,
@@ -162,7 +176,7 @@ class EquationOfState {
   Real iso_sound_speed_, gamma_;         // isothermal Cs, ratio of specific heats
   Real density_floor_, pressure_floor_;  // density and pressure floors
   Real energy_floor_;                    // energy floor
-  Real scalar_floor_; // dimensionless concentration floor
+  Real scalar_floor_;                    // dimensionless concentration floor
   Real sigma_max_, beta_min_;            // limits on ratios of gas quantities to pmag
   Real gamma_max_;                       // maximum Lorentz factor
   Real rho_min_, rho_pow_;               // variables to control power-law denity floor
@@ -176,6 +190,7 @@ class EquationOfState {
   AthenaArray<Real> normal_mm_;          // normal-frame momenta, used in relativity
   AthenaArray<Real> normal_bb_;          // normal-frame fields, used in relativistic MHD
   AthenaArray<Real> normal_tt_;          // normal-frame M.B, used in relativistic MHD
+  AthenaArray<bool> fofc_;               // FOFC tags
   void InitEosConstants(ParameterInput *pin);
 };
 
