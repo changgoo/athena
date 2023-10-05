@@ -74,7 +74,8 @@ void EquationOfState::ConservedToPrimitive(
   }
 
   if (nbad_d>0 || nbad_p>0)
-    std::cerr << "[Cons2Prim] floored " << nbad_d << " bad density; "
+    std::cerr << "ncycle = " << pmy_block_->pmy_mesh->ncycle
+              << " [Cons2Prim] floored " << nbad_d << " bad density; "
               << nbad_p << " bad pressure" << std::endl;
   return;
 }

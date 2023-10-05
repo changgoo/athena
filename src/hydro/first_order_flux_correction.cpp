@@ -133,8 +133,8 @@ void Hydro::FirstOrderFluxCorrection(Real delta, Real gam0, Real gam1, Real beta
     }
   }
   if (nfofc>0)
-    std::cerr << "nstep = " << pmb->pmy_mesh->nstep
-              << "Applied FOFC " << nfofc << " times " << std::endl;
+    std::cerr << "ncycle = " << pmb->pmy_mesh->ncycle
+              << " Applied FOFC " << nfofc << " times" << std::endl;
   return;
 }
 

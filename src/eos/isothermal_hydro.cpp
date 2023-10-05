@@ -69,7 +69,8 @@ void EquationOfState::ConservedToPrimitive(
   }
 
   if (nbad_d>0)
-    std::cerr << "[Cons2Prim] floored " << nbad_d << " bad density " << std::endl;
+    std::cerr << "ncycle = " << pmy_block_->pmy_mesh->ncycle
+              << " [Cons2Prim] floored " << nbad_d << " bad density " << std::endl;
   return;
 }
 
@@ -125,6 +126,7 @@ void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, int k, int j
   Real& w_d  = prim(IDN,i);
 
   // apply density floor
+  if (w_d < density_floor_) std::cerr << "[Recon1] Floor applied" << std::endl;
   w_d = (w_d > density_floor_) ?  w_d : density_floor_;
 
   return;
@@ -142,6 +144,7 @@ void EquationOfState::ApplyPrimitiveConservedFloors(
   Real& u_d  = cons(IDN,k,j,i);
 
   // apply (prim) density floor, without changing momentum or energy
+  if (w_d < density_floor_) std::cerr << "[Recon2] Floor applied" << std::endl;
   w_d = (w_d > density_floor_) ?  w_d : density_floor_;
   // ensure cons density matches
   u_d = w_d;
