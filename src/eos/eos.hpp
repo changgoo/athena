@@ -50,10 +50,10 @@ class EquationOfState {
       const AthenaArray<Real> &bcc, int il, int iu, int jl, int ju, int kl, int ku);
   // single cell conversion methods
   // isothermal hydro/mhd
-  void EquationOfState::SingleConservedToPrimitive(
-    Real &u_d, Real &u_m1, Real &u_m2, Real &u_m3,
-    Real &w_d, Real &w_vx, Real &w_vy, Real &w_vz,
-    bool &dfloor_used)
+  void SingleConservedToPrimitive(
+      Real &u_d, Real &u_m1, Real &u_m2, Real &u_m3,
+      Real &w_d, Real &w_vx, Real &w_vy, Real &w_vz,
+      bool &dfloor_used);
   // adiabatic hydro
   void SingleConservedToPrimitive(
       Real &u_d, Real &u_m1, Real &u_m2, Real &u_m3, Real &u_e,

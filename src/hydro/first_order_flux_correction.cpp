@@ -146,6 +146,9 @@ void Hydro::FirstOrderFluxCorrection(Real delta, Real gam0, Real gam1, Real beta
 //! \brief ApplyFOFC for MHD
 void Hydro::ApplyFOFC_MHD(int i, int j, int k) {
   MeshBlock *pmb = pmy_block;
+  int is = pmb->is; int js = pmb->js; int ks = pmb->ks;
+  int ie = pmb->ie; int je = pmb->je; int ke = pmb->ke;
+
   // apply FOFC
   Real wim1[NWAVE],wi[NWAVE],wip1[NWAVE],flx[NWAVE];
   AthenaArray<Real> &x1flux = flux[X1DIR];
@@ -187,30 +190,35 @@ void Hydro::ApplyFOFC_MHD(int i, int j, int k) {
   wip1[IBZ] = bcc_(IB3,k,j,i+1);
 
   // compute LLF flux at i
-  bxi = b_.x1f(k,j,i);
-  SingleStateLLF_MHD(wim1, wi, bxi, flx);
+  if (i > is) {
+    bxi = b_.x1f(k,j,i);
+    SingleStateLLF_MHD(wim1, wi, bxi, flx);
 
-  // replace fluxes at i
-  x1flux(IDN,k,j,i) = flx[IDN];
-  x1flux(IM1,k,j,i) = flx[IVX];
-  x1flux(IM2,k,j,i) = flx[IVY];
-  x1flux(IM3,k,j,i) = flx[IVZ];
-  if (NON_BAROTROPIC_EOS) x1flux(IEN,k,j,i) = flx[IEN];
-  e3x1_(k,j,i) = -flx[IBY];
-  e2x1_(k,j,i) = flx[IBZ];
+    // replace fluxes at i
+
+    x1flux(IDN,k,j,i) = flx[IDN];
+    x1flux(IM1,k,j,i) = flx[IVX];
+    x1flux(IM2,k,j,i) = flx[IVY];
+    x1flux(IM3,k,j,i) = flx[IVZ];
+    if (NON_BAROTROPIC_EOS) x1flux(IEN,k,j,i) = flx[IEN];
+    e3x1_(k,j,i) = -flx[IBY];
+    e2x1_(k,j,i) = flx[IBZ];
+  }
 
   // compute LLF flux at i+1
-  bxi = b_.x1f(k,j,i+1);
-  SingleStateLLF_MHD(wi, wip1, bxi, flx);
+  if (i < ie) {
+    bxi = b_.x1f(k,j,i+1);
+    SingleStateLLF_MHD(wi, wip1, bxi, flx);
 
-  // replace fluxes at i+1
-  x1flux(IDN,k,j,i+1) = flx[IDN];
-  x1flux(IM1,k,j,i+1) = flx[IVX];
-  x1flux(IM2,k,j,i+1) = flx[IVY];
-  x1flux(IM3,k,j,i+1) = flx[IVZ];
-  if (NON_BAROTROPIC_EOS) x1flux(IEN,k,j,i+1) = flx[IEN];
-  e3x1_(k,j,i+1) = -flx[IBY];
-  e2x1_(k,j,i+1) = flx[IBZ];
+    // replace fluxes at i+1
+    x1flux(IDN,k,j,i+1) = flx[IDN];
+    x1flux(IM1,k,j,i+1) = flx[IVX];
+    x1flux(IM2,k,j,i+1) = flx[IVY];
+    x1flux(IM3,k,j,i+1) = flx[IVZ];
+    if (NON_BAROTROPIC_EOS) x1flux(IEN,k,j,i+1) = flx[IEN];
+    e3x1_(k,j,i+1) = -flx[IBY];
+    e2x1_(k,j,i+1) = flx[IBZ];
+  }
 
   if (pmb->pmy_mesh->f2) {
     // 2D
@@ -243,30 +251,34 @@ void Hydro::ApplyFOFC_MHD(int i, int j, int k) {
     wip1[IBZ] = bcc_(IB1,k,j+1,i);
 
     // compute LLF flux at j
-    bxi = b_.x2f(k,j,i);
-    SingleStateLLF_MHD(wim1, wi, bxi, flx);
+    if (j > js) {
+      bxi = b_.x2f(k,j,i);
+      SingleStateLLF_MHD(wim1, wi, bxi, flx);
 
-    // replace fluxes at j
-    x2flux(IDN,k,j,i) = flx[IDN];
-    x2flux(IM2,k,j,i) = flx[IVX];
-    x2flux(IM3,k,j,i) = flx[IVY];
-    x2flux(IM1,k,j,i) = flx[IVZ];
-    if (NON_BAROTROPIC_EOS) x2flux(IEN,k,j,i) = flx[IEN];
-    e1x2_(k,j,i) = -flx[IBY];
-    e3x2_(k,j,i) = flx[IBZ];
+      // replace fluxes at j
+      x2flux(IDN,k,j,i) = flx[IDN];
+      x2flux(IM2,k,j,i) = flx[IVX];
+      x2flux(IM3,k,j,i) = flx[IVY];
+      x2flux(IM1,k,j,i) = flx[IVZ];
+      if (NON_BAROTROPIC_EOS) x2flux(IEN,k,j,i) = flx[IEN];
+      e1x2_(k,j,i) = -flx[IBY];
+      e3x2_(k,j,i) = flx[IBZ];
+    }
 
     // compute LLF flux at j+1
-    bxi = b_.x2f(k,j+1,i);
-    SingleStateLLF_MHD(wi, wip1, bxi, flx);
+    if (j < je) {
+      bxi = b_.x2f(k,j+1,i);
+      SingleStateLLF_MHD(wi, wip1, bxi, flx);
 
-    // replace fluxes at j+1
-    x2flux(IDN,k,j+1,i) = flx[IDN];
-    x2flux(IM2,k,j+1,i) = flx[IVX];
-    x2flux(IM3,k,j+1,i) = flx[IVY];
-    x2flux(IM1,k,j+1,i) = flx[IVZ];
-    if (NON_BAROTROPIC_EOS) x2flux(IEN,k,j+1,i) = flx[IEN];
-    e1x2_(k,j+1,i) = -flx[IBY];
-    e3x2_(k,j+1,i) = flx[IBZ];
+      // replace fluxes at j+1
+      x2flux(IDN,k,j+1,i) = flx[IDN];
+      x2flux(IM2,k,j+1,i) = flx[IVX];
+      x2flux(IM3,k,j+1,i) = flx[IVY];
+      x2flux(IM1,k,j+1,i) = flx[IVZ];
+      if (NON_BAROTROPIC_EOS) x2flux(IEN,k,j+1,i) = flx[IEN];
+      e1x2_(k,j+1,i) = -flx[IBY];
+      e3x2_(k,j+1,i) = flx[IBZ];
+    }
   }
 
   if (pmb->pmy_mesh->f3) {
@@ -299,30 +311,34 @@ void Hydro::ApplyFOFC_MHD(int i, int j, int k) {
     wip1[IBZ] = bcc_(IB2,k+1,j,i);
 
     // compute LLF flux at k
-    bxi = b_.x3f(k,j,i);
-    SingleStateLLF_MHD(wim1, wi, bxi, flx);
+    if (k > ks) {
+      bxi = b_.x3f(k,j,i);
+      SingleStateLLF_MHD(wim1, wi, bxi, flx);
 
-    // replace fluxes at k
-    x3flux(IDN,k,j,i) = flx[IDN];
-    x3flux(IM3,k,j,i) = flx[IVX];
-    x3flux(IM1,k,j,i) = flx[IVY];
-    x3flux(IM2,k,j,i) = flx[IVZ];
-    if (NON_BAROTROPIC_EOS) x3flux(IEN,k,j,i) = flx[IEN];
-    e2x3_(k,j,i) = -flx[IBY];
-    e1x3_(k,j,i) = flx[IBZ];
+      // replace fluxes at k
+      x3flux(IDN,k,j,i) = flx[IDN];
+      x3flux(IM3,k,j,i) = flx[IVX];
+      x3flux(IM1,k,j,i) = flx[IVY];
+      x3flux(IM2,k,j,i) = flx[IVZ];
+      if (NON_BAROTROPIC_EOS) x3flux(IEN,k,j,i) = flx[IEN];
+      e2x3_(k,j,i) = -flx[IBY];
+      e1x3_(k,j,i) = flx[IBZ];
+    }
 
     // compute LLF flux at k+1
-    bxi = b_.x3f(k+1,j,i);
-    SingleStateLLF_MHD(wi, wip1, bxi, flx);
+    if (k < ke) {
+      bxi = b_.x3f(k+1,j,i);
+      SingleStateLLF_MHD(wi, wip1, bxi, flx);
 
-    // replace fluxes at k+1
-    x3flux(IDN,k+1,j,i) = flx[IDN];
-    x3flux(IM3,k+1,j,i) = flx[IVX];
-    x3flux(IM1,k+1,j,i) = flx[IVY];
-    x3flux(IM2,k+1,j,i) = flx[IVZ];
-    if (NON_BAROTROPIC_EOS) x3flux(IEN,k+1,j,i) = flx[IEN];
-    e2x3_(k+1,j,i) = -flx[IBY];
-    e1x3_(k+1,j,i) = flx[IBZ];
+      // replace fluxes at k+1
+      x3flux(IDN,k+1,j,i) = flx[IDN];
+      x3flux(IM3,k+1,j,i) = flx[IVX];
+      x3flux(IM1,k+1,j,i) = flx[IVY];
+      x3flux(IM2,k+1,j,i) = flx[IVZ];
+      if (NON_BAROTROPIC_EOS) x3flux(IEN,k+1,j,i) = flx[IEN];
+      e2x3_(k+1,j,i) = -flx[IBY];
+      e1x3_(k+1,j,i) = flx[IBZ];
+    }
   }
 }
 #else
@@ -362,10 +378,11 @@ void Hydro::ApplyFOFC_Hydro(int i, int j, int k) {
   if (NON_BAROTROPIC_EOS) wip1[IPR] = w(IPR,k,j,i+1);
 
   // compute LLF flux at i
-  SingleStateLLF_Hydro(wim1, wi, flx);
-
-  // replace fluxes at i
   if (i > is) {
+    SingleStateLLF_Hydro(wim1, wi, flx);
+
+    // replace fluxes at i
+
     x1flux(IDN,k,j,i) = flx[IDN];
     x1flux(IM1,k,j,i) = flx[IVX];
     x1flux(IM2,k,j,i) = flx[IVY];
@@ -374,10 +391,11 @@ void Hydro::ApplyFOFC_Hydro(int i, int j, int k) {
   }
 
   // compute LLF flux at i+1
-  SingleStateLLF_Hydro(wi, wip1, flx);
-
-  // replace fluxes at i+1
   if (i < ie) {
+    SingleStateLLF_Hydro(wi, wip1, flx);
+
+    // replace fluxes at i+1
+
     x1flux(IDN,k,j,i+1) = flx[IDN];
     x1flux(IM1,k,j,i+1) = flx[IVX];
     x1flux(IM2,k,j,i+1) = flx[IVY];
@@ -410,21 +428,24 @@ void Hydro::ApplyFOFC_Hydro(int i, int j, int k) {
     if (NON_BAROTROPIC_EOS) wip1[IPR] = w(IPR,k,j+1,i);
 
     // compute LLF flux at j
-    SingleStateLLF_Hydro(wim1, wi, flx);
-
-    // replace fluxes at j
     if (j > js) {
+      SingleStateLLF_Hydro(wim1, wi, flx);
+
+      // replace fluxes at j
+
       x2flux(IDN,k,j,i) = flx[IDN];
       x2flux(IM2,k,j,i) = flx[IVX];
       x2flux(IM3,k,j,i) = flx[IVY];
       x2flux(IM1,k,j,i) = flx[IVZ];
       if (NON_BAROTROPIC_EOS) x2flux(IEN,k,j,i) = flx[IEN];
     }
-    // compute LLF flux at j+1
-    SingleStateLLF_Hydro(wi, wip1, flx);
 
-    // replace fluxes at j+1
+    // compute LLF flux at j+1
     if (j < je) {
+      SingleStateLLF_Hydro(wi, wip1, flx);
+
+      // replace fluxes at j+1
+
       x2flux(IDN,k,j+1,i) = flx[IDN];
       x2flux(IM2,k,j+1,i) = flx[IVX];
       x2flux(IM3,k,j+1,i) = flx[IVY];
@@ -457,10 +478,11 @@ void Hydro::ApplyFOFC_Hydro(int i, int j, int k) {
     if (NON_BAROTROPIC_EOS) wip1[IPR] = w(IPR,k+1,j,i);
 
     // compute LLF flux at k
-    SingleStateLLF_Hydro(wim1, wi, flx);
-
-    // replace fluxes at k
     if (k > ks) {
+      SingleStateLLF_Hydro(wim1, wi, flx);
+
+      // replace fluxes at k
+
       x3flux(IDN,k,j,i) = flx[IDN];
       x3flux(IM3,k,j,i) = flx[IVX];
       x3flux(IM1,k,j,i) = flx[IVY];
@@ -469,10 +491,11 @@ void Hydro::ApplyFOFC_Hydro(int i, int j, int k) {
     }
 
     // compute LLF flux at k+1
-    SingleStateLLF_Hydro(wi, wip1, flx);
-
-    // replace fluxes at k+1
     if (k < ke) {
+      SingleStateLLF_Hydro(wi, wip1, flx);
+
+      // replace fluxes at k+1
+
       x3flux(IDN,k+1,j,i) = flx[IDN];
       x3flux(IM3,k+1,j,i) = flx[IVX];
       x3flux(IM1,k+1,j,i) = flx[IVY];
