@@ -105,18 +105,16 @@ void EquationOfState::SingleConservedToPrimitive(
   w_vy = u_m2*di;
   w_vz = u_m3*di;
 
-  if (NON_BAROTROPIC_EOS) {
-    Real gm1 = gamma_ - 1.0;
-    Real e_k = 0.5*di*(SQR(u_m1) + SQR(u_m2) + SQR(u_m3));
-    w_p = gm1*(u_e - e_k);
+  Real gm1 = gamma_ - 1.0;
+  Real e_k = 0.5*di*(SQR(u_m1) + SQR(u_m2) + SQR(u_m3));
+  w_p = gm1*(u_e - e_k);
 
-    // apply pressure floor, correct total energy
-    if (w_p < pressure_floor_) {
-      dp = pressure_floor_ - w_p;
-      w_p = pressure_floor_;
-      u_e = w_p/gm1 + e_k;
-      pfloor_used = true;
-    }
+  // apply pressure floor, correct total energy
+  if (w_p < pressure_floor_) {
+    dp = pressure_floor_ - w_p;
+    w_p = pressure_floor_;
+    u_e = w_p/gm1 + e_k;
+    pfloor_used = true;
   }
 }
 
@@ -144,18 +142,16 @@ void EquationOfState::SingleConservedToPrimitive(
   w_vy = u_m2*di;
   w_vz = u_m3*di;
 
-  if (NON_BAROTROPIC_EOS) {
-    Real gm1 = gamma_ - 1.0;
-    Real e_k = 0.5*di*(SQR(u_m1) + SQR(u_m2) + SQR(u_m3));
-    w_p = gm1*(u_e - e_k - e_mag);
+  Real gm1 = gamma_ - 1.0;
+  Real e_k = 0.5*di*(SQR(u_m1) + SQR(u_m2) + SQR(u_m3));
+  w_p = gm1*(u_e - e_k - e_mag);
 
-    // apply pressure floor, correct total energy
-    if (w_p < pressure_floor_) {
-      dp = pressure_floor_ - w_p;
-      w_p = pressure_floor_;
-      u_e = w_p/gm1 + e_k + e_mag;
-      pfloor_used = true;
-    }
+  // apply pressure floor, correct total energy
+  if (w_p < pressure_floor_) {
+    dp = pressure_floor_ - w_p;
+    w_p = pressure_floor_;
+    u_e = w_p/gm1 + e_k + e_mag;
+    pfloor_used = true;
   }
 }
 
