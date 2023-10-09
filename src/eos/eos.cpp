@@ -34,20 +34,30 @@ void EquationOfState::ConservedToPrimitiveTest(
         Real u_m1 = cons(IM1,k,j,i);
         Real u_m2 = cons(IM2,k,j,i);
         Real u_m3 = cons(IM3,k,j,i);
-        Real u_e  = cons(IEN,k,j,i);
-        Real e_mag = 0.0;
-        if (MAGNETIC_FIELDS_ENABLED) {
-          Real bcc1 = bcc(IB1,k,j,i);
-          Real bcc2 = bcc(IB2,k,j,i);
-          Real bcc3 = bcc(IB3,k,j,i);
-          e_mag = 0.5*(SQR(bcc1) + SQR(bcc2) + SQR(bcc3));
-        }
 
-        Real w_d, w_vx, w_vy, w_vz, w_p, dp;
+        Real w_d, w_vx, w_vy, w_vz;
+
         bool dfloor_used = false, pfloor_used = false;
-        SingleConservedToPrimitive(u_d, u_m1, u_m2, u_m3, u_e,
-                                   w_d, w_vx, w_vy, w_vz, w_p,
-                                   dp, dfloor_used, pfloor_used, e_mag);
+        if (NON_BAROTROPIC_EOS) {
+          Real u_e  = cons(IEN,k,j,i);
+          Real e_mag = 0.0;
+          if (MAGNETIC_FIELDS_ENABLED) {
+            Real bcc1 = bcc(IB1,k,j,i);
+            Real bcc2 = bcc(IB2,k,j,i);
+            Real bcc3 = bcc(IB3,k,j,i);
+            e_mag = 0.5*(SQR(bcc1) + SQR(bcc2) + SQR(bcc3));
+          }
+
+          Real w_p, dp;
+          SingleConservedToPrimitive(u_d, u_m1, u_m2, u_m3, u_e,
+                                     w_d, w_vx, w_vy, w_vz, w_p,
+                                     dp, dfloor_used, pfloor_used,
+                                     e_mag);
+        } else {
+          SingleConservedToPrimitive(u_d, u_m1, u_m2, u_m3,
+                                     w_d, w_vx, w_vy, w_vz,
+                                     dfloor_used);
+        }
         fofc_(k,j,i) = dfloor_used || pfloor_used;
       }
     }

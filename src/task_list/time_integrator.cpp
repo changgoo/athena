@@ -106,6 +106,14 @@ TimeIntegratorTaskList::TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm) {
           << std::endl;
       ATHENA_ERROR(msg);
     }
+    // first order flux correction not work with rk4 or ssprk5_4
+    if (pin->GetOrAddBoolean("hydro","fofc",false)) {
+      std::stringstream msg;
+      msg << "### FATAL ERROR in TimeIntegratorTaskList constructor" << std::endl
+          << "integrator=" << integrator << " does not work with "
+          << " first order flux correction" << std::endl;
+      ATHENA_ERROR(msg);
+    }
   }
 
   if (integrator == "vl2") {
@@ -1698,17 +1706,10 @@ TaskStatus TimeIntegratorTaskList::CalculateHydroFlux(MeshBlock *pmb, int stage)
         phydro->CalculateFluxes(phydro->w,  pfield->b,  pfield->bcc, pmb->precon->xorder);
       }
       if (phydro->fofc_enabled) {
-        if (integrator == "vl2" || integrator == "rk2") {
-          phydro->FirstOrderFluxCorrection(stage_wghts[stage-1].delta,
+        phydro->FirstOrderFluxCorrection(stage_wghts[stage-1].delta,
                                           stage_wghts[stage-1].gamma_1,
                                           stage_wghts[stage-1].gamma_2,
                                           stage_wghts[stage-1].beta);
-        } else {
-          std::stringstream msg;
-          msg << "### FATAL ERROR " << std::endl
-              << "FOFC is only supported for the vl2 or rk2 integrators" << std::endl;
-          ATHENA_ERROR(msg);
-        }
       }
     }
     return TaskStatus::next;

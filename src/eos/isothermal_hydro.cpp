@@ -125,7 +125,6 @@ void EquationOfState::ApplyPrimitiveFloors(AthenaArray<Real> &prim, int k, int j
   Real& w_d  = prim(IDN,i);
 
   // apply density floor
-  if (w_d < density_floor_) std::cerr << "[Recon1] Floor applied" << std::endl;
   w_d = (w_d > density_floor_) ?  w_d : density_floor_;
 
   return;
@@ -143,7 +142,6 @@ void EquationOfState::ApplyPrimitiveConservedFloors(
   Real& u_d  = cons(IDN,k,j,i);
 
   // apply (prim) density floor, without changing momentum or energy
-  if (w_d < density_floor_) std::cerr << "[Recon2] Floor applied" << std::endl;
   w_d = (w_d > density_floor_) ?  w_d : density_floor_;
   // ensure cons density matches
   u_d = w_d;
