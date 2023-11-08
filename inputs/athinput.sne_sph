@@ -1,0 +1,68 @@
+<comment>
+problem   = spherical blast wave in spherical coordinates
+reference = Gardiner. T.A. & Stone, J.M., JCP, 205, 509 (2005) (for MHD version of test)
+configure = --prob=sne --coord=spherical_polar
+
+<job>
+problem_id = SNe      # problem ID: basename of output filenames
+
+<output1>
+file_type  = vtk        # Binary data dump
+variable   = prim       # variables to be output
+dt         = 0.0010219724  # time increment between outputs (1000 yrs)
+
+<output2>
+file_type   = hst       # History data dump
+dt          = 0.0001     # time increment between outputs
+data_format = %12.7e    # Optional data format string
+
+<time>
+cfl_number = 0.3        # The Courant, Friedrichs, & Lewy (CFL) Number
+nlim       = -1         # cycle limit
+tlim       = 0.5109862   # time limit (time unit is 0.98 Myr)
+integrator  = vl2       # time integration algorithm
+xorder      = 2         # order of spatial reconstruction
+ncycle_out  = 1         # interval for stdout summary info
+
+<mesh>
+nx1        = 512         # Number of zones in X1-direction (radius)
+x1min      = 0.5         # minimum value of X1
+x1max      = 50.0        # maximum value of X1
+x1rat      = 1.0             #1.01398     # logarithmic bin size in r
+ix1_bc     = reflecting    # inner-X1 boundary flag
+ox1_bc     = outflow    # outer-X1 boundary flag
+
+nx2        = 1               # Number of zones in X2-direction (theta, polar angle)
+x2min      = 1.563901        # minimum value of X2
+x2max      = 1.57769         # maximum value of X2
+ix2_bc     = periodic        # inner-X2 boundary flag
+ox2_bc     = periodic        # outer-X2 boundary flag
+
+nx3        = 1              # Number of zones in X3-direction (phi, azimuthal angle)
+x3min      = -0.006895         # minimum value of X3
+x3max      =  0.006895         # maximum value of X3
+ix3_bc     = periodic        # inner-X3 boundary flag
+ox3_bc     = periodic        # outer-X3 boundary flag
+
+<hydro>
+gamma           = 1.666666666667  # gamma = C_p/C_v
+iso_sound_speed = 1.0
+
+<problem>
+pamb          = 3000.0        # ambient pressure (P/k in K cm^-3)
+damb          = 1.0           # ambient density (1.4 m_p cm^-3)
+r_blast       = 1.0           # deposit energy out to this radius
+E51           = 1             # energy of each SNe to deposit, in ergs.
+after_loop    = false         # whether to call the function to compute stuff at end.  
+T_floor       = 100           # min temp allowed by cooling/heating
+T_max         = 1.0e13        # max temp allowed by cooling/heating
+cfl_cool      = 0.5           # min dt_hydro/dt_cool
+kappa_max_T   = 1.e7          # maximum kappa defined by T
+kappa_max_rho = 0.1           # maximum kappa defined by rho
+kappa_iso     = 0             # conduction flag
+lambda_dv     = 1.0           # lambda*dv
+saturation_on = true          # master switch for cooling
+cooling_on    = true          # master switch for cooling
+delta_t_SNe   = 100.0           # explode another SN every this many Myr years.
+M_ej          = 3             # ejecta mass in solar masses  
+feedback      = sedov         # feedback type [sedov, thermal, kinetic]
