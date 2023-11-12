@@ -2,8 +2,9 @@
 #define CR_INTEGRATORS_CR_INTEGRATORS_HPP_
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file cr_integrators.hpp
 //! \brief definitions for CosmicRay class
@@ -24,7 +25,8 @@ class CosmicRay;
 
 class CRIntegrator {
   friend class CosmicRay;
- public:
+
+public:
   CRIntegrator(CosmicRay *pcr, ParameterInput *pin);
   ~CRIntegrator();
 
@@ -32,26 +34,26 @@ class CRIntegrator {
 
   void FluxDivergence(const Real wght, AthenaArray<Real> &cr_out);
 
-  void CalculateFluxes(AthenaArray<Real> &w,
-          AthenaArray<Real> &bcc, AthenaArray<Real> &cr, const int order);
+  void CalculateFluxes(AthenaArray<Real> &w, AthenaArray<Real> &bcc,
+                       AthenaArray<Real> &cr, const int order);
 
-  void CRFlux(int fdir, int il, int iu,
-              AthenaArray<Real> &w_l, AthenaArray<Real> &w_r,
-              AthenaArray<Real> &vdiff_l, AthenaArray<Real> &vdiff_r,
-              AthenaArray<Real> &flx);
+  void CRFlux(int fdir, int il, int iu, AthenaArray<Real> &w_l,
+              AthenaArray<Real> &w_r, AthenaArray<Real> &vdiff_l,
+              AthenaArray<Real> &vdiff_r, AthenaArray<Real> &flx);
 
   void AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Real> &u,
-        AthenaArray<Real> &w, AthenaArray<Real> &bcc, AthenaArray<Real> &ucr);
+                      AthenaArray<Real> &w, AthenaArray<Real> &bcc,
+                      AthenaArray<Real> &ucr);
 
   int cr_xorder;
 
- private:
+private:
   AthenaArray<Real> new_sol_;
   AthenaArray<Real> ucr_l_, ucr_r_, ucr_lb_; // for reconstruction
   AthenaArray<Real> vdiff_l_, vdiff_r_;
 
   AthenaArray<Real> grad_pc_, ec_source_, coord_source_;
-  AthenaArray<Real> ucr_vel_; //array for reconstruction
+  AthenaArray<Real> ucr_vel_; // array for reconstruction
 
   // temporary array to store the flux
   Real taufact_;
@@ -60,4 +62,4 @@ class CRIntegrator {
   AthenaArray<Real> x2face_area_p1_, x3face_area_p1_;
   AthenaArray<Real> cell_volume_, dflx_, cwidth2_, cwidth3_;
 };
-#endif //CR_INTEGRATORS_CR_INTEGRATORS_HPP_
+#endif // CR_INTEGRATORS_CR_INTEGRATORS_HPP_

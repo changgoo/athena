@@ -43,7 +43,7 @@ ix3_bc     = periodic  # inner-X3 boundary flag
 ox3_bc     = periodic  # outer-X3 boundary flag
 
 <hydro>
-iso_sound_speed = 1.732 
+iso_sound_speed = 1.732
 gamma           = 1.66667   # gamma = C_p/C_v
 
 <problem>

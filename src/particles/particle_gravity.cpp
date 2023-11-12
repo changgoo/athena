@@ -1,14 +1,15 @@
 //======================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //======================================================================================
 //! \file particle_gravity.cpp
 //! \brief implements the members of the ParticleGravity class.
 
 // C++ standard libraries
-#include <cstring>  // strcmp()
-#include <sstream>  // stringstream
+#include <cstring> // strcmp()
+#include <sstream> // stringstream
 
 // Athena++ headers
 #include "../athena.hpp"
@@ -23,8 +24,8 @@
 //! \fn ParticleGravity::ParticleGravity(Particles *ppar)
 //! \brief constructs a new ParticleGravity instance.
 
-ParticleGravity::ParticleGravity(Particles *ppar) :
-  igx(ppar->igx), igy(ppar->igy), igz(ppar->igz) {
+ParticleGravity::ParticleGravity(Particles *ppar)
+    : igx(ppar->igx), igy(ppar->igy), igz(ppar->igz) {
   // Remember my parent Particles instance.
   pmy_par = ppar;
   pmy_pm = ppar->ppm;
@@ -68,24 +69,25 @@ void ParticleGravity::InterpolateGravitationalForce() {
 void ParticleGravity::ExertGravitationalForce(Real dt) {
   // Add the force.
   for (int k = 0; k < pmy_par->npar_; ++k) {
-    pmy_par->vpx(k) += dt * pmy_par->work(igx,k);
-    pmy_par->vpy(k) += dt * pmy_par->work(igy,k);
-    pmy_par->vpz(k) += dt * pmy_par->work(igz,k);
+    pmy_par->vpx(k) += dt * pmy_par->work(igx, k);
+    pmy_par->vpy(k) += dt * pmy_par->work(igy, k);
+    pmy_par->vpz(k) += dt * pmy_par->work(igz, k);
   }
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void ParticleGravity::FindGravitationalForce(const AthenaArray<Real>& phi)
-//! \brief computes the gravitational force from the potential phi.
+//! \fn void ParticleGravity::FindGravitationalForce(const AthenaArray<Real>&
+//! phi) \brief computes the gravitational force from the potential phi.
 //!
 //! \todo (ccyang)
 //! - currently only works with uniform cartesian.
 
-void ParticleGravity::FindGravitationalForce(const AthenaArray<Real>& phi) {
+void ParticleGravity::FindGravitationalForce(const AthenaArray<Real> &phi) {
   // Sanity check.
   if (std::strcmp(COORDINATE_SYSTEM, "cartesian") != 0) {
     std::stringstream msg;
-    msg << "### FATAL ERROR in function [ParticleGravity::FindGravitationalForce]"
+    msg << "### FATAL ERROR in function "
+           "[ParticleGravity::FindGravitationalForce]"
         << std::endl
         << "not implemented for non-Cartesian coordinates. " << std::endl;
     ATHENA_ERROR(msg);
@@ -95,7 +97,8 @@ void ParticleGravity::FindGravitationalForce(const AthenaArray<Real>& phi) {
       (active2 && pcoord->dx2v(0) != pcoord->dx2v(1)) ||
       (active3 && pcoord->dx3v(0) != pcoord->dx3v(1))) {
     std::stringstream msg;
-    msg << "### FATAL ERROR in function [ParticleGravity::FindGravitationalForce]"
+    msg << "### FATAL ERROR in function "
+           "[ParticleGravity::FindGravitationalForce]"
         << std::endl
         << "not implemented for non-uniform grid. " << std::endl;
     ATHENA_ERROR(msg);
@@ -111,14 +114,18 @@ void ParticleGravity::FindGravitationalForce(const AthenaArray<Real>& phi) {
   const int ke = active3 ? ncells3 - 2 : 0;
 
   // Get the grid spacing.
-  Real a1(0.5 / pcoord->dx1v(0)), a2(0.5 / pcoord->dx2v(0)), a3(0.5 / pcoord->dx3v(0));
+  Real a1(0.5 / pcoord->dx1v(0)), a2(0.5 / pcoord->dx2v(0)),
+      a3(0.5 / pcoord->dx3v(0));
 
   // Compute the force.
   for (int k = ks; k <= ke; ++k)
     for (int j = js; j <= je; ++j)
       for (int i = is; i <= ie; ++i) {
-        gforce(0,k,j,i) = active1 ? a1 * (phi(k,j,i-1) - phi(k,j,i+1)) : 0.0;
-        gforce(1,k,j,i) = active2 ? a2 * (phi(k,j-1,i) - phi(k,j+1,i)) : 0.0;
-        gforce(2,k,j,i) = active3 ? a3 * (phi(k-1,j,i) - phi(k+1,j,i)) : 0.0;
+        gforce(0, k, j, i) =
+            active1 ? a1 * (phi(k, j, i - 1) - phi(k, j, i + 1)) : 0.0;
+        gforce(1, k, j, i) =
+            active2 ? a2 * (phi(k, j - 1, i) - phi(k, j + 1, i)) : 0.0;
+        gforce(2, k, j, i) =
+            active3 ? a3 * (phi(k - 1, j, i) - phi(k + 1, j, i)) : 0.0;
       }
 }

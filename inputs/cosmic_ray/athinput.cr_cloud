@@ -1,6 +1,6 @@
 <comment>
 problem   = Bottleneck effect test
-reference = 
+reference =
 configure = --prob=cr_cloud
 
 <job>
@@ -52,17 +52,17 @@ ox3_bc     = periodic  # inner-X3 boundary flag
 #refinement = static
 
 <meshblock>
-nx1         = 512 
+nx1         = 512
 nx2         = 8
 nx3         = 1
 
 <refinement1>
 x1min       = 1
 x1max       = 23.4414
-x2min       = 0.698132 
+x2min       = 0.698132
 x2max       = 2.44346
 x3min       = 0.0
-x3max       = 6.283185307179586 
+x3max       = 6.283185307179586
 level       = 2
 
 <hydro>
@@ -76,5 +76,3 @@ vmax         = 100
 src_flag     = 0
 
 <problem>
-
-

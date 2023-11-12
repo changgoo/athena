@@ -1,6 +1,6 @@
 <comment>
 problem   = cosmic ray shear
-reference = 
+reference =
 configure = --prob=cr_shear
 
 <job>

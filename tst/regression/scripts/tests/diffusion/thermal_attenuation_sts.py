@@ -8,12 +8,12 @@ import scripts.utils.athena as athena  # noqa
 import scripts.tests.diffusion.thermal_attenuation as thermal_attenuation
 import logging
 
-thermal_attenuation.method = 'STS'
-thermal_attenuation.logger = logging.getLogger('athena' + __name__[7:])
+thermal_attenuation.method = "STS"
+thermal_attenuation.logger = logging.getLogger("athena" + __name__[7:])
 
 
 def prepare(*args, **kwargs):
-    thermal_attenuation.prepare('sts', *args, **kwargs)
+    thermal_attenuation.prepare("sts", *args, **kwargs)
 
 
 def run(**kwargs):

@@ -1,7 +1,8 @@
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file hydro_srcterms.cpp
 //! \brief Class to implement source terms in the hydro equations
@@ -9,11 +10,11 @@
 // C headers
 
 // C++ headers
-#include <cstring>    // strcmp
+#include <cstring> // strcmp
 #include <iostream>
 #include <sstream>
-#include <stdexcept>  // runtime_error
-#include <string>     // c_str()
+#include <stdexcept> // runtime_error
+#include <string>    // c_str()
 
 // Athena++ headers
 #include "../../athena.hpp"
@@ -36,13 +37,13 @@ HydroSourceTerms::HydroSourceTerms(Hydro *phyd, ParameterInput *pin) {
   // set the point source only when the coordinate is spherical or 2D
   // It works even for cylindrical with the orbital advection.
   flag_point_mass_ = false;
-  gm_ = pin->GetOrAddReal("problem","GM",0.0);
-  bool orbital_advection_defined
-         = (pin->GetOrAddInteger("orbital_advection","OAorder",0)!=0)?
-           true : false;
+  gm_ = pin->GetOrAddReal("problem", "GM", 0.0);
+  bool orbital_advection_defined =
+      (pin->GetOrAddInteger("orbital_advection", "OAorder", 0) != 0) ? true
+                                                                     : false;
   if (gm_ != 0.0) {
-    if (std::strcmp(COORDINATE_SYSTEM, "spherical_polar") != 0
-        && std::strcmp(COORDINATE_SYSTEM, "cylindrical") != 0) {
+    if (std::strcmp(COORDINATE_SYSTEM, "spherical_polar") != 0 &&
+        std::strcmp(COORDINATE_SYSTEM, "cylindrical") != 0) {
       std::stringstream msg;
       msg << "### FATAL ERROR in HydroSourceTerms constructor" << std::endl
           << "The point mass gravity works only in the cylindrical and "
@@ -52,8 +53,8 @@ HydroSourceTerms::HydroSourceTerms(Hydro *phyd, ParameterInput *pin) {
     }
     if (orbital_advection_defined) {
       hydro_sourceterms_defined = true;
-    } else if (std::strcmp(COORDINATE_SYSTEM, "cylindrical") == 0
-               && phyd->pmy_block->block_size.nx3>1) {
+    } else if (std::strcmp(COORDINATE_SYSTEM, "cylindrical") == 0 &&
+               phyd->pmy_block->block_size.nx3 > 1) {
       std::stringstream msg;
       msg << "### FATAL ERROR in HydroSourceTerms constructor" << std::endl
           << "The point mass gravity deos not work in the 3D cylindrical "
@@ -65,24 +66,27 @@ HydroSourceTerms::HydroSourceTerms(Hydro *phyd, ParameterInput *pin) {
       hydro_sourceterms_defined = true;
     }
   }
-  g1_ = pin->GetOrAddReal("hydro","grav_acc1",0.0);
-  if (g1_ != 0.0) hydro_sourceterms_defined = true;
+  g1_ = pin->GetOrAddReal("hydro", "grav_acc1", 0.0);
+  if (g1_ != 0.0)
+    hydro_sourceterms_defined = true;
 
-  g2_ = pin->GetOrAddReal("hydro","grav_acc2",0.0);
-  if (g2_ != 0.0) hydro_sourceterms_defined = true;
+  g2_ = pin->GetOrAddReal("hydro", "grav_acc2", 0.0);
+  if (g2_ != 0.0)
+    hydro_sourceterms_defined = true;
 
-  g3_ = pin->GetOrAddReal("hydro","grav_acc3",0.0);
-  if (g3_ != 0.0) hydro_sourceterms_defined = true;
+  g3_ = pin->GetOrAddReal("hydro", "grav_acc3", 0.0);
+  if (g3_ != 0.0)
+    hydro_sourceterms_defined = true;
 
   // read shearing box parameters from input block
-  Omega_0_ = pin->GetOrAddReal("orbital_advection","Omega0",0.0);
-  qshear_  = pin->GetOrAddReal("orbital_advection","qshear",0.0);
-  ShBoxCoord_ = pin->GetOrAddInteger("orbital_advection","shboxcoord",1);
+  Omega_0_ = pin->GetOrAddReal("orbital_advection", "Omega0", 0.0);
+  qshear_ = pin->GetOrAddReal("orbital_advection", "qshear", 0.0);
+  ShBoxCoord_ = pin->GetOrAddInteger("orbital_advection", "shboxcoord", 1);
 
   // check flag for shearing source
   flag_shearing_source_ = 0;
-  if(orbital_advection_defined) { // orbital advection source terms
-    if(ShBoxCoord_ == 1) {
+  if (orbital_advection_defined) { // orbital advection source terms
+    if (ShBoxCoord_ == 1) {
       flag_shearing_source_ = 1;
     } else {
       std::stringstream msg;
@@ -92,22 +96,24 @@ HydroSourceTerms::HydroSourceTerms(Hydro *phyd, ParameterInput *pin) {
           << std::endl;
       ATHENA_ERROR(msg);
     }
-  } else if ((Omega_0_ !=0.0) && (qshear_ != 0.0)
-             && std::strcmp(COORDINATE_SYSTEM, "cartesian") == 0) {
+  } else if ((Omega_0_ != 0.0) && (qshear_ != 0.0) &&
+             std::strcmp(COORDINATE_SYSTEM, "cartesian") == 0) {
     flag_shearing_source_ = 2; // shearing box source terms
   } else if ((Omega_0_ != 0.0) &&
-             (std::strcmp(COORDINATE_SYSTEM, "cylindrical") == 0
-              || std::strcmp(COORDINATE_SYSTEM, "spherical_polar") == 0)) {
+             (std::strcmp(COORDINATE_SYSTEM, "cylindrical") == 0 ||
+              std::strcmp(COORDINATE_SYSTEM, "spherical_polar") == 0)) {
     flag_shearing_source_ = 3; // rotating system source terms
   }
 
   if (flag_shearing_source_ != 0)
     hydro_sourceterms_defined = true;
 
-  if (SELF_GRAVITY_ENABLED) hydro_sourceterms_defined = true;
+  if (SELF_GRAVITY_ENABLED)
+    hydro_sourceterms_defined = true;
 
   UserSourceTerm = phyd->pmy_block->pmy_mesh->UserSourceTerm_;
-  if (UserSourceTerm != nullptr) hydro_sourceterms_defined = true;
+  if (UserSourceTerm != nullptr)
+    hydro_sourceterms_defined = true;
 }
 
 //----------------------------------------------------------------------------------------

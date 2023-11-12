@@ -1,37 +1,38 @@
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file point_cooling.cpp
 //! \brief Problem generator for point cooling test
 //========================================================================================
 
 // C++ headers
-#include <algorithm>  // min()
-#include <cmath>      // abs(), pow(), sqrt()
-#include <fstream>    // ofstream
-#include <sstream>    // stringstream
-#include <stdexcept>  // runtime_error
-#include <string>     // string
+#include <algorithm> // min()
+#include <cmath>     // abs(), pow(), sqrt()
+#include <fstream>   // ofstream
+#include <sstream>   // stringstream
+#include <stdexcept> // runtime_error
+#include <string>    // string
 
 // Athena++ headers
-#include "../athena.hpp"                   // macros, enums, declarations
-#include "../athena_arrays.hpp"            // AthenaArray
-#include "../coordinates/coordinates.hpp"  // Coordinates
-#include "../eos/eos.hpp"                  // EquationOfState
-#include "../field/field.hpp"              // Field
-#include "../globals.hpp"                  // Globals
-#include "../hydro/hydro.hpp"              // Hydro
+#include "../athena.hpp"                  // macros, enums, declarations
+#include "../athena_arrays.hpp"           // AthenaArray
+#include "../coordinates/coordinates.hpp" // Coordinates
+#include "../eos/eos.hpp"                 // EquationOfState
+#include "../field/field.hpp"             // Field
+#include "../globals.hpp"                 // Globals
+#include "../hydro/hydro.hpp"             // Hydro
 #include "../mesh/mesh.hpp"
-#include "../microphysics/cooling.hpp"     // CoolingSolver
-#include "../parameter_input.hpp"          // ParameterInput
+#include "../microphysics/cooling.hpp" // CoolingSolver
+#include "../parameter_input.hpp"      // ParameterInput
 
 //========================================================================================
 //! \fn void Mesh::InitUserMeshData(ParameterInput *pin)
-//! \brief Function to initialize problem-specific data in mesh class.  Can also be used
-//! to initialize variables which are global to (and therefore can be passed to) other
-//! functions in this file.  Called in Mesh constructor.
+//! \brief Function to initialize problem-specific data in mesh class.  Can also
+//! be used to initialize variables which are global to (and therefore can be
+//! passed to) other functions in this file.  Called in Mesh constructor.
 //========================================================================================
 void Mesh::InitUserMeshData(ParameterInput *pin) {
   if (cooling) {
@@ -74,8 +75,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     ku += (NGHOST);
   }
 
-  Real rho_0   = pin->GetReal("problem", "rho_0"); // measured in m_p muH cm^-3
-  Real pgas_0  = pin->GetReal("problem", "pgas_0"); // measured in kB K cm^-3
+  Real rho_0 = pin->GetReal("problem", "rho_0");   // measured in m_p muH cm^-3
+  Real pgas_0 = pin->GetReal("problem", "pgas_0"); // measured in kB K cm^-3
 
   rho_0 *= pcool->pcf->nH_to_code_den;
   pgas_0 *= pcool->pcf->pok_to_code_press; // to code units
@@ -84,19 +85,19 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   for (int k = kl; k <= ku; ++k) {
     for (int j = jl; j <= ju; ++j) {
       for (int i = il; i <= iu; ++i) {
-        phydro->w(IDN,k,j,i) = rho_0;
-        phydro->w(IPR,k,j,i) = pgas_0;
-        phydro->w(IVX,k,j,i) = 0.0;
-        phydro->w(IVY,k,j,i) = 0.0;
-        phydro->w(IVZ,k,j,i) = 0.0;
+        phydro->w(IDN, k, j, i) = rho_0;
+        phydro->w(IPR, k, j, i) = pgas_0;
+        phydro->w(IVX, k, j, i) = 0.0;
+        phydro->w(IVY, k, j, i) = 0.0;
+        phydro->w(IVZ, k, j, i) = 0.0;
       }
     }
   }
 
   // Initialize conserved values
   AthenaArray<Real> b;
-  peos->PrimitiveToConserved(phydro->w, b, phydro->u, pcoord,
-       il, iu, jl, ju, kl, ku);
+  peos->PrimitiveToConserved(phydro->w, b, phydro->u, pcoord, il, iu, jl, ju,
+                             kl, ku);
   return;
 }
 
@@ -106,6 +107,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 //========================================================================================
 
 void MeshBlock::UserWorkInLoop() {
-  if (pcool->op_flag) pcool->OperatorSplitSolver(this);
+  if (pcool->op_flag)
+    pcool->OperatorSplitSolver(this);
   return;
 }

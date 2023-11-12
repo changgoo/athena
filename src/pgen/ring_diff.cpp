@@ -1,7 +1,8 @@
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file ring_diff.cpp
 //! \brief ring diffusion test
@@ -18,12 +19,12 @@
 // C headers
 
 // C++ headers
-#include <cmath>      // sqrt(), erfc
-#include <cstring>    // strcmp()
-#include <iostream>   // endl
-#include <sstream>    // stringstream
-#include <stdexcept>  // runtime_error
-#include <string>     // c_str()
+#include <cmath>     // sqrt(), erfc
+#include <cstring>   // strcmp()
+#include <iostream>  // endl
+#include <sstream>   // stringstream
+#include <stdexcept> // runtime_error
+#include <string>    // c_str()
 
 // Athena++ headers
 #include "../athena.hpp"
@@ -42,7 +43,7 @@ Real HistoryL1Error(MeshBlock *pmb, int iout);
 Real AnalyticSolution(Real phi, Real r, Real t);
 
 static const Real r1 = 0.5, r2 = 0.7;
-static const Real phi1 = PI*5/12., phi2 = PI*7/12.;
+static const Real phi1 = PI * 5 / 12., phi2 = PI * 7 / 12.;
 
 void Mesh::InitUserMeshData(ParameterInput *pin) {
   if (!MAGNETIC_FIELDS_ENABLED) {
@@ -89,54 +90,60 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   Real x30 = pin->GetOrAddReal("problem", "x30", 0.);
 
   // set a uniform, static medium
-  for (int k=ks; k<=ke; ++k) {
-    for (int j=js; j<=je; ++j) {
-      for (int i=is; i<=ie; ++i) {
-        phydro->w(IDN,k,j,i) = d0;
-        phydro->w(IVX,k,j,i) = v1;
-        phydro->w(IVY,k,j,i) = v2;
-        phydro->w(IVZ,k,j,i) = v3;
+  for (int k = ks; k <= ke; ++k) {
+    for (int j = js; j <= je; ++j) {
+      for (int i = is; i <= ie; ++i) {
+        phydro->w(IDN, k, j, i) = d0;
+        phydro->w(IVX, k, j, i) = v1;
+        phydro->w(IVY, k, j, i) = v2;
+        phydro->w(IVZ, k, j, i) = v3;
       }
     }
   }
 
   // set thermal energy to diffuse
-  for (int k=ks; k<=ke; ++k) {
-    for (int j=js; j<=je; ++j) {
-      for (int i=is; i<=ie; ++i) {
+  for (int k = ks; k <= ke; ++k) {
+    for (int j = js; j <= je; ++j) {
+      for (int i = is; i <= ie; ++i) {
         if (std::strcmp(COORDINATE_SYSTEM, "cartesian") == 0) {
           x1 = pcoord->x1v(i);
           x2 = pcoord->x2v(j);
           x3 = pcoord->x3v(j);
-          r = std::sqrt(SQR(x1)+SQR(x2));
-          phi = std::atan2(x2,x1);
+          r = std::sqrt(SQR(x1) + SQR(x2));
+          phi = std::atan2(x2, x1);
         } else if (std::strcmp(COORDINATE_SYSTEM, "cylindrical") == 0) {
           r = pcoord->x1v(i);
           phi = pcoord->x2v(j);
-          x1 = r*std::cos(phi);
-          x2 = r*std::sin(phi);
+          x1 = r * std::cos(phi);
+          x2 = r * std::sin(phi);
           x3 = pcoord->x3v(j);
         } else {
           std::stringstream msg;
-          msg << "### FATAL ERROR in ring_diff.cpp ProblemGenerator" << std::endl
+          msg << "### FATAL ERROR in ring_diff.cpp ProblemGenerator"
+              << std::endl
               << "2-d diffusion test only compatible with cartesian or"
-              << std::endl << "cylindrical coord" << std::endl;
+              << std::endl
+              << "cylindrical coord" << std::endl;
           ATHENA_ERROR(msg);
         }
         if (iprob == 1) { // in-plane, ring diffusion
-          if ((r>r1) & (r<r2) & (phi>phi1) & (phi<phi2))
-            phydro->w(IPR,k,j,i) = 12;
+          if ((r > r1) & (r < r2) & (phi > phi1) & (phi < phi2))
+            phydro->w(IPR, k, j, i) = 12;
           else
-            phydro->w(IPR,k,j,i) = 10;
-        } else if (iprob == 2) { //gaussian diffusion
-          Real rsq = SQR(x1-x10);
-          if (je > js) rsq += SQR(x2-x20);
-          if (ke > ks) rsq += SQR(x3-x30);
-          phydro->w(IPR,k,j,i) = amp/std::pow(std::sqrt(4.*PI*kappa*t0),pmy_mesh->ndim)
-                                  * std::exp(-rsq/(4.*kappa*t0));
+            phydro->w(IPR, k, j, i) = 10;
+        } else if (iprob == 2) { // gaussian diffusion
+          Real rsq = SQR(x1 - x10);
+          if (je > js)
+            rsq += SQR(x2 - x20);
+          if (ke > ks)
+            rsq += SQR(x3 - x30);
+          phydro->w(IPR, k, j, i) =
+              amp / std::pow(std::sqrt(4. * PI * kappa * t0), pmy_mesh->ndim) *
+              std::exp(-rsq / (4. * kappa * t0));
         } else {
           std::stringstream msg;
-          msg << "### FATAL ERROR in ring_diff.cpp ProblemGenerator" << std::endl
+          msg << "### FATAL ERROR in ring_diff.cpp ProblemGenerator"
+              << std::endl
               << "unsupported iprob = " << iprob << std::endl;
           ATHENA_ERROR(msg);
         }
@@ -147,60 +154,60 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   // magnetic fields
   // circular in XY plane
 
-  for (int k=ks; k<=ke; ++k) {
-    for (int j=js; j<=je; ++j) {
-      for (int i=is; i<=ie+1; ++i) {
+  for (int k = ks; k <= ke; ++k) {
+    for (int j = js; j <= je; ++j) {
+      for (int i = is; i <= ie + 1; ++i) {
         if (std::strcmp(COORDINATE_SYSTEM, "cartesian") == 0) {
           x1 = pcoord->x1v(i);
           x2 = pcoord->x2v(j);
-          r = std::sqrt(SQR(x1)+SQR(x2));
-          phi = std::atan2(x2,x1);
-          pfield->b.x1f(k,j,i) = x2/r;
+          r = std::sqrt(SQR(x1) + SQR(x2));
+          phi = std::atan2(x2, x1);
+          pfield->b.x1f(k, j, i) = x2 / r;
         } else if (std::strcmp(COORDINATE_SYSTEM, "cylindrical") == 0) {
           r = pcoord->x1v(i);
           phi = pcoord->x2v(j);
-          x1 = r*std::cos(phi);
-          x2 = r*std::sin(phi);
-          pfield->b.x1f(k,j,i) = 0.0;
+          x1 = r * std::cos(phi);
+          x2 = r * std::sin(phi);
+          pfield->b.x1f(k, j, i) = 0.0;
         }
       }
     }
   }
 
-  for (int k=ks; k<=ke; ++k) {
-    for (int j=js; j<=je+1; ++j) {
-      for (int i=is; i<=ie; ++i) {
+  for (int k = ks; k <= ke; ++k) {
+    for (int j = js; j <= je + 1; ++j) {
+      for (int i = is; i <= ie; ++i) {
         if (std::strcmp(COORDINATE_SYSTEM, "cartesian") == 0) {
           x1 = pcoord->x1v(i);
           x2 = pcoord->x2v(j);
-          r = std::sqrt(SQR(x1)+SQR(x2));
-          phi = std::atan2(x2,x1);
-          pfield->b.x2f(k,j,i) = -x1/r;
+          r = std::sqrt(SQR(x1) + SQR(x2));
+          phi = std::atan2(x2, x1);
+          pfield->b.x2f(k, j, i) = -x1 / r;
         } else if (std::strcmp(COORDINATE_SYSTEM, "cylindrical") == 0) {
           r = pcoord->x1v(i);
           phi = pcoord->x2v(j);
-          x1 = r*std::cos(phi);
-          x2 = r*std::sin(phi);
-          pfield->b.x2f(k,j,i) = 1.0;
+          x1 = r * std::cos(phi);
+          x2 = r * std::sin(phi);
+          pfield->b.x2f(k, j, i) = 1.0;
         }
       }
     }
   }
 
-  for (int k=ks; k<=ke+1; ++k) {
-    for (int j=js; j<=je; ++j) {
-      for (int i=is; i<=ie; ++i) {
-        pfield->b.x3f(k,j,i) = 0.0;
+  for (int k = ks; k <= ke + 1; ++k) {
+    for (int j = js; j <= je; ++j) {
+      for (int i = is; i <= ie; ++i) {
+        pfield->b.x3f(k, j, i) = 0.0;
       }
     }
   }
   // Calculate CellCentered B
-  pfield->CalculateCellCenteredField(pfield->b, pfield->bcc, pcoord,
-                                      is, ie, js, je, ks, ke);
+  pfield->CalculateCellCenteredField(pfield->b, pfield->bcc, pcoord, is, ie, js,
+                                     je, ks, ke);
 
   // Initialize conserved values
-  peos->PrimitiveToConserved(phydro->w, pfield->bcc, phydro->u, pcoord,
-                              is, ie, js, je, ks, ke);
+  peos->PrimitiveToConserved(phydro->w, pfield->bcc, phydro->u, pcoord, is, ie,
+                             js, je, ks, ke);
 
   return;
 }
@@ -209,28 +216,30 @@ Real HistoryEleak(MeshBlock *pmb, int iout) {
   Real x1, x2;
   Real r, phi;
   Real Eleak = 0.0;
-  int is = pmb->is, ie = pmb->ie, js = pmb->js, je = pmb->je, ks = pmb->ks, ke = pmb->ke;
+  int is = pmb->is, ie = pmb->ie, js = pmb->js, je = pmb->je, ks = pmb->ks,
+      ke = pmb->ke;
   AthenaArray<Real> &w = pmb->phydro->w;
   AthenaArray<Real> volume; // 1D array of volumes
   // allocate 1D array for cell volume used in usr def history
   volume.NewAthenaArray(pmb->ncells1);
 
-  for (int k=ks; k<=ke; k++) {
-    for (int j=js; j<=je; j++) {
+  for (int k = ks; k <= ke; k++) {
+    for (int j = js; j <= je; j++) {
       pmb->pcoord->CellVolume(k, j, is, ie, volume);
-      for (int i=is; i<=ie; i++) {
+      for (int i = is; i <= ie; i++) {
         if (std::strcmp(COORDINATE_SYSTEM, "cartesian") == 0) {
           x1 = pmb->pcoord->x1v(i);
           x2 = pmb->pcoord->x2v(j);
-          r = std::sqrt(SQR(x1)+SQR(x2));
-          phi = std::atan2(x2,x1);
+          r = std::sqrt(SQR(x1) + SQR(x2));
+          phi = std::atan2(x2, x1);
         } else if (std::strcmp(COORDINATE_SYSTEM, "cylindrical") == 0) {
           r = pmb->pcoord->x1v(i);
           phi = pmb->pcoord->x2v(j);
-          x1 = r*std::cos(phi);
-          x2 = r*std::sin(phi);
+          x1 = r * std::cos(phi);
+          x2 = r * std::sin(phi);
         }
-        if ((r<r1) | (r>r2)) Eleak += (w(IPR,k,j,i)-10)*volume(i);
+        if ((r < r1) | (r > r2))
+          Eleak += (w(IPR, k, j, i) - 10) * volume(i);
       }
     }
   }
@@ -240,35 +249,36 @@ Real HistoryEleak(MeshBlock *pmb, int iout) {
 Real HistoryL1Error(MeshBlock *pmb, int iout) {
   Real x1, x2;
   Real r, phi, pa;
-  Real l1_error=0.0;
+  Real l1_error = 0.0;
 
-  int is = pmb->is, ie = pmb->ie, js = pmb->js, je = pmb->je, ks = pmb->ks, ke = pmb->ke;
+  int is = pmb->is, ie = pmb->ie, js = pmb->js, je = pmb->je, ks = pmb->ks,
+      ke = pmb->ke;
   AthenaArray<Real> &w = pmb->phydro->w;
   AthenaArray<Real> volume; // 1D array of volumes
   // allocate 1D array for cell volume used in usr def history
   volume.NewAthenaArray(pmb->ncells1);
 
-  for (int k=ks; k<=ke; k++) {
-    for (int j=js; j<=je; j++) {
+  for (int k = ks; k <= ke; k++) {
+    for (int j = js; j <= je; j++) {
       pmb->pcoord->CellVolume(k, j, is, ie, volume);
-      for (int i=is; i<=ie; i++) {
+      for (int i = is; i <= ie; i++) {
         if (std::strcmp(COORDINATE_SYSTEM, "cartesian") == 0) {
           x1 = pmb->pcoord->x1v(i);
           x2 = pmb->pcoord->x2v(j);
-          r = std::sqrt(SQR(x1)+SQR(x2));
-          phi = std::atan2(x2,x1);
+          r = std::sqrt(SQR(x1) + SQR(x2));
+          phi = std::atan2(x2, x1);
         } else if (std::strcmp(COORDINATE_SYSTEM, "cylindrical") == 0) {
           r = pmb->pcoord->x1v(i);
           phi = pmb->pcoord->x2v(j);
-          x1 = r*std::cos(phi);
-          x2 = r*std::sin(phi);
+          x1 = r * std::cos(phi);
+          x2 = r * std::sin(phi);
         }
-        if ((r>r1) & (r<r2)) {
-          pa = AnalyticSolution(phi,r,pmb->pmy_mesh->time);
+        if ((r > r1) & (r < r2)) {
+          pa = AnalyticSolution(phi, r, pmb->pmy_mesh->time);
         } else {
           pa = 10.;
         }
-        l1_error += std::abs(w(IPR,k,j,i)-pa)*volume(i);
+        l1_error += std::abs(w(IPR, k, j, i) - pa) * volume(i);
       }
     }
   }
@@ -276,8 +286,9 @@ Real HistoryL1Error(MeshBlock *pmb, int iout) {
 }
 
 Real AnalyticSolution(Real phi, Real r, Real t) {
-  Real dphi = 0.5*(phi2-phi1);
-  Real phi0 = 0.5*(phi2+phi1);
-  Real D = std::sqrt(4*t); // sqrt(4*t*(gamma-1)/kappa_aniso)
-  return 10+std::erfc((phi-phi0-dphi)*r/D) - std::erfc((phi-phi0+dphi)*r/D);
+  Real dphi = 0.5 * (phi2 - phi1);
+  Real phi0 = 0.5 * (phi2 + phi1);
+  Real D = std::sqrt(4 * t); // sqrt(4*t*(gamma-1)/kappa_aniso)
+  return 10 + std::erfc((phi - phi0 - dphi) * r / D) -
+         std::erfc((phi - phi0 + dphi) * r / D);
 }

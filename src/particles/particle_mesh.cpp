@@ -1,10 +1,12 @@
 //======================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //======================================================================================
 //! \file particle_mesh.cpp
-//! \brief implements ParticleMesh class used for operations involved in particle-mesh
+//! \brief implements ParticleMesh class used for operations involved in
+//! particle-mesh
 //!        methods.
 
 // Standard library
@@ -28,17 +30,16 @@ static Real _WeightFunction(Real dxi);
 //! \fn ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb)
 //! \brief constructs a new ParticleMesh instance.
 
-ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : updated(false),
-  imom1(-1), imom2(-1), imom3(-1), idens(-1), nmeshaux_(0),
-  is(pmb->is), ie(pmb->ie), js(pmb->js), je(pmb->je), ks(pmb->ks), ke(pmb->ke),
-  active1_(ppar->active1_), active2_(ppar->active2_), active3_(ppar->active3_),
-  dxi1_(active1_ ? RINF : 0),
-  dxi2_(active2_ ? RINF : 0),
-  dxi3_(active3_ ? RINF : 0),
-  nx1_(pmb->ncells1), nx2_(pmb->ncells2), nx3_(pmb->ncells3),
-  ncells_(nx1_ * nx2_ * nx3_),
-  npc1_(active1_ ? NPC : 1), npc2_(active2_ ? NPC : 1), npc3_(active3_ ? NPC : 1),
-  ppar_(ppar), pmb_(pmb), pmesh_(ppar->pmy_mesh_) {
+ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb)
+    : updated(false), imom1(-1), imom2(-1), imom3(-1), idens(-1), nmeshaux_(0),
+      is(pmb->is), ie(pmb->ie), js(pmb->js), je(pmb->je), ks(pmb->ks),
+      ke(pmb->ke), active1_(ppar->active1_), active2_(ppar->active2_),
+      active3_(ppar->active3_), dxi1_(active1_ ? RINF : 0),
+      dxi2_(active2_ ? RINF : 0), dxi3_(active3_ ? RINF : 0),
+      nx1_(pmb->ncells1), nx2_(pmb->ncells2), nx3_(pmb->ncells3),
+      ncells_(nx1_ * nx2_ * nx3_), npc1_(active1_ ? NPC : 1),
+      npc2_(active2_ ? NPC : 1), npc3_(active3_ ? NPC : 1), ppar_(ppar),
+      pmb_(pmb), pmesh_(ppar->pmy_mesh_) {
   // Add density and momentum in meshaux.
   idens = AddMeshAux();
   imom1 = AddMeshAux();
@@ -55,8 +56,8 @@ ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : updated(false),
   mom3_.InitWithShallowSlice(meshaux_, 4, imom3, 1);
 
   // Enroll CellCenteredBoundaryVariable object
-  AthenaArray<Real> empty_flux[3]=
-    {AthenaArray<Real>(),AthenaArray<Real>(), AthenaArray<Real>()};
+  AthenaArray<Real> empty_flux[3] = {AthenaArray<Real>(), AthenaArray<Real>(),
+                                     AthenaArray<Real>()};
 
   pmbvar = new ParticleMeshBoundaryVariable(pmb, &meshaux_, &coarse_meshaux_,
                                             empty_flux, this);
@@ -66,7 +67,8 @@ ParticleMesh::ParticleMesh(Particles *ppar, MeshBlock *pmb) : updated(false),
   // if that particle exert gravity. Otherwise, add it to the list for
   // outputs.
   pmb_->pbval->bvars_pm.push_back(pmbvar);
-  if (ppar_->IsGravity()) pmb_->pbval->bvars_pm_grav.push_back(pmbvar);
+  if (ppar_->IsGravity())
+    pmb_->pbval->bvars_pm_grav.push_back(pmbvar);
 }
 
 //--------------------------------------------------------------------------------------
@@ -93,9 +95,10 @@ void ParticleMesh::ComputePMDensity(bool include_momentum) {
     mom2.InitWithShallowSlice(parprop, 2, 2, 1);
     mom3.InitWithShallowSlice(parprop, 2, 3, 1);
     for (int k = 0; k < ppar_->npar_; ++k) {
-      pc->CartesianToMeshCoordsVector(ppar_->xp(k), ppar_->yp(k), ppar_->zp(k),
-        ppar_->mass(k)*ppar_->vpx(k), ppar_->mass(k)*ppar_->vpy(k),
-        ppar_->mass(k)*ppar_->vpz(k), mom1(k), mom2(k), mom3(k));
+      pc->CartesianToMeshCoordsVector(
+          ppar_->xp(k), ppar_->yp(k), ppar_->zp(k),
+          ppar_->mass(k) * ppar_->vpx(k), ppar_->mass(k) * ppar_->vpy(k),
+          ppar_->mass(k) * ppar_->vpz(k), mom1(k), mom2(k), mom3(k));
       mpar(k) = ppar_->mass(k);
     }
     DepositParticlesToMeshAux(parprop, 0, idens, 4);
@@ -140,7 +143,7 @@ Real ParticleMesh::FindMaximumDensity() const {
   for (int k = ks; k <= ke; ++k)
     for (int j = js; j <= je; ++j)
       for (int i = is; i <= ie; ++i)
-        dmax = std::max(dmax, dens_(k,j,i));
+        dmax = std::max(dmax, dens_(k, j, i));
   return dmax;
 }
 
@@ -160,11 +163,11 @@ AthenaArray<Real> ParticleMesh::GetVelocityField() const {
   for (int k = ks; k <= ke; ++k) {
     for (int j = js; j <= je; ++j) {
       for (int i = is; i <= ie; ++i) {
-        Real rho = dens_(k,j,i);
+        Real rho = dens_(k, j, i);
         rho = (rho > 0.0) ? rho : 1.0;
-        vel(0,k,j,i) = mom1_(k,j,i) / rho;
-        vel(1,k,j,i) = mom2_(k,j,i) / rho;
-        vel(2,k,j,i) = mom3_(k,j,i) / rho;
+        vel(0, k, j, i) = mom1_(k, j, i) / rho;
+        vel(1, k, j, i) = mom2_(k, j, i) / rho;
+        vel(2, k, j, i) = mom3_(k, j, i) / rho;
       }
     }
   }
@@ -175,35 +178,34 @@ AthenaArray<Real> ParticleMesh::GetVelocityField() const {
 //! \fn int ParticleMesh::AddMeshAux()
 //! \brief adds one auxiliary to the mesh and returns the index.
 
-int ParticleMesh::AddMeshAux() {
-  return nmeshaux_++;
-}
+int ParticleMesh::AddMeshAux() { return nmeshaux_++; }
 
 //--------------------------------------------------------------------------------------
 //! \fn void ParticleMesh::InterpolateMeshToParticles(
 //!              const AthenaArray<Real>& meshsrc, int ms1,
 //!              AthenaArray<Real>& par, int p1, int nprop)
-//! \brief interpolates meshsrc from property index ms1 to ms1+nprop-1 onto particle
-//!     array par (realprop, auxprop, or work in Particles class) from property index p1
-//!     to p1+nprop-1.
+//! \brief interpolates meshsrc from property index ms1 to ms1+nprop-1 onto
+//! particle
+//!     array par (realprop, auxprop, or work in Particles class) from property
+//!     index p1 to p1+nprop-1.
 
-void ParticleMesh::InterpolateMeshToParticles(
-         const AthenaArray<Real>& meshsrc, int ms1,
-         AthenaArray<Real>& par, int p1, int nprop) {
+void ParticleMesh::InterpolateMeshToParticles(const AthenaArray<Real> &meshsrc,
+                                              int ms1, AthenaArray<Real> &par,
+                                              int p1, int nprop) {
   // Transpose meshsrc.
   int nx1 = meshsrc.GetDim1(), nx2 = meshsrc.GetDim2(), nx3 = meshsrc.GetDim3();
   AthenaArray<Real> u;
-  u.NewAthenaArray(nx3,nx2,nx1,nprop);
+  u.NewAthenaArray(nx3, nx2, nx1, nprop);
   for (int n = 0; n < nprop; ++n)
     for (int k = 0; k < nx3; ++k)
       for (int j = 0; j < nx2; ++j)
         for (int i = 0; i < nx1; ++i)
-          u(k,j,i,n) = meshsrc(ms1+n,k,j,i);
+          u(k, j, i, n) = meshsrc(ms1 + n, k, j, i);
 
   // Allocate space for SIMD.
-  Real **w1 __attribute__((aligned(CACHELINE_BYTES))) = new Real*[npc1_];
-  Real **w2 __attribute__((aligned(CACHELINE_BYTES))) = new Real*[npc2_];
-  Real **w3 __attribute__((aligned(CACHELINE_BYTES))) = new Real*[npc3_];
+  Real **w1 __attribute__((aligned(CACHELINE_BYTES))) = new Real *[npc1_];
+  Real **w2 __attribute__((aligned(CACHELINE_BYTES))) = new Real *[npc2_];
+  Real **w3 __attribute__((aligned(CACHELINE_BYTES))) = new Real *[npc3_];
   for (int i = 0; i < npc1_; ++i)
     w1[i] = new Real[SIMD_WIDTH];
   for (int i = 0; i < npc2_; ++i)
@@ -218,11 +220,12 @@ void ParticleMesh::InterpolateMeshToParticles(
   int npar = ppar_->npar_;
   for (int k = 0; k < npar; k += SIMD_WIDTH) {
 #pragma omp simd simdlen(SIMD_WIDTH)
-    for (int kk = 0; kk < std::min(SIMD_WIDTH, npar-k); ++kk) {
+    for (int kk = 0; kk < std::min(SIMD_WIDTH, npar - k); ++kk) {
       int kkk = k + kk;
 
       // Find the domain the particle influences.
-      Real xi1 = ppar_->xi1_(kkk), xi2 = ppar_->xi2_(kkk), xi3 = ppar_->xi3_(kkk);
+      Real xi1 = ppar_->xi1_(kkk), xi2 = ppar_->xi2_(kkk),
+           xi3 = ppar_->xi3_(kkk);
       int imb1 = static_cast<int>(xi1 - dxi1_),
           imb2 = static_cast<int>(xi2 - dxi2_),
           imb3 = static_cast<int>(xi3 - dxi3_);
@@ -235,19 +238,19 @@ void ParticleMesh::InterpolateMeshToParticles(
       imb3v[kk] = imb3;
 
       // Weigh each cell.
-#pragma loop count (NPC)
+#pragma loop count(NPC)
       for (int i = 0; i < npc1_; ++i)
         w1[i][kk] = active1_ ? _WeightFunction(xi1 + i) : 1.0;
-#pragma loop count (NPC)
+#pragma loop count(NPC)
       for (int i = 0; i < npc2_; ++i)
         w2[i][kk] = active2_ ? _WeightFunction(xi2 + i) : 1.0;
-#pragma loop count (NPC)
+#pragma loop count(NPC)
       for (int i = 0; i < npc3_; ++i)
         w3[i][kk] = active3_ ? _WeightFunction(xi3 + i) : 1.0;
     }
 
 #pragma ivdep
-    for (int kk = 0; kk < std::min(SIMD_WIDTH, npar-k); ++kk) {
+    for (int kk = 0; kk < std::min(SIMD_WIDTH, npar - k); ++kk) {
       int kkk = k + kk;
 
       // Initiate interpolation.
@@ -257,40 +260,40 @@ void ParticleMesh::InterpolateMeshToParticles(
 
       int imb1 = imb1v[kk], imb2 = imb2v[kk], imb3 = imb3v[kk];
 
-#pragma loop count (NPC)
+#pragma loop count(NPC)
       for (int ipc3 = 0; ipc3 < npc3_; ++ipc3) {
-#pragma loop count (NPC)
+#pragma loop count(NPC)
         for (int ipc2 = 0; ipc2 < npc2_; ++ipc2) {
-#pragma loop count (NPC)
+#pragma loop count(NPC)
           for (int ipc1 = 0; ipc1 < npc1_; ++ipc1) {
             Real w = w1[ipc1][kk] * w2[ipc2][kk] * w3[ipc3][kk];
 
             // Interpolate meshsrc to particles.
             for (int n = 0; n < nprop; ++n)
-              pd[n] += w * u(imb3+ipc3,imb2+ipc2,imb1+ipc1,n);
+              pd[n] += w * u(imb3 + ipc3, imb2 + ipc2, imb1 + ipc1, n);
           }
         }
       }
 
       // Record the final interpolated properties.
       for (int n = 0; n < nprop; ++n)
-        par(p1+n,kkk) = pd[n];
+        par(p1 + n, kkk) = pd[n];
 
-      delete [] pd;
+      delete[] pd;
     }
   }
 
   // Release working arrays.
   u.DeleteAthenaArray();
   for (int i = 0; i < npc1_; ++i)
-    delete [] w1[i];
+    delete[] w1[i];
   for (int i = 0; i < npc2_; ++i)
-    delete [] w2[i];
+    delete[] w2[i];
   for (int i = 0; i < npc3_; ++i)
-    delete [] w3[i];
-  delete [] w1;
-  delete [] w2;
-  delete [] w3;
+    delete[] w3[i];
+  delete[] w1;
+  delete[] w2;
+  delete[] w3;
 }
 
 //--------------------------------------------------------------------------------------
@@ -298,18 +301,20 @@ void ParticleMesh::InterpolateMeshToParticles(
 //!              const AthenaArray<Real>& par, int p1, int ma1, int nprop)
 //! \brief Deposit particle properties into Mesh.
 //!
-//!        Assigns par (realprop, auxprop, or work in Particles class) from property
-//!        index p1 to p1+nprop-1 onto meshaux from property index ma1 and up.
-void ParticleMesh::DepositParticlesToMeshAux(
-         const AthenaArray<Real>& par, int p1, int ma1, int nprop) {
+//!        Assigns par (realprop, auxprop, or work in Particles class) from
+//!        property index p1 to p1+nprop-1 onto meshaux from property index ma1
+//!        and up.
+void ParticleMesh::DepositParticlesToMeshAux(const AthenaArray<Real> &par,
+                                             int p1, int ma1, int nprop) {
   // Zero out meshaux.
-  Real *pfirst = &meshaux_(ma1,0,0,0);
-  int size = nprop*meshaux_.GetDim3()*meshaux_.GetDim2()*meshaux_.GetDim1();
+  Real *pfirst = &meshaux_(ma1, 0, 0, 0);
+  int size =
+      nprop * meshaux_.GetDim3() * meshaux_.GetDim2() * meshaux_.GetDim1();
   std::fill(pfirst, pfirst + size, 0.0);
   // Allocate space for SIMD.
-  Real **w1 __attribute__((aligned(CACHELINE_BYTES))) = new Real*[npc1_];
-  Real **w2 __attribute__((aligned(CACHELINE_BYTES))) = new Real*[npc2_];
-  Real **w3 __attribute__((aligned(CACHELINE_BYTES))) = new Real*[npc3_];
+  Real **w1 __attribute__((aligned(CACHELINE_BYTES))) = new Real *[npc1_];
+  Real **w2 __attribute__((aligned(CACHELINE_BYTES))) = new Real *[npc2_];
+  Real **w3 __attribute__((aligned(CACHELINE_BYTES))) = new Real *[npc3_];
   for (int i = 0; i < npc1_; ++i)
     w1[i] = new Real[SIMD_WIDTH];
   for (int i = 0; i < npc2_; ++i)
@@ -325,11 +330,12 @@ void ParticleMesh::DepositParticlesToMeshAux(
   int npar = ppar_->npar_;
   for (int k = 0; k < npar; k += SIMD_WIDTH) {
 #pragma omp simd simdlen(SIMD_WIDTH)
-    for (int kk = 0; kk < std::min(SIMD_WIDTH, npar-k); ++kk) {
+    for (int kk = 0; kk < std::min(SIMD_WIDTH, npar - k); ++kk) {
       int kkk = k + kk;
 
       // Find the domain the particle influences.
-      Real xi1 = ppar_->xi1_(kkk), xi2 = ppar_->xi2_(kkk), xi3 = ppar_->xi3_(kkk);
+      Real xi1 = ppar_->xi1_(kkk), xi2 = ppar_->xi2_(kkk),
+           xi3 = ppar_->xi3_(kkk);
       int imb1 = static_cast<int>(xi1 - dxi1_),
           imb2 = static_cast<int>(xi2 - dxi2_),
           imb3 = static_cast<int>(xi3 - dxi3_);
@@ -342,65 +348,69 @@ void ParticleMesh::DepositParticlesToMeshAux(
       imb3v[kk] = imb3;
 
       // Weigh each cell.
-#pragma loop count (NPC)
+#pragma loop count(NPC)
       for (int i = 0; i < npc1_; ++i)
         w1[i][kk] = active1_ ? _WeightFunction(xi1 + i) : 1.0;
-#pragma loop count (NPC)
+#pragma loop count(NPC)
       for (int i = 0; i < npc2_; ++i)
         w2[i][kk] = active2_ ? _WeightFunction(xi2 + i) : 1.0;
-#pragma loop count (NPC)
+#pragma loop count(NPC)
       for (int i = 0; i < npc3_; ++i)
         w3[i][kk] = active3_ ? _WeightFunction(xi3 + i) : 1.0;
     }
 
 #pragma ivdep
-    for (int kk = 0; kk < std::min(SIMD_WIDTH, npar-k); ++kk) {
+    for (int kk = 0; kk < std::min(SIMD_WIDTH, npar - k); ++kk) {
       int kkk = k + kk;
 
       // Fetch particle properties.
       Real *ps = new Real[nprop];
       for (int i = 0; i < nprop; ++i)
-        ps[i] = par(p1+i,kkk);
+        ps[i] = par(p1 + i, kkk);
 
       int imb1 = imb1v[kk], imb2 = imb2v[kk], imb3 = imb3v[kk];
 
-#pragma loop count (NPC)
+#pragma loop count(NPC)
       for (int ipc3 = 0; ipc3 < npc3_; ++ipc3) {
-#pragma loop count (NPC)
+#pragma loop count(NPC)
         for (int ipc2 = 0; ipc2 < npc2_; ++ipc2) {
-#pragma loop count (NPC)
+#pragma loop count(NPC)
           for (int ipc1 = 0; ipc1 < npc1_; ++ipc1) {
             Real w = w1[ipc1][kk] * w2[ipc2][kk] * w3[ipc3][kk];
-            Real vol = pc->GetCellVolume(imb3+ipc3,imb2+ipc2,imb1+ipc1);
+            Real vol = pc->GetCellVolume(imb3 + ipc3, imb2 + ipc2, imb1 + ipc1);
             // Assign particles to meshaux.
             for (int n = 0; n < nprop; ++n)
-              meshaux_(ma1+n,imb3+ipc3,imb2+ipc2,imb1+ipc1) += w * ps[n] / vol;
+              meshaux_(ma1 + n, imb3 + ipc3, imb2 + ipc2, imb1 + ipc1) +=
+                  w * ps[n] / vol;
           }
         }
       }
-      delete [] ps;
+      delete[] ps;
     }
   }
 
   // Release working array.
   for (int i = 0; i < npc1_; ++i)
-    delete [] w1[i];
+    delete[] w1[i];
   for (int i = 0; i < npc2_; ++i)
-    delete [] w2[i];
+    delete[] w2[i];
   for (int i = 0; i < npc3_; ++i)
-    delete [] w3[i];
-  delete [] w1;
-  delete [] w2;
-  delete [] w3;
+    delete[] w3[i];
+  delete[] w1;
+  delete[] w2;
+  delete[] w3;
 }
 
 //--------------------------------------------------------------------------------------
 //! \fn void ParticleMesh::DepositMeshAux(AthenaArray<Real>& u,
 //!                                       int ma1, int mb1, int nprop)
-//! \brief deposits data in meshaux from property index ma1 to ma1+nprop-1 to meshblock
-//!        data u from property index mb1 and mb1+nprop-1, divided by cell volume.
+//! \brief deposits data in meshaux from property index ma1 to ma1+nprop-1 to
+//! meshblock
+//!        data u from property index mb1 and mb1+nprop-1, divided by cell
+//!        volume.
 
-void ParticleMesh::DepositMeshAux(AthenaArray<Real>& u, int ma1, int mb1, int nprop) {
+void ParticleMesh::DepositMeshAux(AthenaArray<Real> &u, int ma1, int mb1,
+                                  int nprop) {
   Coordinates *pc = pmb_->pcoord;
 
 #pragma ivdep
@@ -408,7 +418,7 @@ void ParticleMesh::DepositMeshAux(AthenaArray<Real>& u, int ma1, int mb1, int np
     for (int k = ks; k <= ke; ++k)
       for (int j = js; j <= je; ++j)
         for (int i = is; i <= ie; ++i)
-          u(mb1+n,k,j,i) += meshaux_(ma1+n,k,j,i);
+          u(mb1 + n, k, j, i) += meshaux_(ma1 + n, k, j, i);
 }
 
 //--------------------------------------------------------------------------------------

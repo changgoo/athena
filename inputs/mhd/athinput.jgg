@@ -1,5 +1,5 @@
 <comment>
-problem   = MHD shwave test 
+problem   = MHD shwave test
 reference = Johnson, 2007, ApJ, 660, 1375, Johnson et al., 2008, ApJS, 177, 373
 configure = --prob==jgg --eos=isothermal -b -fft
 

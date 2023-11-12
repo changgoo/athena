@@ -1,7 +1,8 @@
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //======================================================================================
 //! \file eos_table.cpp
 //! \brief implements functions in class EquationOfState for an EOS lookup table
@@ -10,7 +11,7 @@
 // C headers
 
 // C++ headers
-#include <cmath>   // sqrt()
+#include <cmath> // sqrt()
 #include <fstream>
 #include <iostream> // ifstream
 #include <sstream>
@@ -35,7 +36,8 @@ Real dens_pow = -1.0;
 //!        of energy per volume.
 inline Real GetEosData(EosTable *ptable, int kOut, Real var, Real rho) {
   Real x1 = std::log10(rho * ptable->rhoUnit);
-  Real x2 = std::log10(var * ptable->EosRatios(kOut) * ptable->eUnit) + dens_pow * x1;
+  Real x2 =
+      std::log10(var * ptable->EosRatios(kOut) * ptable->eUnit) + dens_pow * x1;
   return std::pow((Real)10, ptable->table.interpolate(kOut, x2, x1));
 }
 } // namespace
@@ -64,7 +66,7 @@ Real EquationOfState::AsqFromRhoP(Real rho, Real pres) {
 //----------------------------------------------------------------------------------------
 //! void EquationOfState::InitEosConstants(ParameterInput* pin)
 //! \brief Initialize constants for EOS
-void EquationOfState::InitEosConstants(ParameterInput* pin) {
+void EquationOfState::InitEosConstants(ParameterInput *pin) {
   dens_pow = pin->GetOrAddReal("hydro", "dens_pow", dens_pow);
   return;
 }

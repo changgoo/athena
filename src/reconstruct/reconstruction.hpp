@@ -2,11 +2,13 @@
 #define RECONSTRUCT_RECONSTRUCTION_HPP_
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file reconstruction.hpp
-//! \brief defines class Reconstruction, data and functions for spatial reconstruction
+//! \brief defines class Reconstruction, data and functions for spatial
+//! reconstruction
 
 // C headers
 
@@ -24,19 +26,22 @@ class ParameterInput;
 //! \brief member functions implement various spatial reconstruction algorithms
 
 class Reconstruction {
- public:
+public:
   Reconstruction(MeshBlock *pmb, ParameterInput *pin);
 
   // data
   // switches for reconstruction method variants:
-  int xorder;   // roughly the formal order of accuracy of overall reconstruction method
-  bool characteristic_projection; // reconstruct on characteristic or primitive hydro vars
+  int xorder; // roughly the formal order of accuracy of overall reconstruction
+              // method
+  bool characteristic_projection; // reconstruct on characteristic or primitive
+                                  // hydro vars
   bool uniform[3], curvilinear[2];
-  // (Cartesian reconstruction formulas are used for x3 azimuthal coordinate in both
-  // cylindrical and spherical-polar coordinates)
+  // (Cartesian reconstruction formulas are used for x3 azimuthal coordinate in
+  // both cylindrical and spherical-polar coordinates)
 
   // related fourth-order solver switches
-  const bool correct_ic, correct_err; // used in Mesh::Initialize() and ProblemGenerator()
+  const bool correct_ic,
+      correct_err; // used in Mesh::Initialize() and ProblemGenerator()
 
   // x1-sliced arrays of interpolation coefficients and limiter parameters:
   AthenaArray<Real> c1i, c2i, c3i, c4i, c5i, c6i;  // coefficients for PPM in x1
@@ -47,13 +52,16 @@ class Reconstruction {
   AthenaArray<Real> hplus_ratio_k, hminus_ratio_k; // for curvilinear PPMx3
 
   // functions
-  // linear transformations of vectors between primitive and characteristic variables
-  void LeftEigenmatrixDotVector(
-      const int ivx, const int il, const int iu,
-      const AthenaArray<Real> &b1, const AthenaArray<Real> &w, AthenaArray<Real> &vect);
-  void RightEigenmatrixDotVector(
-      const int ivx, const int il, const int iu,
-      const AthenaArray<Real> &b1, const AthenaArray<Real> &w, AthenaArray<Real> &vect);
+  // linear transformations of vectors between primitive and characteristic
+  // variables
+  void LeftEigenmatrixDotVector(const int ivx, const int il, const int iu,
+                                const AthenaArray<Real> &b1,
+                                const AthenaArray<Real> &w,
+                                AthenaArray<Real> &vect);
+  void RightEigenmatrixDotVector(const int ivx, const int il, const int iu,
+                                 const AthenaArray<Real> &b1,
+                                 const AthenaArray<Real> &w,
+                                 AthenaArray<Real> &vect);
 
   // reconstruction functions of various orders in each dimension
   void DonorCellX1(const int k, const int j, const int il, const int iu,
@@ -69,68 +77,75 @@ class Reconstruction {
                    AthenaArray<Real> &wl, AthenaArray<Real> &wr);
 
   void PiecewiseLinearX1(const int k, const int j, const int il, const int iu,
-                         const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
-                         AthenaArray<Real> &wl, AthenaArray<Real> &wr);
+                         const AthenaArray<Real> &w,
+                         const AthenaArray<Real> &bcc, AthenaArray<Real> &wl,
+                         AthenaArray<Real> &wr);
 
   void PiecewiseLinearX2(const int k, const int j, const int il, const int iu,
-                         const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
-                         AthenaArray<Real> &wl, AthenaArray<Real> &wr);
+                         const AthenaArray<Real> &w,
+                         const AthenaArray<Real> &bcc, AthenaArray<Real> &wl,
+                         AthenaArray<Real> &wr);
 
   void PiecewiseLinearX3(const int k, const int j, const int il, const int iu,
-                         const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
-                         AthenaArray<Real> &wl, AthenaArray<Real> &wr);
+                         const AthenaArray<Real> &w,
+                         const AthenaArray<Real> &bcc, AthenaArray<Real> &wl,
+                         AthenaArray<Real> &wr);
 
-  void PiecewiseParabolicX1(const int k, const int j, const int il, const int iu,
-                            const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
-                            AthenaArray<Real> &wl, AthenaArray<Real> &wr);
+  void PiecewiseParabolicX1(const int k, const int j, const int il,
+                            const int iu, const AthenaArray<Real> &w,
+                            const AthenaArray<Real> &bcc, AthenaArray<Real> &wl,
+                            AthenaArray<Real> &wr);
 
-  void PiecewiseParabolicX2(const int k, const int j, const int il, const int iu,
-                            const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
-                            AthenaArray<Real> &wl, AthenaArray<Real> &wr);
+  void PiecewiseParabolicX2(const int k, const int j, const int il,
+                            const int iu, const AthenaArray<Real> &w,
+                            const AthenaArray<Real> &bcc, AthenaArray<Real> &wl,
+                            AthenaArray<Real> &wr);
 
-  void PiecewiseParabolicX3(const int k, const int j, const int il, const int iu,
-                            const AthenaArray<Real> &w, const AthenaArray<Real> &bcc,
-                            AthenaArray<Real> &wl, AthenaArray<Real> &wr);
+  void PiecewiseParabolicX3(const int k, const int j, const int il,
+                            const int iu, const AthenaArray<Real> &w,
+                            const AthenaArray<Real> &bcc, AthenaArray<Real> &wl,
+                            AthenaArray<Real> &wr);
 
-  // overloads for non-fluid (cell-centered Hydro prim. and magnetic field) reconstruction
+  // overloads for non-fluid (cell-centered Hydro prim. and magnetic field)
+  // reconstruction
   void DonorCellX1(const int k, const int j, const int il, const int iu,
-                   const AthenaArray<Real> &q,
-                   AthenaArray<Real> &ql, AthenaArray<Real> &qr);
+                   const AthenaArray<Real> &q, AthenaArray<Real> &ql,
+                   AthenaArray<Real> &qr);
 
   void DonorCellX2(const int k, const int j, const int il, const int iu,
-                   const AthenaArray<Real> &q,
-                   AthenaArray<Real> &ql, AthenaArray<Real> &qr);
+                   const AthenaArray<Real> &q, AthenaArray<Real> &ql,
+                   AthenaArray<Real> &qr);
 
   void DonorCellX3(const int k, const int j, const int il, const int iu,
-                   const AthenaArray<Real> &q,
-                   AthenaArray<Real> &ql, AthenaArray<Real> &qr);
+                   const AthenaArray<Real> &q, AthenaArray<Real> &ql,
+                   AthenaArray<Real> &qr);
 
   void PiecewiseLinearX1(const int k, const int j, const int il, const int iu,
-                         const AthenaArray<Real> &q,
-                         AthenaArray<Real> &ql, AthenaArray<Real> &qr);
+                         const AthenaArray<Real> &q, AthenaArray<Real> &ql,
+                         AthenaArray<Real> &qr);
 
   void PiecewiseLinearX2(const int k, const int j, const int il, const int iu,
-                         const AthenaArray<Real> &q,
-                         AthenaArray<Real> &ql, AthenaArray<Real> &qr);
+                         const AthenaArray<Real> &q, AthenaArray<Real> &ql,
+                         AthenaArray<Real> &qr);
 
   void PiecewiseLinearX3(const int k, const int j, const int il, const int iu,
-                         const AthenaArray<Real> &q,
-                         AthenaArray<Real> &ql, AthenaArray<Real> &qr);
+                         const AthenaArray<Real> &q, AthenaArray<Real> &ql,
+                         AthenaArray<Real> &qr);
 
-  void PiecewiseParabolicX1(const int k, const int j, const int il, const int iu,
-                            const AthenaArray<Real> &q,
+  void PiecewiseParabolicX1(const int k, const int j, const int il,
+                            const int iu, const AthenaArray<Real> &q,
                             AthenaArray<Real> &ql, AthenaArray<Real> &qr);
 
-  void PiecewiseParabolicX2(const int k, const int j, const int il, const int iu,
-                            const AthenaArray<Real> &q,
+  void PiecewiseParabolicX2(const int k, const int j, const int il,
+                            const int iu, const AthenaArray<Real> &q,
                             AthenaArray<Real> &ql, AthenaArray<Real> &qr);
 
-  void PiecewiseParabolicX3(const int k, const int j, const int il, const int iu,
-                            const AthenaArray<Real> &q,
+  void PiecewiseParabolicX3(const int k, const int j, const int il,
+                            const int iu, const AthenaArray<Real> &q,
                             AthenaArray<Real> &ql, AthenaArray<Real> &qr);
 
- private:
-  MeshBlock* pmy_block_;  // ptr to MeshBlock containing this Reconstruction
+private:
+  MeshBlock *pmy_block_; // ptr to MeshBlock containing this Reconstruction
 
   // scratch arrays used in PLM and PPM reconstruction functions
   AthenaArray<Real> scr01_i_, scr02_i_, scr03_i_, scr04_i_, scr05_i_;

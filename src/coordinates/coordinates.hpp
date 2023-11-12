@@ -2,15 +2,16 @@
 #define COORDINATES_COORDINATES_HPP_
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file coordinates.hpp
 //! \brief defines abstract base and derived classes for coordinates.
 //!
-//! These classes provide data and functions to compute/store coordinate positions and
-//! spacing, as well as geometrical factors (areas, volumes, coordinate source terms)
-//! for various coordinate systems.
+//! These classes provide data and functions to compute/store coordinate
+//! positions and spacing, as well as geometrical factors (areas, volumes,
+//! coordinate source terms) for various coordinate systems.
 
 // C headers
 
@@ -33,16 +34,19 @@ class ParameterInput;
 //! \brief abstract base class for all coordinate derived classes
 
 class Coordinates {
- public:
+public:
   friend class HydroSourceTerms;
   Coordinates(MeshBlock *pmb, ParameterInput *pin, bool flag = false);
   virtual ~Coordinates() = default;
 
   // data
-  MeshBlock *pmy_block;  // ptr to MeshBlock containing this Coordinates
-  AthenaArray<Real> dx1f, dx2f, dx3f, x1f, x2f, x3f;    // face   spacing and positions
-  AthenaArray<Real> dx1v, dx2v, dx3v, x1v, x2v, x3v;    // volume spacing and positions
-  AthenaArray<Real> x1s2, x1s3, x2s1, x2s3, x3s1, x3s2; // area averaged positions for AMR
+  MeshBlock *pmy_block; // ptr to MeshBlock containing this Coordinates
+  AthenaArray<Real> dx1f, dx2f, dx3f, x1f, x2f,
+      x3f; // face   spacing and positions
+  AthenaArray<Real> dx1v, dx2v, dx3v, x1v, x2v,
+      x3v; // volume spacing and positions
+  AthenaArray<Real> x1s2, x1s3, x2s1, x2s3, x3s1,
+      x3s2; // area averaged positions for AMR
   // geometry coefficients (only used in SphericalPolar, Cylindrical, Cartesian)
   AthenaArray<Real> h2f, dh2fd1, h31f, h32f, dh31fd1, dh32fd2;
   AthenaArray<Real> h2v, dh2vd1, h31v, h32v, dh31vd1, dh32vd2;
@@ -59,19 +63,19 @@ class Coordinates {
   virtual Real GetEdge2Length(const int k, const int j, const int i);
   virtual Real GetEdge3Length(const int k, const int j, const int i);
   // ...to compute length connecting cell centers (for non-ideal MHD)
-  virtual void VolCenter1Length(const int k, const int j, const int il, const int iu,
-                                AthenaArray<Real> &len);
-  virtual void VolCenter2Length(const int k, const int j, const int il, const int iu,
-                                AthenaArray<Real> &len);
-  virtual void VolCenter3Length(const int k, const int j, const int il, const int iu,
-                                AthenaArray<Real> &len);
+  virtual void VolCenter1Length(const int k, const int j, const int il,
+                                const int iu, AthenaArray<Real> &len);
+  virtual void VolCenter2Length(const int k, const int j, const int il,
+                                const int iu, AthenaArray<Real> &len);
+  virtual void VolCenter3Length(const int k, const int j, const int il,
+                                const int iu, AthenaArray<Real> &len);
   // ...to compute physical width at cell center
-  virtual void CenterWidth1(const int k, const int j, const int il, const int iu,
-                            AthenaArray<Real> &dx1);
-  virtual void CenterWidth2(const int k, const int j, const int il, const int iu,
-                            AthenaArray<Real> &dx2);
-  virtual void CenterWidth3(const int k, const int j, const int il, const int iu,
-                            AthenaArray<Real> &dx3);
+  virtual void CenterWidth1(const int k, const int j, const int il,
+                            const int iu, AthenaArray<Real> &dx1);
+  virtual void CenterWidth2(const int k, const int j, const int il,
+                            const int iu, AthenaArray<Real> &dx2);
+  virtual void CenterWidth3(const int k, const int j, const int il,
+                            const int iu, AthenaArray<Real> &dx3);
 
   // ...to compute area of faces
   virtual void Face1Area(const int k, const int j, const int il, const int iu,
@@ -84,39 +88,43 @@ class Coordinates {
   virtual Real GetFace2Area(const int k, const int j, const int i);
   virtual Real GetFace3Area(const int k, const int j, const int i);
   // ...to compute area of faces joined by cell centers (for non-ideal MHD)
-  virtual void VolCenterFace1Area(const int k, const int j, const int il, const int iu,
-                                  AthenaArray<Real> &area);
-  virtual void VolCenterFace2Area(const int k, const int j, const int il, const int iu,
-                                  AthenaArray<Real> &area);
-  virtual void VolCenterFace3Area(const int k, const int j, const int il, const int iu,
-                                  AthenaArray<Real> &area);
+  virtual void VolCenterFace1Area(const int k, const int j, const int il,
+                                  const int iu, AthenaArray<Real> &area);
+  virtual void VolCenterFace2Area(const int k, const int j, const int il,
+                                  const int iu, AthenaArray<Real> &area);
+  virtual void VolCenterFace3Area(const int k, const int j, const int il,
+                                  const int iu, AthenaArray<Real> &area);
 
-  // ...to compute Laplacian of quantities in the coord system and orthogonal subspaces
-  virtual void Laplacian(
-      const AthenaArray<Real> &s, AthenaArray<Real> &delta_s,
-      const int il, const int iu, const int jl, const int ju, const int kl, const int ku,
-      const int nl, const int nu);
-  virtual void LaplacianX1(
-      const AthenaArray<Real> &s, AthenaArray<Real> &delta_s,
-      const int n, const int k, const int j, const int il, const int iu);
-  virtual void LaplacianX1All(
-      const AthenaArray<Real> &s, AthenaArray<Real> &delta_s,
-      const int nl, const int nu, const int kl, const int ku,
-      const int jl, const int ju, const int il, const int iu);
-  virtual void LaplacianX2(
-      const AthenaArray<Real> &s, AthenaArray<Real> &delta_s,
-      const int n, const int k, const int j, const int il, const int iu);
-  virtual void LaplacianX2All(
-      const AthenaArray<Real> &s, AthenaArray<Real> &delta_s,
-      const int nl, const int nu, const int kl, const int ku,
-      const int jl, const int ju, const int il, const int iu);
-  virtual void LaplacianX3(
-      const AthenaArray<Real> &s, AthenaArray<Real> &delta_s,
-      const int n, const int k, const int j, const int il, const int iu);
-  virtual void LaplacianX3All(
-      const AthenaArray<Real> &s, AthenaArray<Real> &delta_s,
-      const int nl, const int nu, const int kl, const int ku,
-      const int jl, const int ju, const int il, const int iu);
+  // ...to compute Laplacian of quantities in the coord system and orthogonal
+  // subspaces
+  virtual void Laplacian(const AthenaArray<Real> &s, AthenaArray<Real> &delta_s,
+                         const int il, const int iu, const int jl, const int ju,
+                         const int kl, const int ku, const int nl,
+                         const int nu);
+  virtual void LaplacianX1(const AthenaArray<Real> &s,
+                           AthenaArray<Real> &delta_s, const int n, const int k,
+                           const int j, const int il, const int iu);
+  virtual void LaplacianX1All(const AthenaArray<Real> &s,
+                              AthenaArray<Real> &delta_s, const int nl,
+                              const int nu, const int kl, const int ku,
+                              const int jl, const int ju, const int il,
+                              const int iu);
+  virtual void LaplacianX2(const AthenaArray<Real> &s,
+                           AthenaArray<Real> &delta_s, const int n, const int k,
+                           const int j, const int il, const int iu);
+  virtual void LaplacianX2All(const AthenaArray<Real> &s,
+                              AthenaArray<Real> &delta_s, const int nl,
+                              const int nu, const int kl, const int ku,
+                              const int jl, const int ju, const int il,
+                              const int iu);
+  virtual void LaplacianX3(const AthenaArray<Real> &s,
+                           AthenaArray<Real> &delta_s, const int n, const int k,
+                           const int j, const int il, const int iu);
+  virtual void LaplacianX3All(const AthenaArray<Real> &s,
+                              AthenaArray<Real> &delta_s, const int nl,
+                              const int nu, const int kl, const int ku,
+                              const int jl, const int ju, const int il,
+                              const int iu);
 
   // ...to compute volume of cells
   virtual void CellVolume(const int k, const int j, const int il, const int iu,
@@ -124,51 +132,54 @@ class Coordinates {
   virtual Real GetCellVolume(const int k, const int j, const int i);
 
   // ...to compute geometrical source terms
-  virtual void AddCoordTermsDivergence(const Real dt, const AthenaArray<Real> *flux,
-                             const AthenaArray<Real> &prim, const AthenaArray<Real> &bcc,
-                             AthenaArray<Real> &u);
+  virtual void AddCoordTermsDivergence(const Real dt,
+                                       const AthenaArray<Real> *flux,
+                                       const AthenaArray<Real> &prim,
+                                       const AthenaArray<Real> &bcc,
+                                       AthenaArray<Real> &u);
 
   virtual void AddCoordTermsDivergence_STS(const Real dt, int stage,
-                             const AthenaArray<Real> *flux,
-                             AthenaArray<Real> &u, AthenaArray<Real> &flux_div);
+                                           const AthenaArray<Real> *flux,
+                                           AthenaArray<Real> &u,
+                                           AthenaArray<Real> &flux_div);
 
   // coordinate source term for cosmic rays
   virtual void AddCoordTermsDivergence_CR(const AthenaArray<Real> &u_cr,
-                             AthenaArray<Real> &coord_src);
+                                          AthenaArray<Real> &coord_src);
 
   // subtract coordinate source term for grad_pc
   virtual void SubtractCoordTermsDivergence_CR(const AthenaArray<Real> &u_cr,
-                             AthenaArray<Real> &grad_pc);
+                                               AthenaArray<Real> &grad_pc);
 
   // ...to determine if index is a pole
   bool IsPole(int j);
 
   // ...to make coordinate transformations
-  virtual void CartesianToMeshCoords(
-      Real x, Real y, Real z, Real& x1, Real& x2, Real& x3) const;
-  virtual void MeshCoordsToCartesian(
-      Real x1, Real x2, Real x3, Real& x, Real& y, Real& z) const;
-  virtual void MeshCoordsToIndices(
-      Real x1, Real x2, Real x3, Real& xi1, Real& xi2, Real& xi3) const;
-  virtual void IndicesToMeshCoords(
-      Real xi1, Real xi2, Real xi3, Real& x1, Real& x2, Real& x3) const;
-  virtual void CartesianToMeshCoordsVector(
-      Real x, Real y, Real z, Real vx, Real vy, Real vz,
-      Real& vx1, Real& vx2, Real& vx3) const;
-  virtual void MeshCoordsToCartesianVector(
-      Real x1, Real x2, Real x3, Real vx1, Real vx2, Real vx3,
-      Real& vx, Real& vy, Real& vz) const;
+  virtual void CartesianToMeshCoords(Real x, Real y, Real z, Real &x1, Real &x2,
+                                     Real &x3) const;
+  virtual void MeshCoordsToCartesian(Real x1, Real x2, Real x3, Real &x,
+                                     Real &y, Real &z) const;
+  virtual void MeshCoordsToIndices(Real x1, Real x2, Real x3, Real &xi1,
+                                   Real &xi2, Real &xi3) const;
+  virtual void IndicesToMeshCoords(Real xi1, Real xi2, Real xi3, Real &x1,
+                                   Real &x2, Real &x3) const;
+  virtual void CartesianToMeshCoordsVector(Real x, Real y, Real z, Real vx,
+                                           Real vy, Real vz, Real &vx1,
+                                           Real &vx2, Real &vx3) const;
+  virtual void MeshCoordsToCartesianVector(Real x1, Real x2, Real x3, Real vx1,
+                                           Real vx2, Real vx3, Real &vx,
+                                           Real &vy, Real &vz) const;
 
   // In GR, functions...
   // ...to return private variables
-  Real GetMass() const {return bh_mass_;}
-  Real GetSpin() const {return bh_spin_;}
+  Real GetMass() const { return bh_mass_; }
+  Real GetSpin() const { return bh_spin_; }
 
   // ...to compute metric
-  void Metric(
-      Real x1, Real x2, Real x3, ParameterInput *pin, AthenaArray<Real> &g,
-      AthenaArray<Real> &g_inv, AthenaArray<Real> &dg_dx1, AthenaArray<Real> &dg_dx2,
-      AthenaArray<Real> &dg_dx3);
+  void Metric(Real x1, Real x2, Real x3, ParameterInput *pin,
+              AthenaArray<Real> &g, AthenaArray<Real> &g_inv,
+              AthenaArray<Real> &dg_dx1, AthenaArray<Real> &dg_dx2,
+              AthenaArray<Real> &dg_dx3);
   virtual void CellMetric(const int k, const int j, const int il, const int iu,
                           AthenaArray<Real> &g, AthenaArray<Real> &gi) {}
   virtual void Face1Metric(const int k, const int j, const int il, const int iu,
@@ -179,44 +190,54 @@ class Coordinates {
                            AthenaArray<Real> &g, AthenaArray<Real> &g_inv) {}
 
   // ...to transform primitives to locally flat space
-  virtual void PrimToLocal1(
-      const int k, const int j, const int il, const int iu,
-      const AthenaArray<Real> &b1_vals, AthenaArray<Real> &prim_left,
-      AthenaArray<Real> &prim_right, AthenaArray<Real> &bx) {}
-  virtual void PrimToLocal2(
-      const int k, const int j, const int il, const int iu,
-      const AthenaArray<Real> &b2_vals, AthenaArray<Real> &prim_left,
-      AthenaArray<Real> &prim_right, AthenaArray<Real> &bx) {}
-  virtual void PrimToLocal3(
-      const int k, const int j, const int il, const int iu,
-      const AthenaArray<Real> &b3_vals, AthenaArray<Real> &prim_left,
-      AthenaArray<Real> &prim_right, AthenaArray<Real> &bx) {}
+  virtual void PrimToLocal1(const int k, const int j, const int il,
+                            const int iu, const AthenaArray<Real> &b1_vals,
+                            AthenaArray<Real> &prim_left,
+                            AthenaArray<Real> &prim_right,
+                            AthenaArray<Real> &bx) {}
+  virtual void PrimToLocal2(const int k, const int j, const int il,
+                            const int iu, const AthenaArray<Real> &b2_vals,
+                            AthenaArray<Real> &prim_left,
+                            AthenaArray<Real> &prim_right,
+                            AthenaArray<Real> &bx) {}
+  virtual void PrimToLocal3(const int k, const int j, const int il,
+                            const int iu, const AthenaArray<Real> &b3_vals,
+                            AthenaArray<Real> &prim_left,
+                            AthenaArray<Real> &prim_right,
+                            AthenaArray<Real> &bx) {}
 
   // ...to transform fluxes in locally flat space to global frame
-  virtual void FluxToGlobal1(
-      const int k, const int j, const int il, const int iu,
-      const AthenaArray<Real> &cons, const AthenaArray<Real> &bbx,
-      AthenaArray<Real> &flux, AthenaArray<Real> &ey, AthenaArray<Real> &ez) {}
-  virtual void FluxToGlobal2(
-      const int k, const int j, const int il, const int iu,
-      const AthenaArray<Real> &cons, const AthenaArray<Real> &bbx,
-      AthenaArray<Real> &flux, AthenaArray<Real> &ey, AthenaArray<Real> &ez) {}
-  virtual void FluxToGlobal3(
-      const int k, const int j, const int il, const int iu,
-      const AthenaArray<Real> &cons, const AthenaArray<Real> &bbx,
-      AthenaArray<Real> &flux, AthenaArray<Real> &ey, AthenaArray<Real> &ez) {}
+  virtual void FluxToGlobal1(const int k, const int j, const int il,
+                             const int iu, const AthenaArray<Real> &cons,
+                             const AthenaArray<Real> &bbx,
+                             AthenaArray<Real> &flux, AthenaArray<Real> &ey,
+                             AthenaArray<Real> &ez) {}
+  virtual void FluxToGlobal2(const int k, const int j, const int il,
+                             const int iu, const AthenaArray<Real> &cons,
+                             const AthenaArray<Real> &bbx,
+                             AthenaArray<Real> &flux, AthenaArray<Real> &ey,
+                             AthenaArray<Real> &ez) {}
+  virtual void FluxToGlobal3(const int k, const int j, const int il,
+                             const int iu, const AthenaArray<Real> &cons,
+                             const AthenaArray<Real> &bbx,
+                             AthenaArray<Real> &flux, AthenaArray<Real> &ey,
+                             AthenaArray<Real> &ez) {}
 
   // ...to raise (lower) covariant (contravariant) components of a vector
-  virtual void RaiseVectorCell(Real a_0, Real a_1, Real a_2, Real a_3, int k, int j,
-                               int i, Real *pa0, Real *pa1, Real *pa2, Real *pa3) {}
-  virtual void LowerVectorCell(Real a0, Real a1, Real a2, Real a3, int k, int j, int i,
-                               Real *pa_0, Real *pa_1, Real *pa_2, Real *pa_3) {}
+  virtual void RaiseVectorCell(Real a_0, Real a_1, Real a_2, Real a_3, int k,
+                               int j, int i, Real *pa0, Real *pa1, Real *pa2,
+                               Real *pa3) {}
+  virtual void LowerVectorCell(Real a0, Real a1, Real a2, Real a3, int k, int j,
+                               int i, Real *pa_0, Real *pa_1, Real *pa_2,
+                               Real *pa_3) {}
 
- protected:
-  bool coarse_flag;  // true if this coordinate object is parent (coarse) mesh in AMR
+protected:
+  bool coarse_flag; // true if this coordinate object is parent (coarse) mesh in
+                    // AMR
   Mesh *pm;
-  int il, iu, jl, ju, kl, ku, ng;  // limits of indices of arrays (normal or coarse)
-  int nc1, nc2, nc3;               // # cells in each dir of arrays (normal or coarse)
+  int il, iu, jl, ju, kl, ku,
+      ng;            // limits of indices of arrays (normal or coarse)
+  int nc1, nc2, nc3; // # cells in each dir of arrays (normal or coarse)
   // Scratch arrays for coordinate factors
   // Format: coord_<type>[<direction>]_<index>[<count>]_
   //   type: vol[ume], area, etc.
@@ -238,9 +259,9 @@ class Coordinates {
   AthenaArray<Real> coord_area3_i_, coord_area3_i1_, coord_area3_i2_;
   AthenaArray<Real> coord_area3_j1_, coord_area3_j2_;
   AthenaArray<Real> coord_area3_kji_;
-  AthenaArray<Real> coord_area1vc_i_,coord_area1vc_j_; //nonidealmhd additions
-  AthenaArray<Real> coord_area2vc_i_,coord_area2vc_j_; //nonidealmhd additions
-  AthenaArray<Real> coord_area3vc_i_; //nonidealmhd addition
+  AthenaArray<Real> coord_area1vc_i_, coord_area1vc_j_; // nonidealmhd additions
+  AthenaArray<Real> coord_area2vc_i_, coord_area2vc_j_; // nonidealmhd additions
+  AthenaArray<Real> coord_area3vc_i_;                   // nonidealmhd addition
   AthenaArray<Real> coord_len1_i1_, coord_len1_i2_;
   AthenaArray<Real> coord_len1_j1_, coord_len1_j2_;
   AthenaArray<Real> coord_len1_kji_;
@@ -287,17 +308,17 @@ class Coordinates {
   AthenaArray<Real> trans_face1_i1_, trans_face1_i2_;
   AthenaArray<Real> trans_face1_j1_;
   AthenaArray<Real> trans_face1_ji1_, trans_face1_ji2_, trans_face1_ji3_,
-    trans_face1_ji4_, trans_face1_ji5_, trans_face1_ji6_, trans_face1_ji7_;
+      trans_face1_ji4_, trans_face1_ji5_, trans_face1_ji6_, trans_face1_ji7_;
   AthenaArray<Real> trans_face1_kji_;
   AthenaArray<Real> trans_face2_i1_, trans_face2_i2_;
   AthenaArray<Real> trans_face2_j1_;
   AthenaArray<Real> trans_face2_ji1_, trans_face2_ji2_, trans_face2_ji3_,
-    trans_face2_ji4_, trans_face2_ji5_, trans_face2_ji6_;
+      trans_face2_ji4_, trans_face2_ji5_, trans_face2_ji6_;
   AthenaArray<Real> trans_face2_kji_;
   AthenaArray<Real> trans_face3_i1_, trans_face3_i2_;
   AthenaArray<Real> trans_face3_j1_;
   AthenaArray<Real> trans_face3_ji1_, trans_face3_ji2_, trans_face3_ji3_,
-    trans_face3_ji4_, trans_face3_ji5_, trans_face3_ji6_;
+      trans_face3_ji4_, trans_face3_ji5_, trans_face3_ji6_;
   AthenaArray<Real> trans_face3_kji_;
   AthenaArray<Real> g_, gi_;
 
@@ -314,18 +335,20 @@ class Coordinates {
 class Cartesian : public Coordinates {
   friend class HydroSourceTerms;
 
- public:
+public:
   Cartesian(MeshBlock *pmb, ParameterInput *pin, bool flag);
 
   // functions to make coordinate transformations.
-  void CartesianToMeshCoords(Real x, Real y, Real z, Real& x1, Real& x2, Real& x3) const;
-  void MeshCoordsToCartesian(Real x1, Real x2, Real x3, Real& x, Real& y, Real& z) const;
-  void CartesianToMeshCoordsVector(
-      Real x, Real y, Real z, Real vx, Real vy, Real vz,
-      Real& vx1, Real& vx2, Real& vx3) const;
-  void MeshCoordsToCartesianVector(
-      Real x1, Real x2, Real x3, Real vx1, Real vx2, Real vx3,
-      Real& vx, Real& vy, Real& vz) const;
+  void CartesianToMeshCoords(Real x, Real y, Real z, Real &x1, Real &x2,
+                             Real &x3) const;
+  void MeshCoordsToCartesian(Real x1, Real x2, Real x3, Real &x, Real &y,
+                             Real &z) const;
+  void CartesianToMeshCoordsVector(Real x, Real y, Real z, Real vx, Real vy,
+                                   Real vz, Real &vx1, Real &vx2,
+                                   Real &vx3) const;
+  void MeshCoordsToCartesianVector(Real x1, Real x2, Real x3, Real vx1,
+                                   Real vx2, Real vx3, Real &vx, Real &vy,
+                                   Real &vz) const;
 };
 
 //----------------------------------------------------------------------------------------
@@ -336,7 +359,7 @@ class Cartesian : public Coordinates {
 class Cylindrical : public Coordinates {
   friend class HydroSourceTerms;
 
- public:
+public:
   Cylindrical(MeshBlock *pmb, ParameterInput *pin, bool flag);
 
   // functions...
@@ -370,41 +393,46 @@ class Cylindrical : public Coordinates {
 
   // ...to compute geometrical source terms
   void AddCoordTermsDivergence(const Real dt, const AthenaArray<Real> *flux,
-                     const AthenaArray<Real> &prim, const AthenaArray<Real> &bcc,
-                     AthenaArray<Real> &u) final;
+                               const AthenaArray<Real> &prim,
+                               const AthenaArray<Real> &bcc,
+                               AthenaArray<Real> &u) final;
   void AddCoordTermsDivergence_STS(const Real dt, int stage,
-                     const AthenaArray<Real> *flux,
-                     AthenaArray<Real> &u, AthenaArray<Real> &flux_div) final;
+                                   const AthenaArray<Real> *flux,
+                                   AthenaArray<Real> &u,
+                                   AthenaArray<Real> &flux_div) final;
   // coordinate source term for cosmic rays
   void AddCoordTermsDivergence_CR(const AthenaArray<Real> &u_cr,
-                               AthenaArray<Real> &coord_src) final;
+                                  AthenaArray<Real> &coord_src) final;
   // subtract coordinate source term for grad_pc
   void SubtractCoordTermsDivergence_CR(const AthenaArray<Real> &u_cr,
-                                AthenaArray<Real> &grad_pc) final;
+                                       AthenaArray<Real> &grad_pc) final;
 
   // functions to make coordinate transformations.
-  void CartesianToMeshCoords(Real x, Real y, Real z, Real& x1, Real& x2, Real& x3) const;
-  void MeshCoordsToCartesian(Real x1, Real x2, Real x3, Real& x, Real& y, Real& z) const;
-  void CartesianToMeshCoordsVector(
-      Real x, Real y, Real z, Real vx, Real vy, Real vz,
-      Real& vx1, Real& vx2, Real& vx3) const;
-  void MeshCoordsToCartesianVector(
-      Real x1, Real x2, Real x3, Real vx1, Real vx2, Real vx3,
-      Real& vx, Real& vy, Real& vz) const;
+  void CartesianToMeshCoords(Real x, Real y, Real z, Real &x1, Real &x2,
+                             Real &x3) const;
+  void MeshCoordsToCartesian(Real x1, Real x2, Real x3, Real &x, Real &y,
+                             Real &z) const;
+  void CartesianToMeshCoordsVector(Real x, Real y, Real z, Real vx, Real vy,
+                                   Real vz, Real &vx1, Real &vx2,
+                                   Real &vx3) const;
+  void MeshCoordsToCartesianVector(Real x1, Real x2, Real x3, Real vx1,
+                                   Real vx2, Real vx3, Real &vx, Real &vy,
+                                   Real &vz) const;
 
- private:
+private:
   Real x2ref;
 };
 
 //----------------------------------------------------------------------------------------
 //! \class SphericalPolar
-//! \brief derived class for spherical polar coordinates.  Many of the length, area,
+//! \brief derived class for spherical polar coordinates.  Many of the length,
+//! area,
 //!  and volume functions in the Coordinates abstract base class are overridden.
 
 class SphericalPolar : public Coordinates {
   friend class HydroSourceTerms;
 
- public:
+public:
   SphericalPolar(MeshBlock *pmb, ParameterInput *pin, bool flag);
 
   // functions...
@@ -450,43 +478,48 @@ class SphericalPolar : public Coordinates {
 
   // ...to compute geometrical source terms
   void AddCoordTermsDivergence(const Real dt, const AthenaArray<Real> *flux,
-                     const AthenaArray<Real> &prim, const AthenaArray<Real> &bcc,
-                     AthenaArray<Real> &u) final;
+                               const AthenaArray<Real> &prim,
+                               const AthenaArray<Real> &bcc,
+                               AthenaArray<Real> &u) final;
   void AddCoordTermsDivergence_STS(const Real dt, int stage,
-                     const AthenaArray<Real> *flux,
-                     AthenaArray<Real> &u, AthenaArray<Real> &flux_div) final;
+                                   const AthenaArray<Real> *flux,
+                                   AthenaArray<Real> &u,
+                                   AthenaArray<Real> &flux_div) final;
   // coordinate source term for cosmic rays
   void AddCoordTermsDivergence_CR(const AthenaArray<Real> &u_cr,
-                              AthenaArray<Real> &coord_src) final;
+                                  AthenaArray<Real> &coord_src) final;
   // subtract coordinate source term for grad_pc
   void SubtractCoordTermsDivergence_CR(const AthenaArray<Real> &u_cr,
-                              AthenaArray<Real> &grad_pc) final;
+                                       AthenaArray<Real> &grad_pc) final;
 
   // functions to make coordinate transformations.
-  void CartesianToMeshCoords(Real x, Real y, Real z, Real& x1, Real& x2, Real& x3) const;
-  void MeshCoordsToCartesian(Real x1, Real x2, Real x3, Real& x, Real& y, Real& z) const;
-  void CartesianToMeshCoordsVector(
-      Real x, Real y, Real z, Real vx, Real vy, Real vz,
-      Real& vx1, Real& vx2, Real& vx3) const;
-  void MeshCoordsToCartesianVector(
-      Real x1, Real x2, Real x3, Real vx1, Real vx2, Real vx3,
-      Real& vx, Real& vy, Real& vz) const;
+  void CartesianToMeshCoords(Real x, Real y, Real z, Real &x1, Real &x2,
+                             Real &x3) const;
+  void MeshCoordsToCartesian(Real x1, Real x2, Real x3, Real &x, Real &y,
+                             Real &z) const;
+  void CartesianToMeshCoordsVector(Real x, Real y, Real z, Real vx, Real vy,
+                                   Real vz, Real &vx1, Real &vx2,
+                                   Real &vx3) const;
+  void MeshCoordsToCartesianVector(Real x1, Real x2, Real x3, Real vx1,
+                                   Real vx2, Real vx3, Real &vx, Real &vy,
+                                   Real &vz) const;
 
- private:
+private:
   Real x3ref;
 };
 
 //----------------------------------------------------------------------------------------
 //! \class Minkowski
-//! \brief derived class for Minkowski (flat) spacetime and Cartesian coordinates in GR.
+//! \brief derived class for Minkowski (flat) spacetime and Cartesian
+//! coordinates in GR.
 //!
-//! None of the length, area, and volume functions in the abstract base class need to be
-//! overridden, but all the metric and transforms functions are.
+//! None of the length, area, and volume functions in the abstract base class
+//! need to be overridden, but all the metric and transforms functions are.
 
 class Minkowski : public Coordinates {
   friend class HydroSourceTerms;
 
- public:
+public:
   Minkowski(MeshBlock *pmb, ParameterInput *pin, bool flag);
 
   // In GR, functions...
@@ -502,46 +535,50 @@ class Minkowski : public Coordinates {
 
   // ...to transform primitives to locally flat space
   void PrimToLocal1(const int k, const int j, const int il, const int iu,
-                    const AthenaArray<Real> &b1_vals, AthenaArray<Real> &prim_left,
-                    AthenaArray<Real> &prim_right, AthenaArray<Real> &bx) final;
+                    const AthenaArray<Real> &b1_vals,
+                    AthenaArray<Real> &prim_left, AthenaArray<Real> &prim_right,
+                    AthenaArray<Real> &bx) final;
   void PrimToLocal2(const int k, const int j, const int il, const int iu,
-                    const AthenaArray<Real> &b2_vals, AthenaArray<Real> &prim_left,
-                    AthenaArray<Real> &prim_right, AthenaArray<Real> &bx) final;
+                    const AthenaArray<Real> &b2_vals,
+                    AthenaArray<Real> &prim_left, AthenaArray<Real> &prim_right,
+                    AthenaArray<Real> &bx) final;
   void PrimToLocal3(const int k, const int j, const int il, const int iu,
-                    const AthenaArray<Real> &b3_vals, AthenaArray<Real> &prim_left,
-                    AthenaArray<Real> &prim_right, AthenaArray<Real> &bx) final;
+                    const AthenaArray<Real> &b3_vals,
+                    AthenaArray<Real> &prim_left, AthenaArray<Real> &prim_right,
+                    AthenaArray<Real> &bx) final;
 
   // ...to transform fluxes in locally flat space to global frame
-  void FluxToGlobal1(
-      const int k, const int j, const int il, const int iu,
-      const AthenaArray<Real> &cons, const AthenaArray<Real> &bbx,
-      AthenaArray<Real> &flux, AthenaArray<Real> &ey, AthenaArray<Real> &ez) final;
-  void FluxToGlobal2(
-      const int k, const int j, const int il, const int iu,
-      const AthenaArray<Real> &cons, const AthenaArray<Real> &bbx,
-      AthenaArray<Real> &flux, AthenaArray<Real> &ey, AthenaArray<Real> &ez) final;
-  void FluxToGlobal3(
-      const int k, const int j, const int il, const int iu,
-      const AthenaArray<Real> &cons, const AthenaArray<Real> &bbx,
-      AthenaArray<Real> &flux, AthenaArray<Real> &ey, AthenaArray<Real> &ez) final;
+  void FluxToGlobal1(const int k, const int j, const int il, const int iu,
+                     const AthenaArray<Real> &cons,
+                     const AthenaArray<Real> &bbx, AthenaArray<Real> &flux,
+                     AthenaArray<Real> &ey, AthenaArray<Real> &ez) final;
+  void FluxToGlobal2(const int k, const int j, const int il, const int iu,
+                     const AthenaArray<Real> &cons,
+                     const AthenaArray<Real> &bbx, AthenaArray<Real> &flux,
+                     AthenaArray<Real> &ey, AthenaArray<Real> &ez) final;
+  void FluxToGlobal3(const int k, const int j, const int il, const int iu,
+                     const AthenaArray<Real> &cons,
+                     const AthenaArray<Real> &bbx, AthenaArray<Real> &flux,
+                     AthenaArray<Real> &ey, AthenaArray<Real> &ez) final;
 
   // for raising (lowering) covariant (contravariant) components of a vector
-  void RaiseVectorCell(Real a_0, Real a_1, Real a_2, Real a_3, int k, int j, int i,
-                       Real *pa0, Real *pa1, Real *pa2, Real *pa3) final;
+  void RaiseVectorCell(Real a_0, Real a_1, Real a_2, Real a_3, int k, int j,
+                       int i, Real *pa0, Real *pa1, Real *pa2, Real *pa3) final;
   void LowerVectorCell(Real a0, Real a1, Real a2, Real a3, int k, int j, int i,
                        Real *pa_0, Real *pa_1, Real *pa_2, Real *pa_3) final;
 };
 
 //----------------------------------------------------------------------------------------
 //! \class Schwarzschild
-//! \brief derived class for Schwarzschild spacetime and spherical polar coordinates in GR
+//! \brief derived class for Schwarzschild spacetime and spherical polar
+//! coordinates in GR
 //!
 //!  Nearly every function in the abstract base class need to be overridden.
 
 class Schwarzschild : public Coordinates {
   friend class HydroSourceTerms;
 
- public:
+public:
   Schwarzschild(MeshBlock *pmb, ParameterInput *pin, bool flag);
 
   // functions...
@@ -582,8 +619,9 @@ class Schwarzschild : public Coordinates {
 
   // ...to compute geometrical source terms
   void AddCoordTermsDivergence(const Real dt, const AthenaArray<Real> *flux,
-                     const AthenaArray<Real> &prim, const AthenaArray<Real> &bcc,
-                     AthenaArray<Real> &u) final;
+                               const AthenaArray<Real> &prim,
+                               const AthenaArray<Real> &bcc,
+                               AthenaArray<Real> &u) final;
 
   // In GR, functions...
   // ...to compute metric
@@ -598,32 +636,35 @@ class Schwarzschild : public Coordinates {
 
   // ...to transform primitives to locally flat space
   void PrimToLocal1(const int k, const int j, const int il, const int iu,
-                    const AthenaArray<Real> &b1_vals, AthenaArray<Real> &prim_left,
-                    AthenaArray<Real> &prim_right, AthenaArray<Real> &bx) final;
+                    const AthenaArray<Real> &b1_vals,
+                    AthenaArray<Real> &prim_left, AthenaArray<Real> &prim_right,
+                    AthenaArray<Real> &bx) final;
   void PrimToLocal2(const int k, const int j, const int il, const int iu,
-                    const AthenaArray<Real> &b2_vals, AthenaArray<Real> &prim_left,
-                    AthenaArray<Real> &prim_right, AthenaArray<Real> &bx) final;
+                    const AthenaArray<Real> &b2_vals,
+                    AthenaArray<Real> &prim_left, AthenaArray<Real> &prim_right,
+                    AthenaArray<Real> &bx) final;
   void PrimToLocal3(const int k, const int j, const int il, const int iu,
-                    const AthenaArray<Real> &b3_vals, AthenaArray<Real> &prim_left,
-                    AthenaArray<Real> &prim_right, AthenaArray<Real> &bx) final;
+                    const AthenaArray<Real> &b3_vals,
+                    AthenaArray<Real> &prim_left, AthenaArray<Real> &prim_right,
+                    AthenaArray<Real> &bx) final;
 
   // ...to transform fluxes in locally flat space to global frame
-  void FluxToGlobal1(
-      const int k, const int j, const int il, const int iu,
-      const AthenaArray<Real> &cons, const AthenaArray<Real> &bbx,
-      AthenaArray<Real> &flux, AthenaArray<Real> &ey, AthenaArray<Real> &ez) final;
-  void FluxToGlobal2(
-      const int k, const int j, const int il, const int iu,
-      const AthenaArray<Real> &cons, const AthenaArray<Real> &bbx,
-      AthenaArray<Real> &flux, AthenaArray<Real> &ey, AthenaArray<Real> &ez) final;
-  void FluxToGlobal3(
-      const int k, const int j, const int il, const int iu,
-      const AthenaArray<Real> &cons, const AthenaArray<Real> &bbx,
-      AthenaArray<Real> &flux, AthenaArray<Real> &ey, AthenaArray<Real> &ez) final;
+  void FluxToGlobal1(const int k, const int j, const int il, const int iu,
+                     const AthenaArray<Real> &cons,
+                     const AthenaArray<Real> &bbx, AthenaArray<Real> &flux,
+                     AthenaArray<Real> &ey, AthenaArray<Real> &ez) final;
+  void FluxToGlobal2(const int k, const int j, const int il, const int iu,
+                     const AthenaArray<Real> &cons,
+                     const AthenaArray<Real> &bbx, AthenaArray<Real> &flux,
+                     AthenaArray<Real> &ey, AthenaArray<Real> &ez) final;
+  void FluxToGlobal3(const int k, const int j, const int il, const int iu,
+                     const AthenaArray<Real> &cons,
+                     const AthenaArray<Real> &bbx, AthenaArray<Real> &flux,
+                     AthenaArray<Real> &ey, AthenaArray<Real> &ez) final;
 
   // for raising (lowering) covariant (contravariant) components of a vector
-  void RaiseVectorCell(Real a_0, Real a_1, Real a_2, Real a_3, int k, int j, int i,
-                       Real *pa0, Real *pa1, Real *pa2, Real *pa3) final;
+  void RaiseVectorCell(Real a_0, Real a_1, Real a_2, Real a_3, int k, int j,
+                       int i, Real *pa0, Real *pa1, Real *pa2, Real *pa3) final;
   void LowerVectorCell(Real a0, Real a1, Real a2, Real a3, int k, int j, int i,
                        Real *pa_0, Real *pa_1, Real *pa_2, Real *pa_3) final;
 };
@@ -637,7 +678,7 @@ class Schwarzschild : public Coordinates {
 class KerrSchild : public Coordinates {
   friend class HydroSourceTerms;
 
- public:
+public:
   KerrSchild(MeshBlock *pmb, ParameterInput *pin, bool flag);
 
   // functions...
@@ -678,8 +719,9 @@ class KerrSchild : public Coordinates {
 
   // ...to compute geometrical source terms
   void AddCoordTermsDivergence(const Real dt, const AthenaArray<Real> *flux,
-                     const AthenaArray<Real> &prim, const AthenaArray<Real> &bcc,
-                     AthenaArray<Real> &u) final;
+                               const AthenaArray<Real> &prim,
+                               const AthenaArray<Real> &bcc,
+                               AthenaArray<Real> &u) final;
 
   // In GR, functions...
   // ...to compute metric
@@ -694,46 +736,50 @@ class KerrSchild : public Coordinates {
 
   // ...to transform primitives to locally flat space
   void PrimToLocal1(const int k, const int j, const int il, const int iu,
-                    const AthenaArray<Real> &b1_vals, AthenaArray<Real> &prim_left,
-                    AthenaArray<Real> &prim_right, AthenaArray<Real> &bx) final;
+                    const AthenaArray<Real> &b1_vals,
+                    AthenaArray<Real> &prim_left, AthenaArray<Real> &prim_right,
+                    AthenaArray<Real> &bx) final;
   void PrimToLocal2(const int k, const int j, const int il, const int iu,
-                    const AthenaArray<Real> &b2_vals, AthenaArray<Real> &prim_left,
-                    AthenaArray<Real> &prim_right, AthenaArray<Real> &bx) final;
+                    const AthenaArray<Real> &b2_vals,
+                    AthenaArray<Real> &prim_left, AthenaArray<Real> &prim_right,
+                    AthenaArray<Real> &bx) final;
   void PrimToLocal3(const int k, const int j, const int il, const int iu,
-                    const AthenaArray<Real> &b3_vals, AthenaArray<Real> &prim_left,
-                    AthenaArray<Real> &prim_right, AthenaArray<Real> &bx) final;
+                    const AthenaArray<Real> &b3_vals,
+                    AthenaArray<Real> &prim_left, AthenaArray<Real> &prim_right,
+                    AthenaArray<Real> &bx) final;
 
   // ...to transform fluxes in locally flat space to global frame
-  void FluxToGlobal1(
-      const int k, const int j, const int il, const int iu,
-      const AthenaArray<Real> &cons, const AthenaArray<Real> &bbx,
-      AthenaArray<Real> &flux, AthenaArray<Real> &ey, AthenaArray<Real> &ez) final;
-  void FluxToGlobal2(
-      const int k, const int j, const int il, const int iu,
-      const AthenaArray<Real> &cons, const AthenaArray<Real> &bbx,
-      AthenaArray<Real> &flux, AthenaArray<Real> &ey, AthenaArray<Real> &ez) final;
-  void FluxToGlobal3(
-      const int k, const int j, const int il, const int iu,
-      const AthenaArray<Real> &cons, const AthenaArray<Real> &bbx,
-      AthenaArray<Real> &flux, AthenaArray<Real> &ey, AthenaArray<Real> &ez) final;
+  void FluxToGlobal1(const int k, const int j, const int il, const int iu,
+                     const AthenaArray<Real> &cons,
+                     const AthenaArray<Real> &bbx, AthenaArray<Real> &flux,
+                     AthenaArray<Real> &ey, AthenaArray<Real> &ez) final;
+  void FluxToGlobal2(const int k, const int j, const int il, const int iu,
+                     const AthenaArray<Real> &cons,
+                     const AthenaArray<Real> &bbx, AthenaArray<Real> &flux,
+                     AthenaArray<Real> &ey, AthenaArray<Real> &ez) final;
+  void FluxToGlobal3(const int k, const int j, const int il, const int iu,
+                     const AthenaArray<Real> &cons,
+                     const AthenaArray<Real> &bbx, AthenaArray<Real> &flux,
+                     AthenaArray<Real> &ey, AthenaArray<Real> &ez) final;
 
   // for raising (lowering) covariant (contravariant) components of a vector
-  void RaiseVectorCell(Real a_0, Real a_1, Real a_2, Real a_3, int k, int j, int i,
-                       Real *pa0, Real *pa1, Real *pa2, Real *pa3) final;
+  void RaiseVectorCell(Real a_0, Real a_1, Real a_2, Real a_3, int k, int j,
+                       int i, Real *pa0, Real *pa1, Real *pa2, Real *pa3) final;
   void LowerVectorCell(Real a0, Real a1, Real a2, Real a3, int k, int j, int i,
                        Real *pa_0, Real *pa_1, Real *pa_2, Real *pa_3) final;
 };
 
 //----------------------------------------------------------------------------------------
 //! \class GRUser
-//! \brief derived class for arbitrary (stationary) user-defined coordinates in GR.
+//! \brief derived class for arbitrary (stationary) user-defined coordinates in
+//! GR.
 //!
 //! Nearly every function in the abstract base class need to be overridden.
 
 class GRUser : public Coordinates {
   friend class HydroSourceTerms;
 
- public:
+public:
   GRUser(MeshBlock *pmb, ParameterInput *pin, bool flag);
 
   // functions...
@@ -774,8 +820,9 @@ class GRUser : public Coordinates {
 
   // ...to compute geometrical source terms
   void AddCoordTermsDivergence(const Real dt, const AthenaArray<Real> *flux,
-                     const AthenaArray<Real> &prim, const AthenaArray<Real> &bcc,
-                     AthenaArray<Real> &u) final;
+                               const AthenaArray<Real> &prim,
+                               const AthenaArray<Real> &bcc,
+                               AthenaArray<Real> &u) final;
 
   // In GR, functions...
   // ...to compute metric
@@ -790,32 +837,35 @@ class GRUser : public Coordinates {
 
   // ...to transform primitives to locally flat space
   void PrimToLocal1(const int k, const int j, const int il, const int iu,
-                    const AthenaArray<Real> &b1_vals, AthenaArray<Real> &prim_left,
-                    AthenaArray<Real> &prim_right, AthenaArray<Real> &bx) final;
+                    const AthenaArray<Real> &b1_vals,
+                    AthenaArray<Real> &prim_left, AthenaArray<Real> &prim_right,
+                    AthenaArray<Real> &bx) final;
   void PrimToLocal2(const int k, const int j, const int il, const int iu,
-                    const AthenaArray<Real> &b2_vals, AthenaArray<Real> &prim_left,
-                    AthenaArray<Real> &prim_right, AthenaArray<Real> &bx) final;
+                    const AthenaArray<Real> &b2_vals,
+                    AthenaArray<Real> &prim_left, AthenaArray<Real> &prim_right,
+                    AthenaArray<Real> &bx) final;
   void PrimToLocal3(const int k, const int j, const int il, const int iu,
-                    const AthenaArray<Real> &b3_vals, AthenaArray<Real> &prim_left,
-                    AthenaArray<Real> &prim_right, AthenaArray<Real> &bx) final;
+                    const AthenaArray<Real> &b3_vals,
+                    AthenaArray<Real> &prim_left, AthenaArray<Real> &prim_right,
+                    AthenaArray<Real> &bx) final;
 
   // ...to transform fluxes in locally flat space to global frame
-  void FluxToGlobal1(
-      const int k, const int j, const int il, const int iu,
-      const AthenaArray<Real> &cons, const AthenaArray<Real> &bbx,
-      AthenaArray<Real> &flux, AthenaArray<Real> &ey, AthenaArray<Real> &ez) final;
-  void FluxToGlobal2(
-      const int k, const int j, const int il, const int iu,
-      const AthenaArray<Real> &cons, const AthenaArray<Real> &bbx,
-      AthenaArray<Real> &flux, AthenaArray<Real> &ey, AthenaArray<Real> &ez) final;
-  void FluxToGlobal3(
-      const int k, const int j, const int il, const int iu,
-      const AthenaArray<Real> &cons, const AthenaArray<Real> &bbx,
-      AthenaArray<Real> &flux, AthenaArray<Real> &ey, AthenaArray<Real> &ez) final;
+  void FluxToGlobal1(const int k, const int j, const int il, const int iu,
+                     const AthenaArray<Real> &cons,
+                     const AthenaArray<Real> &bbx, AthenaArray<Real> &flux,
+                     AthenaArray<Real> &ey, AthenaArray<Real> &ez) final;
+  void FluxToGlobal2(const int k, const int j, const int il, const int iu,
+                     const AthenaArray<Real> &cons,
+                     const AthenaArray<Real> &bbx, AthenaArray<Real> &flux,
+                     AthenaArray<Real> &ey, AthenaArray<Real> &ez) final;
+  void FluxToGlobal3(const int k, const int j, const int il, const int iu,
+                     const AthenaArray<Real> &cons,
+                     const AthenaArray<Real> &bbx, AthenaArray<Real> &flux,
+                     AthenaArray<Real> &ey, AthenaArray<Real> &ez) final;
 
   // ...for raising (lowering) covariant (contravariant) components of a vector
-  void RaiseVectorCell(Real a_0, Real a_1, Real a_2, Real a_3, int k, int j, int i,
-                       Real *pa0, Real *pa1, Real *pa2, Real *pa3) final;
+  void RaiseVectorCell(Real a_0, Real a_1, Real a_2, Real a_3, int k, int j,
+                       int i, Real *pa0, Real *pa1, Real *pa2, Real *pa3) final;
   void LowerVectorCell(Real a0, Real a1, Real a2, Real a3, int k, int j, int i,
                        Real *pa_0, Real *pa_1, Real *pa_2, Real *pa_3) final;
 };

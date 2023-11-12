@@ -1,6 +1,6 @@
 <comment>
 problem   = poisson's solver test
-reference = 
+reference =
 configure = --prob=poisson --grav=mg/fft -fft --eos=isothermal
 
 <job>

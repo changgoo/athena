@@ -1,7 +1,8 @@
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file hdf5_reader.cpp
 //! \brief Implements HDF5 reader functions
@@ -9,24 +10,24 @@
 // C headers
 
 // C++ headers
-#include <iostream>   // cout
-#include <sstream>    // stringstream
-#include <stdexcept>  // runtime_error
-#include <string>     // string
+#include <iostream>  // cout
+#include <sstream>   // stringstream
+#include <stdexcept> // runtime_error
+#include <string>    // string
 
 // Athena++ headers
-#include "../athena.hpp"         // Real
-#include "../athena_arrays.hpp"  // AthenaArray
-#include "../defs.hpp"           // SINGLE_PRECISION_ENABLED
+#include "../athena.hpp"        // Real
+#include "../athena_arrays.hpp" // AthenaArray
+#include "../defs.hpp"          // SINGLE_PRECISION_ENABLED
 #include "hdf5_reader.hpp"
 
 // Only proceed if HDF5 enabled
 #ifdef HDF5OUTPUT
 
 // External library headers
-#include <hdf5.h>  // H5[F|P|S|T]_*, H5[D|F|P|S]*(), hid_t
+#include <hdf5.h> // H5[F|P|S|T]_*, H5[D|F|P|S]*(), hid_t
 #ifdef MPI_PARALLEL
-#include <mpi.h>  // MPI_COMM_WORLD, MPI_INFO_NULL
+#include <mpi.h> // MPI_COMM_WORLD, MPI_INFO_NULL
 #endif
 
 // Determine floating-point precision (in memory, not file)
@@ -37,29 +38,31 @@
 #endif
 
 //----------------------------------------------------------------------------------------
-//! \fn void HDF5ReadArray(const char *filename, const char *dataset_name, int rank_file,
-//!     const int *start_file, const int *count_file, int rank_mem, const int *start_mem,
-//!     const int *count_mem, AthenaArray<Real> &array, bool collective=false,
-//!     bool noop=false)
+//! \fn void HDF5ReadArray(const char *filename, const char *dataset_name, int
+//! rank_file,
+//!     const int *start_file, const int *count_file, int rank_mem, const int
+//!     *start_mem, const int *count_mem, AthenaArray<Real> &array, bool
+//!     collective=false, bool noop=false)
 //! \brief Read a single dataset from an HDF5 file into a pre-allocated array.
 
-void HDF5ReadRealArray(const char *filename, const char *dataset_name, int rank_file,
-                       const int *start_file, const int *count_file, int rank_mem,
+void HDF5ReadRealArray(const char *filename, const char *dataset_name,
+                       int rank_file, const int *start_file,
+                       const int *count_file, int rank_mem,
                        const int *start_mem, const int *count_mem,
-                       AthenaArray<Real> &array,
-                       bool collective, bool noop) {
+                       AthenaArray<Real> &array, bool collective, bool noop) {
   // Check that user is not trying to exceed limits of HDF5 array or AthenaArray
   // dimensionality
   if (rank_file > MAX_RANK_FILE) {
     std::stringstream msg;
-    msg << "### FATAL ERROR\nAttempting to read HDF5 array of ndim= " << rank_file
-        << "\nExceeding MAX_RANK_FILE=" << MAX_RANK_FILE << std::endl;
+    msg << "### FATAL ERROR\nAttempting to read HDF5 array of ndim= "
+        << rank_file << "\nExceeding MAX_RANK_FILE=" << MAX_RANK_FILE
+        << std::endl;
     ATHENA_ERROR(msg);
   }
   if (rank_mem > MAX_RANK_MEM) {
     std::stringstream msg;
-    msg << "### FATAL ERROR\nAttempting to read HDF5 array of ndim= " << rank_mem
-        << "\nExceeding MAX_RANK_MEM=" << MAX_RANK_MEM << std::endl;
+    msg << "### FATAL ERROR\nAttempting to read HDF5 array of ndim= "
+        << rank_mem << "\nExceeding MAX_RANK_MEM=" << MAX_RANK_MEM << std::endl;
     ATHENA_ERROR(msg);
   }
 
@@ -123,10 +126,10 @@ void HDF5ReadRealArray(const char *filename, const char *dataset_name, int rank_
   if (noop) {
     H5Sselect_none(dataspace_mem);
   }
-  H5Sselect_hyperslab(dataspace_mem, H5S_SELECT_SET, start_mem_hid, NULL, count_mem_hid,
-                      NULL);
-  H5Dread(dataset, H5T_REAL, dataspace_mem, dataspace_file, property_list_transfer,
-          array.data());
+  H5Sselect_hyperslab(dataspace_mem, H5S_SELECT_SET, start_mem_hid, NULL,
+                      count_mem_hid, NULL);
+  H5Dread(dataset, H5T_REAL, dataspace_mem, dataspace_file,
+          property_list_transfer, array.data());
   H5Dclose(dataset);
   H5Sclose(dataspace_file);
   H5Sclose(dataspace_mem);
@@ -137,15 +140,16 @@ void HDF5ReadRealArray(const char *filename, const char *dataset_name, int rank_
   return;
 }
 
-
 //----------------------------------------------------------------------------------------
-//! \fn void HDF5TableLoader(const char *filename, InterpTable2D* ptable, const int nvar,
-//!                    const char **var_names, char *x2lim_name, char *x1lim_name) {
+//! \fn void HDF5TableLoader(const char *filename, InterpTable2D* ptable, const
+//! int nvar,
+//!                    const char **var_names, char *x2lim_name, char
+//!                    *x1lim_name) {
 //! \brief Reads datasets from an HDF5 file into a InterpTable2D.
 
-void HDF5TableLoader(const char *filename, InterpTable2D* ptable, const int nvar,
-                     const char **var_names, const char *x2lim_name,
-                     const char *x1lim_name) {
+void HDF5TableLoader(const char *filename, InterpTable2D *ptable,
+                     const int nvar, const char **var_names,
+                     const char *x2lim_name, const char *x1lim_name) {
   hsize_t dims[2];
   int tmp[2];
   int count_file[2];
@@ -169,10 +173,11 @@ void HDF5TableLoader(const char *filename, InterpTable2D* ptable, const int nvar
     if (i == 0) {
       count_file[0] = tmp[0];
       count_file[1] = tmp[1];
-    } else if (count_file[0]!=tmp[0] || count_file[1]!=tmp[1]) {
+    } else if (count_file[0] != tmp[0] || count_file[1] != tmp[1]) {
       std::stringstream msg;
       msg << "### FATAL ERROR in HDF5TableLoader" << std::endl
-          << "Inconsistent data field shape in file '" << filename << "'." << std::endl;
+          << "Inconsistent data field shape in file '" << filename << "'."
+          << std::endl;
       ATHENA_ERROR(msg);
     }
   }
@@ -190,8 +195,8 @@ void HDF5TableLoader(const char *filename, InterpTable2D* ptable, const int nvar
   count_mem[2] = count_file[1];
   for (int i = 0; i < nvar; ++i) {
     start_mem[0] = i;
-    HDF5ReadRealArray(filename, var_names[i], 2, start_file, count_file,
-                      3, start_mem, count_mem, ptable->data);
+    HDF5ReadRealArray(filename, var_names[i], 2, start_file, count_file, 3,
+                      start_mem, count_mem, ptable->data);
   }
   if (x2lim_name) {
     AthenaArray<Real> lim;
@@ -211,4 +216,4 @@ void HDF5TableLoader(const char *filename, InterpTable2D* ptable, const int nvar
   }
   return;
 }
-#endif  // HDF5OUTPUT
+#endif // HDF5OUTPUT

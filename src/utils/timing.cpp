@@ -1,7 +1,8 @@
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file timing.cpp
 //! \brief utility function for timing
@@ -9,10 +10,10 @@
 // C headers
 
 // C++ headers
-#include <ctime>      // clock(), CLOCKS_PER_SEC, clock_t
+#include <ctime> // clock(), CLOCKS_PER_SEC, clock_t
 #include <fstream>
 #include <iostream>
-#include <string>     // c_str()
+#include <string> // c_str()
 
 // Athena++ headers
 #include "../athena.hpp"
@@ -36,7 +37,7 @@ double MarkTime() {
 #ifdef MPI_PARALLEL
   return MPI_Wtime();
 #else
-  return static_cast<double> (clock())/static_cast<double> (CLOCKS_PER_SEC);
+  return static_cast<double>(clock()) / static_cast<double>(CLOCKS_PER_SEC);
 #endif
 #endif
 }

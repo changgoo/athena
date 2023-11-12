@@ -1,6 +1,6 @@
 <comment>
 problem   = reading from athena files
-reference = 
+reference =
 configure = --prob=from_athena_rst
 
 <job>
@@ -48,7 +48,7 @@ ox3_bc     = outflow     # outer-X3 boundary flag
 <meshblock>
 nx1        =    64
 nx2        =    64
-nx3        =    448 
+nx3        =    448
 
 <hydro>
 gamma           = 1.6666666666667       # gamma = C_p/C_v
@@ -58,4 +58,3 @@ pfloor          = 1.e-7
 <problem>
 vtk_directory = ./Tigress_vtk/        #directory of the restart file to be read in
 vtk_file    = R8_8pc_newacc.0286.vtk   #name of the restart file to be read in
-

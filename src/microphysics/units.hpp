@@ -2,8 +2,9 @@
 #define MICROPHYSICS_UNITS_HPP_
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file units.hpp
 //! \brief prototypes of unit and constant classes
@@ -18,23 +19,23 @@
 
 //! \brief Physical constants defined in c.g.s.
 namespace Constants {
-static const Real G     = 6.67259e-8;
-static const Real Msun  = 1.9891e+33;
-static const Real Lsun  = 3.8268e+33;
-static const Real Myr   = 3.155815e+13;
-static const Real pc    = 3.085678e+18;
-static const Real kpc   = 3.085678e+21;
-static const Real kms   = 1.0e+5;
-static const Real mH    = 1.6733e-24;
-static const Real aR    = 7.5646e-15;
-static const Real kB    = 1.380658e-16;
-static const Real c     = 2.99792458e+10;
-static const Real e     = 4.80320427e-10;
+static const Real G = 6.67259e-8;
+static const Real Msun = 1.9891e+33;
+static const Real Lsun = 3.8268e+33;
+static const Real Myr = 3.155815e+13;
+static const Real pc = 3.085678e+18;
+static const Real kpc = 3.085678e+21;
+static const Real kms = 1.0e+5;
+static const Real mH = 1.6733e-24;
+static const Real aR = 7.5646e-15;
+static const Real kB = 1.380658e-16;
+static const Real c = 2.99792458e+10;
+static const Real e = 4.80320427e-10;
 } // namespace Constants
 
 //! \brief Class for units
 class Units {
- public:
+public:
   explicit Units(ParameterInput *pin);
   Units(Real dunit, Real lunit, Real vunit);
 

@@ -2,20 +2,21 @@
 #define MESH_MESH_HPP_
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file mesh.hpp
 //! \brief defines Mesh and MeshBlock classes, and various structs used in them
 //!
-//! The Mesh is the overall grid structure, and MeshBlocks are local patches of data
-//! (potentially on different levels) that tile the entire domain.
+//! The Mesh is the overall grid structure, and MeshBlocks are local patches of
+//! data (potentially on different levels) that tile the entire domain.
 
 // C headers
 
 // C++ headers
-#include <cstdint>     // int64_t
-#include <functional>  // reference_wrapper
+#include <cstdint>    // int64_t
+#include <functional> // reference_wrapper
 #include <string>
 #include <vector>
 
@@ -60,7 +61,7 @@ class BlockFFTGravity;
 class CoolingSolver;
 class Units;
 
-FluidFormulation GetFluidFormulation(const std::string& input_string);
+FluidFormulation GetFluidFormulation(const std::string &input_string);
 
 //----------------------------------------------------------------------------------------
 //! \class MeshBlock
@@ -79,21 +80,22 @@ class MeshBlock {
   friend class ATHDF5Output;
 #endif
 
- public:
+public:
   MeshBlock(int igid, int ilid, LogicalLocation iloc, RegionSize input_size,
             BoundaryFlag *input_bcs, Mesh *pm, ParameterInput *pin, int igflag,
             bool ref_flag = false);
-  MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin, LogicalLocation iloc,
-            RegionSize input_block, BoundaryFlag *input_bcs, double icost,
-            char *mbdata, int igflag);
+  MeshBlock(int igid, int ilid, Mesh *pm, ParameterInput *pin,
+            LogicalLocation iloc, RegionSize input_block,
+            BoundaryFlag *input_bcs, double icost, char *mbdata, int igflag);
   ~MeshBlock();
 
   // data
-  Mesh *pmy_mesh;  // ptr to Mesh containing this MeshBlock
+  Mesh *pmy_mesh; // ptr to Mesh containing this MeshBlock
   LogicalLocation loc;
   RegionSize block_size;
-  // for convenience: "max" # of real+ghost cells along each dir for allocating "standard"
-  // sized MeshBlock arrays, depending on ndim (i.e. ncells2=nx2+2*NGHOST if nx2>1)
+  // for convenience: "max" # of real+ghost cells along each dir for allocating
+  // "standard" sized MeshBlock arrays, depending on ndim (i.e.
+  // ncells2=nx2+2*NGHOST if nx2>1)
   int ncells1, ncells2, ncells3;
   // on 1x coarser level MeshBlock (i.e. ncc2=nx2/2 + 2*NGHOST, if nx2>1)
   int ncc1, ncc2, ncc3;
@@ -137,34 +139,33 @@ class MeshBlock {
   // functions
   std::size_t GetBlockSizeInBytes();
   int GetNumberOfMeshBlockCells() {
-    return block_size.nx1*block_size.nx2*block_size.nx3; }
+    return block_size.nx1 * block_size.nx2 * block_size.nx3;
+  }
   void SearchAndSetNeighbors(MeshBlockTree &tree, int *ranklist, int *nslist);
-  void WeightedAve(AthenaArray<Real> &u_out,
-                  AthenaArray<Real> &u_in1, AthenaArray<Real> &u_in2,
-                  AthenaArray<Real> &u_in3, AthenaArray<Real> &u_in4,
-                  const Real wght[5]);
-  void WeightedAve(FaceField &b_out,
-                   FaceField &b_in1, FaceField &b_in2,
-                   FaceField &b_in3, FaceField &b_in4,
-                   const Real wght[5]);
+  void WeightedAve(AthenaArray<Real> &u_out, AthenaArray<Real> &u_in1,
+                   AthenaArray<Real> &u_in2, AthenaArray<Real> &u_in3,
+                   AthenaArray<Real> &u_in4, const Real wght[5]);
+  void WeightedAve(FaceField &b_out, FaceField &b_in1, FaceField &b_in2,
+                   FaceField &b_in3, FaceField &b_in4, const Real wght[5]);
   void WeightedAve(AthenaArray<Real> &u_out, AthenaArray<Real> &u_in1,
                    AthenaArray<Real> &u_in2, const Real wght[3]);
 
-
   // inform MeshBlock which arrays contained in member Hydro, Field, Particles,
-  // ... etc. classes are the "primary" representations of a quantity. when registered,
-  // that data are used for (1) load balancing (2) (future) dumping to restart file
+  // ... etc. classes are the "primary" representations of a quantity. when
+  // registered, that data are used for (1) load balancing (2) (future) dumping
+  // to restart file
   void RegisterMeshBlockData(AthenaArray<Real> &pvar_cc);
   void RegisterMeshBlockData(FaceField &pvar_fc);
 
   //! defined in either the prob file or default_pgen.cpp in ../pgen/
-  void UserWorkBeforeOutput(ParameterInput *pin); // called in Mesh fn (friend class)
-  void UserWorkInLoop();                          // called in TimeIntegratorTaskList
+  void
+  UserWorkBeforeOutput(ParameterInput *pin); // called in Mesh fn (friend class)
+  void UserWorkInLoop();                     // called in TimeIntegratorTaskList
 
- private:
+private:
   // data
   Real new_block_dt_, new_block_dt_hyperbolic_, new_block_dt_parabolic_,
-    new_block_dt_user_;
+      new_block_dt_user_;
   //! \todo(felker):
   //! * make global TaskList a member of MeshBlock, store TaskStates in list
   //!   shared by main integrator + FFT gravity task lists.
@@ -226,25 +227,27 @@ class Mesh {
   friend class ATHDF5Output;
 #endif
 
- public:
+public:
   // 2x function overloads of ctor: normal and restarted simulation
-  explicit Mesh(ParameterInput *pin, int test_flag=0);
-  Mesh(ParameterInput *pin, IOWrapper &resfile, int test_flag=0);
+  explicit Mesh(ParameterInput *pin, int test_flag = 0);
+  Mesh(ParameterInput *pin, IOWrapper &resfile, int test_flag = 0);
   ~Mesh();
 
   // accessors
-  int GetNumMeshThreads() const {return num_mesh_threads_;}
-  std::int64_t GetTotalCells() {return static_cast<std::int64_t> (nbtotal)*
-  my_blocks(0)->block_size.nx1*my_blocks(0)->block_size.nx2*my_blocks(0)->block_size.nx3;}
+  int GetNumMeshThreads() const { return num_mesh_threads_; }
+  std::int64_t GetTotalCells() {
+    return static_cast<std::int64_t>(nbtotal) * my_blocks(0)->block_size.nx1 *
+           my_blocks(0)->block_size.nx2 * my_blocks(0)->block_size.nx3;
+  }
 
   // data
   RegionSize mesh_size;
   BoundaryFlag mesh_bcs[6];
   const bool f2, f3; // flags indicating (at least) 2D or 3D Mesh
-  const int ndim;     // number of dimensions
+  const int ndim;    // number of dimensions
   const bool adaptive, multilevel;
-  const int orbital_advection;       // order of the orbital splitting method
-  const bool shear_periodic;         // flag of shear periodic b.c.
+  const int orbital_advection; // order of the orbital splitting method
+  const bool shear_periodic;   // flag of shear periodic b.c.
   const FluidFormulation fluid_setup;
   Real start_time, time, tlim, dtlim;
   Real dt, dt_hyperbolic, dt_parabolic, dt_user, cfl_number;
@@ -264,14 +267,13 @@ class Mesh {
   bool amr_updated;
   EosTable *peos_table;
 
-  AthenaArray<MeshBlock*> my_blocks;
+  AthenaArray<MeshBlock *> my_blocks;
 
   FFTGravityDriver *pfgrd;
   MGGravityDriver *pmgrd;
 
   Units *punit;
   CoolingSolver *pcool;
-
 
   AthenaArray<Real> *ruser_mesh_data;
   AthenaArray<int> *iuser_mesh_data;
@@ -285,20 +287,22 @@ class Mesh {
   void OutputCycleDiagnostics();
   void LoadBalancingAndAdaptiveMeshRefinement(ParameterInput *pin);
   int CreateAMRMPITag(int lid, int ox1, int ox2, int ox3);
-  MeshBlock* FindMeshBlock(int tgid);
+  MeshBlock *FindMeshBlock(int tgid);
   void ApplyUserWorkBeforeOutput(ParameterInput *pin);
 
-  // function for distributing unique "phys" bitfield IDs to BoundaryVariable objects and
-  // other categories of MPI communication for generating unique MPI_TAGs
+  // function for distributing unique "phys" bitfield IDs to BoundaryVariable
+  // objects and other categories of MPI communication for generating unique
+  // MPI_TAGs
   int ReserveTagPhysIDs(int num_phys);
 
   // defined in either the prob file or default_pgen.cpp in ../pgen/
-  void UserWorkAfterLoop(ParameterInput *pin);   // called in main loop
+  void UserWorkAfterLoop(ParameterInput *pin); // called in main loop
   void UserWorkInLoop(); // called in main after each cycle
 
- private:
+private:
   // data
-  int next_phys_id_; // next unused value for encoding final component of MPI tag bitfield
+  int next_phys_id_; // next unused value for encoding final component of MPI
+                     // tag bitfield
   int root_level, max_level, current_level;
   int num_mesh_threads_;
   int gids_, gide_;
@@ -314,7 +318,8 @@ class Mesh {
   LogicalLocation *loclist;
   MeshBlockTree tree;
   // number of MeshBlocks in the x1, x2, x3 directions of the root grid:
-  // (unlike LogicalLocation.lxi, nrbxi don't grow w/ AMR # of levels, so keep 32-bit int)
+  // (unlike LogicalLocation.lxi, nrbxi don't grow w/ AMR # of levels, so keep
+  // 32-bit int)
   int nrbx1, nrbx2, nrbx3;
   //! \todo (felker):
   //! * find unnecessary static_cast<> ops. from old std::int64_t type in 2018:
@@ -354,7 +359,8 @@ class Mesh {
   void AllocateRealUserMeshDataField(int n);
   void AllocateIntUserMeshDataField(int n);
   void OutputMeshStructure(int dim);
-  void CalculateLoadBalance(double *clist, int *rlist, int *slist, int *nlist, int nb);
+  void CalculateLoadBalance(double *clist, int *rlist, int *slist, int *nlist,
+                            int nb);
   void ResetLoadBalanceVariables();
 
   void CorrectMidpointInitialCondition();
@@ -368,17 +374,20 @@ class Mesh {
 
   // Mesh::RedistributeAndRefineMeshBlocks() helper functions:
   // step 6: send
-  void PrepareSendSameLevel(MeshBlock* pb, Real *sendbuf);
-  void PrepareSendCoarseToFineAMR(MeshBlock* pb, Real *sendbuf, LogicalLocation &lloc);
-  void PrepareSendFineToCoarseAMR(MeshBlock* pb, Real *sendbuf);
-  // step 7: create new MeshBlock list (same MPI rank but diff level: create new block)
-  void FillSameRankFineToCoarseAMR(MeshBlock* pob, MeshBlock* pmb,
+  void PrepareSendSameLevel(MeshBlock *pb, Real *sendbuf);
+  void PrepareSendCoarseToFineAMR(MeshBlock *pb, Real *sendbuf,
+                                  LogicalLocation &lloc);
+  void PrepareSendFineToCoarseAMR(MeshBlock *pb, Real *sendbuf);
+  // step 7: create new MeshBlock list (same MPI rank but diff level: create new
+  // block)
+  void FillSameRankFineToCoarseAMR(MeshBlock *pob, MeshBlock *pmb,
                                    LogicalLocation &loc);
-  void FillSameRankCoarseToFineAMR(MeshBlock* pob, MeshBlock* pmb,
+  void FillSameRankCoarseToFineAMR(MeshBlock *pob, MeshBlock *pmb,
                                    LogicalLocation &newloc);
   // step 8: receive
   void FinishRecvSameLevel(MeshBlock *pb, Real *recvbuf);
-  void FinishRecvFineToCoarseAMR(MeshBlock *pb, Real *recvbuf, LogicalLocation &lloc);
+  void FinishRecvFineToCoarseAMR(MeshBlock *pb, Real *recvbuf,
+                                 LogicalLocation &lloc);
   void FinishRecvCoarseToFineAMR(MeshBlock *pb, Real *recvbuf);
 
   //! defined in either the prob file or default_pgen.cpp in ../pgen/
@@ -386,7 +395,8 @@ class Mesh {
 
   // often used (not defined) in prob file in ../pgen/
   void EnrollUserBoundaryFunction(BoundaryFace face, BValFunc my_func);
-  void EnrollUserMGGravityBoundaryFunction(BoundaryFace dir, MGBoundaryFunc my_bc);
+  void EnrollUserMGGravityBoundaryFunction(BoundaryFace dir,
+                                           MGBoundaryFunc my_bc);
   void EnrollUserCRBoundaryFunction(BoundaryFace face, CRBoundaryFunc my_func);
   //! \deprecated (felker):
   //! * provide trivial overload for old-style BoundaryFace enum argument
@@ -399,42 +409,47 @@ class Mesh {
   void EnrollUserExplicitSourceFunction(SrcTermFunc my_func);
   void EnrollUserTimeStepFunction(TimeStepFunc my_func);
   void AllocateUserHistoryOutput(int n);
-  void EnrollUserHistoryOutput(int i, HistoryOutputFunc my_func, const char *name,
-                               UserHistoryOperation op=UserHistoryOperation::sum);
+  void
+  EnrollUserHistoryOutput(int i, HistoryOutputFunc my_func, const char *name,
+                          UserHistoryOperation op = UserHistoryOperation::sum);
   void EnrollUserMetric(MetricFunc my_func);
   void EnrollViscosityCoefficient(ViscosityCoeffFunc my_func);
   void EnrollConductionCoefficient(ConductionCoeffFunc my_func);
   void EnrollFieldDiffusivity(FieldDiffusionCoeffFunc my_func);
   void EnrollOrbitalVelocity(OrbitalVelocityFunc my_func);
   void EnrollOrbitalVelocityDerivative(int i, OrbitalVelocityFunc my_func);
-  void SetGravitationalConstant(Real g) { four_pi_G_=4.0*PI*g; }
-  void SetFourPiG(Real fpg) { four_pi_G_=fpg; }
-  void SetGravityThreshold(Real eps) { grav_eps_=eps; }
+  void SetGravitationalConstant(Real g) { four_pi_G_ = 4.0 * PI * g; }
+  void SetFourPiG(Real fpg) { four_pi_G_ = fpg; }
+  void SetGravityThreshold(Real eps) { grav_eps_ = eps; }
 };
-
 
 //----------------------------------------------------------------------------------------
 //! \fn Real ComputeMeshGeneratorX(std::int64_t index, std::int64_t nrange,
 //!                                bool sym_interval)
 //! \brief wrapper fn to compute Real x logical location for either
 //!        [0., 1.] or [-0.5, 0.5]\n
-//!        real cell ranges for MeshGenerator_[] functions (default/user vs. uniform)
+//!        real cell ranges for MeshGenerator_[] functions (default/user vs.
+//!        uniform)
 
 inline Real ComputeMeshGeneratorX(std::int64_t index, std::int64_t nrange,
                                   bool sym_interval) {
   // index is typically 0, ... nrange for non-ghost boundaries
   if (!sym_interval) {
-    // to map to fractional logical position [0.0, 1.0], simply divide by # of faces
-    return static_cast<Real>(index)/static_cast<Real>(nrange);
+    // to map to fractional logical position [0.0, 1.0], simply divide by # of
+    // faces
+    return static_cast<Real>(index) / static_cast<Real>(nrange);
   } else {
-    // to map to a [-0.5, 0.5] range, rescale int indices around 0 before FP conversion
-    // if nrange is even, there is an index at center x=0.0; map it to (int) 0
-    // if nrange is odd, the center x=0.0 is between two indices; map them to -1, 1
-    std::int64_t noffset = index - (nrange)/2;
-    std::int64_t noffset_ceil = index - (nrange+1)/2; // = noffset if nrange is even
-    //std::cout << "noffset, noffset_ceil = " << noffset << ", " << noffset_ceil << "\n";
-    // average the (possibly) biased integer indexing
-    return static_cast<Real>(noffset + noffset_ceil)/(2.0*nrange);
+    // to map to a [-0.5, 0.5] range, rescale int indices around 0 before FP
+    // conversion if nrange is even, there is an index at center x=0.0; map it
+    // to (int) 0 if nrange is odd, the center x=0.0 is between two indices; map
+    // them to -1, 1
+    std::int64_t noffset = index - (nrange) / 2;
+    std::int64_t noffset_ceil =
+        index - (nrange + 1) / 2; // = noffset if nrange is even
+    // std::cout << "noffset, noffset_ceil = " << noffset << ", " <<
+    // noffset_ceil << "\n";
+    //  average the (possibly) biased integer indexing
+    return static_cast<Real>(noffset + noffset_ceil) / (2.0 * nrange);
   }
 }
 
@@ -445,16 +460,17 @@ inline Real ComputeMeshGeneratorX(std::int64_t index, std::int64_t nrange,
 
 inline Real DefaultMeshGeneratorX1(Real x, RegionSize rs) {
   Real lw, rw;
-  if (rs.x1rat==1.0) {
-    rw=x, lw=1.0-x;
+  if (rs.x1rat == 1.0) {
+    rw = x, lw = 1.0 - x;
   } else {
-    Real ratn=std::pow(rs.x1rat,rs.nx1);
-    Real rnx=std::pow(rs.x1rat,x*rs.nx1);
-    lw=(rnx-ratn)/(1.0-ratn);
-    rw=1.0-lw;
+    Real ratn = std::pow(rs.x1rat, rs.nx1);
+    Real rnx = std::pow(rs.x1rat, x * rs.nx1);
+    lw = (rnx - ratn) / (1.0 - ratn);
+    rw = 1.0 - lw;
   }
-  // linear interp, equally weighted from left (x(xmin)=0.0) and right (x(xmax)=1.0)
-  return rs.x1min*lw+rs.x1max*rw;
+  // linear interp, equally weighted from left (x(xmin)=0.0) and right
+  // (x(xmax)=1.0)
+  return rs.x1min * lw + rs.x1max * rw;
 }
 
 //----------------------------------------------------------------------------------------
@@ -464,15 +480,15 @@ inline Real DefaultMeshGeneratorX1(Real x, RegionSize rs) {
 
 inline Real DefaultMeshGeneratorX2(Real x, RegionSize rs) {
   Real lw, rw;
-  if (rs.x2rat==1.0) {
-    rw=x, lw=1.0-x;
+  if (rs.x2rat == 1.0) {
+    rw = x, lw = 1.0 - x;
   } else {
-    Real ratn=std::pow(rs.x2rat,rs.nx2);
-    Real rnx=std::pow(rs.x2rat,x*rs.nx2);
-    lw=(rnx-ratn)/(1.0-ratn);
-    rw=1.0-lw;
+    Real ratn = std::pow(rs.x2rat, rs.nx2);
+    Real rnx = std::pow(rs.x2rat, x * rs.nx2);
+    lw = (rnx - ratn) / (1.0 - ratn);
+    rw = 1.0 - lw;
   }
-  return rs.x2min*lw+rs.x2max*rw;
+  return rs.x2min * lw + rs.x2max * rw;
 }
 
 //----------------------------------------------------------------------------------------
@@ -482,15 +498,15 @@ inline Real DefaultMeshGeneratorX2(Real x, RegionSize rs) {
 
 inline Real DefaultMeshGeneratorX3(Real x, RegionSize rs) {
   Real lw, rw;
-  if (rs.x3rat==1.0) {
-    rw=x, lw=1.0-x;
+  if (rs.x3rat == 1.0) {
+    rw = x, lw = 1.0 - x;
   } else {
-    Real ratn=std::pow(rs.x3rat,rs.nx3);
-    Real rnx=std::pow(rs.x3rat,x*rs.nx3);
-    lw=(rnx-ratn)/(1.0-ratn);
-    rw=1.0-lw;
+    Real ratn = std::pow(rs.x3rat, rs.nx3);
+    Real rnx = std::pow(rs.x3rat, x * rs.nx3);
+    lw = (rnx - ratn) / (1.0 - ratn);
+    rw = 1.0 - lw;
   }
-  return rs.x3min*lw+rs.x3max*rw;
+  return rs.x3min * lw + rs.x3max * rw;
 }
 
 //----------------------------------------------------------------------------------------
@@ -499,8 +515,10 @@ inline Real DefaultMeshGeneratorX3(Real x, RegionSize rs) {
 //!        real cells in [-0.5, 0.5]
 
 inline Real UniformMeshGeneratorX1(Real x, RegionSize rs) {
-  // linear interp, equally weighted from left (x(xmin)=-0.5) and right (x(xmax)=0.5)
-  return static_cast<Real>(0.5)*(rs.x1min+rs.x1max) + (x*rs.x1max - x*rs.x1min);
+  // linear interp, equally weighted from left (x(xmin)=-0.5) and right
+  // (x(xmax)=0.5)
+  return static_cast<Real>(0.5) * (rs.x1min + rs.x1max) +
+         (x * rs.x1max - x * rs.x1min);
 }
 
 //----------------------------------------------------------------------------------------
@@ -509,7 +527,8 @@ inline Real UniformMeshGeneratorX1(Real x, RegionSize rs) {
 //!       real cells in [-0.5, 0.5]
 
 inline Real UniformMeshGeneratorX2(Real x, RegionSize rs) {
-  return static_cast<Real>(0.5)*(rs.x2min+rs.x2max) + (x*rs.x2max - x*rs.x2min);
+  return static_cast<Real>(0.5) * (rs.x2min + rs.x2max) +
+         (x * rs.x2max - x * rs.x2min);
 }
 
 //----------------------------------------------------------------------------------------
@@ -518,7 +537,8 @@ inline Real UniformMeshGeneratorX2(Real x, RegionSize rs) {
 //!        real cells in [-0.5, 0.5]
 
 inline Real UniformMeshGeneratorX3(Real x, RegionSize rs) {
-  return static_cast<Real>(0.5)*(rs.x3min+rs.x3max) + (x*rs.x3max - x*rs.x3min);
+  return static_cast<Real>(0.5) * (rs.x3min + rs.x3max) +
+         (x * rs.x3max - x * rs.x3min);
 }
 
-#endif  // MESH_MESH_HPP_
+#endif // MESH_MESH_HPP_

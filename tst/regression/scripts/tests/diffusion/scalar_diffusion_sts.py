@@ -8,13 +8,13 @@ import scripts.utils.athena as athena  # noqa
 import scripts.tests.diffusion.scalar_diffusion as scalar_diffusion
 import logging
 
-scalar_diffusion.sts_integrators = ['rkl1', 'rkl2']
+scalar_diffusion.sts_integrators = ["rkl1", "rkl2"]
 scalar_diffusion.rate_tols = [-0.99, -1.99]
-scalar_diffusion.logger = logging.getLogger('athena' + __name__[7:])
+scalar_diffusion.logger = logging.getLogger("athena" + __name__[7:])
 
 
 def prepare(*args, **kwargs):
-    return scalar_diffusion.prepare('sts', *args, **kwargs)
+    return scalar_diffusion.prepare("sts", *args, **kwargs)
 
 
 def run(**kwargs):

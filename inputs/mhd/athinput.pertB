@@ -1,6 +1,6 @@
 <comment>
 problem   = Generate B field with a Gaussian random field
-reference = 
+reference =
 configure = --prob=pertB -fft -b -hdf5
 
 <job>

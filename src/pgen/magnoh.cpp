@@ -1,7 +1,8 @@
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file magnoh.cpp
 //! \brief Magnetized Noh with perturbation in B_phi. Authored by A. Beresnyak
@@ -18,19 +19,20 @@
 //!   \f$ (1+perturb*std::cos(mphi*phi)) \f$ to the magnetic potential Az
 //!
 //! REFERENCES:
-//! 1) Velikovich, Giuliani, Zalesak, Gardiner, "Exact self-similar solutions for the
-//! magnetized Noh Z pinch problem", Phys. of Plasmas, vol.19, p.012707 (2012)
+//! 1) Velikovich, Giuliani, Zalesak, Gardiner, "Exact self-similar solutions
+//! for the magnetized Noh Z pinch problem", Phys. of Plasmas, vol.19, p.012707
+//! (2012)
 //!
-//! 2) Giuliani, Velikovich, Beresnyak, Zalesak, Gianakon, Rousculp, "Self-similar
-//! solutions for the magnetized Noh problem with axial and azimuthal field", Phys. of
-//! Plasmas, in prep (2018)
+//! 2) Giuliani, Velikovich, Beresnyak, Zalesak, Gianakon, Rousculp,
+//! "Self-similar solutions for the magnetized Noh problem with axial and
+//! azimuthal field", Phys. of Plasmas, in prep (2018)
 
 // C headers
 
 // C++ headers
 #include <algorithm>
-#include <cmath>      // sqrt()
-#include <cstring>    // strcmp()
+#include <cmath>   // sqrt()
+#include <cstring> // strcmp()
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -59,9 +61,9 @@ Real bphi0, bz;
 
 //========================================================================================
 //! \fn void Mesh::InitUserMeshData(ParameterInput *pin)
-//  \brief Function to initialize problem-specific data in mesh class.  Can also be used
-//  to initialize variables which are global to (and therefore can be passed to) other
-//  functions in this file.  Called in Mesh constructor.
+//  \brief Function to initialize problem-specific data in mesh class.  Can also
+//  be used to initialize variables which are global to (and therefore can be
+//  passed to) other functions in this file.  Called in Mesh constructor.
 //========================================================================================
 
 void Mesh::InitUserMeshData(ParameterInput *pin) {
@@ -69,22 +71,21 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   // nu_iso = pin->GetOrAddReal("problem", "nu_iso", 0.0);
   // eta_ohm = pin->GetOrAddReal("problem", "eta_ohm", 0.0);
 
-  alpha  = pin->GetReal("problem", "alpha");
-  beta  = pin->GetReal("problem", "beta");
+  alpha = pin->GetReal("problem", "alpha");
+  beta = pin->GetReal("problem", "beta");
   pcoeff = pin->GetReal("problem", "pcoeff");
-  rho0  = pin->GetReal("problem", "d");
-  vr =  pin->GetReal("problem", "vr");
+  rho0 = pin->GetReal("problem", "d");
+  vr = pin->GetReal("problem", "vr");
   // convert from CGS to Athena Heaviside units:
-  bphi0 = pin->GetReal("problem", "bphi")/std::sqrt(4*M_PI);
-  bz = pin->GetReal("problem", "bz")/std::sqrt(4*M_PI);
-  P0 = 4*M_PI*pcoeff*(bphi0*bphi0+bz*bz);
+  bphi0 = pin->GetReal("problem", "bphi") / std::sqrt(4 * M_PI);
+  bz = pin->GetReal("problem", "bz") / std::sqrt(4 * M_PI);
+  P0 = 4 * M_PI * pcoeff * (bphi0 * bphi0 + bz * bz);
 
-  perturb = pin->GetOrAddReal("problem","perturb",0.0);
-  mphi = pin->GetOrAddReal("problem","mphi",1.0);
+  perturb = pin->GetOrAddReal("problem", "perturb", 0.0);
+  mphi = pin->GetOrAddReal("problem", "mphi", 1.0);
 
   return;
 }
-
 
 //========================================================================================
 //! \fn void MeshBlock::ProblemGenerator(ParameterInput *pin)
@@ -99,38 +100,40 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     std::stringstream msg;
     msg << "### FATAL ERROR in magnoh.cpp ProblemGenerator" << std::endl
         << "Unrecognized COORDINATE_SYSTEM= " << COORDINATE_SYSTEM << std::endl
-        << "Only Cartesian and cylindrical are supported for this problem" << std::endl;
+        << "Only Cartesian and cylindrical are supported for this problem"
+        << std::endl;
     ATHENA_ERROR(msg);
   }
 
   // initialize vector potential for inflowing B
   // (only initializing 2D array for vec potential)
   AthenaArray<Real> az;
-  az.NewAthenaArray(ncells2, ncells1);  // ncells2 is consistent only if 2D or 3D
+  az.NewAthenaArray(ncells2, ncells1); // ncells2 is consistent only if 2D or 3D
 
-  for (int j=js; j<=je+1; ++j) {
-    for (int i=is; i<=ie+1; ++i) {
-      Real rad,phi;
+  for (int j = js; j <= je + 1; ++j) {
+    for (int i = is; i <= ie + 1; ++i) {
+      Real rad, phi;
       if (std::strcmp(COORDINATE_SYSTEM, "cylindrical") == 0) {
         rad = pcoord->x1f(i);
         phi = pcoord->x2f(j);
       } else { // cartesian
-        Real x1  = pcoord->x1f(i);
-        Real x2  = pcoord->x2f(j);
+        Real x1 = pcoord->x1f(i);
+        Real x2 = pcoord->x2f(j);
         rad = std::sqrt(SQR(x1) + SQR(x2));
         phi = atan2(x2, x1);
       }
       // if (rad==0.0) rad=3.0/100000;
-      az(j,i) = (bphi0/(beta+1))*std::pow(rad,beta+1)*(1+perturb*std::cos(mphi*phi));
+      az(j, i) = (bphi0 / (beta + 1)) * std::pow(rad, beta + 1) *
+                 (1 + perturb * std::cos(mphi * phi));
     }
   }
 
   // initialize conserved variables
-  for (int k=ks; k<=ke; k++) {
-    for (int j=js; j<=je; j++) {
-      for (int i=is; i<=ie; i++) {
+  for (int k = ks; k <= ke; k++) {
+    for (int j = js; j <= je; j++) {
+      for (int i = is; i <= ie; i++) {
         // Volume centered coordinates and quantities
-        Real rad,x1,x2;
+        Real rad, x1, x2;
         if (std::strcmp(COORDINATE_SYSTEM, "cylindrical") == 0) {
           rad = pcoord->x1v(i);
         } else { // cartesian
@@ -138,71 +141,74 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
           x2 = pcoord->x2v(j);
           rad = std::sqrt(SQR(x1) + SQR(x2));
         }
-        Real rho = rho0*std::pow(rad, alpha);
-        Real P   = P0  *std::pow(rad, 2*beta);
+        Real rho = rho0 * std::pow(rad, alpha);
+        Real P = P0 * std::pow(rad, 2 * beta);
 
-        phydro->u(IDN,k,j,i) = rho;
+        phydro->u(IDN, k, j, i) = rho;
 
         if (std::strcmp(COORDINATE_SYSTEM, "cylindrical") == 0) {
-          phydro->u(IM1,k,j,i) = rho*vr;
-          phydro->u(IM2,k,j,i) = 0.0;
+          phydro->u(IM1, k, j, i) = rho * vr;
+          phydro->u(IM2, k, j, i) = 0.0;
         } else { // cartesian
-          phydro->u(IM1,k,j,i) = rho*vr*x1/rad;
-          phydro->u(IM2,k,j,i) = rho*vr*x2/rad;
+          phydro->u(IM1, k, j, i) = rho * vr * x1 / rad;
+          phydro->u(IM2, k, j, i) = rho * vr * x2 / rad;
         }
 
-        phydro->u(IM3,k,j,i) = 0.0;
-        phydro->u(IEN,k,j,i) = P/gm1 + 0.5*rho*SQR(vr);
+        phydro->u(IM3, k, j, i) = 0.0;
+        phydro->u(IEN, k, j, i) = P / gm1 + 0.5 * rho * SQR(vr);
       }
     }
   }
 
   // initialize face-averaged magnetic fields
   if (MAGNETIC_FIELDS_ENABLED) {
-    for (int k=ks; k<=ke; k++) {
-      for (int j=js; j<=je; j++) {
-        for (int i=is; i<=ie+1; i++) {
+    for (int k = ks; k <= ke; k++) {
+      for (int j = js; j <= je; j++) {
+        for (int i = is; i <= ie + 1; i++) {
           Real geom_coeff = 1.0;
           if (std::strcmp(COORDINATE_SYSTEM, "cylindrical") == 0) {
-            geom_coeff = 1.0/pcoord->x1f(i);
+            geom_coeff = 1.0 / pcoord->x1f(i);
           }
-          pfield->b.x1f(k,j,i) = geom_coeff*(az(j+1,i) - az(j,i))/pcoord->dx2f(j);
+          pfield->b.x1f(k, j, i) =
+              geom_coeff * (az(j + 1, i) - az(j, i)) / pcoord->dx2f(j);
         }
       }
     }
-    for (int k=ks; k<=ke; k++) {
-      for (int j=js; j<=je+1; j++) {
-        for (int i=is; i<=ie; i++) {
+    for (int k = ks; k <= ke; k++) {
+      for (int j = js; j <= je + 1; j++) {
+        for (int i = is; i <= ie; i++) {
           Real geom_coeff = 1.0;
           if (std::strcmp(COORDINATE_SYSTEM, "cylindrical") == 0) {
             geom_coeff = -1.0; // Left hand system?
           }
-          pfield->b.x2f(k,j,i) = geom_coeff*(az(j,i) - az(j,i+1))/pcoord->dx1f(i);
+          pfield->b.x2f(k, j, i) =
+              geom_coeff * (az(j, i) - az(j, i + 1)) / pcoord->dx1f(i);
         }
       }
     }
-    for (int k=ks; k<=ke+1; k++) {
-      for (int j=js; j<=je; j++) {
-        for (int i=is; i<=ie; i++) {
+    for (int k = ks; k <= ke + 1; k++) {
+      for (int j = js; j <= je; j++) {
+        for (int i = is; i <= ie; i++) {
           Real rad;
           if (std::strcmp(COORDINATE_SYSTEM, "cylindrical") == 0) {
             rad = pcoord->x1v(i);
           } else {
             rad = std::sqrt(SQR(pcoord->x1v(i)) + SQR(pcoord->x2v(j)));
           }
-          pfield->b.x3f(k,j,i) = bz*std::pow(rad,beta);
+          pfield->b.x3f(k, j, i) = bz * std::pow(rad, beta);
         }
       }
     }
     if (NON_BAROTROPIC_EOS) {
-      for (int k=ks; k<=ke; k++) {
-        for (int j=js; j<=je; j++) {
-          for (int i=is; i<=ie; i++) {
-            phydro->u(IEN,k,j,i) +=
+      for (int k = ks; k <= ke; k++) {
+        for (int j = js; j <= je; j++) {
+          for (int i = is; i <= ie; i++) {
+            phydro->u(IEN, k, j, i) +=
                 // second-order accurate assumption about volume-averaged field
-                0.5*0.25*(SQR(pfield->b.x1f(k,j,i) + pfield->b.x1f(k,j,i+1))
-                          + SQR(pfield->b.x2f(k,j,i)  + pfield->b.x2f(k,j+1,i))
-                          + SQR(pfield->b.x3f(k,j,i) + pfield->b.x3f(k+1,j,i)));
+                0.5 * 0.25 *
+                (SQR(pfield->b.x1f(k, j, i) + pfield->b.x1f(k, j, i + 1)) +
+                 SQR(pfield->b.x2f(k, j, i) + pfield->b.x2f(k, j + 1, i)) +
+                 SQR(pfield->b.x3f(k, j, i) + pfield->b.x3f(k + 1, j, i)));
           }
         }
       }

@@ -3,8 +3,9 @@
 
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file perturbation.hpp
 //  \brief defines PERTURBATION class
@@ -12,7 +13,7 @@
 // C headers
 
 // C++ headers
-#include <random>     // mt19937, normal_distribution, uniform_real_distribution
+#include <random> // mt19937, normal_distribution, uniform_real_distribution
 
 // Athena++ headers
 #include "../athena.hpp"
@@ -31,8 +32,9 @@ class FFTDriver;
 //! \class PerturbationBlock
 //! \brief MeshBlock level container class for communication purpose
 class PerturbationBlock {
-friend class PerturbationGenerator;
- public:
+  friend class PerturbationGenerator;
+
+public:
   explicit PerturbationBlock(MeshBlock *pmb);
   ~PerturbationBlock();
 
@@ -45,8 +47,8 @@ friend class PerturbationGenerator;
 //! \class PerturbationGenerator
 //  \brief Perturbation Generator
 
-class PerturbationGenerator : public FFTDriver{
- public:
+class PerturbationGenerator : public FFTDriver {
+public:
   PerturbationGenerator(Mesh *pm, ParameterInput *pin);
   ~PerturbationGenerator();
   void GenerateVector();
@@ -65,9 +67,9 @@ class PerturbationGenerator : public FFTDriver{
   AthenaArray<Real> GetVector(int nb);
   AthenaArray<Real> GetScalar(int nb);
   std::int64_t GetKcomp(int idx, int disp, int Nx);
-  AthenaArray<PerturbationBlock*> my_ptblocks;
+  AthenaArray<PerturbationBlock *> my_ptblocks;
 
- protected:
+protected:
   std::int64_t rseed;
   int nlow, nhigh;
   Real f_shear, expo, dvol;
@@ -81,8 +83,8 @@ class PerturbationGenerator : public FFTDriver{
 //! \class TurbulenceDriver
 //  \brief Turbulence Driver
 
-class TurbulenceDriver : public PerturbationGenerator{
- public:
+class TurbulenceDriver : public PerturbationGenerator {
+public:
   TurbulenceDriver(Mesh *pm, ParameterInput *pin);
   ~TurbulenceDriver();
   void Driving();
@@ -92,7 +94,7 @@ class TurbulenceDriver : public PerturbationGenerator{
   int turb_flag;
   Real tdrive, dtdrive, tcorr, dedt;
 
- private:
+private:
   std::complex<Real> **fv_new_;
 };
 

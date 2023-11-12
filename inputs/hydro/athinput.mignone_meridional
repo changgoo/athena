@@ -66,8 +66,8 @@ alpha         = 1.0    # coefficient of linear velocity profile
 
 # case A: monotonically decreasing function
 a_width       = 10.0
-b_center      = 0.0 
+b_center      = 0.0
 
 # case B: non-monotonic function
-# a_width       = 16.0  
+# a_width       = 16.0
 # b_center      = 0.196349540849362077 // = pi/16.0

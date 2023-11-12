@@ -5,7 +5,7 @@ import os
 
 class timing_reader(object):
     def __init__(self, base, pid):
-        """ Timing reader class
+        """Timing reader class
 
         Parameters
         ----------
@@ -22,12 +22,12 @@ class timing_reader(object):
         self.base = base
         self.pid = pid
         self.fdict = dict()
-        lt = '{}{}.loop_time.txt'.format(base, pid)
-        tt = '{}{}.task_time.txt'.format(base, pid)
+        lt = "{}{}.loop_time.txt".format(base, pid)
+        tt = "{}{}.task_time.txt".format(base, pid)
         if os.path.isfile(lt):
-            self.fdict['loop_time'] = lt
+            self.fdict["loop_time"] = lt
         if os.path.isfile(tt):
-            self.fdict['task_time'] = tt
+            self.fdict["task_time"] = tt
 
     def load_task_time(self, groups=None):
         """Read .task_time.txt file
@@ -44,37 +44,38 @@ class timing_reader(object):
 
         The breakdown of time taken by each task of the time integrator
         """
+
         def from_block(block):
             info = dict()
-            h = block[0].split(',')
-            info['ncycle'] = int(h[0].split('=')[1])
-            name = h[1].split('=')[1]
-            time = h[2].split('=')[1]
+            h = block[0].split(",")
+            info["ncycle"] = int(h[0].split("=")[1])
+            name = h[1].split("=")[1]
+            time = h[2].split("=")[1]
             info[name] = float(time)
             for line in block[1:]:
-                sp = line.split(',')
-                name = sp[0].replace(' ', '')
-                time = sp[1].split('=')[1]
+                sp = line.split(",")
+                name = sp[0].replace(" ", "")
+                time = sp[1].split("=")[1]
                 info[name] = float(time)
             return info
 
-        with open(self.fdict['task_time']) as fp:
+        with open(self.fdict["task_time"]) as fp:
             lines = fp.readlines()
 
         block_idx = []
         for i, line in enumerate(lines):
-            if line.startswith('#'):
+            if line.startswith("#"):
                 block_idx.append(i)
         timing = dict()
 
         # initialize
-        info = from_block(lines[0:block_idx[1]])
+        info = from_block(lines[0 : block_idx[1]])
 
         if groups is None:
             for k in info:
                 timing[k] = []
         else:
-            meta = set(['TimeIntegrator', 'ncycle'])
+            meta = set(["TimeIntegrator", "ncycle"])
             keys = set(info.keys()) - meta
             members = dict()
             for g in groups:
@@ -83,7 +84,7 @@ class timing_reader(object):
                     if g in k:
                         members[g].append(k)
                         keys = keys - set([k])
-            members['Others'] = keys
+            members["Others"] = keys
             for k in list(meta) + list(members.keys()):
                 timing[k] = []
 
@@ -118,16 +119,18 @@ class timing_reader(object):
         The breakdown of each step of the main loop including
         Before, TimeIntegratorTaskList, SelfGravity, After
         """
+
         def from_one_line(line):
             info = dict()
-            for sp in line.split(','):
-                name, value = sp.split('=')
-                if name in ['ncycle']:
-                    info[name.replace(' ', '')] = int(value)
+            for sp in line.split(","):
+                name, value = sp.split("=")
+                if name in ["ncycle"]:
+                    info[name.replace(" ", "")] = int(value)
                 else:
-                    info[name.replace(' ', '')] = float(value)
+                    info[name.replace(" ", "")] = float(value)
             return info
-        with open(self.fdict['loop_time']) as fp:
+
+        with open(self.fdict["loop_time"]) as fp:
             lines = fp.readlines()
 
         timing = dict()
@@ -139,7 +142,7 @@ class timing_reader(object):
             info = from_one_line(line)
             for k, v in info.items():
                 timing[k].append(v)
-        return pd.DataFrame(timing).rename(columns=dict(time='All'))
+        return pd.DataFrame(timing).rename(columns=dict(time="All"))
 
     def load_timing(self):
         """Read both timing outputs
@@ -152,11 +155,24 @@ class timing_reader(object):
         time in second for each step : xarray.Dataset
 
         """
-        timing1 = self.load_task_time(groups=['Hydro', 'Field', 'EMF', 'Particle',
-                                      'UserWork', 'Primitives'])
+        timing1 = self.load_task_time(
+            groups=["Hydro", "Field", "EMF", "Particle", "UserWork", "Primitives"]
+        )
         timing2 = self.load_loop_time()
-        timing = timing1.merge(timing2)[['All', 'Before', 'SelfGravity', 'Hydro', 'Field',
-                                         'EMF', 'Particle', 'UserWork', 'Primitives',
-                                         'Others', 'After']].to_xarray()
-        timing = timing.rename(dict(index='ncycle'))
+        timing = timing1.merge(timing2)[
+            [
+                "All",
+                "Before",
+                "SelfGravity",
+                "Hydro",
+                "Field",
+                "EMF",
+                "Particle",
+                "UserWork",
+                "Primitives",
+                "Others",
+                "After",
+            ]
+        ].to_xarray()
+        timing = timing.rename(dict(index="ncycle"))
         return timing

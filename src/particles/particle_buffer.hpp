@@ -2,7 +2,8 @@
 #define PARTICLES_PARTICLE_BUFFER_HPP_
 //======================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors
 //======================================================================================
 //! \file particle_buffer.hpp
 //! \brief defines ParticleBuffer class for communication of particles.
@@ -21,9 +22,9 @@
 //! \brief defines the class for managing buffers for transporting particles.
 
 class ParticleBuffer {
-friend class Particles;
+  friend class Particles;
 
- public:
+public:
   // Constructors and destructor
   ParticleBuffer();
   ParticleBuffer(int nparmax0, int nint, int nreal);
@@ -32,17 +33,17 @@ friend class Particles;
   // Instance method
   void Reallocate(int new_nparmax, int nint, int nreal);
 
- protected:
+protected:
   // Instance variables
-  int* ibuf;   //!> ptr to integer buffer
-  Real* rbuf;   //!> ptr to real buffer
-  int nparmax_;  //!> maximum number of particles
-  int npar_;     //!> actual number of particles in the buffer
+  int *ibuf;    //!> ptr to integer buffer
+  Real *rbuf;   //!> ptr to real buffer
+  int nparmax_; //!> maximum number of particles
+  int npar_;    //!> actual number of particles in the buffer
 #ifdef MPI_PARALLEL
-  MPI_Request reqn, reqi, reqr;  //!> MPI request handles
-  int flagn;               //!> Flag indicating if the incoming number is known
-  int flagi, flagr;        //!> Flags indicating if the respective buffer is filled
-  int tag;                 //!> MPI tag (allowing for from tag to tag + 2)
+  MPI_Request reqn, reqi, reqr; //!> MPI request handles
+  int flagn;        //!> Flag indicating if the incoming number is known
+  int flagi, flagr; //!> Flags indicating if the respective buffer is filled
+  int tag;          //!> MPI tag (allowing for from tag to tag + 2)
 #endif
 };
-#endif  // PARTICLES_PARTICLE_BUFFER_HPP_
+#endif // PARTICLES_PARTICLE_BUFFER_HPP_

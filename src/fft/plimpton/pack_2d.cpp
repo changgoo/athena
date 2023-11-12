@@ -43,8 +43,8 @@
 void pack_2d(double *data, double *buf, struct pack_plan_2d *plan)
 
 {
-  int in,out,fast,slow;
-  int nfast,nslow,nstride;
+  int in, out, fast, slow;
+  int nfast, nslow, nstride;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -52,7 +52,7 @@ void pack_2d(double *data, double *buf, struct pack_plan_2d *plan)
 
   in = 0;
   for (slow = 0; slow < nslow; slow++) {
-    out = slow*nstride;
+    out = slow * nstride;
     for (fast = 0; fast < nfast; fast++)
       buf[in++] = data[out++];
   }
@@ -64,8 +64,8 @@ void pack_2d(double *data, double *buf, struct pack_plan_2d *plan)
 void unpack_2d(double *buf, double *data, struct pack_plan_2d *plan)
 
 {
-  int in,out,fast,slow;
-  int nfast,nslow,nstride;
+  int in, out, fast, slow;
+  int nfast, nslow, nstride;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -73,7 +73,7 @@ void unpack_2d(double *buf, double *data, struct pack_plan_2d *plan)
 
   out = 0;
   for (slow = 0; slow < nslow; slow++) {
-    in = slow*nstride;
+    in = slow * nstride;
     for (fast = 0; fast < nfast; fast++)
       data[in++] = buf[out++];
   }
@@ -85,8 +85,8 @@ void unpack_2d(double *buf, double *data, struct pack_plan_2d *plan)
 void unpack_2d_permute_1(double *buf, double *data, struct pack_plan_2d *plan)
 
 {
-  int in,out,fast,slow;
-  int nfast,nslow,nstride;
+  int in, out, fast, slow;
+  int nfast, nslow, nstride;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -106,8 +106,8 @@ void unpack_2d_permute_1(double *buf, double *data, struct pack_plan_2d *plan)
 void unpack_2d_permute_2(double *buf, double *data, struct pack_plan_2d *plan)
 
 {
-  int in,out,fast,slow;
-  int nfast,nslow,nstride;
+  int in, out, fast, slow;
+  int nfast, nslow, nstride;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -115,10 +115,10 @@ void unpack_2d_permute_2(double *buf, double *data, struct pack_plan_2d *plan)
 
   out = 0;
   for (slow = 0; slow < nslow; slow++) {
-    in = 2*slow;
+    in = 2 * slow;
     for (fast = 0; fast < nfast; fast++, in += nstride) {
       data[in] = buf[out++];
-      data[in+1] = buf[out++];
+      data[in + 1] = buf[out++];
     }
   }
 }
@@ -129,8 +129,8 @@ void unpack_2d_permute_2(double *buf, double *data, struct pack_plan_2d *plan)
 void unpack_2d_permute_n(double *buf, double *data, struct pack_plan_2d *plan)
 
 {
-  int in,out,iqty,instart,fast,slow;
-  int nfast,nslow,nstride,nqty;
+  int in, out, iqty, instart, fast, slow;
+  int nfast, nslow, nstride, nqty;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -139,10 +139,11 @@ void unpack_2d_permute_n(double *buf, double *data, struct pack_plan_2d *plan)
 
   out = 0;
   for (slow = 0; slow < nslow; slow++) {
-    instart = nqty*slow;
+    instart = nqty * slow;
     for (fast = 0; fast < nfast; fast++, instart += nstride) {
       in = instart;
-      for (iqty = 0; iqty < nqty; iqty++) data[in++] = buf[out++];
+      for (iqty = 0; iqty < nqty; iqty++)
+        data[in++] = buf[out++];
     }
   }
 }
@@ -161,9 +162,9 @@ void unpack_2d_permute_n(double *buf, double *data, struct pack_plan_2d *plan)
 void pack_2d(double *data, double *buf, struct pack_plan_2d *plan)
 
 {
-  double *in,*out,*begin,*end;
+  double *in, *out, *begin, *end;
   int slow;
-  int nfast,nslow,nstride;
+  int nfast, nslow, nstride;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -171,7 +172,7 @@ void pack_2d(double *data, double *buf, struct pack_plan_2d *plan)
 
   in = buf;
   for (slow = 0; slow < nslow; slow++) {
-    begin = &(data[slow*nstride]);
+    begin = &(data[slow * nstride]);
     end = begin + nfast;
     for (out = begin; out < end; out++)
       *(in++) = *out;
@@ -184,9 +185,9 @@ void pack_2d(double *data, double *buf, struct pack_plan_2d *plan)
 void unpack_2d(double *buf, double *data, struct pack_plan_2d *plan)
 
 {
-  double *in,*out,*begin,*end;
+  double *in, *out, *begin, *end;
   int slow;
-  int nfast,nslow,nstride;
+  int nfast, nslow, nstride;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -194,7 +195,7 @@ void unpack_2d(double *buf, double *data, struct pack_plan_2d *plan)
 
   out = buf;
   for (slow = 0; slow < nslow; slow++) {
-    begin = &(data[slow*nstride]);
+    begin = &(data[slow * nstride]);
     end = begin + nfast;
     for (in = begin; in < end; in++)
       *in = *(out++);
@@ -207,9 +208,9 @@ void unpack_2d(double *buf, double *data, struct pack_plan_2d *plan)
 void unpack_2d_permute_1(double *buf, double *data, struct pack_plan_2d *plan)
 
 {
-  double *in,*out,*begin,*end;
+  double *in, *out, *begin, *end;
   int slow;
-  int nfast,nslow,nstride;
+  int nfast, nslow, nstride;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -218,7 +219,7 @@ void unpack_2d_permute_1(double *buf, double *data, struct pack_plan_2d *plan)
   out = buf;
   for (slow = 0; slow < nslow; slow++) {
     begin = &(data[slow]);
-    end = begin + nfast*nstride;
+    end = begin + nfast * nstride;
     for (in = begin; in < end; in += nstride)
       *in = *(out++);
   }
@@ -230,9 +231,9 @@ void unpack_2d_permute_1(double *buf, double *data, struct pack_plan_2d *plan)
 void unpack_2d_permute_2(double *buf, double *data, struct pack_plan_2d *plan)
 
 {
-  double *in,*out,*begin,*end;
+  double *in, *out, *begin, *end;
   int slow;
-  int nfast,nslow,nstride;
+  int nfast, nslow, nstride;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -240,11 +241,11 @@ void unpack_2d_permute_2(double *buf, double *data, struct pack_plan_2d *plan)
 
   out = buf;
   for (slow = 0; slow < nslow; slow++) {
-    begin = &(data[2*slow]);
-    end = begin + nfast*nstride;
+    begin = &(data[2 * slow]);
+    end = begin + nfast * nstride;
     for (in = begin; in < end; in += nstride) {
       *in = *(out++);
-      *(in+1) = *(out++);
+      *(in + 1) = *(out++);
     }
   }
 }
@@ -255,9 +256,9 @@ void unpack_2d_permute_2(double *buf, double *data, struct pack_plan_2d *plan)
 void unpack_2d_permute_n(double *buf, double *data, struct pack_plan_2d *plan)
 
 {
-  double *in,*out,*instart,*begin,*end;
-  int iqty,slow;
-  int nfast,nslow,nstride,nqty;
+  double *in, *out, *instart, *begin, *end;
+  int iqty, slow;
+  int nfast, nslow, nstride, nqty;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -266,11 +267,12 @@ void unpack_2d_permute_n(double *buf, double *data, struct pack_plan_2d *plan)
 
   out = buf;
   for (slow = 0; slow < nslow; slow++) {
-    begin = &(data[nqty*slow]);
-    end = begin + nfast*nstride;
+    begin = &(data[nqty * slow]);
+    end = begin + nfast * nstride;
     for (instart = begin; instart < end; instart += nstride) {
       in = instart;
-      for (iqty = 0; iqty < nqty; iqty++) *(in++) = *(out++);
+      for (iqty = 0; iqty < nqty; iqty++)
+        *(in++) = *(out++);
     }
   }
 }
@@ -291,19 +293,19 @@ void unpack_2d_permute_n(double *buf, double *data, struct pack_plan_2d *plan)
 void pack_2d(double *data, double *buf, struct pack_plan_2d *plan)
 
 {
-  double *in,*out;
-  int slow,size;
-  int nfast,nslow,nstride;
+  double *in, *out;
+  int slow, size;
+  int nfast, nslow, nstride;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
   nstride = plan->nstride;
 
-  size = nfast*sizeof(double);
+  size = nfast * sizeof(double);
   for (slow = 0; slow < nslow; slow++) {
-    in = &(buf[slow*nfast]);
-    out = &(data[slow*nstride]);
-    memcpy(in,out,size);
+    in = &(buf[slow * nfast]);
+    out = &(data[slow * nstride]);
+    memcpy(in, out, size);
   }
 }
 
@@ -313,19 +315,19 @@ void pack_2d(double *data, double *buf, struct pack_plan_2d *plan)
 void unpack_2d(double *buf, double *data, struct pack_plan_2d *plan)
 
 {
-  double *in,*out;
-  int slow,size;
-  int nfast,nslow,nstride;
+  double *in, *out;
+  int slow, size;
+  int nfast, nslow, nstride;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
   nstride = plan->nstride;
 
-  size = nfast*sizeof(double);
+  size = nfast * sizeof(double);
   for (slow = 0; slow < nslow; slow++) {
-    in = &(data[slow*nstride]);
-    out = &(buf[slow*nfast]);
-    memcpy(in,out,size);
+    in = &(data[slow * nstride]);
+    out = &(buf[slow * nfast]);
+    memcpy(in, out, size);
   }
 }
 
@@ -335,9 +337,9 @@ void unpack_2d(double *buf, double *data, struct pack_plan_2d *plan)
 void unpack_2d_permute_1(double *buf, double *data, struct pack_plan_2d *plan)
 
 {
-  double *in,*out,*begin,*end;
+  double *in, *out, *begin, *end;
   int slow;
-  int nfast,nslow,nstride;
+  int nfast, nslow, nstride;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -346,7 +348,7 @@ void unpack_2d_permute_1(double *buf, double *data, struct pack_plan_2d *plan)
   out = buf;
   for (slow = 0; slow < nslow; slow++) {
     begin = &(data[slow]);
-    end = begin + nfast*nstride;
+    end = begin + nfast * nstride;
     for (in = begin; in < end; in += nstride)
       *in = *(out++);
   }
@@ -358,9 +360,9 @@ void unpack_2d_permute_1(double *buf, double *data, struct pack_plan_2d *plan)
 void unpack_2d_permute_2(double *buf, double *data, struct pack_plan_2d *plan)
 
 {
-  double *in,*out,*begin,*end;
+  double *in, *out, *begin, *end;
   int slow;
-  int nfast,nslow,nstride;
+  int nfast, nslow, nstride;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -368,11 +370,11 @@ void unpack_2d_permute_2(double *buf, double *data, struct pack_plan_2d *plan)
 
   out = buf;
   for (slow = 0; slow < nslow; slow++) {
-    begin = &(data[2*slow]);
-    end = begin + nfast*nstride;
+    begin = &(data[2 * slow]);
+    end = begin + nfast * nstride;
     for (in = begin; in < end; in += nstride) {
       *in = *(out++);
-      *(in+1) = *(out++);
+      *(in + 1) = *(out++);
     }
   }
 }
@@ -383,9 +385,9 @@ void unpack_2d_permute_2(double *buf, double *data, struct pack_plan_2d *plan)
 void unpack_2d_permute_n(double *buf, double *data, struct pack_plan_2d *plan)
 
 {
-  double *in,*out,*instart,*begin,*end;
-  int iqty,slow;
-  int nfast,nslow,nstride,nqty;
+  double *in, *out, *instart, *begin, *end;
+  int iqty, slow;
+  int nfast, nslow, nstride, nqty;
 
   nfast = plan->nfast;
   nslow = plan->nslow;
@@ -394,11 +396,12 @@ void unpack_2d_permute_n(double *buf, double *data, struct pack_plan_2d *plan)
 
   out = buf;
   for (slow = 0; slow < nslow; slow++) {
-    begin = &(data[nqty*slow]);
-    end = begin + nfast*nstride;
+    begin = &(data[nqty * slow]);
+    end = begin + nfast * nstride;
     for (instart = begin; instart < end; instart += nstride) {
       in = instart;
-      for (iqty = 0; iqty < nqty; iqty++) *(in++) = *(out++);
+      for (iqty = 0; iqty < nqty; iqty++)
+        *(in++) = *(out++);
     }
   }
 }

@@ -24,13 +24,15 @@ produced by the test.
 """
 
 # Modules
-import numpy as np                             # standard Python module for numerics
-import sys                                     # standard Python module to change path
-import scripts.utils.athena as athena          # utilities for running Athena++
+import numpy as np  # standard Python module for numerics
+import sys  # standard Python module to change path
+import scripts.utils.athena as athena  # utilities for running Athena++
 import scripts.utils.comparison as comparison  # more utilities explicitly for testing
-sys.path.insert(0, '../../vis/python')         # insert path to Python read scripts
-import athena_read                             # utilities for reading Athena++ data # noqa
-athena_read.check_nan_flag = True              # raise exception when encountering NaNs
+
+sys.path.insert(0, "../../vis/python")  # insert path to Python read scripts
+import athena_read  # utilities for reading Athena++ data # noqa
+
+athena_read.check_nan_flag = True  # raise exception when encountering NaNs
 
 
 def prepare(**kwargs):
@@ -48,10 +50,7 @@ def prepare(**kwargs):
     # to athena.configure(). Any number of --<key>=<value> command-line arguments can also
     # be supplied. Note athena.configure() expects the values only to be quoted, e.g.
     # --<key>='<value>'.
-    athena.configure('g', 't',
-                     prob='gr_shock_tube',
-                     coord='minkowski',
-                     **kwargs)
+    athena.configure("g", "t", prob="gr_shock_tube", coord="minkowski", **kwargs)
 
     # Call make as though we ran
     #     make clean
@@ -71,25 +70,27 @@ def run(**kwargs):
     # Create list of runtime arguments to override the athinput file. Each element in the
     # list is simply a string of the form '<block>/<field>=<value>', where the contents of
     # the string are exactly what one would type on the command line run running Athena++.
-    arguments = ['time/ncycle_out=0',
-                 'job/problem_id=gr_shock_tube',
-                 'output1/file_type=vtk',
-                 'output1/variable=cons',
-                 'output1/dt=0.4',
-                 'time/cfl_number=0.4',
-                 'time/tlim=0.4',
-                 'mesh/nx1=400']
+    arguments = [
+        "time/ncycle_out=0",
+        "job/problem_id=gr_shock_tube",
+        "output1/file_type=vtk",
+        "output1/variable=cons",
+        "output1/dt=0.4",
+        "time/cfl_number=0.4",
+        "time/tlim=0.4",
+        "mesh/nx1=400",
+    ]
 
     # Run Athena++ as though we called
     #     ./athena -i ../inputs/hydro_sr/athinput.mb_1 job/problem_id=gr_shock_tube <...>
     # from the bin/ directory. Note we omit the leading '../inputs/' below when specifying
     # the athinput file.)
-    athena.run('hydro_sr/athinput.mb_1', arguments)
+    athena.run("hydro_sr/athinput.mb_1", arguments)
     # No return statement/value is ever required from run(), but returning anything other
     # than default None will cause run_tests.py to skip executing the optional Lcov cmd
     # immediately after this module.run() finishes, e.g. if Lcov was already invoked by:
     # athena.run('hydro_sr/athinput.mb_1', arguments, lcov_test_suffix='mb_1')
-    return 'skip_lcov'
+    return "skip_lcov"
 
 
 def analyze():
@@ -108,12 +109,12 @@ def analyze():
     # the y-interface locations, the z-interface locations, and the values of the
     # variables themselves. In a 1D problem we ignore the second and third returned
     # values, assigning them to the _ variable as is typical Python style.
-    x_ref, _, _, data_ref = athena_read.vtk('data/sr_hydro_shock1_hlle.vtk')
+    x_ref, _, _, data_ref = athena_read.vtk("data/sr_hydro_shock1_hlle.vtk")
 
     # Read in the data produced during this test. This will usually be stored in the
     # tst/regression/bin/ directory, but again we omit the first part of the path. Note
     # the file name is what we expect based on the job/problem_id field supplied in run().
-    x_new, _, _, data_new = athena_read.vtk('bin/gr_shock_tube.block0.out1.00001.vtk')
+    x_new, _, _, data_new = athena_read.vtk("bin/gr_shock_tube.block0.out1.00001.vtk")
 
     # Extract the quantities of interest. Suppose we want to check that the total energy
     # and the x-momentum are the same as those given in the reference dataset. The fourth
@@ -122,12 +123,12 @@ def analyze():
     # the arrays as stored in the vtk file. Here we extract the reference values, where
     # the fourth index specifies which component of the vector quantity to extract. The
     # choice of slicing will give us 1D arrays without any singleton dimensions.
-    e_ref = data_ref['Etot'][0, 0, :]
-    mx_ref = data_ref['mom'][0, 0, :, 0]
+    e_ref = data_ref["Etot"][0, 0, :]
+    mx_ref = data_ref["mom"][0, 0, :, 0]
 
     # Similarly, we extract the newly created values.
-    e_new = -data_new['Etot'][0, 0, :]   # sign flip between SR and GR definitions
-    mx_new = data_new['mom'][0, 0, :, 0]
+    e_new = -data_new["Etot"][0, 0, :]  # sign flip between SR and GR definitions
+    mx_new = data_new["mom"][0, 0, :, 0]
 
     # Next we compute the differences between the reference arrays and the newly created
     # ones in the L^1 sense. That is, given functions f and g, we want

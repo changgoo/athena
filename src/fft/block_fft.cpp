@@ -1,7 +1,8 @@
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file block_fft.cpp
 //! \brief defines interface class to Plimpton's fftMPI
@@ -9,11 +10,11 @@
 // C headers
 
 // C++ headers
-#include <algorithm>  // max
+#include <algorithm> // max
 #include <complex>
 #include <iostream>
 #include <sstream>
-#include <stdexcept>  // runtime_error
+#include <stdexcept> // runtime_error
 
 // Athena++ headers
 #include "../athena.hpp"
@@ -25,47 +26,41 @@
 
 // constructor, initializes data structures and parameters
 
-BlockFFT::BlockFFT(MeshBlock *pmb) :
-    ndim(pmb->pmy_mesh->ndim),
-    is(pmb->is), ie(pmb->ie), js(pmb->js), je(pmb->je), ks(pmb->ks), ke(pmb->ke),
-    Nx1(pmb->pmy_mesh->mesh_size.nx1),
-    Nx2(pmb->pmy_mesh->mesh_size.nx2),
-    Nx3(pmb->pmy_mesh->mesh_size.nx3),
-    nx1(pmb->block_size.nx1),
-    nx2(pmb->block_size.nx2),
-    nx3(pmb->block_size.nx3),
-    in_ilo(static_cast<int>(pmb->loc.lx1)*pmb->block_size.nx1),
-    in_ihi((static_cast<int>(pmb->loc.lx1+1)*pmb->block_size.nx1)-1),
-    in_jlo(static_cast<int>(pmb->loc.lx2)*pmb->block_size.nx2),
-    in_jhi((static_cast<int>(pmb->loc.lx2+1)*pmb->block_size.nx2)-1),
-    in_klo(static_cast<int>(pmb->loc.lx3)*pmb->block_size.nx3),
-    in_khi((static_cast<int>(pmb->loc.lx3+1)*pmb->block_size.nx3)-1),
-    pmy_block_(pmb) {
+BlockFFT::BlockFFT(MeshBlock *pmb)
+    : ndim(pmb->pmy_mesh->ndim), is(pmb->is), ie(pmb->ie), js(pmb->js),
+      je(pmb->je), ks(pmb->ks), ke(pmb->ke), Nx1(pmb->pmy_mesh->mesh_size.nx1),
+      Nx2(pmb->pmy_mesh->mesh_size.nx2), Nx3(pmb->pmy_mesh->mesh_size.nx3),
+      nx1(pmb->block_size.nx1), nx2(pmb->block_size.nx2),
+      nx3(pmb->block_size.nx3),
+      in_ilo(static_cast<int>(pmb->loc.lx1) * pmb->block_size.nx1),
+      in_ihi((static_cast<int>(pmb->loc.lx1 + 1) * pmb->block_size.nx1) - 1),
+      in_jlo(static_cast<int>(pmb->loc.lx2) * pmb->block_size.nx2),
+      in_jhi((static_cast<int>(pmb->loc.lx2 + 1) * pmb->block_size.nx2) - 1),
+      in_klo(static_cast<int>(pmb->loc.lx3) * pmb->block_size.nx3),
+      in_khi((static_cast<int>(pmb->loc.lx3 + 1) * pmb->block_size.nx3) - 1),
+      pmy_block_(pmb) {
 #ifdef FFT
-  if (ndim==3) {
+  if (ndim == 3) {
 #ifdef MPI_PARALLEL
     // use Plimpton's fftMPI
-    pf3d = new FFTMPI_NS::FFT3d(MPI_COMM_WORLD,2); // 2 for double precision
-    // The three-dimensional data cube is pencil-decomposed in x, y, and z directions.
-    // To complete three-dimensional FFTs, we do the followings:
-    // (1) block decomposition -> x-pencil decomposition
-    // (2) FFT in x-axis
-    // (3) x-pencil decomposition -> y-pencil decomposition
-    // (4) FFT in y-axis
-    // (5) y-pencil decomposition -> z-pencil decomposition
-    // (6) FFT in z-axis
-    // After (1)-(6), the data will be in z-pencil decomposition.
-    // By default, we don't perform z-pencil decomposition -> block decomposition
-    // which is unneccessary.
-    // To change the order of executions, override the ExecuteForward/ExecuteBackward
-    // functions (e.g., see BlockFFTGravity class).
-    int permute=2; // will make output array (slow,mid,fast) = (y,x,z) = (j,i,k)
+    pf3d = new FFTMPI_NS::FFT3d(MPI_COMM_WORLD, 2); // 2 for double precision
+    // The three-dimensional data cube is pencil-decomposed in x, y, and z
+    // directions. To complete three-dimensional FFTs, we do the followings: (1)
+    // block decomposition -> x-pencil decomposition (2) FFT in x-axis (3)
+    // x-pencil decomposition -> y-pencil decomposition (4) FFT in y-axis (5)
+    // y-pencil decomposition -> z-pencil decomposition (6) FFT in z-axis After
+    // (1)-(6), the data will be in z-pencil decomposition. By default, we don't
+    // perform z-pencil decomposition -> block decomposition which is
+    // unneccessary. To change the order of executions, override the
+    // ExecuteForward/ExecuteBackward functions (e.g., see BlockFFTGravity
+    // class).
+    int permute =
+        2; // will make output array (slow,mid,fast) = (y,x,z) = (j,i,k)
     int fftsize, sendsize, recvsize; // to be returned from setup
     // preliminary setup to get domain decomposition
-    pf3d->setup(Nx1, Nx2, Nx3,
-                in_ilo, in_ihi, in_jlo, in_jhi, in_klo, in_khi,
-                in_ilo, in_ihi, in_jlo, in_jhi, in_klo, in_khi,
-                permute, fftsize, sendsize, recvsize);
+    pf3d->setup(Nx1, Nx2, Nx3, in_ilo, in_ihi, in_jlo, in_jhi, in_klo, in_khi,
+                in_ilo, in_ihi, in_jlo, in_jhi, in_klo, in_khi, permute,
+                fftsize, sendsize, recvsize);
 
     // set global index in pencil decompositions
     fast_ilo = pf3d->fast_ilo;
@@ -100,26 +95,25 @@ BlockFFT::BlockFFT(MeshBlock *pmb) :
 
     // reallocate and setup FFT
     delete pf3d;
-    pf3d = new FFTMPI_NS::FFT3d(MPI_COMM_WORLD,2);
-    pf3d->setup(Nx1, Nx2, Nx3,
-                in_ilo, in_ihi, in_jlo, in_jhi, in_klo, in_khi,
+    pf3d = new FFTMPI_NS::FFT3d(MPI_COMM_WORLD, 2);
+    pf3d->setup(Nx1, Nx2, Nx3, in_ilo, in_ihi, in_jlo, in_jhi, in_klo, in_khi,
                 slow_ilo, slow_ihi, slow_jlo, slow_jhi, slow_klo, slow_khi,
                 permute, fftsize, sendsize, recvsize);
 
     // initialize arrays
-    // Depending on configuration, the domain may not be evenly pencil-decomposed.
-    // For example, consider 128x128x192 Mesh evenly devided into 64^3 Meshblock.
-    // In z-pencil decomposition, there will be 8 Meshblocks with size 43x32x192
-    // and 4 Meshblocks with size 42x32x192.
+    // Depending on configuration, the domain may not be evenly
+    // pencil-decomposed. For example, consider 128x128x192 Mesh evenly devided
+    // into 64^3 Meshblock. In z-pencil decomposition, there will be 8
+    // Meshblocks with size 43x32x192 and 4 Meshblocks with size 42x32x192.
     // Because 43x32x192 > 64^3, we need to prepare the FFT buffer with largest
     // possible size of the pencil-decompositions.
-    int cnt = nx1*nx2*nx3;
-    cnt = std::max(cnt, fast_nx1*fast_nx2*fast_nx3);
-    cnt = std::max(cnt, mid_nx1*mid_nx2*mid_nx3);
-    cnt = std::max(cnt, slow_nx1*slow_nx2*slow_nx3);
+    int cnt = nx1 * nx2 * nx3;
+    cnt = std::max(cnt, fast_nx1 * fast_nx2 * fast_nx3);
+    cnt = std::max(cnt, mid_nx1 * mid_nx2 * mid_nx3);
+    cnt = std::max(cnt, slow_nx1 * slow_nx2 * slow_nx3);
     in_ = new std::complex<Real>[cnt];
 
-#else // serial
+#else  // serial
     std::stringstream msg;
     msg << "### FATAL ERROR in BlockFFT::BlockFFT" << std::endl
         << "3D FFT only works with MPI " << std::endl;
@@ -153,11 +147,11 @@ BlockFFT::~BlockFFT() {
 //! \brief Fill the source in the active zone
 
 void BlockFFT::LoadSource(const AthenaArray<Real> &src) {
-  for (int k=ks; k<=ke; k++) {
-    for (int j=js; j<=je; j++) {
-      for (int i=is; i<=ie; i++) {
-        int idx = (i-is) + nx1*((j-js) + nx2*(k-ks));
-        in_[idx] = {src(k,j,i), 0.0};
+  for (int k = ks; k <= ke; k++) {
+    for (int j = js; j <= je; j++) {
+      for (int i = is; i <= ie; i++) {
+        int idx = (i - is) + nx1 * ((j - js) + nx2 * (k - ks));
+        in_[idx] = {src(k, j, i), 0.0};
       }
     }
   }
@@ -169,11 +163,11 @@ void BlockFFT::LoadSource(const AthenaArray<Real> &src) {
 //! \brief Fill the result in the active zone
 
 void BlockFFT::RetrieveResult(AthenaArray<Real> &dst) {
-  for (int k=ks; k<=ke; k++) {
-    for (int j=js; j<=je; j++) {
-      for (int i=is; i<=ie; i++) {
-        int idx = (i-is) + nx1*((j-js) + nx2*(k-ks));
-        dst(k,j,i) = in_[idx].real();
+  for (int k = ks; k <= ke; k++) {
+    for (int j = js; j <= je; j++) {
+      for (int i = is; i <= ie; i++) {
+        int idx = (i - is) + nx1 * ((j - js) + nx2 * (k - ks));
+        dst(k, j, i) = in_[idx].real();
       }
     }
   }
@@ -187,19 +181,23 @@ void BlockFFT::RetrieveResult(AthenaArray<Real> &dst) {
 void BlockFFT::ExecuteForward() {
 #ifdef FFT
 #ifdef MPI_PARALLEL
-  FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR*>(in_);
+  FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR *>(in_);
   // block2fast
-  if (pf3d->remap_prefast) pf3d->remap(data,data,pf3d->remap_prefast);
+  if (pf3d->remap_prefast)
+    pf3d->remap(data, data, pf3d->remap_prefast);
   // fast_forward
-  pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data),FFTW_FORWARD,pf3d->fft_fast);
+  pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data), FFTW_FORWARD,
+                     pf3d->fft_fast);
   // fast2mid
-  pf3d->remap(data,data,pf3d->remap_fastmid);
+  pf3d->remap(data, data, pf3d->remap_fastmid);
   // mid_forward
-  pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data),FFTW_FORWARD,pf3d->fft_mid);
+  pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data), FFTW_FORWARD,
+                     pf3d->fft_mid);
   // mid2slow
-  pf3d->remap(data,data,pf3d->remap_midslow);
+  pf3d->remap(data, data, pf3d->remap_midslow);
   // slow_forward
-  pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data),FFTW_FORWARD,pf3d->fft_slow);
+  pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data), FFTW_FORWARD,
+                     pf3d->fft_slow);
 #endif
 #endif
 
@@ -223,21 +221,26 @@ void BlockFFT::ApplyKernel() {
 void BlockFFT::ExecuteBackward() {
 #ifdef FFT
 #ifdef MPI_PARALLEL
-  FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR*>(in_);
+  FFT_SCALAR *data = reinterpret_cast<FFT_SCALAR *>(in_);
   // slow_backward
-  pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data),FFTW_BACKWARD,pf3d->fft_slow);
+  pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data), FFTW_BACKWARD,
+                     pf3d->fft_slow);
   // slow2mid
-  pf3d->remap(data,data,pf3d->remap_slowmid);
+  pf3d->remap(data, data, pf3d->remap_slowmid);
   // mid_backward
-  pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data),FFTW_BACKWARD,pf3d->fft_mid);
+  pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data), FFTW_BACKWARD,
+                     pf3d->fft_mid);
   // mid2fast
-  pf3d->remap(data,data,pf3d->remap_midfast);
+  pf3d->remap(data, data, pf3d->remap_midfast);
   // fast_backward
-  pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data),FFTW_BACKWARD,pf3d->fft_fast);
+  pf3d->perform_ffts(reinterpret_cast<FFT_DATA *>(data), FFTW_BACKWARD,
+                     pf3d->fft_fast);
   // fast2block
-  if (pf3d->remap_postfast) pf3d->remap(data,data,pf3d->remap_postfast);
+  if (pf3d->remap_postfast)
+    pf3d->remap(data, data, pf3d->remap_postfast);
   // multiply norm factor
-  for (int i=0; i<2*nx1*nx2*nx3; ++i) data[i] /= (Nx1*Nx2*Nx3);
+  for (int i = 0; i < 2 * nx1 * nx2 * nx3; ++i)
+    data[i] /= (Nx1 * Nx2 * Nx3);
 #endif
 #endif
 

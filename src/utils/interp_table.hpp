@@ -2,8 +2,9 @@
 #define UTILS_INTERP_TABLE_HPP_
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file interp_table.hpp
 //! \brief defines class InterpTable2D
@@ -14,11 +15,11 @@
 // C++ headers
 
 // Athena++ headers
-#include "../athena.hpp"         // Real
-#include "../athena_arrays.hpp"  // AthenaArray
+#include "../athena.hpp"        // Real
+#include "../athena_arrays.hpp" // AthenaArray
 
 class InterpTable2D {
- public:
+public:
   InterpTable2D() = default;
   InterpTable2D(const int nvar, const int nx2, const int nx1);
 
@@ -32,7 +33,7 @@ class InterpTable2D {
   void GetX2lim(Real &x2min, Real &x2max);
   void GetSize(int &nvar, int &nx2, int &nx1);
 
- private:
+private:
   int nvar_;
   int nx1_;
   int nx2_;
@@ -45,7 +46,7 @@ class InterpTable2D {
 };
 
 class EosTable {
- public:
+public:
   explicit EosTable(ParameterInput *pin);
 
   InterpTable2D table;
@@ -56,4 +57,4 @@ class EosTable {
   AthenaArray<Real> EosRatios;
 };
 
-#endif //UTILS_INTERP_TABLE_HPP_
+#endif // UTILS_INTERP_TABLE_HPP_

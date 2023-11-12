@@ -2,8 +2,9 @@
 #define UTILS_UTILS_HPP_
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file utils.hpp
 //! \brief prototypes of functions and class definitions for utils/*.cpp files
@@ -11,12 +12,12 @@
 // C headers
 
 // C++ headers
-#include <csignal>   // sigset_t POSIX C extension
-#include <cstdint>   // std::int64_t
+#include <csignal> // sigset_t POSIX C extension
+#include <cstdint> // std::int64_t
 #include <string>
 
 // Athena++ headers
-#include "../athena.hpp"         // Real
+#include "../athena.hpp" // Real
 
 void ChangeRunDir(const char *pdir);
 double ran2(std::int64_t *idum);
@@ -24,17 +25,16 @@ void ShowConfig();
 double MarkTime();
 void OutputLoopTime(const int ncycle, double dt_array[], std::string basename);
 
-void RotateVec(const Real sint, const Real cost,
-              const Real sinp, const Real cosp,
-              Real &v1, Real &v2, Real &v3);
+void RotateVec(const Real sint, const Real cost, const Real sinp,
+               const Real cosp, Real &v1, Real &v2, Real &v3);
 
-void InvRotateVec(const Real sint, const Real cost,
-                 const Real sinp, const Real cosp,
-                 Real &v1, Real &v2, Real &v3);
+void InvRotateVec(const Real sint, const Real cost, const Real sinp,
+                  const Real cosp, Real &v1, Real &v2, Real &v3);
 
 //----------------------------------------------------------------------------------------
 //! \namespace SignalHandler
-//! \brief static data and functions that implement a simple signal handling system
+//! \brief static data and functions that implement a simple signal handling
+//! system
 
 namespace SignalHandler {
 const int nsignal = 3;

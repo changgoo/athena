@@ -14,33 +14,30 @@
 
 // Error class
 
-#include <mpi.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include "error.h"
+#include <mpi.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 using namespace FFTMPI_NS;
 
 /* ---------------------------------------------------------------------- */
 
-Error::Error(MPI_Comm world_caller)
-{
-  world = world_caller;
-}
+Error::Error(MPI_Comm world_caller) { world = world_caller; }
 
 /* ----------------------------------------------------------------------
    must be called by all procs in world
    shuts down MPI and exits
 ------------------------------------------------------------------------- */
 
-void Error::all(const char *str)
-{
+void Error::all(const char *str) {
   MPI_Barrier(world);
 
   int me;
-  MPI_Comm_rank(world,&me);
-  if (me == 0) printf("ERROR: %s\n",str);
+  MPI_Comm_rank(world, &me);
+  if (me == 0)
+    printf("ERROR: %s\n", str);
   MPI_Finalize();
   exit(1);
 }
@@ -50,12 +47,11 @@ void Error::all(const char *str)
    forces abort of entire world if any proc in world calls
 ------------------------------------------------------------------------- */
 
-void Error::one(const char *str)
-{
+void Error::one(const char *str) {
   int me;
-  MPI_Comm_rank(world,&me);
-  printf("ERROR on proc %d: %s\n",me,str);
-  MPI_Abort(world,1);
+  MPI_Comm_rank(world, &me);
+  printf("ERROR on proc %d: %s\n", me, str);
+  MPI_Abort(world, 1);
 }
 
 /* ----------------------------------------------------------------------
@@ -63,7 +59,4 @@ void Error::one(const char *str)
    only write to screen if non-NULL on this proc since could be file
 ------------------------------------------------------------------------- */
 
-void Error::warning(const char *str)
-{
-  printf("WARNING: %s\n",str);
-}
+void Error::warning(const char *str) { printf("WARNING: %s\n", str); }

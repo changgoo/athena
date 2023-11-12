@@ -67,4 +67,3 @@ pres    = 0.1         # pressure
 v_par   = 0.0         # vpar = {0, 1} -> {traveling, standing} wave
 ang_2   = 0.0         # rotation of k around x2 axis
 dir     = 1           # 1: right polarization (whistler wave), 2: left
-

@@ -7,10 +7,11 @@ from . import brent_opt
 
 class EOS(object):
     """Parent class to implement equation of state functions"""
+
     def __init__(self):
         """Initialize EOS class"""
         self.ideal = False  # Whether this EOS is ideal
-        self.indep = None   # independent variables not including density
+        self.indep = None  # independent variables not including density
 
     def valid(self):
         """Determine if this EOS is valid"""
@@ -40,30 +41,34 @@ class EOS(object):
 
 class SimpleHydrogen(EOS):
     """Simple hydrogen equation of state"""
+
     def __init__(self):
         super(SimpleHydrogen, self).__init__()
-        self.indep = 'T'  # Temperature is the independent variable other than density
+        self.indep = "T"  # Temperature is the independent variable other than density
         self.T_of_rho_ei = np.vectorize(self._T_of_rho_ei)
         self.T_of_rho_p = np.vectorize(self._T_of_rho_p)
         self.T_of_rho_h = np.vectorize(self._T_of_rho_h)
 
     def _phi(self, T):
-        return np.exp(1. / T - 1.5 * np.log(T))
+        return np.exp(1.0 / T - 1.5 * np.log(T))
 
     def _x(self, rho, T):
         """Ionization fraction"""
-        with np.errstate(over='ignore'):
-            return 2. / (1 + np.sqrt(1 + 4.
-                                     * np.exp(1. / T - 1.5 * np.log(T) + np.log(rho))))
+        with np.errstate(over="ignore"):
+            return 2.0 / (
+                1 + np.sqrt(1 + 4.0 * np.exp(1.0 / T - 1.5 * np.log(T) + np.log(rho)))
+            )
 
     def _x_T(self, rho, T):
         """Temperature derivative of ionization fraction"""
         x = self._x(rho, T)
-        return x**3 / (2. + x) * np.exp(1. / T - 3.5 * np.log(T)) * (1. + 1.5 * T) * rho
+        return (
+            x**3 / (2.0 + x) * np.exp(1.0 / T - 3.5 * np.log(T)) * (1.0 + 1.5 * T) * rho
+        )
 
     def p_of_rho_T(self, rho, T):
         """Pressure as a function of density (rho) and temperature (T)"""
-        return rho * T * (1. + self._x(rho, T))
+        return rho * T * (1.0 + self._x(rho, T))
 
     def ei_of_rho_T(self, rho, T):
         """Internal energy density as a function of density (rho) and temperature (T)"""
@@ -71,20 +76,21 @@ class SimpleHydrogen(EOS):
 
     def _b(self, rho, T):
         lt = np.log(T)
-        c1 = np.exp(-1.25 * lt - .5 / T)
-        c2 = np.exp(1.5 * lt - 1. / T)
-        return 8. * rho * c1 / (np.sqrt(c2) + np.sqrt(c2 + 4. * rho))**3
+        c1 = np.exp(-1.25 * lt - 0.5 / T)
+        c2 = np.exp(1.5 * lt - 1.0 / T)
+        return 8.0 * rho * c1 / (np.sqrt(c2) + np.sqrt(c2 + 4.0 * rho)) ** 3
 
     def gamma1(self, rho, T):
         """Gamma_1 as a function of density (rho) and temperature (T)"""
         x = self._x(rho, T)
         b = self._b(rho, T)
-        return (b * (4. + 20. * T + 15. * T**2) + 10. * (2. + x - x**2)) /\
-               (b * (2. + 3. * T)**2 + 6.*(2. + x - x**2))
+        return (b * (4.0 + 20.0 * T + 15.0 * T**2) + 10.0 * (2.0 + x - x**2)) / (
+            b * (2.0 + 3.0 * T) ** 2 + 6.0 * (2.0 + x - x**2)
+        )
 
     def asq_of_rho_T(self, rho, T):
         """Adiabatic sound speed^2 as a function of density (rho) and temperature (T)"""
-        return T * (1. + self._x(rho, T)) * self.gamma1(rho, T)
+        return T * (1.0 + self._x(rho, T)) * self.gamma1(rho, T)
 
     def asq_of_rho_p(self, rho, p):
         """Adiabatic sound speed^2 as a function of density (rho) and pressure (p)"""
@@ -96,41 +102,43 @@ class SimpleHydrogen(EOS):
 
     def _T_of_rho_h(self, rho, h):
         """Temperature as a function of density (rho) and specific enthalpy (h)"""
-        t1 = .4 * h * (1. + sys.float_info.epsilon)
+        t1 = 0.4 * h * (1.0 + sys.float_info.epsilon)
 
         def f(y):
-            return (self.p_of_rho_T(rho, y) + self.ei_of_rho_T(rho, y)) / (h * rho) - 1.
+            return (self.p_of_rho_T(rho, y) + self.ei_of_rho_T(rho, y)) / (
+                h * rho
+            ) - 1.0
 
-        T, r = brentq(f, .1 * t1, t1, **brent_opt)
+        T, r = brentq(f, 0.1 * t1, t1, **brent_opt)
         if not r.converged:
-            raise RuntimeError('Unable to converge on temperature.')
+            raise RuntimeError("Unable to converge on temperature.")
         return T
 
     def _T_of_rho_p(self, rho, p):
         """Temperature as a function of density (rho) and pressure (p)"""
-        t1 = p / rho * (1. + sys.float_info.epsilon)  # initial guess
+        t1 = p / rho * (1.0 + sys.float_info.epsilon)  # initial guess
 
         def f(y):  # function to find root of
-            return self.p_of_rho_T(rho, y) / p - 1.
+            return self.p_of_rho_T(rho, y) / p - 1.0
 
         try:
-            T, r = brentq(f, .1 * t1, t1, **brent_opt)  # find root
+            T, r = brentq(f, 0.1 * t1, t1, **brent_opt)  # find root
         except ValueError:
-            T, r = brentq(f, .05 * t1, 2 * t1, **brent_opt)
+            T, r = brentq(f, 0.05 * t1, 2 * t1, **brent_opt)
         if not r.converged:
-            raise RuntimeError('Unable to converge on temperature.')
+            raise RuntimeError("Unable to converge on temperature.")
         return T
 
     def _T_of_rho_ei(self, rho, ei):
         """Temperature as a function of density (rho) and internal energy density (e)"""
-        t1 = ei / rho * (1. + sys.float_info.epsilon)  # initial guess
+        t1 = ei / rho * (1.0 + sys.float_info.epsilon)  # initial guess
 
-        def f(y):   # function to find root of
-            return self.ei_of_rho_T(rho, y) / ei - 1.
+        def f(y):  # function to find root of
+            return self.ei_of_rho_T(rho, y) / ei - 1.0
 
-        T, r = brentq(f, .05 * t1, 2 * t1, **brent_opt)
+        T, r = brentq(f, 0.05 * t1, 2 * t1, **brent_opt)
         if not r.converged:
-            raise RuntimeError('Unable to converge on temperature.')
+            raise RuntimeError("Unable to converge on temperature.")
         return T
 
     def ei_of_rho_p(self, rho, p):
@@ -144,14 +152,15 @@ class SimpleHydrogen(EOS):
 
 class Ideal(EOS):
     """Ideal equation of state class"""
+
     def __init__(self, gamma, R=1):
         """Adiabatic index "gamma" (>1) and ideal gas constant "R"."""
         if gamma <= 1:
-            raise ValueError('The value for gamma must be larger than 1.')
+            raise ValueError("The value for gamma must be larger than 1.")
         super(Ideal, self).__init__()
         self.ideal = True
         self._g = gamma
-        self._gm1 = gamma - 1.
+        self._gm1 = gamma - 1.0
         self.R = R
 
     def gamma(self):
@@ -193,12 +202,21 @@ class TestIdeal(Ideal):
     def __init__(self, gamma, R=1):
         super(TestIdeal, self).__init__(gamma, R=R)
         self.ideal = False
-        self.indep = 'p'
+        self.indep = "p"
 
 
 class AthenaTable(EOS):
-    def __init__(self, data, lrho, le, ratios=None, indep=None, dens_pow=-1, fn=None,
-                 add_var=None):
+    def __init__(
+        self,
+        data,
+        lrho,
+        le,
+        ratios=None,
+        indep=None,
+        dens_pow=-1,
+        fn=None,
+        add_var=None,
+    ):
         super(EOS, self).__init__()
         self.fn = fn
         if ratios is None:
@@ -206,38 +224,40 @@ class AthenaTable(EOS):
         lr = np.log(ratios)
         self._lr = lr
         if indep is None:
-            indep = 'ei'
+            indep = "ei"
         self.indep = indep
         self.data = data
         self.lrho = lrho
         self.le = le
         self.dens_pow = dens_pow
-        var = ['p', 'e', 'asq_p']
+        var = ["p", "e", "asq_p"]
         if add_var is not None:
             var.extend(add_var)
-        d = {var[i]: RBS(lrho, le + lr[i], np.log10(data[i].T), kx=1, ky=1).ev
-             for i in range(len(var))}
+        d = {
+            var[i]: RBS(lrho, le + lr[i], np.log10(data[i].T), kx=1, ky=1).ev
+            for i in range(len(var))
+        }
         self._interp_dict = d
 
     def _interp(self, rho, e, var):
         ld = np.log10(rho)
-        return 10**self._interp_dict[var](ld, np.log10(e) + self.dens_pow * ld)
+        return 10 ** self._interp_dict[var](ld, np.log10(e) + self.dens_pow * ld)
 
     def asq_of_rho_p(self, rho, p):
         """Adiabatic sound speed^2 as a function of density (rho) and pressure (p)"""
-        return self._interp(rho, p, 'asq_p') * p / rho
+        return self._interp(rho, p, "asq_p") * p / rho
 
     def ei_of_rho_p(self, rho, p):
         """Internal energy density as a function of density (rho) and pressure (p)"""
-        return self._interp(rho, p, 'e') * p
+        return self._interp(rho, p, "e") * p
 
     def es_of_rho_p(self, rho, p):
         """Specific internal energy as a function of density (rho) and pressure (p)"""
-        return self._interp(rho, p, 'e') * p / rho
+        return self._interp(rho, p, "e") * p / rho
 
     def p_of_rho_ei(self, rho, ei):
         """Pressure as a function of density (rho) and internal energy density (ei)"""
-        return self._interp(rho, ei, 'p') * ei
+        return self._interp(rho, ei, "p") * ei
 
     def p_of_rho_es(self, rho, es):
         """Pressure as a function of density (rho) and specific internal energy (es)"""
@@ -246,9 +266,9 @@ class AthenaTable(EOS):
 
 def parse_eos(eos):
     """Function to interpret input as an EOS"""
-    if hasattr(eos, 'asq_of_rho_p'):
+    if hasattr(eos, "asq_of_rho_p"):
         return eos  # already is EOS class
-    if eos == 'H' or eos == 'h':
+    if eos == "H" or eos == "h":
         return SimpleHydrogen()
     try:
         return Ideal(float(eos))  # try parsing as a gamma value

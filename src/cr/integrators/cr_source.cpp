@@ -1,12 +1,12 @@
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file cr_source.cpp
 //! \brief Add cosmic ray source terms to both cosmic ray and gas
 //========================================================================================
-
 
 // Athena++ headers
 #include "../../athena.hpp"
@@ -28,67 +28,71 @@
 #include <mpi.h>
 #endif
 
-
 // OpenMP header
 #ifdef OPENMP_PARALLEL
 #include <omp.h>
 #endif
 
-//add the source terms implicitly
-void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Real> &u,
-        AthenaArray<Real> &w, AthenaArray<Real> &bcc,
-        AthenaArray<Real> &u_cr) {
-  CosmicRay *pcr=pmb->pcr;
+// add the source terms implicitly
+void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt,
+                                  AthenaArray<Real> &u, AthenaArray<Real> &w,
+                                  AthenaArray<Real> &bcc,
+                                  AthenaArray<Real> &u_cr) {
+  CosmicRay *pcr = pmb->pcr;
 
   Real vlim = pcr->vmax;
-  Real invlim = 1.0/vlim;
+  Real invlim = 1.0 / vlim;
 
-// The information stored in the array
-// b_angle is
-// b_angle[0]=sin_theta_b
-// b_angle[1]=cos_theta_b
-// b_angle[2]=sin_phi_b
-// b_angle[3]=cos_phi_b
+  // The information stored in the array
+  // b_angle is
+  // b_angle[0]=sin_theta_b
+  // b_angle[1]=cos_theta_b
+  // b_angle[2]=sin_phi_b
+  // b_angle[3]=cos_phi_b
 
-  int is = pmb->is; int js = pmb->js; int ks = pmb->ks;
-  int ie = pmb->ie; int je = pmb->je; int ke = pmb->ke;
+  int is = pmb->is;
+  int js = pmb->js;
+  int ks = pmb->ks;
+  int ie = pmb->ie;
+  int je = pmb->je;
+  int ke = pmb->ke;
 
-  for(int k=ks; k<=ke; ++k) {
-    for(int j=js; j<=je; ++j) {
-      Real fxx = 1.0/3.0;
-      Real fyy = 1.0/3.0;
-      Real fzz = 1.0/3.0;
+  for (int k = ks; k <= ke; ++k) {
+    for (int j = js; j <= je; ++j) {
+      Real fxx = 1.0 / 3.0;
+      Real fyy = 1.0 / 3.0;
+      Real fzz = 1.0 / 3.0;
       Real fxy = 0.0;
       Real fxz = 0.0;
       Real fyz = 0.0;
 
-      Real *ec = &(u_cr(CRE,k,j,0));
-      Real *fc1 = &(u_cr(CRF1,k,j,0));
-      Real *fc2 = &(u_cr(CRF2,k,j,0));
-      Real *fc3 = &(u_cr(CRF3,k,j,0));
+      Real *ec = &(u_cr(CRE, k, j, 0));
+      Real *fc1 = &(u_cr(CRF1, k, j, 0));
+      Real *fc2 = &(u_cr(CRF2, k, j, 0));
+      Real *fc3 = &(u_cr(CRF3, k, j, 0));
 
       // The angle of B
-      Real *sint_b = &(pcr->b_angle(0,k,j,0));
-      Real *cost_b = &(pcr->b_angle(1,k,j,0));
-      Real *sinp_b = &(pcr->b_angle(2,k,j,0));
-      Real *cosp_b = &(pcr->b_angle(3,k,j,0));
+      Real *sint_b = &(pcr->b_angle(0, k, j, 0));
+      Real *cost_b = &(pcr->b_angle(1, k, j, 0));
+      Real *sinp_b = &(pcr->b_angle(2, k, j, 0));
+      Real *cosp_b = &(pcr->b_angle(3, k, j, 0));
 
-// adv1 is dPc/dx, adv2 is dPc/dy, adv3 is dPc/dz
+      // adv1 is dPc/dx, adv2 is dPc/dy, adv3 is dPc/dz
 
-      for(int i=is; i<=ie; ++i) {
-        Real rho = u(IDN,k,j,i);
-        Real v1 = u(IM1,k,j,i)/rho;
-        Real v2 = u(IM2,k,j,i)/rho;
-        Real v3 = u(IM3,k,j,i)/rho;
+      for (int i = is; i <= ie; ++i) {
+        Real rho = u(IDN, k, j, i);
+        Real v1 = u(IM1, k, j, i) / rho;
+        Real v2 = u(IM2, k, j, i) / rho;
+        Real v3 = u(IM3, k, j, i) / rho;
         Real vtot1 = v1;
         Real vtot2 = v2;
         Real vtot3 = v3;
 
-        //This can be turned on for post-processing
+        // This can be turned on for post-processing
         Real kin_en = 1e20;
-        if(pcr->src_flag == 0) {
-          kin_en = rho*(std::pow(v1,2)+std::pow(v2,2)+std::pow(v3,2));
-          if (ec[i]>kin_en || ec[i]<0) {
+        if (pcr->src_flag == 0) {
+          kin_en = rho * (std::pow(v1, 2) + std::pow(v2, 2) + std::pow(v3, 2));
+          if (ec[i] > kin_en || ec[i] < 0) {
             vtot1 = 0;
             vtot2 = 0;
             vtot3 = 0;
@@ -96,10 +100,10 @@ void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Rea
         }
 
         // add the streaming velocity
-        if(pcr->stream_flag) {
-          vtot1 += pcr->v_adv(0,k,j,i);
-          vtot2 += pcr->v_adv(1,k,j,i);
-          vtot3 += pcr->v_adv(2,k,j,i);
+        if (pcr->stream_flag) {
+          vtot1 += pcr->v_adv(0, k, j, i);
+          vtot2 += pcr->v_adv(1, k, j, i);
+          vtot3 += pcr->v_adv(2, k, j, i);
         }
 
         Real fr1 = fc1[i];
@@ -108,13 +112,14 @@ void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Rea
 
         // in the case with magnetic field
         // rotate the vectors to oriante to the B direction
-        if(MAGNETIC_FIELDS_ENABLED) {
+        if (MAGNETIC_FIELDS_ENABLED) {
           // Apply rotation of the vectors
-          RotateVec(sint_b[i],cost_b[i],sinp_b[i],cosp_b[i],v1,v2,v3);
+          RotateVec(sint_b[i], cost_b[i], sinp_b[i], cosp_b[i], v1, v2, v3);
 
-          RotateVec(sint_b[i],cost_b[i],sinp_b[i],cosp_b[i],fr1,fr2,fr3);
+          RotateVec(sint_b[i], cost_b[i], sinp_b[i], cosp_b[i], fr1, fr2, fr3);
 
-          RotateVec(sint_b[i],cost_b[i],sinp_b[i],cosp_b[i],vtot1,vtot2,vtot3);
+          RotateVec(sint_b[i], cost_b[i], sinp_b[i], cosp_b[i], vtot1, vtot2,
+                    vtot3);
 
           // perpendicular energy source term is already added via ec_source_
           // we will still need to include this in general for diffusion case
@@ -122,19 +127,19 @@ void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Rea
           vtot3 = 0.0;
         }
 
-        Real sigma_x = pcr->sigma_diff(0,k,j,i);
-        Real sigma_y = pcr->sigma_diff(1,k,j,i);
-        Real sigma_z = pcr->sigma_diff(2,k,j,i);
+        Real sigma_x = pcr->sigma_diff(0, k, j, i);
+        Real sigma_y = pcr->sigma_diff(1, k, j, i);
+        Real sigma_z = pcr->sigma_diff(2, k, j, i);
 
-        if(pcr->stream_flag) {
-          sigma_x = 1.0/(1.0/pcr->sigma_diff(0,k,j,i) +
-           1.0/pcr->sigma_adv(0,k,j,i));
+        if (pcr->stream_flag) {
+          sigma_x = 1.0 / (1.0 / pcr->sigma_diff(0, k, j, i) +
+                           1.0 / pcr->sigma_adv(0, k, j, i));
 
-          sigma_y = 1.0/(1.0/pcr->sigma_diff(1,k,j,i) +
-            1.0/pcr->sigma_adv(1,k,j,i));
+          sigma_y = 1.0 / (1.0 / pcr->sigma_diff(1, k, j, i) +
+                           1.0 / pcr->sigma_adv(1, k, j, i));
 
-          sigma_z = 1.0/(1.0/pcr->sigma_diff(2,k,j,i) +
-           1.0/pcr->sigma_adv(2,k,j,i));
+          sigma_z = 1.0 / (1.0 / pcr->sigma_diff(2, k, j, i) +
+                           1.0 / pcr->sigma_adv(2, k, j, i));
         }
 
         // Now update the momentum equation
@@ -147,88 +152,89 @@ void CRIntegrator::AddSourceTerms(MeshBlock *pmb, const Real dt, AthenaArray<Rea
         Real rhs3 = fr2;
         Real rhs4 = fr3;
 
-        Real coef_11 = 1.0 - dt * sigma_x * vtot1 * v1 * invlim * 4.0/3.0
-                            - dt * sigma_y * vtot2 * v2 * invlim * 4.0/3.0
-                            - dt * sigma_z * vtot3 * v3 * invlim * 4.0/3.0;
+        Real coef_11 = 1.0 - dt * sigma_x * vtot1 * v1 * invlim * 4.0 / 3.0 -
+                       dt * sigma_y * vtot2 * v2 * invlim * 4.0 / 3.0 -
+                       dt * sigma_z * vtot3 * v3 * invlim * 4.0 / 3.0;
         Real coef_12 = dt * sigma_x * vtot1;
         Real coef_13 = dt * sigma_y * vtot2;
         Real coef_14 = dt * sigma_z * vtot3;
 
-        Real coef_21 = -dt * v1 * sigma_x * 4.0/3.0;
+        Real coef_21 = -dt * v1 * sigma_x * 4.0 / 3.0;
         Real coef_22 = 1.0 + dt * vlim * sigma_x;
 
-        Real coef_31 = -dt * v2 * sigma_y * 4.0/3.0;
+        Real coef_31 = -dt * v2 * sigma_y * 4.0 / 3.0;
         Real coef_33 = 1.0 + dt * vlim * sigma_y;
 
-        Real coef_41 = -dt * v3 * sigma_z * 4.0/3.0;
+        Real coef_41 = -dt * v3 * sigma_z * 4.0 / 3.0;
         Real coef_44 = 1.0 + dt * vlim * sigma_z;
 
-        //newfr1 = (rhs2 - coef21 * newEc)/coef22
-        // newfr2= (rhs3 - coef31 * newEc)/coef33
-        // newfr3 = (rhs4 - coef41 * newEc)/coef44
-        // coef11 - coef21 * coef12 /coef22 - coef13 * coef31 /coef33
-        // - coef41 * coef14 /coef44)* newec
-        // =rhs1 - coef12 *rhs2/coef22 - coef13 * rhs3/coef33 - coef14 * rhs4/coef44
+        // newfr1 = (rhs2 - coef21 * newEc)/coef22
+        //  newfr2= (rhs3 - coef31 * newEc)/coef33
+        //  newfr3 = (rhs4 - coef41 * newEc)/coef44
+        //  coef11 - coef21 * coef12 /coef22 - coef13 * coef31 /coef33
+        //  - coef41 * coef14 /coef44)* newec
+        //  =rhs1 - coef12 *rhs2/coef22 - coef13 * rhs3/coef33 - coef14 *
+        //  rhs4/coef44
 
-        Real e_coef = coef_11 - coef_12 * coef_21/coef_22 - coef_13 * coef_31/coef_33
-                       - coef_14 * coef_41/coef_44;
-        Real new_ec = rhs1 - coef_12 * rhs2/coef_22 - coef_13 * rhs3/coef_33
-                      - coef_14 * rhs4/coef_44;
+        Real e_coef = coef_11 - coef_12 * coef_21 / coef_22 -
+                      coef_13 * coef_31 / coef_33 - coef_14 * coef_41 / coef_44;
+        Real new_ec = rhs1 - coef_12 * rhs2 / coef_22 -
+                      coef_13 * rhs3 / coef_33 - coef_14 * rhs4 / coef_44;
         new_ec /= e_coef;
 
-        Real newfr1 = (rhs2 - coef_21 * new_ec)/coef_22;
-        Real newfr2 = (rhs3 - coef_31 * new_ec)/coef_33;
-        Real newfr3 = (rhs4 - coef_41 * new_ec)/coef_44;
+        Real newfr1 = (rhs2 - coef_21 * new_ec) / coef_22;
+        Real newfr2 = (rhs3 - coef_31 * new_ec) / coef_33;
+        Real newfr3 = (rhs4 - coef_41 * new_ec) / coef_44;
 
         // Now apply the invert rotation
-        if(MAGNETIC_FIELDS_ENABLED) {
+        if (MAGNETIC_FIELDS_ENABLED) {
           // Apply rotation of the vectors
-          InvRotateVec(sint_b[i],cost_b[i],sinp_b[i],cosp_b[i],
-                                         newfr1,newfr2,newfr3);
-          //This can be turned on for post-processing
-          if ((pcr->src_flag == 0 && ec[i]<=kin_en && ec[i]>0)||
-              (pcr->src_flag>0))
-            new_ec += dt * ec_source_(k,j,i);
+          InvRotateVec(sint_b[i], cost_b[i], sinp_b[i], cosp_b[i], newfr1,
+                       newfr2, newfr3);
+          // This can be turned on for post-processing
+          if ((pcr->src_flag == 0 && ec[i] <= kin_en && ec[i] > 0) ||
+              (pcr->src_flag > 0))
+            new_ec += dt * ec_source_(k, j, i);
         }
 
-        if(new_ec < 0.0)
+        if (new_ec < 0.0)
           new_ec = ec[i];
 
-        if (pcr->losses_flag>0) {
+        if (pcr->losses_flag > 0) {
           new_ec -= pcr->lambdac * new_ec * rho * dt;
-          //c_in_code can be used fro relativistic CRs only -> to be changed
-          newfr1 -= pcr->lambdac * newfr1 * rho * dt
-            * std::pow(vlim/pcr->punit->c_in_code,2);
-          newfr2 -= pcr->lambdac * newfr2 * rho * dt
-            * std::pow(vlim/pcr->punit->c_in_code,2);
-          newfr3 -= pcr->lambdac * newfr3 * rho * dt
-            * std::pow(vlim/pcr->punit->c_in_code,2);
+          // c_in_code can be used fro relativistic CRs only -> to be changed
+          newfr1 -= pcr->lambdac * newfr1 * rho * dt *
+                    std::pow(vlim / pcr->punit->c_in_code, 2);
+          newfr2 -= pcr->lambdac * newfr2 * rho * dt *
+                    std::pow(vlim / pcr->punit->c_in_code, 2);
+          newfr3 -= pcr->lambdac * newfr3 * rho * dt *
+                    std::pow(vlim / pcr->punit->c_in_code, 2);
         }
 
         // Add the energy source term
         if (NON_BAROTROPIC_EOS && (pcr->src_flag > 0)) {
-          Real new_eg = u(IEN,k,j,i) - (new_ec - ec[i]);
-          if(new_eg < 0.0) new_eg = u(IEN,k,j,i);
-          u(IEN,k,j,i) = new_eg;
+          Real new_eg = u(IEN, k, j, i) - (new_ec - ec[i]);
+          if (new_eg < 0.0)
+            new_eg = u(IEN, k, j, i);
+          u(IEN, k, j, i) = new_eg;
         }
 
-        if(pcr->src_flag > 0) {
-          u(IM1,k,j,i) += (-(newfr1 - fc1[i]) * invlim);
-          u(IM2,k,j,i) += (-(newfr2 - fc2[i]) * invlim);
-          u(IM3,k,j,i) += (-(newfr3 - fc3[i]) * invlim);
+        if (pcr->src_flag > 0) {
+          u(IM1, k, j, i) += (-(newfr1 - fc1[i]) * invlim);
+          u(IM2, k, j, i) += (-(newfr2 - fc2[i]) * invlim);
+          u(IM3, k, j, i) += (-(newfr3 - fc3[i]) * invlim);
         }
 
-        u_cr(CRE,k,j,i) = new_ec;
-        u_cr(CRF1,k,j,i) = newfr1;
-        u_cr(CRF2,k,j,i) = newfr2;
-        u_cr(CRF3,k,j,i) = newfr3;
-      }// end i
-    }// end j
-  }// end k
-
+        u_cr(CRE, k, j, i) = new_ec;
+        u_cr(CRF1, k, j, i) = newfr1;
+        u_cr(CRF2, k, j, i) = newfr2;
+        u_cr(CRF3, k, j, i) = newfr3;
+      } // end i
+    }   // end j
+  }     // end k
 
   // Add user defined source term for cosmic rays
-  if(pcr->cr_source_defined)
-    pcr->UserSourceTerm_(pmb, pmb->pmy_mesh->time, dt, w, bcc,
-         u_cr, pcr->CRInjectionRate);
+  if (pcr->cr_source_defined)
+    pcr->UserSourceTerm_(pmb, pmb->pmy_mesh->time, dt, w, bcc, u_cr,
+                         pcr->CRInjectionRate);
 }

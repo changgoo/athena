@@ -1,7 +1,8 @@
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file shu_osher.cpp
 //! \brief Problem generator for Shu-Osher shocktube test, involving
@@ -14,7 +15,7 @@
 // C headers
 
 // C++ headers
-#include <cmath>  // sin()
+#include <cmath> // sin()
 
 // Athena++ headers
 #include "../athena.hpp"
@@ -45,22 +46,24 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 
   Real gm1 = (peos->GetGamma()) - 1.0;
 
-  for (int k=ks; k<=ke; ++k) {
-    for (int j=js; j<=je; ++j) {
+  for (int k = ks; k <= ke; ++k) {
+    for (int j = js; j <= je; ++j) {
 #pragma omp simd
-      for (int i=is; i<=ie; ++i) {
+      for (int i = is; i <= ie; ++i) {
         if (pcoord->x1v(i) < -0.8) {
-          phydro->u(IDN,k,j,i) = dl;
-          phydro->u(IM1,k,j,i) = ul*dl;
-          phydro->u(IM2,k,j,i) = vl*dl;
-          phydro->u(IM3,k,j,i) = wl*dl;
-          phydro->u(IEN,k,j,i) = pl/gm1 + 0.5*dl*(ul*ul + vl*vl + wl*wl);
+          phydro->u(IDN, k, j, i) = dl;
+          phydro->u(IM1, k, j, i) = ul * dl;
+          phydro->u(IM2, k, j, i) = vl * dl;
+          phydro->u(IM3, k, j, i) = wl * dl;
+          phydro->u(IEN, k, j, i) =
+              pl / gm1 + 0.5 * dl * (ul * ul + vl * vl + wl * wl);
         } else {
-          phydro->u(IDN,k,j,i) = 1.0 + 0.2*std::sin(5.0*PI*(pcoord->x1v(i)));
-          phydro->u(IM1,k,j,i) = 0.0;
-          phydro->u(IM2,k,j,i) = 0.0;
-          phydro->u(IM3,k,j,i) = 0.0;
-          phydro->u(IEN,k,j,i) = 1.0/gm1;
+          phydro->u(IDN, k, j, i) =
+              1.0 + 0.2 * std::sin(5.0 * PI * (pcoord->x1v(i)));
+          phydro->u(IM1, k, j, i) = 0.0;
+          phydro->u(IM2, k, j, i) = 0.0;
+          phydro->u(IM3, k, j, i) = 0.0;
+          phydro->u(IEN, k, j, i) = 1.0 / gm1;
         }
       }
     }

@@ -1,6 +1,6 @@
 <comment>
 problem   = Jeans test
-reference = 
+reference =
 configure = --prob=jeans --grav=mg/fft (-fft)
 
 <job>

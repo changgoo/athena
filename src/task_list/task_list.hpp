@@ -2,8 +2,9 @@
 #define TASK_LIST_TASK_LIST_HPP_
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file task_list.hpp
 //! \brief provides functionality to control dynamic execution using tasks
@@ -11,9 +12,9 @@
 // C headers
 
 // C++ headers
-#include <cstdint>      // std::uint64_t
-#include <string>       // std::string
-#include <vector>     // std::vector
+#include <cstdint> // std::uint64_t
+#include <string>  // std::string
+#include <vector>  // std::vector
 
 // Athena++ headers
 #include "../athena.hpp"
@@ -28,33 +29,35 @@ class TaskID;
 //! \todo (felker):
 //! - these 4x declarations can be nested in TaskList if MGTaskList is derived
 
-// constants = return codes for functions working on individual Tasks and TaskList
-enum class TaskListStatus {running, stuck, complete, nothing_to_do};
-enum class TaskStatus {fail, success, next};
-// success vs. next: They are different (only) when there are more than one MeshBlock per
-// node.  When a task returns “next”, then it processes the next Task in the same
-// MeshBlock; when it returns “success”, then the TaskList processes the next MeshBlock.
-// “next” should be used when you want to immediately start the next task, for example,
-// start sending the data just calculated in the previous task.  Otherwise, use “success”
-// to process MeshBlocks as evenly as possible.
+// constants = return codes for functions working on individual Tasks and
+// TaskList
+enum class TaskListStatus { running, stuck, complete, nothing_to_do };
+enum class TaskStatus { fail, success, next };
+// success vs. next: They are different (only) when there are more than one
+// MeshBlock per node.  When a task returns “next”, then it processes the next
+// Task in the same MeshBlock; when it returns “success”, then the TaskList
+// processes the next MeshBlock. “next” should be used when you want to
+// immediately start the next task, for example, start sending the data just
+// calculated in the previous task.  Otherwise, use “success” to process
+// MeshBlocks as evenly as possible.
 
 //----------------------------------------------------------------------------------------
 //! \class TaskID
 //! \brief generalization of bit fields for Task IDs, status, and dependencies.
 
-class TaskID {  // POD but not aggregate (there is a user-provided ctor)
- public:
+class TaskID { // POD but not aggregate (there is a user-provided ctor)
+public:
   TaskID() = default;
   explicit TaskID(unsigned int id);
   void Clear();
-  bool IsUnfinished(const TaskID& id) const;
-  bool CheckDependencies(const TaskID& dep) const;
-  void SetFinished(const TaskID& id);
+  bool IsUnfinished(const TaskID &id) const;
+  bool CheckDependencies(const TaskID &dep) const;
+  void SetFinished(const TaskID &id);
 
-  bool operator== (const TaskID& rhs) const;
-  TaskID operator| (const TaskID& rhs) const;
+  bool operator==(const TaskID &rhs) const;
+  TaskID operator|(const TaskID &rhs) const;
 
- private:
+private:
   constexpr static int kNField_ = 2;
   std::uint64_t bitfld_[kNField_];
 
@@ -62,15 +65,14 @@ class TaskID {  // POD but not aggregate (there is a user-provided ctor)
   friend class MultigridTaskList;
 };
 
-
 //----------------------------------------------------------------------------------------
 //! \struct Task
 //! \brief data and function pointer for an individual Task
 
-struct Task { // aggregate and POD
-  TaskID task_id;    // encodes task with bit positions in HydroIntegratorTaskNames
+struct Task {     // aggregate and POD
+  TaskID task_id; // encodes task with bit positions in HydroIntegratorTaskNames
   TaskID dependency; // encodes dependencies to other tasks using " " " "
-  TaskStatus (TaskList::*TaskFunc)(MeshBlock*, int);  // ptr to member function
+  TaskStatus (TaskList::*TaskFunc)(MeshBlock *, int); // ptr to member function
   bool lb_time; // flag for automatic load balancing based on timing
   double task_time;
   std::string task_name;
@@ -95,14 +97,17 @@ struct TaskStates { // aggregate and POD
 //! \brief data and function definitions for task list base class
 
 class TaskList {
- public:
-  TaskList() : ntasks(0), nstages(0), task_list_{} {} // 2x direct + zero initialization
+public:
+  TaskList()
+      : ntasks(0), nstages(0), task_list_{} {
+  } // 2x direct + zero initialization
   // rule of five:
   virtual ~TaskList() = default;
 
   // data
-  int ntasks;     //!> number of tasks in this list
-  int nstages;    //!> number of times the tasklist is repeated per each full timestep
+  int ntasks;  //!> number of tasks in this list
+  int nstages; //!> number of times the tasklist is repeated per each full
+               //! timestep
 
   // name
   std::string task_list_name;
@@ -112,22 +117,23 @@ class TaskList {
   void DoTaskListOneStage(Mesh *pmesh, int stage);
   void OutputAllTaskTime(const int ncycle, std::string basename);
 
- protected:
+protected:
   //! \todo (felker): rename to avoid confusion with class name
-  Task task_list_[64*TaskID::kNField_];
+  Task task_list_[64 * TaskID::kNField_];
 
- private:
-  virtual void AddTask(const TaskID& id, const TaskID& dep) = 0;
+private:
+  virtual void AddTask(const TaskID &id, const TaskID &dep) = 0;
   virtual void StartupTaskList(MeshBlock *pmb, int stage) = 0;
   bool newfile_ = true;
 };
 
 //----------------------------------------------------------------------------------------
 //! \class TimeIntegratorTaskList
-//! \brief data and function definitions for TimeIntegratorTaskList derived class
+//! \brief data and function definitions for TimeIntegratorTaskList derived
+//! class
 
 class TimeIntegratorTaskList : public TaskList {
- public:
+public:
   TimeIntegratorTaskList(ParameterInput *pin, Mesh *pm);
 
   //--------------------------------------------------------------------------------------
@@ -136,16 +142,21 @@ class TimeIntegratorTaskList : public TaskList {
 
   struct IntegratorWeight {
     // 2S or 3S* low-storage RK coefficients, Ketchenson (2010)
-    Real delta; //!> low-storage coefficients to avoid double F() evaluation per substage
-    Real gamma_1, gamma_2, gamma_3; // low-storage coeff for weighted ave of registers
-    Real beta; // coeff. from bidiagonal Shu-Osher form Beta matrix, -1 diagonal terms
+    Real delta; //!> low-storage coefficients to avoid double F() evaluation per
+                //! substage
+    Real gamma_1, gamma_2,
+        gamma_3; // low-storage coeff for weighted ave of registers
+    Real beta; // coeff. from bidiagonal Shu-Osher form Beta matrix, -1 diagonal
+               // terms
     Real sbeta, ebeta; // time coeff describing start/end time of each stage
-    bool main_stage, orbital_stage; // flag for whether the main calculation is done
+    bool main_stage,
+        orbital_stage; // flag for whether the main calculation is done
   };
 
   // data
   std::string integrator;
-  Real cfl_limit; // dt stability limit for the particular time integrator + spatial order
+  Real cfl_limit;   // dt stability limit for the particular time integrator +
+                    // spatial order
   int nstages_main; // number of stages labeled main_stage
 
   // functions
@@ -223,7 +234,9 @@ class TimeIntegratorTaskList : public TaskList {
   TaskStatus ReceiveFieldOrbital(MeshBlock *pmb, int stage);
   TaskStatus CalculateFieldOrbital(MeshBlock *pmb, int stage);
 
-  bool CheckNextMainStage(int stage) const {return stage_wghts[stage%nstages].main_stage;}
+  bool CheckNextMainStage(int stage) const {
+    return stage_wghts[stage % nstages].main_stage;
+  }
 
   // Task functions for cosmic rays
   TaskStatus CalculateCRFlux(MeshBlock *pmb, int stage);
@@ -240,13 +253,13 @@ class TimeIntegratorTaskList : public TaskList {
   TaskStatus ReceiveCRFluxShear(MeshBlock *pmb, int stage);
   TaskStatus SendCRFluxShear(MeshBlock *pmb, int stage);
 
- private:
+private:
   bool ORBITAL_ADVECTION; // flag for orbital advection (true w/ , false w/o)
   bool SHEAR_PERIODIC; // flag for shear periodic boundary (true w/ , false w/o)
-  bool PARTICLES; // flag for particles (true w/ , false w/o)
+  bool PARTICLES;      // flag for particles (true w/ , false w/o)
   IntegratorWeight stage_wghts[MAX_NSTAGE];
 
-  void AddTask(const TaskID& id, const TaskID& dep) override;
+  void AddTask(const TaskID &id, const TaskID &dep) override;
   void StartupTaskList(MeshBlock *pmb, int stage) override;
 };
 
@@ -255,8 +268,9 @@ class TimeIntegratorTaskList : public TaskList {
 //! \brief data and function definitions for SuperTimeStepTaskList derived class
 
 class SuperTimeStepTaskList : public TaskList {
- public:
-  SuperTimeStepTaskList(ParameterInput *pin, Mesh *pm, TimeIntegratorTaskList *ptlist);
+public:
+  SuperTimeStepTaskList(ParameterInput *pin, Mesh *pm,
+                        TimeIntegratorTaskList *ptlist);
   const Real sts_max_dt_ratio;
 
   // subset of NHYDRO indices
@@ -282,17 +296,18 @@ class SuperTimeStepTaskList : public TaskList {
   TaskStatus UserWork_STS(MeshBlock *pmb, int stage);
   TaskStatus CheckRefinement_STS(MeshBlock *pmb, int stage);
 
-
- private:
+private:
   bool SHEAR_PERIODIC; // flag for shear periodic boundary (true w/ , false w/o)
-  // currently intiialized but unused. May use it for direct calls to TimeIntegrator fns:
+  // currently intiialized but unused. May use it for direct calls to
+  // TimeIntegrator fns:
   TimeIntegratorTaskList *ptlist_;
-  void AddTask(const TaskID&, const TaskID& dep) override;
+  void AddTask(const TaskID &, const TaskID &dep) override;
   void StartupTaskList(MeshBlock *pmb, int stage) override;
 };
 
 //----------------------------------------------------------------------------------------
-//! 64-bit integers with "1" in different bit positions used to ID each hydro task.
+//! 64-bit integers with "1" in different bit positions used to ID each hydro
+//! task.
 //!
 //! \todo (felker):
 //! - uncomment the reserved TASK_NAMES once the features are merged to master
@@ -403,5 +418,5 @@ const TaskID SEND_PARSH(87);
 const TaskID RECV_PARSH(88);
 const TaskID SEND_PMSH(89);
 const TaskID RECV_PMSH(90);
-}  // namespace HydroIntegratorTaskNames
-#endif  // TASK_LIST_TASK_LIST_HPP_
+} // namespace HydroIntegratorTaskNames
+#endif // TASK_LIST_TASK_LIST_HPP_

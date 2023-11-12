@@ -2,11 +2,13 @@
 #define GRAVITY_GRAVITY_HPP_
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file gravity.hpp
-//! \brief defines Gravity class which implements data and functions for gravitational
+//! \brief defines Gravity class which implements data and functions for
+//! gravitational
 //!        potential. Shared by both Multigrid and FFT schemes for self-gravity.
 
 // C headers
@@ -30,17 +32,18 @@ class MGGRavityDriver;
 //! \brief gravitational potential data and functions
 
 class Gravity {
- public:
+public:
   Gravity(MeshBlock *pmb, ParameterInput *pin);
 
-  MeshBlock* pmy_block;  // ptr to MeshBlock containing this Field
-  AthenaArray<Real> phi;   // gravitational potential
+  MeshBlock *pmy_block;  // ptr to MeshBlock containing this Field
+  AthenaArray<Real> phi; // gravitational potential
   AthenaArray<Real> empty_flux[3];
   Real gconst, four_pi_G;
   bool srcterm;
 
-  // TODO(felker): consider creating a CellCentered.. derived class, and changing to
-  //GravityBoundaryVariable *pgbval;
+  // TODO(felker): consider creating a CellCentered.. derived class, and
+  // changing to
+  // GravityBoundaryVariable *pgbval;
   CellCenteredBoundaryVariable gbvar;
 
   void Initialize(ParameterInput *pin);
@@ -48,7 +51,7 @@ class Gravity {
 
   friend class MGGravityDriver;
 
- private:
+private:
   bool gravity_tensor_momentum_;
   bool gravity_tensor_energy_;
 };

@@ -23,8 +23,8 @@ class LogPipe(threading.Thread):
 
     def run(self):
         """Run the thread, logging everything."""
-        for line in iter(self.pipeReader.readline, ''):
-            self.logger.log(self.level, line.strip('\n'))
+        for line in iter(self.pipeReader.readline, ""):
+            self.logger.log(self.level, line.strip("\n"))
         self.pipeReader.close()
 
     def close(self):

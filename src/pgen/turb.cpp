@@ -1,7 +1,8 @@
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file turb.cpp
 //! \brief Problem generator for turbulence driver
@@ -36,7 +37,7 @@
 void CollectCounters(Mesh *pm);
 
 int turb_flag;
-Real rho0=1.0;
+Real rho0 = 1.0;
 TurbulenceDriver *ptrbd;
 //========================================================================================
 //! \fn void Mesh::InitUserMeshData(ParameterInput *pin)
@@ -44,8 +45,8 @@ TurbulenceDriver *ptrbd;
 //========================================================================================
 void Mesh::InitUserMeshData(ParameterInput *pin) {
   if (SELF_GRAVITY_ENABLED) {
-    Real four_pi_G = pin->GetReal("self_gravity","four_pi_G");
-    Real eps = pin->GetOrAddReal("self_gravity","grav_eps", 0.0);
+    Real four_pi_G = pin->GetReal("self_gravity", "four_pi_G");
+    Real eps = pin->GetOrAddReal("self_gravity", "grav_eps", 0.0);
     SetFourPiG(four_pi_G);
     SetGravityThreshold(eps);
   }
@@ -58,17 +59,17 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
 //========================================================================================
 
 void MeshBlock::ProblemGenerator(ParameterInput *pin) {
-  for (int k=ks; k<=ke; k++) {
-    for (int j=js; j<=je; j++) {
-      for (int i=is; i<=ie; i++) {
-        phydro->u(IDN,k,j,i) = rho0;
+  for (int k = ks; k <= ke; k++) {
+    for (int j = js; j <= je; j++) {
+      for (int i = is; i <= ie; i++) {
+        phydro->u(IDN, k, j, i) = rho0;
 
-        phydro->u(IM1,k,j,i) = 0.0;
-        phydro->u(IM2,k,j,i) = 0.0;
-        phydro->u(IM3,k,j,i) = 0.0;
+        phydro->u(IM1, k, j, i) = 0.0;
+        phydro->u(IM2, k, j, i) = 0.0;
+        phydro->u(IM3, k, j, i) = 0.0;
 
         if (NON_BAROTROPIC_EOS) {
-          phydro->u(IEN,k,j,i) = 1.0;
+          phydro->u(IEN, k, j, i) = 1.0;
         }
       }
     }
@@ -80,7 +81,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
 //  \brief
 //========================================================================================
 void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
-  turb_flag = pin->GetOrAddInteger("problem","turb_flag",0);
+  turb_flag = pin->GetOrAddInteger("problem", "turb_flag", 0);
   if (turb_flag != 0) {
     ptrbd = new TurbulenceDriver(this, pin);
 
@@ -89,10 +90,11 @@ void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
         MeshBlock *pmb = my_blocks(0);
         Real dx = pmb->pcoord->dx1v(0);
         // get rough estimate of dt
-        dt = std::cbrt(1.5*rho0/ptrbd->dedt*SQR(dx));
+        dt = std::cbrt(1.5 * rho0 / ptrbd->dedt * SQR(dx));
       }
       ptrbd->Driving();
-      if (turb_flag == 1) delete ptrbd;
+      if (turb_flag == 1)
+        delete ptrbd;
     }
   }
 }
@@ -102,7 +104,8 @@ void Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
 //  \brief
 //========================================================================================
 void Mesh::UserWorkInLoop() {
-  if (turb_flag > 1) ptrbd->Driving(); // driven turbulence
+  if (turb_flag > 1)
+    ptrbd->Driving(); // driven turbulence
   // check number of bad cells
   CollectCounters(this);
 }
@@ -112,7 +115,8 @@ void Mesh::UserWorkInLoop() {
 //  \brief
 //========================================================================================
 void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
-  if (turb_flag > 1) delete ptrbd; // driven turbulence
+  if (turb_flag > 1)
+    delete ptrbd; // driven turbulence
 }
 
 //========================================================================================
@@ -120,10 +124,10 @@ void Mesh::UserWorkAfterLoop(ParameterInput *pin) {
 //! \brief collect counters
 //========================================================================================
 void CollectCounters(Mesh *pm) {
-  int nbad_d=0, nbad_p=0;
+  int nbad_d = 0, nbad_p = 0;
 
   // summing up over meshblocks within the rank
-  for (int b=0; b<pm->nblocal; ++b) {
+  for (int b = 0; b < pm->nblocal; ++b) {
     MeshBlock *pmb = pm->my_blocks(b);
     nbad_d += pmb->nbad_d;
     nbad_p += pmb->nbad_p;
@@ -136,7 +140,9 @@ void CollectCounters(Mesh *pm) {
 #endif
 
   if (Globals::my_rank == 0) {
-    if (nbad_p > 0) std::cerr << nbad_p << " cells had negative pressure" << std::endl;
-    if (nbad_d > 0) std::cerr << nbad_d << " cells had negative density" << std::endl;
+    if (nbad_p > 0)
+      std::cerr << nbad_p << " cells had negative pressure" << std::endl;
+    if (nbad_d > 0)
+      std::cerr << nbad_d << " cells had negative density" << std::endl;
   }
 }

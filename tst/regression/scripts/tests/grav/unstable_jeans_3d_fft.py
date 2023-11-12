@@ -11,26 +11,23 @@ import os
 import numpy as np
 import scripts.utils.athena as athena
 import sys
-sys.path.insert(0, '../../vis/python')
-import athena_read                             # noqa
+
+sys.path.insert(0, "../../vis/python")
+import athena_read  # noqa
+
 athena_read.check_nan_flag = True
-logger = logging.getLogger('athena' + __name__[7:])  # set logger name based on module
+logger = logging.getLogger("athena" + __name__[7:])  # set logger name based on module
 
 
 # Prepare Athena++
 def prepare(**kwargs):
-    logger.debug('Running test ' + __name__)
-    athena.configure('mpi', 'fft',
-                     prob='jeans',
-                     grav='blockfft', **kwargs)
+    logger.debug("Running test " + __name__)
+    athena.configure("mpi", "fft", prob="jeans", grav="blockfft", **kwargs)
     athena.make()
-    os.system('mv bin/athena bin/athena_blockfft')
-    os.system('mv obj obj_blockfft')
+    os.system("mv bin/athena bin/athena_blockfft")
+    os.system("mv obj obj_blockfft")
 
-    athena.configure('fft',
-                     prob='jeans',
-                     grav='fft',
-                     **kwargs)
+    athena.configure("fft", prob="jeans", grav="fft", **kwargs)
     athena.make()
 
 
@@ -42,65 +39,78 @@ def run(**kwargs):
     # amp 1e-6
     def arg_res(res):
         arguments = [
-          'mesh/nx1=64', 'mesh/nx2=32', 'mesh/nx3=32',
-          'meshblock/nx1=16',
-          'meshblock/nx2=16',
-          'meshblock/nx3=16',
-          'problem/njeans=1.5',
-          'output2/dt=-1', 'time/tlim=0.046', 'problem/compute_error=true',
-          'time/ncycle_out=10']
-        arguments[0] = 'mesh/nx1='+str(2*res)
-        arguments[1] = 'mesh/nx2='+str(res)
-        arguments[2] = 'mesh/nx3='+str(res)
+            "mesh/nx1=64",
+            "mesh/nx2=32",
+            "mesh/nx3=32",
+            "meshblock/nx1=16",
+            "meshblock/nx2=16",
+            "meshblock/nx3=16",
+            "problem/njeans=1.5",
+            "output2/dt=-1",
+            "time/tlim=0.046",
+            "problem/compute_error=true",
+            "time/ncycle_out=10",
+        ]
+        arguments[0] = "mesh/nx1=" + str(2 * res)
+        arguments[1] = "mesh/nx2=" + str(res)
+        arguments[2] = "mesh/nx3=" + str(res)
         return arguments
-    athena.run('hydro/athinput.jeans_3d', arg_res(32))
-    athena.run('hydro/athinput.jeans_3d', arg_res(64))
 
-    os.system('rm -rf obj')
-    os.system('mv obj_blockfft obj')
-    os.system('mv bin/athena_blockfft bin/athena')
+    athena.run("hydro/athinput.jeans_3d", arg_res(32))
+    athena.run("hydro/athinput.jeans_3d", arg_res(64))
+
+    os.system("rm -rf obj")
+    os.system("mv obj_blockfft obj")
+    os.system("mv bin/athena_blockfft bin/athena")
     args = arg_res(32)
-    args[3] = 'meshblock/nx1='+str(32)
-    args[4] = 'meshblock/nx2='+str(16)
-    args[5] = 'meshblock/nx3='+str(32)
-    athena.mpirun(kwargs['mpirun_cmd'], kwargs['mpirun_opts'],
-                  4, 'hydro/athinput.jeans_3d', args)
+    args[3] = "meshblock/nx1=" + str(32)
+    args[4] = "meshblock/nx2=" + str(16)
+    args[5] = "meshblock/nx3=" + str(32)
+    athena.mpirun(
+        kwargs["mpirun_cmd"], kwargs["mpirun_opts"], 4, "hydro/athinput.jeans_3d", args
+    )
     args = arg_res(64)
-    args[3] = 'meshblock/nx1='+str(64)
-    args[4] = 'meshblock/nx2='+str(32)
-    args[5] = 'meshblock/nx3='+str(64)
-    athena.mpirun(kwargs['mpirun_cmd'], kwargs['mpirun_opts'],
-                  4, 'hydro/athinput.jeans_3d', args)
+    args[3] = "meshblock/nx1=" + str(64)
+    args[4] = "meshblock/nx2=" + str(32)
+    args[5] = "meshblock/nx3=" + str(64)
+    athena.mpirun(
+        kwargs["mpirun_cmd"], kwargs["mpirun_opts"], 4, "hydro/athinput.jeans_3d", args
+    )
 
 
 # Analyze outputs
 def analyze():
     # read data from error file
-    filename = 'bin/jeans-errors.dat'
+    filename = "bin/jeans-errors.dat"
     data = athena_read.error_dat(filename)
     logger.info(str(data))
     result = True
     # error
     for i in range(4):
-        if data[i][4] > 1.e-7:
-            logger.warning("FFT Gravity Linear Jeans instability error is too large: %g",
-                           data[i][4])
+        if data[i][4] > 1.0e-7:
+            logger.warning(
+                "FFT Gravity Linear Jeans instability error is too large: %g",
+                data[i][4],
+            )
             result = False
     # compute overall convergence slope
-    gslope = np.log(data[len(data)-1][4]/data[0][4])/np.log(4.0)
+    gslope = np.log(data[len(data) - 1][4] / data[0][4]) / np.log(4.0)
     err_tol = 1.5
     warn_tol = 1.1
     # 2nd order convergence: doubling resolution should decrease error by 4.0
     for i in [0, 2]:
-        slope = np.log(data[i+1][4]/data[i][4])/np.log(2.0)
-        if data[i+1][4] > (err_tol*data[i][4]/(4.0)):
+        slope = np.log(data[i + 1][4] / data[i][4]) / np.log(2.0)
+        if data[i + 1][4] > (err_tol * data[i][4] / (4.0)):
             logger.warning(
-                "Linear Jeans instability error is not converging at 2nd order")
+                "Linear Jeans instability error is not converging at 2nd order"
+            )
             logger.warning("Error tolerance: %g", err_tol)
             logger.warning("Order estimate: %g %g", slope, gslope)
             result = False
-        elif data[i+1][4] > (warn_tol*data[i][4]/(4.0)):
-            logger.warning("WARNING: Linear Jeans instability error is converging slowly")
+        elif data[i + 1][4] > (warn_tol * data[i][4] / (4.0)):
+            logger.warning(
+                "WARNING: Linear Jeans instability error is converging slowly"
+            )
             logger.warning("Error tolerance: %g", warn_tol)
             logger.warning("Order estimate: %g %g", slope, gslope)
     return result

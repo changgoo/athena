@@ -46,7 +46,7 @@ sfloor = 0.0                 # passive scalar floor
 <problem>
 shock_dir = 1    # 1/2/3 for x/y/z-directions
 xshock    = 0.0  # position of initial interface
- 
+
 dl = 1.0   # left density rho
 pl = 10.0  # left gas pressure p_gas
 ul = -0.6  # left 3-velocity v^x

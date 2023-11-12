@@ -14,10 +14,10 @@
 
 // Memory class
 
+#include "memory.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "memory.h"
 
 // memory alignment settings
 
@@ -28,23 +28,17 @@
 #include "tbb/scalable_allocator.h"
 #else
 #include <malloc.h>
-size_t smalloc_size(const void *p) {
-    return malloc_usable_size((void*)p);
-}
+size_t smalloc_size(const void *p) { return malloc_usable_size((void *)p); }
 #endif
 #else
 // platform dependent malloced size return function
 // https://stackoverflow.com/questions/1281686/determine-size-of-dynamically-allocated-memory-in-c
 #if defined(__linux__)
 #include <malloc.h>
-size_t smalloc_size(const void *p) {
-    return malloc_usable_size((void*)p);
-}
+size_t smalloc_size(const void *p) { return malloc_usable_size((void *)p); }
 #elif defined(__APPLE__)
 #include <malloc/malloc.h>
-size_t smalloc_size(const void *p) {
-    return malloc_size(p);
-}
+size_t smalloc_size(const void *p) { return malloc_size(p); }
 #endif
 #endif
 
@@ -58,9 +52,9 @@ using namespace FFTMPI_NS;
    safe malloc
 ------------------------------------------------------------------------- */
 
-void *Memory::smalloc(size_t nbytes)
-{
-  if (nbytes == 0) return NULL;
+void *Memory::smalloc(size_t nbytes) {
+  if (nbytes == 0)
+    return NULL;
 
 #if defined(FFT_MEMALIGN)
   void *ptr;
@@ -68,8 +62,9 @@ void *Memory::smalloc(size_t nbytes)
 #if defined(FFT_USE_TBB_ALLOCATOR)
   ptr = scalable_aligned_malloc(nbytes, FFT_MEMALIGN);
 #else
-  int retval = posix_memalign(&ptr,FFT_MEMALIGN,nbytes);
-  if (retval) ptr = NULL;
+  int retval = posix_memalign(&ptr, FFT_MEMALIGN, nbytes);
+  if (retval)
+    ptr = NULL;
 #endif
 
 #else
@@ -83,8 +78,7 @@ void *Memory::smalloc(size_t nbytes)
    safe realloc
 ------------------------------------------------------------------------- */
 
-void *Memory::srealloc(void *ptr, size_t nbytes)
-{
+void *Memory::srealloc(void *ptr, size_t nbytes) {
   if (nbytes == 0) {
     sfree(ptr);
     return NULL;
@@ -98,12 +92,14 @@ void *Memory::srealloc(void *ptr, size_t nbytes)
   if (offset) {
     void *optr = ptr;
     ptr = smalloc(nbytes);
-    if (nbytes < smalloc_size(optr)) memcpy(ptr,optr,nbytes);
-    else memcpy(ptr,optr,smalloc_size(optr));
+    if (nbytes < smalloc_size(optr))
+      memcpy(ptr, optr, nbytes);
+    else
+      memcpy(ptr, optr, smalloc_size(optr));
     free(optr);
   }
 #else
-  ptr = realloc(ptr,nbytes);
+  ptr = realloc(ptr, nbytes);
 #endif
 
   return ptr;
@@ -113,15 +109,15 @@ void *Memory::srealloc(void *ptr, size_t nbytes)
    safe free
 ------------------------------------------------------------------------- */
 
-void Memory::sfree(void *ptr)
-{
-  if (ptr == NULL) return;
+void Memory::sfree(void *ptr) {
+  if (ptr == NULL)
+    return;
 
-  #if defined(FFT_USE_TBB_ALLOCATOR)
+#if defined(FFT_USE_TBB_ALLOCATOR)
   scalable_aligned_free(ptr);
-  #else
+#else
   free(ptr);
-  #endif
+#endif
 
   ptr = NULL;
 }

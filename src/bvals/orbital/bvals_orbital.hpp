@@ -2,8 +2,9 @@
 #define BVALS_ORBITAL_BVALS_ORBITAL_HPP_
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file bvals_orbital.hpp
 //! \brief handle orbital communication for orbital advection
@@ -32,7 +33,7 @@ using OrbitalBoundaryData = BoundaryData<4>;
 //! \brief
 
 class OrbitalBoundaryCommunication {
- public:
+public:
   explicit OrbitalBoundaryCommunication(OrbitalAdvection *porb);
   ~OrbitalBoundaryCommunication();
   // BoundaryCommunication:
@@ -49,7 +50,7 @@ class OrbitalBoundaryCommunication {
 
   static constexpr int max_phys_id = 2;
 
- private:
+private:
   void InitBoundaryData(OrbitalBoundaryData &bd, BoundaryQuantity type);
   void DestroyBoundaryData(OrbitalBoundaryData &bd);
 
@@ -76,15 +77,16 @@ class OrbitalBoundaryCommunication {
 
   // BoundaryData objects for communications
   OrbitalBoundaryData orbital_bd_cc_[2], orbital_bd_fc_[2];
-  SimpleNeighborBlock orbital_send_neighbor_[2][4], orbital_recv_neighbor_[2][4];
+  SimpleNeighborBlock orbital_send_neighbor_[2][4],
+      orbital_recv_neighbor_[2][4];
   int orbital_send_cc_count_[2][4], orbital_recv_cc_count_[2][4];
   int orbital_send_fc_count_[2][4], orbital_recv_fc_count_[2][4];
   int xgh;
 
-  int *size_cc_send[2];  //same, coarser, fine*4
-  int *size_cc_recv[2];  //same, coarser, fine*4
-  int *size_fc_send[2];  //same, coarser, fine*4
-  int *size_fc_recv[2];  //same, coarser, fine*4
+  int *size_cc_send[2]; // same, coarser, fine*4
+  int *size_cc_recv[2]; // same, coarser, fine*4
+  int *size_fc_send[2]; // same, coarser, fine*4
+  int *size_fc_recv[2]; // same, coarser, fine*4
 
   // ptr to MeshBlock, Mesh, BoundaryValues, OrbitalAdvection
   MeshBlock *pmy_block_;

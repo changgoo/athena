@@ -18,12 +18,12 @@
 /* loop counters for doing a pack/unpack */
 
 struct pack_plan_3d {
-  int nfast;                 /* # of elements in fast index */
-  int nmid;                  /* # of elements in mid index */
-  int nslow;                 /* # of elements in slow index */
-  int nstride_line;          /* stride between successive mid indices */
-  int nstride_plane;         /* stride between successive slow indices */
-  int nqty;                  /* # of values/element */
+  int nfast;         /* # of elements in fast index */
+  int nmid;          /* # of elements in mid index */
+  int nslow;         /* # of elements in slow index */
+  int nstride_line;  /* stride between successive mid indices */
+  int nstride_plane; /* stride between successive slow indices */
+  int nqty;          /* # of values/element */
 };
 
 /* function prototypes */

@@ -1,6 +1,6 @@
 <comment>
 problem   = field loop advection test through poles in spherical polar coords
-reference = 
+reference =
 configure = -b --prob=field_loop_poles --coord=spherical_polar
 
 <job>

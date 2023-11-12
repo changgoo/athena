@@ -1,7 +1,7 @@
 <comment>
 problem   = underdense Mach10 jet
-reference = 
-configure = --prob=jet 
+reference =
+configure = --prob=jet
 
 <job>
 problem_id = jet      # problem ID: basename of output filenames
@@ -60,7 +60,7 @@ djet = 0.1
 pjet = 6.0e-3
 vxjet = 1.0
 vyjet = 0.0
-vzjet = 0.0 
+vzjet = 0.0
 bxjet = 0.1
 byjet = 0.0
 bzjet = 0.0

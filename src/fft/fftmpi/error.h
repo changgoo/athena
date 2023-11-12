@@ -22,16 +22,16 @@
 namespace FFTMPI_NS {
 
 class Error {
- public:
+public:
   Error(MPI_Comm);
   void all(const char *);
   void one(const char *);
   void warning(const char *);
 
- private:
+private:
   MPI_Comm world;
 };
 
-}
+} // namespace FFTMPI_NS
 
 #endif

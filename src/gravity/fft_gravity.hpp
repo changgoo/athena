@@ -2,8 +2,9 @@
 #define GRAVITY_FFT_GRAVITY_HPP_
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file fft_gravity.hpp
 //! \brief defines FFTGravity class
@@ -28,25 +29,24 @@ class FFTGravitySolverTaskList;
 //! \brief FFT gravity solver for each block
 
 class FFTGravity : public FFTBlock {
- public:
-  FFTGravity(FFTDriver *pfd, LogicalLocation iloc, int igid,
-             RegionSize msize, RegionSize bsize)
+public:
+  FFTGravity(FFTDriver *pfd, LogicalLocation iloc, int igid, RegionSize msize,
+             RegionSize bsize)
       : FFTBlock(pfd, iloc, igid, msize, bsize) {}
   ~FFTGravity() {}
   void ApplyKernel(int mode) final;
 };
 
-
 //! \class FFTDriver
 //! \brief FFT gravity solver
 
-class FFTGravityDriver : public FFTDriver{
- public:
+class FFTGravityDriver : public FFTDriver {
+public:
   FFTGravityDriver(Mesh *pm, ParameterInput *pin);
   ~FFTGravityDriver();
   void Solve(int stage, int mode);
 
- private:
+private:
   Real four_pi_G_;
   FFTGravitySolverTaskList *gtlist_;
 };

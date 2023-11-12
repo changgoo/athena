@@ -25,27 +25,27 @@ void factor(int n, int *num, int *list)
   } else if (n % 2 == 0) {
     *list = 2;
     (*num)++;
-    factor(n/2,num,list+1);
+    factor(n / 2, num, list + 1);
   } else if (n % 3 == 0) {
     *list = 3;
     (*num)++;
-    factor(n/3,num,list+1);
+    factor(n / 3, num, list + 1);
   } else if (n % 5 == 0) {
     *list = 5;
     (*num)++;
-    factor(n/5,num,list+1);
+    factor(n / 5, num, list + 1);
   } else if (n % 7 == 0) {
     *list = 7;
     (*num)++;
-    factor(n/7,num,list+1);
+    factor(n / 7, num, list + 1);
   } else if (n % 11 == 0) {
     *list = 11;
     (*num)++;
-    factor(n/11,num,list+1);
+    factor(n / 11, num, list + 1);
   } else if (n % 13 == 0) {
     *list = 13;
     (*num)++;
-    factor(n/13,num,list+1);
+    factor(n / 13, num, list + 1);
   } else {
     *list = n;
     (*num)++;
@@ -53,20 +53,19 @@ void factor(int n, int *num, int *list)
   }
 }
 
-
 /* ------------------------------------------------------------------- */
 /* divide n into 2 factors of as equal size as possible */
 
 void bifactor(int n, int *factor1, int *factor2)
 
 {
-  int n1,n2,facmax;
+  int n1, n2, facmax;
 
-  facmax = sqrt((double) n);
+  facmax = sqrt((double)n);
 
   for (n1 = facmax; n1 > 0; n1--) {
-    n2 = n/n1;
-    if (n1*n2 == n) {
+    n2 = n / n1;
+    if (n1 * n2 == n) {
       *factor1 = n1;
       *factor2 = n2;
       return;

@@ -8,13 +8,13 @@ import scripts.utils.athena as athena  # noqa
 import scripts.tests.diffusion.resistive_diffusion as resistive_diffusion
 import logging
 
-resistive_diffusion.sts_integrators = ['rkl1', 'rkl2']
+resistive_diffusion.sts_integrators = ["rkl1", "rkl2"]
 resistive_diffusion.rate_tols = [-0.99, -1.99]
-resistive_diffusion.logger = logging.getLogger('athena' + __name__[7:])
+resistive_diffusion.logger = logging.getLogger("athena" + __name__[7:])
 
 
 def prepare(*args, **kwargs):
-    return resistive_diffusion.prepare('sts', *args, **kwargs)
+    return resistive_diffusion.prepare("sts", *args, **kwargs)
 
 
 def run(**kwargs):

@@ -1,5 +1,5 @@
 # Introduction
-Welcome! Thank you for considering contributing to Athena++. This project adheres to a [code of conduct](CODE_OF_CONDUCT.md), which you are expected to uphold by participating. 
+Welcome! Thank you for considering contributing to Athena++. This project adheres to a [code of conduct](CODE_OF_CONDUCT.md), which you are expected to uphold by participating.
 
 The guidelines in this document are meant to help make the development of Athena++ straightforward and effective. They are a set of best practices, not strict rules, and this document may be modified at any time. Navigating the code can be daunting for new users, so if anything is unclear, please let us know!
 
@@ -8,7 +8,7 @@ The guidelines in this document are meant to help make the development of Athena
 
 ## Resources and quick links
 * The latest development version of Athena++ is hosted in the public [PrincetonUniversity/athena](https://github.com/PrincetonUniversity/athena) GitHub repository.
-* The public version of Athena++ was formerly distributed via [PrincetonUnviersity/athena-public-version](https://github.com/PrincetonUniversity/athena-public-version) GitHub repository. This repository is now archived. 
+* The public version of Athena++ was formerly distributed via [PrincetonUnviersity/athena-public-version](https://github.com/PrincetonUniversity/athena-public-version) GitHub repository. This repository is now archived.
 * The final version of the predecessor C code, Athena 4.2, has been migrated from its original SVN repository to GitHub at [PrincetonUniversity/Athena-Cversion](https://github.com/PrincetonUniversity/Athena-Cversion).
   * [Athena 4.2 Documentation](https://princetonuniversity.github.io/Athena-Cversion/AthenaDocs) is hosted on GitHub Pages.
   * The [Athena 4.2 Test Page](https://www.astro.princeton.edu/~jstone/Athena/tests/) contains useful algorithm test results.
@@ -183,7 +183,7 @@ At this time, the Slack workspace is closed to the general public. The workspace
 ## Versioning and releases
 We intend to provide periodic releases, versioned according to CalVer, or [Calendar Versioninng](https://calver.org/). A detailed walkthrough of the steps a project maintainer must complete in order to mint a new release is provided in the following section.
 
-We currently maintain Git tags and code versions in a one-to-one correspondence: all versions are tagged, and all tags have a version number. However, not all tags/versions are released (see below section discussing pre-release tagged versions). A release version is defined by drafting a [GitHub Release](https://help.github.com/articles/creating-releases/) along with release notes in the GitHub UI. 
+We currently maintain Git tags and code versions in a one-to-one correspondence: all versions are tagged, and all tags have a version number. However, not all tags/versions are released (see below section discussing pre-release tagged versions). A release version is defined by drafting a [GitHub Release](https://help.github.com/articles/creating-releases/) along with release notes in the GitHub UI.
 
 Each release is accompanied by an Git annotated (not lightweight) tag. An annotated tag is a full Git object with its own tagger name, tagger email, and creation date. A lightweight Git tag is more appropriate for temporary or local/personal use than for publishing releases, since a lightweight tag is merely a pointer to a commit object (much like a branch that doesn't naturally move with commits and *shouldn't* be moved by users after it is shared). Therefore, the tag should be created from the Git CLI, not the GitHub UI which only supports creating lightweight tags as of 5/24/18.
 

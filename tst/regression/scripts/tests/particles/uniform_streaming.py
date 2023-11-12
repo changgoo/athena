@@ -2,22 +2,23 @@
 
 # Modules
 import math
-import numpy as np                             # standard Python module for numerics
-import sys                                     # standard Python module to change path
-import scripts.utils.athena as athena          # utilities for running Athena++
-sys.path.insert(0, '../../vis/python')         # insert path to Python read scripts
-import athena_read                             # utilities for reading Athena++ data # noqa
+import numpy as np  # standard Python module for numerics
+import sys  # standard Python module to change path
+import scripts.utils.athena as athena  # utilities for running Athena++
+
+sys.path.insert(0, "../../vis/python")  # insert path to Python read scripts
+import athena_read  # utilities for reading Athena++ data # noqa
 
 
 def prepare(**kwargs):
-    """Configure and make the executable. """
+    """Configure and make the executable."""
 
-    athena.configure('mpi', prob='uniform_streaming', **kwargs)
+    athena.configure("mpi", prob="uniform_streaming", **kwargs)
     athena.make()
 
 
 def run(**kwargs):
-    """Run the executable. """
+    """Run the executable."""
     import os
     import subprocess
 
@@ -28,8 +29,13 @@ def run(**kwargs):
     arguments = []
 
     # Run the executable.
-    athena.mpirun(kwargs['mpirun_cmd'], kwargs['mpirun_opts'], 2,
-                  'particles/athinput.uniform_streaming', arguments)
+    athena.mpirun(
+        kwargs["mpirun_cmd"],
+        kwargs["mpirun_opts"],
+        2,
+        "particles/athinput.uniform_streaming",
+        arguments,
+    )
 
     # Combine the output tables.
     my_dir = os.path.dirname(os.path.realpath(__file__))
@@ -37,7 +43,7 @@ def run(**kwargs):
 
 
 def analyze():
-    """Analyze the output and determine if the test passes. """
+    """Analyze the output and determine if the test passes."""
     from glob import glob
 
     # Force pass the test for now
@@ -47,7 +53,9 @@ def analyze():
     base = "bin/UniStream"
 
     # Read the input file.
-    athinput = athena_read.athinput("../../inputs/particles//athinput.uniform_streaming")
+    athinput = athena_read.athinput(
+        "../../inputs/particles//athinput.uniform_streaming"
+    )
     input_mesh = athinput["mesh"]
     input_particles = athinput["particle1"]
     input_problem = athinput["problem"]
@@ -73,8 +81,11 @@ def analyze():
 
     # Construct numpy datatypes.
     dtp = np.dtype(
-        {"names": ["id", "xp", "yp", "zp", "vpx", "vpy", "vpz"],
-         "formats": [int, float, float, float, float, float, float]})
+        {
+            "names": ["id", "xp", "yp", "zp", "vpx", "vpy", "vpz"],
+            "formats": [int, float, float, float, float, float, float],
+        }
+    )
 
     f = open(base + ".00000.tab")
     f.readline()
@@ -197,28 +208,26 @@ def analyze():
     def norm(u, v):
         s = 0
         for a, b in zip(u, v):
-            s += (a - b)**2
+            s += (a - b) ** 2
         return math.sqrt(s)
 
     # Find the absolute errors.
-    err_drp = norm([dxpavg[-1], dypavg[-1], dzpavg[-1]],
-                   [dxpe[-1], dype[-1], dzpe[-1]])
-    err_v = norm([vpxavg[-1], vpyavg[-1], vpzavg[-1]],
-                 [vpxe[-1], vpye[-1], vpze[-1]])
-    err_u = norm([uxavg[-1], uyavg[-1], uzavg[-1]],
-                 [uxe[-1], uye[-1], uze[-1]])
+    err_drp = norm([dxpavg[-1], dypavg[-1], dzpavg[-1]], [dxpe[-1], dype[-1], dzpe[-1]])
+    err_v = norm([vpxavg[-1], vpyavg[-1], vpzavg[-1]], [vpxe[-1], vpye[-1], vpze[-1]])
+    err_u = norm([uxavg[-1], uyavg[-1], uzavg[-1]], [uxe[-1], uye[-1], uze[-1]])
     print("\nAbsolute Errors in:\n")
     print("\tParticle displacement = {}".format(err_drp))
     print("\tParticle velocity     = {}".format(err_v))
     print("\tGas velocity          = {}\n".format(err_u))
 
     # Evaluate the uniformity.
-    ddrp = norm([dxpmax[-1], dypmax[-1], dzpmax[-1]],
-                [dxpmin[-1], dypmin[-1], dzpmin[-1]])
-    dv = norm([vpxmax[-1], vpymax[-1], vpzmax[-1]],
-              [vpxmin[-1], vpymin[-1], vpzmin[-1]])
-    du = norm([uxmax[-1], uymax[-1], uzmax[-1]],
-              [uxmin[-1], uymin[-1], uzmin[-1]])
+    ddrp = norm(
+        [dxpmax[-1], dypmax[-1], dzpmax[-1]], [dxpmin[-1], dypmin[-1], dzpmin[-1]]
+    )
+    dv = norm(
+        [vpxmax[-1], vpymax[-1], vpzmax[-1]], [vpxmin[-1], vpymin[-1], vpzmin[-1]]
+    )
+    du = norm([uxmax[-1], uymax[-1], uzmax[-1]], [uxmin[-1], uymin[-1], uzmin[-1]])
     print("\nData Range in:\n")
     print("\tParticle displacement = {}".format(ddrp))
     print("\tParticle velocity     = {}".format(dv))
@@ -226,22 +235,22 @@ def analyze():
 
     # Detect anomalies.
     ok = True
-    if err_drp > 2.50E-6:
+    if err_drp > 2.50e-6:
         print("*** Too much error in particle displacement")
         ok = False
-    if err_v > 5.50E-6:
+    if err_v > 5.50e-6:
         print("*** Too much error in particle velocity")
         ok = False
-    if err_u > 1.50E-6:
+    if err_u > 1.50e-6:
         print("*** Too much error in gas velocity")
         ok = False
-    if ddrp > 3E-15:
+    if ddrp > 3e-15:
         print("*** Not uniform in particle displacement")
         ok = False
-    if dv > 2E-15:
+    if dv > 2e-15:
         print("*** Not uniform in particle velocity")
         ok = False
-    if du > 5E-15:
+    if du > 5e-15:
         print("*** Not uniform in gas velocity")
         ok = False
 
@@ -256,7 +265,8 @@ class UniformStreaming:
     """Object for uniform streaming motion between gas and solid
     particles.
     """
-# ----------------------------------------------------------------------
+
+    # ----------------------------------------------------------------------
     def __init__(self, ts, g, epsilon, u0, v0, backreaction=True):
         """Initializes the object.
 
@@ -282,7 +292,7 @@ class UniformStreaming:
         # Find the center-of-mass velocity.
         self.ucm = (u0 + epsilon * v0) / (1 + epsilon)
 
-# ----------------------------------------------------------------------
+    # ----------------------------------------------------------------------
     def velocities(self, t):
         """Find the velocities of the gas and the particles as a
         function of time.
@@ -311,7 +321,7 @@ class UniformStreaming:
 
         return u, v
 
-# ----------------------------------------------------------------------
+    # ----------------------------------------------------------------------
     def displacement(self, t):
         """Find the displacement of a particle function of time.
 
@@ -330,7 +340,11 @@ class UniformStreaming:
             w = self.ucm - a**2 * self.g * self.ts
             dxp = a * self.ts * (self.v0 - w) * r + w * t + 0.5 * a * self.g * t**2
         else:
-            dxp = self.u0 * t + (self.v0 - self.u0) * self.ts * (1 - np.exp(-t / self.ts))
+            dxp = self.u0 * t + (self.v0 - self.u0) * self.ts * (
+                1 - np.exp(-t / self.ts)
+            )
 
         return dxp
+
+
 # ======================================================================

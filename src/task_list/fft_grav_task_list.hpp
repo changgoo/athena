@@ -2,8 +2,9 @@
 #define TASK_LIST_FFT_GRAV_TASK_LIST_HPP_
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file fft_grav_task_list.hpp
 //! \brief define FFTGravitySolverTaskList
@@ -11,8 +12,8 @@
 // C headers
 
 // C++ headers
-#include <cstdint>      // std::uint64_t
-#include <string>     // c_str()
+#include <cstdint> // std::uint64_t
+#include <string>  // c_str()
 
 // Athena++ headers
 #include "../athena.hpp"
@@ -24,10 +25,11 @@ class MeshBlock;
 
 //----------------------------------------------------------------------------------------
 //! \class FFTGravitySolverTaskList
-//! \brief data and function definitions for FFTGravitySolverTaskList derived class
+//! \brief data and function definitions for FFTGravitySolverTaskList derived
+//! class
 
 class FFTGravitySolverTaskList : public TaskList {
- public:
+public:
   FFTGravitySolverTaskList(ParameterInput *pin, Mesh *pm);
 
   // data
@@ -42,18 +44,18 @@ class FFTGravitySolverTaskList : public TaskList {
   TaskStatus SetFFTGravityBoundary(MeshBlock *pmb, int stage);
   TaskStatus PhysicalBoundary(MeshBlock *pmb, int stage);
 
- private:
+private:
   bool ORBITAL_ADVECTION; // flag for orbital advection (true w/ , false w/o)
   bool SHEAR_PERIODIC; // flag for shear periodic boundary (true w/ , false w/o)
   Real sbeta[2], ebeta[2];
 
-  void AddTask(const TaskID& id, const TaskID& dep) override;
+  void AddTask(const TaskID &id, const TaskID &dep) override;
   void StartupTaskList(MeshBlock *pmb, int stage) override;
 };
 
-
 //----------------------------------------------------------------------------------------
-//! 64-bit integers with "1" in different bit positions used to ID  each hydro task.
+//! 64-bit integers with "1" in different bit positions used to ID  each hydro
+//! task.
 namespace FFTGravitySolverTaskNames {
 const TaskID NONE(0);
 const TaskID CLEAR_GRAV(1);

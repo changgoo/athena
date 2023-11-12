@@ -1,7 +1,8 @@
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file scalar_diff.cpp
 //! \brief scalar diffusion test
@@ -13,12 +14,12 @@
 // C headers
 
 // C++ headers
-#include <cmath>      // sqrt()
-#include <cstring>    // strcmp()
-#include <iostream>   // endl
-#include <sstream>    // stringstream
-#include <stdexcept>  // runtime_error
-#include <string>     // c_str()
+#include <cmath>     // sqrt()
+#include <cstring>   // strcmp()
+#include <iostream>  // endl
+#include <sstream>   // stringstream
+#include <stdexcept> // runtime_error
+#include <string>    // c_str()
 
 // Athena++ headers
 #include "../athena.hpp"
@@ -39,7 +40,7 @@ int RefinementCondition(MeshBlock *pmb);
 void Mesh::InitUserMeshData(ParameterInput *pin) {
   if (adaptive) {
     EnrollUserRefinementCondition(RefinementCondition);
-    threshold = pin->GetReal("problem","thr");
+    threshold = pin->GetReal("problem", "thr");
   }
   return;
 }
@@ -66,145 +67,153 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     if (std::strcmp(COORDINATE_SYSTEM, "cartesian") != 0) {
       std::stringstream msg;
       msg << "### FATAL ERROR in scalar_diff.cpp ProblemGenerator" << std::endl
-          << "1-D diffusion test only compatible with cartesian coord" << std::endl;
+          << "1-D diffusion test only compatible with cartesian coord"
+          << std::endl;
       ATHENA_ERROR(msg);
     }
-    for (int k=ks; k<=ke; ++k) {
-      for (int j=js; j<=je; ++j) {
-        for (int i=is; i<=ie; ++i) {
-          x1=pcoord->x1v(i);
-          phydro->u(IDN,k,j,i) = d0;
-          phydro->u(IM1,k,j,i) = phydro->u(IDN,k,j,i)*v1;
-          phydro->u(IM2,k,j,i) = phydro->u(IDN,k,j,i)*v2;
-          phydro->u(IM3,k,j,i) = phydro->u(IDN,k,j,i)*v3;
+    for (int k = ks; k <= ke; ++k) {
+      for (int j = js; j <= je; ++j) {
+        for (int i = is; i <= ie; ++i) {
+          x1 = pcoord->x1v(i);
+          phydro->u(IDN, k, j, i) = d0;
+          phydro->u(IM1, k, j, i) = phydro->u(IDN, k, j, i) * v1;
+          phydro->u(IM2, k, j, i) = phydro->u(IDN, k, j, i) * v2;
+          phydro->u(IM3, k, j, i) = phydro->u(IDN, k, j, i) * v3;
           if (NSCALARS > 0) {
-            for (int n=0; n<NSCALARS; ++n) {
-              pscalars->s(n,k,j,i) = phydro->u(IDN,k,j,i)
-                                * amp/std::pow(std::sqrt(4.*PI*nu_scalar_iso*t0),1.0)
-                                * std::exp(-(std::pow(x1-x10,2.))
-                                           / (4.*nu_scalar_iso*t0));
+            for (int n = 0; n < NSCALARS; ++n) {
+              pscalars->s(n, k, j, i) =
+                  phydro->u(IDN, k, j, i) * amp /
+                  std::pow(std::sqrt(4. * PI * nu_scalar_iso * t0), 1.0) *
+                  std::exp(-(std::pow(x1 - x10, 2.)) /
+                           (4. * nu_scalar_iso * t0));
             }
           }
         }
       }
     }
   } else if (iprob == 1) { // 2-D diffusion
-    for (int k=ks; k<=ke; ++k) {
-      for (int j=js; j<=je; ++j) {
-        for (int i=is; i<=ie; ++i) {
+    for (int k = ks; k <= ke; ++k) {
+      for (int j = js; j <= je; ++j) {
+        for (int i = is; i <= ie; ++i) {
           if (std::strcmp(COORDINATE_SYSTEM, "cartesian") == 0) {
             x1 = pcoord->x1v(i);
             x2 = pcoord->x2v(j);
-            phydro->u(IDN,k,j,i) = d0;
-            phydro->u(IM1,k,j,i) = phydro->u(IDN,k,j,i)*v1;
-            phydro->u(IM2,k,j,i) = phydro->u(IDN,k,j,i)*v2;
-            phydro->u(IM3,k,j,i) = phydro->u(IDN,k,j,i)*v3;
+            phydro->u(IDN, k, j, i) = d0;
+            phydro->u(IM1, k, j, i) = phydro->u(IDN, k, j, i) * v1;
+            phydro->u(IM2, k, j, i) = phydro->u(IDN, k, j, i) * v2;
+            phydro->u(IM3, k, j, i) = phydro->u(IDN, k, j, i) * v3;
             if (NSCALARS > 0) {
-              for (int n=0; n<NSCALARS; ++n) {
-                pscalars->s(n,k,j,i) = phydro->u(IDN,k,j,i)
-                                  * amp/std::pow(std::sqrt(4.*PI*nu_scalar_iso*t0),2.0)
-                                  * std::exp(-(std::pow(x1-x10,2.)
-                                               + std::pow(x2-x20,2.))
-                                             / (4.*nu_scalar_iso*t0));
+              for (int n = 0; n < NSCALARS; ++n) {
+                pscalars->s(n, k, j, i) =
+                    phydro->u(IDN, k, j, i) * amp /
+                    std::pow(std::sqrt(4. * PI * nu_scalar_iso * t0), 2.0) *
+                    std::exp(
+                        -(std::pow(x1 - x10, 2.) + std::pow(x2 - x20, 2.)) /
+                        (4. * nu_scalar_iso * t0));
               }
             }
           } else if (std::strcmp(COORDINATE_SYSTEM, "cylindrical") == 0) {
             r = pcoord->x1v(i);
             phi = pcoord->x2v(j);
-            x1 = r*std::cos(phi);
-            x2 = r*std::sin(phi);
-            phydro->u(IDN,k,j,i) = d0;
-            phydro->u(IM1,k,j,i) = phydro->u(IDN,k,j,i)*v1;
-            phydro->u(IM2,k,j,i) = phydro->u(IDN,k,j,i)*v2;
-            phydro->u(IM3,k,j,i) = phydro->u(IDN,k,j,i)*v3;
+            x1 = r * std::cos(phi);
+            x2 = r * std::sin(phi);
+            phydro->u(IDN, k, j, i) = d0;
+            phydro->u(IM1, k, j, i) = phydro->u(IDN, k, j, i) * v1;
+            phydro->u(IM2, k, j, i) = phydro->u(IDN, k, j, i) * v2;
+            phydro->u(IM3, k, j, i) = phydro->u(IDN, k, j, i) * v3;
             if (NSCALARS > 0) {
-              for (int n=0; n<NSCALARS; ++n) {
-                pscalars->s(n,k,j,i) = phydro->u(IDN,k,j,i)
-                                  * amp/std::pow(std::sqrt(4.*PI*nu_scalar_iso*t0),2.0)
-                                  * std::exp(-(std::pow(x1-x10,2.)
-                                               + std::pow(x2-x20,2.))
-                                             / (4.*nu_scalar_iso*t0));
+              for (int n = 0; n < NSCALARS; ++n) {
+                pscalars->s(n, k, j, i) =
+                    phydro->u(IDN, k, j, i) * amp /
+                    std::pow(std::sqrt(4. * PI * nu_scalar_iso * t0), 2.0) *
+                    std::exp(
+                        -(std::pow(x1 - x10, 2.) + std::pow(x2 - x20, 2.)) /
+                        (4. * nu_scalar_iso * t0));
               }
             }
           } else {
             std::stringstream msg;
-            msg << "### FATAL ERROR in scalar_diff.cpp ProblemGenerator" << std::endl
+            msg << "### FATAL ERROR in scalar_diff.cpp ProblemGenerator"
+                << std::endl
                 << "2-d diffusion test only compatible with cartesian or"
-                << std::endl << "cylindrical coord" << std::endl;
+                << std::endl
+                << "cylindrical coord" << std::endl;
             ATHENA_ERROR(msg);
           }
         }
       }
     }
   } else if (iprob == 2) { // 3-D diffusion
-    for (int k=ks; k<=ke; ++k) {
-      for (int j=js; j<=je; ++j) {
-        for (int i=is; i<=ie; ++i) {
+    for (int k = ks; k <= ke; ++k) {
+      for (int j = js; j <= je; ++j) {
+        for (int i = is; i <= ie; ++i) {
           if (std::strcmp(COORDINATE_SYSTEM, "cartesian") == 0) {
             x1 = pcoord->x1v(i);
             x2 = pcoord->x2v(j);
             x3 = pcoord->x3v(k);
-            phydro->u(IDN,k,j,i) = d0;
-            phydro->u(IM1,k,j,i) = phydro->u(IDN,k,j,i)*v1;
-            phydro->u(IM2,k,j,i) = phydro->u(IDN,k,j,i)*v2;
-            phydro->u(IM3,k,j,i) = phydro->u(IDN,k,j,i)*v3;
+            phydro->u(IDN, k, j, i) = d0;
+            phydro->u(IM1, k, j, i) = phydro->u(IDN, k, j, i) * v1;
+            phydro->u(IM2, k, j, i) = phydro->u(IDN, k, j, i) * v2;
+            phydro->u(IM3, k, j, i) = phydro->u(IDN, k, j, i) * v3;
             if (NSCALARS > 0) {
-              for (int n=0; n<NSCALARS; ++n) {
-                pscalars->s(n,k,j,i) = phydro->u(IDN,k,j,i)
-                                  * amp/std::pow(std::sqrt(4.*PI*nu_scalar_iso*t0),3.0)
-                                  * std::exp(-(std::pow(x1-x10,2.)
-                                               + std::pow(x2-x20,2.)
-                                               + std::pow(x3-x30,2.))
-                                             / (4.*nu_scalar_iso*t0));
+              for (int n = 0; n < NSCALARS; ++n) {
+                pscalars->s(n, k, j, i) =
+                    phydro->u(IDN, k, j, i) * amp /
+                    std::pow(std::sqrt(4. * PI * nu_scalar_iso * t0), 3.0) *
+                    std::exp(-(std::pow(x1 - x10, 2.) + std::pow(x2 - x20, 2.) +
+                               std::pow(x3 - x30, 2.)) /
+                             (4. * nu_scalar_iso * t0));
               }
             }
           } else if (std::strcmp(COORDINATE_SYSTEM, "cylindrical") == 0) {
             r = pcoord->x1v(i);
             phi = pcoord->x2v(j);
             z = pcoord->x3v(k);
-            x1 = r*std::cos(phi);
-            x2 = r*std::sin(phi);
+            x1 = r * std::cos(phi);
+            x2 = r * std::sin(phi);
             x3 = z;
-            phydro->u(IDN,k,j,i) = d0;
-            phydro->u(IM1,k,j,i) = phydro->u(IDN,k,j,i)*v1;
-            phydro->u(IM2,k,j,i) = phydro->u(IDN,k,j,i)*v2;
-            phydro->u(IM3,k,j,i) = phydro->u(IDN,k,j,i)*v3;
+            phydro->u(IDN, k, j, i) = d0;
+            phydro->u(IM1, k, j, i) = phydro->u(IDN, k, j, i) * v1;
+            phydro->u(IM2, k, j, i) = phydro->u(IDN, k, j, i) * v2;
+            phydro->u(IM3, k, j, i) = phydro->u(IDN, k, j, i) * v3;
             if (NSCALARS > 0) {
-              for (int n=0; n<NSCALARS; ++n) {
-                pscalars->s(n,k,j,i) = phydro->u(IDN,k,j,i)
-                                  * amp/std::pow(std::sqrt(4.*PI*nu_scalar_iso*t0),3.0)
-                                  * std::exp(-(std::pow(x1-x10,2.)
-                                               + std::pow(x2-x20,2.)
-                                               + std::pow(x3-x30,2.))
-                                             / (4.*nu_scalar_iso*t0));
+              for (int n = 0; n < NSCALARS; ++n) {
+                pscalars->s(n, k, j, i) =
+                    phydro->u(IDN, k, j, i) * amp /
+                    std::pow(std::sqrt(4. * PI * nu_scalar_iso * t0), 3.0) *
+                    std::exp(-(std::pow(x1 - x10, 2.) + std::pow(x2 - x20, 2.) +
+                               std::pow(x3 - x30, 2.)) /
+                             (4. * nu_scalar_iso * t0));
               }
             }
           } else if (std::strcmp(COORDINATE_SYSTEM, "spherical_polar") == 0) {
             r = pcoord->x1v(i);
             theta = pcoord->x2v(j);
             phi = pcoord->x3v(k);
-            x1 = r*std::sin(theta)*std::cos(phi);
-            x2 = r*std::sin(theta)*std::sin(phi);
-            x3 = r*std::cos(theta);
-            phydro->u(IDN,k,j,i) = d0;
-            phydro->u(IM1,k,j,i) = phydro->u(IDN,k,j,i)*v1;
-            phydro->u(IM2,k,j,i) = phydro->u(IDN,k,j,i)*v2;
-            phydro->u(IM3,k,j,i) = phydro->u(IDN,k,j,i)*v3;
+            x1 = r * std::sin(theta) * std::cos(phi);
+            x2 = r * std::sin(theta) * std::sin(phi);
+            x3 = r * std::cos(theta);
+            phydro->u(IDN, k, j, i) = d0;
+            phydro->u(IM1, k, j, i) = phydro->u(IDN, k, j, i) * v1;
+            phydro->u(IM2, k, j, i) = phydro->u(IDN, k, j, i) * v2;
+            phydro->u(IM3, k, j, i) = phydro->u(IDN, k, j, i) * v3;
             if (NSCALARS > 0) {
-              for (int n=0; n<NSCALARS; ++n) {
-                pscalars->s(n,k,j,i) = phydro->u(IDN,k,j,i)
-                                  * amp/std::pow(std::sqrt(4.*PI*nu_scalar_iso*t0),3.0)
-                                  * std::exp(-(std::pow(x1-x10,2.)
-                                               + std::pow(x2-x20,2.)
-                                               + std::pow(x3-x30,2.))
-                                             / (4.*nu_scalar_iso*t0));
+              for (int n = 0; n < NSCALARS; ++n) {
+                pscalars->s(n, k, j, i) =
+                    phydro->u(IDN, k, j, i) * amp /
+                    std::pow(std::sqrt(4. * PI * nu_scalar_iso * t0), 3.0) *
+                    std::exp(-(std::pow(x1 - x10, 2.) + std::pow(x2 - x20, 2.) +
+                               std::pow(x3 - x30, 2.)) /
+                             (4. * nu_scalar_iso * t0));
               }
             }
           } else {
             std::stringstream msg;
-            msg << "### FATAL ERROR in scalar_diff.cpp ProblemGenerator" << std::endl
+            msg << "### FATAL ERROR in scalar_diff.cpp ProblemGenerator"
+                << std::endl
                 << "2-d diffusion test only compatible with cartesian, "
-                << std::endl << "cylindrical, or spherical_polar coord" << std::endl;
+                << std::endl
+                << "cylindrical, or spherical_polar coord" << std::endl;
             ATHENA_ERROR(msg);
           }
         }
@@ -226,30 +235,33 @@ int RefinementCondition(MeshBlock *pmb) {
   Real maxeps = 0.;
   if (NSCALARS > 0) {
     if (f3) {
-      for (int k=pmb->ks-1; k<=pmb->ke+1; k++) {
-        for (int j=pmb->js-1; j<=pmb->je+1; j++) {
-          for (int i=pmb->is-1; i<=pmb->ie+1; i++) {
-            Real eps = std::sqrt(SQR(0.5*(r(0,k,j,i+1) - r(0,k,j,i-1)))
-                                 + SQR(0.5*(r(0,k,j+1,i) - r(0,k,j-1,i)))
-                                 + SQR(0.5*(r(0,k+1,j,i) - r(0,k-1,j,i))));
+      for (int k = pmb->ks - 1; k <= pmb->ke + 1; k++) {
+        for (int j = pmb->js - 1; j <= pmb->je + 1; j++) {
+          for (int i = pmb->is - 1; i <= pmb->ie + 1; i++) {
+            Real eps =
+                std::sqrt(SQR(0.5 * (r(0, k, j, i + 1) - r(0, k, j, i - 1))) +
+                          SQR(0.5 * (r(0, k, j + 1, i) - r(0, k, j - 1, i))) +
+                          SQR(0.5 * (r(0, k + 1, j, i) - r(0, k - 1, j, i))));
             maxeps = std::max(maxeps, eps);
           }
         }
       }
     } else if (f2) {
       int k = pmb->ks;
-      for (int j=pmb->js-1; j<=pmb->je+1; j++) {
-        for (int i=pmb->is-1; i<=pmb->ie+1; i++) {
-          Real eps = std::sqrt(SQR(0.5*(r(0,k,j,i+1) - r(0,k,j,i-1)))
-                               + SQR(0.5*(r(0,k,j+1,i) - r(0,k,j-1,i))));
+      for (int j = pmb->js - 1; j <= pmb->je + 1; j++) {
+        for (int i = pmb->is - 1; i <= pmb->ie + 1; i++) {
+          Real eps =
+              std::sqrt(SQR(0.5 * (r(0, k, j, i + 1) - r(0, k, j, i - 1))) +
+                        SQR(0.5 * (r(0, k, j + 1, i) - r(0, k, j - 1, i))));
           maxeps = std::max(maxeps, eps);
         }
       }
     } else {
       int k = pmb->ks;
       int j = pmb->js;
-      for (int i=pmb->is-1; i<=pmb->ie+1; i++) {
-        Real eps = std::sqrt(SQR(0.5*(r(0,k,j,i+1) - r(0,k,j,i-1))));
+      for (int i = pmb->is - 1; i <= pmb->ie + 1; i++) {
+        Real eps =
+            std::sqrt(SQR(0.5 * (r(0, k, j, i + 1) - r(0, k, j, i - 1))));
         maxeps = std::max(maxeps, eps);
       }
     }
@@ -257,7 +269,9 @@ int RefinementCondition(MeshBlock *pmb) {
     return 0;
   }
 
-  if (maxeps > threshold) return 1;
-  if (maxeps < 0.25*threshold) return -1;
+  if (maxeps > threshold)
+    return 1;
+  if (maxeps < 0.25 * threshold)
+    return -1;
   return 0;
 }

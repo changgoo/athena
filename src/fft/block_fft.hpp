@@ -2,8 +2,9 @@
 #define FFT_BLOCK_FFT_HPP_
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file block_fft.hpp
 //! \brief defines interface class to Plimpton's fftMPI
@@ -24,18 +25,17 @@
 #ifdef FFT
 #include <fftw3.h>
 #ifdef MPI_PARALLEL
-#include <mpi.h>
 #include "fftmpi/fft2d.h"
 #include "fftmpi/fft3d.h"
+#include <mpi.h>
 #endif // MPI_PARALLEL
 #endif
-
 
 //! \class BlockFFT
 //! \brief interface to the Plimpton's fftMPI
 
 class BlockFFT {
- public:
+public:
   explicit BlockFFT(MeshBlock *pmb);
   virtual ~BlockFFT();
 
@@ -66,7 +66,7 @@ class BlockFFT {
   virtual void ExecuteBackward();
   virtual void ApplyKernel();
 
- protected:
+protected:
   MeshBlock *pmy_block_;
   std::complex<Real> *in_;
 };

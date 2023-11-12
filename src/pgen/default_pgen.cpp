@@ -1,24 +1,27 @@
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file default_pgen.cpp
-//! \brief Provides default (empty) versions of all functions in problem generator files
-//! This means user does not have to implement these functions if they are not needed.
+//! \brief Provides default (empty) versions of all functions in problem
+//! generator files This means user does not have to implement these functions
+//! if they are not needed.
 //!
-//! The attribute "weak" is used to ensure the loader selects the user-defined version of
-//! functions rather than the default version given here.
+//! The attribute "weak" is used to ensure the loader selects the user-defined
+//! version of functions rather than the default version given here.
 //!
 //! The attribute "alias" may be used with the "weak" functions (in non-defining
-//! declarations) in order to have them refer to common no-operation function definition
-//! in the same translation unit. Target function must be specified by mangled name
-//! unless C linkage is specified.
+//! declarations) in order to have them refer to common no-operation function
+//! definition in the same translation unit. Target function must be specified
+//! by mangled name unless C linkage is specified.
 //!
-//! This functionality is not in either the C nor the C++ standard. These GNU extensions
-//! are largely supported by LLVM, Intel, IBM, but may affect portability for some
-//! architecutres and compilers. In such cases, simply define all 6 of the below class
-//! functions in every pgen/*.cpp file (without any function attributes).
+//! This functionality is not in either the C nor the C++ standard. These GNU
+//! extensions are largely supported by LLVM, Intel, IBM, but may affect
+//! portability for some architecutres and compilers. In such cases, simply
+//! define all 6 of the below class functions in every pgen/*.cpp file (without
+//! any function attributes).
 
 // C headers
 
@@ -34,9 +37,9 @@
 
 //========================================================================================
 //! \fn void Mesh::InitUserMeshData(ParameterInput *pin)
-//! \brief Function to initialize problem-specific data in Mesh class.  Can also be used
-//! to initialize variables which are global to (and therefore can be passed to) other
-//! functions in this file.  Called in Mesh constructor.
+//! \brief Function to initialize problem-specific data in Mesh class.  Can also
+//! be used to initialize variables which are global to (and therefore can be
+//! passed to) other functions in this file.  Called in Mesh constructor.
 //========================================================================================
 
 void __attribute__((weak)) Mesh::InitUserMeshData(ParameterInput *pin) {
@@ -46,12 +49,13 @@ void __attribute__((weak)) Mesh::InitUserMeshData(ParameterInput *pin) {
 
 //========================================================================================
 //! \fn void Mesh::PostInitialize(ParameterInput *pin)
-//! \brief Function to initialize problem-specific data in Mesh class.  Can also be used
-//! to initialize variables which are global to (and therefore can be passed to) other
-//! functions in this file.  Called in Mesh constructor.
+//! \brief Function to initialize problem-specific data in Mesh class.  Can also
+//! be used to initialize variables which are global to (and therefore can be
+//! passed to) other functions in this file.  Called in Mesh constructor.
 //========================================================================================
 
-void __attribute__((weak)) Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
+void __attribute__((weak))
+Mesh::PostInitialize(int res_flag, ParameterInput *pin) {
   // do nothing
   return;
 }
@@ -80,12 +84,13 @@ void __attribute__((weak)) Mesh::UserWorkAfterLoop(ParameterInput *pin) {
 
 //========================================================================================
 //! \fn void MeshBlock::InitUserMeshBlockData(ParameterInput *pin)
-//! \brief Function to initialize problem-specific data in MeshBlock class.  Can also be
-//! used to initialize variables which are global to other functions in this file.
-//! Called in MeshBlock constructor before ProblemGenerator.
+//! \brief Function to initialize problem-specific data in MeshBlock class.  Can
+//! also be used to initialize variables which are global to other functions in
+//! this file. Called in MeshBlock constructor before ProblemGenerator.
 //========================================================================================
 
-void __attribute__((weak)) MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
+void __attribute__((weak))
+MeshBlock::InitUserMeshBlockData(ParameterInput *pin) {
   // do nothing
   return;
 }
@@ -116,7 +121,8 @@ void __attribute__((weak)) MeshBlock::UserWorkInLoop() {
 //! \brief Function called before generating output files
 //========================================================================================
 
-void __attribute__((weak)) MeshBlock::UserWorkBeforeOutput(ParameterInput *pin) {
+void __attribute__((weak))
+MeshBlock::UserWorkBeforeOutput(ParameterInput *pin) {
   // do nothing
   return;
 }

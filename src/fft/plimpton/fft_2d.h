@@ -37,18 +37,18 @@ typedef fftw_complex FFT_DATA;
 /* details of how to do a 2d FFT */
 
 struct fft_plan_2d {
-  struct remap_plan_2d *pre_plan;       /* remap from input -> 1st FFTs */
-  struct remap_plan_2d *mid_plan;       /* remap from 1st -> 2nd FFTs */
-  struct remap_plan_2d *post_plan;      /* remap from 2nd FFTs -> output */
-  FFT_DATA *copy;                   /* memory for remap results (if needed) */
-  FFT_DATA *scratch;                /* scratch space for remaps */
-  int total1,total2;                /* # of 1st and 2nd FFTs (times length) */
-  int length1,length2;              /* length of 1st and 2nd FFTs */
-  int pre_target,mid_target;        /* where to put remap results */
-  int scaled;                       /* whether to scale FFT results */
-  int normnum;                      /* # of values to rescale */
-  double norm;                      /* normalization factor for rescaling */
-                                    /* system specific 1d FFT info */
+  struct remap_plan_2d *pre_plan;  /* remap from input -> 1st FFTs */
+  struct remap_plan_2d *mid_plan;  /* remap from 1st -> 2nd FFTs */
+  struct remap_plan_2d *post_plan; /* remap from 2nd FFTs -> output */
+  FFT_DATA *copy;                  /* memory for remap results (if needed) */
+  FFT_DATA *scratch;               /* scratch space for remaps */
+  int total1, total2;              /* # of 1st and 2nd FFTs (times length) */
+  int length1, length2;            /* length of 1st and 2nd FFTs */
+  int pre_target, mid_target;      /* where to put remap results */
+  int scaled;                      /* whether to scale FFT results */
+  int normnum;                     /* # of values to rescale */
+  double norm;                     /* normalization factor for rescaling */
+                                   /* system specific 1d FFT info */
   fftw_plan plan_fast_forward;
   fftw_plan plan_fast_backward;
   fftw_plan plan_slow_forward;
@@ -58,9 +58,8 @@ struct fft_plan_2d {
 /* function prototypes */
 
 void fft_2d(FFT_DATA *, FFT_DATA *, int, struct fft_plan_2d *);
-struct fft_plan_2d *fft_2d_create_plan(MPI_Comm, int, int,
-  int, int, int, int, int, int, int, int,
-  int, int, int *);
+struct fft_plan_2d *fft_2d_create_plan(MPI_Comm, int, int, int, int, int, int,
+                                       int, int, int, int, int, int, int *);
 void fft_2d_destroy_plan(struct fft_plan_2d *);
 void factor(int, int *, int *);
 

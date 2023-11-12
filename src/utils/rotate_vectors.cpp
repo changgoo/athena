@@ -1,7 +1,8 @@
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file rotate_vectors.cpp
 //! \brief rotate vectors
@@ -32,15 +33,14 @@
 //! [0      1    0]
 //! [-cos_t 0 sin_t]
 //----------------------------------------------------------------------------------------
-void RotateVec(const Real sint, const Real cost,
-              const Real sinp, const Real cosp,
-              Real &v1, Real &v2, Real &v3) {
+void RotateVec(const Real sint, const Real cost, const Real sinp,
+               const Real cosp, Real &v1, Real &v2, Real &v3) {
   // First apply R1, then apply R2
-  Real newv1 =  cosp * v1 + sinp * v2;
+  Real newv1 = cosp * v1 + sinp * v2;
   v2 = -sinp * v1 + cosp * v2;
 
   // now apply R2
-  v1 =  sint * newv1 + cost * v3;
+  v1 = sint * newv1 + cost * v3;
   Real newv3 = -cost * newv1 + sint * v3;
   v3 = newv3;
 }
@@ -66,9 +66,8 @@ void RotateVec(const Real sint, const Real cost,
 //! [0      1    0]
 //! [cos_t 0 sin_t]
 //----------------------------------------------------------------------------------------
-void InvRotateVec(const Real sint, const Real cost,
-                 const Real sinp, const Real cosp,
-                 Real &v1, Real &v2, Real &v3) {
+void InvRotateVec(const Real sint, const Real cost, const Real sinp,
+                  const Real cosp, Real &v1, Real &v2, Real &v3) {
   // First apply R2^-1, then apply R1^-1
   Real newv1 = sint * v1 - cost * v3;
   v3 = cost * v1 + sint * v3;

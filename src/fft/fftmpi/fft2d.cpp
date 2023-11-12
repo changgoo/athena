@@ -23,22 +23,22 @@
                          Paul Coffman (IBM) added MPI collective remap
 ------------------------------------------------------------------------- */
 
-#include <mpi.h>
 #include <cmath>
+#include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "error.h"
 #include "fft2d.h"
+#include "memory.h"
 #include "remap2d.h"
 #include "version.h"
-#include "memory.h"
-#include "error.h"
 
 using namespace FFTMPI_NS;
 
-#define MIN(A,B) ((A) < (B) ? (A) : (B))
-#define MAX(A,B) ((A) > (B) ? (A) : (B))
+#define MIN(A, B) ((A) < (B) ? (A) : (B))
+#define MAX(A, B) ((A) > (B) ? (A) : (B))
 
 #define NFACTOR 50
 #define BIG 1.0e20
@@ -104,11 +104,10 @@ typedef int64_t bigint;
    user_precision = caller precision for its FFT data, 1=single, 2=double
 ------------------------------------------------------------------------- */
 
-FFT2d::FFT2d(MPI_Comm user_comm, int user_precision)
-{
+FFT2d::FFT2d(MPI_Comm user_comm, int user_precision) {
   world = user_comm;
-  MPI_Comm_rank(world,&me);
-  MPI_Comm_size(world,&nprocs);
+  MPI_Comm_rank(world, &me);
+  MPI_Comm_size(world, &nprocs);
 
   // default settings
   // user can change them before setup()
@@ -138,8 +137,10 @@ FFT2d::FFT2d(MPI_Comm user_comm, int user_precision)
       (user_precision == 2 && sizeof(FFT_SCALAR) != 8))
     error->all("Precision mis-match with FFT lib");
 
-  if (sizeof(FFT_SCALAR) == 4) precision = "single";
-  if (sizeof(FFT_SCALAR) == 8) precision = "double";
+  if (sizeof(FFT_SCALAR) == 4)
+    precision = "single";
+  if (sizeof(FFT_SCALAR) == 8)
+    precision = "double";
 
   // allowed prime factors for each FFT grid dimension
 
@@ -169,13 +170,12 @@ FFT2d::FFT2d(MPI_Comm user_comm, int user_precision)
    delete a 2d FFT
 ------------------------------------------------------------------------- */
 
-FFT2d::~FFT2d()
-{
+FFT2d::~FFT2d() {
   delete memory;
   delete error;
 
-  delete [] primes;
-  delete [] factors;
+  delete[] primes;
+  delete[] factors;
 
   deallocate_remap(remap_prefast);
   deallocate_remap(remap_fastslow);
@@ -218,15 +218,12 @@ FFT2d::~FFT2d()
    recvsize = size of recv buffer, caller may choose to provide it
 ------------------------------------------------------------------------- */
 
-void FFT2d::setup(int user_nfast, int user_nslow,
-                  int user_in_ilo, int user_in_ihi,
-                  int user_in_jlo, int user_in_jhi,
-                  int user_out_ilo, int user_out_ihi,
-                  int user_out_jlo, int user_out_jhi,
-                  int user_permute,
-                  int &user_fftsize, int &user_sendsize, int &user_recvsize)
-{
-  int flag,allflag;
+void FFT2d::setup(int user_nfast, int user_nslow, int user_in_ilo,
+                  int user_in_ihi, int user_in_jlo, int user_in_jhi,
+                  int user_out_ilo, int user_out_ihi, int user_out_jlo,
+                  int user_out_jhi, int user_permute, int &user_fftsize,
+                  int &user_sendsize, int &user_recvsize) {
+  int flag, allflag;
 
   setupflag = 1;
 
@@ -235,10 +232,14 @@ void FFT2d::setup(int user_nfast, int user_nslow,
   nfast = user_nfast;
   nslow = user_nslow;
 
-  in_ilo = user_in_ilo; in_ihi = user_in_ihi;
-  in_jlo = user_in_jlo; in_jhi = user_in_jhi;
-  out_ilo = user_out_ilo; out_ihi = user_out_ihi;
-  out_jlo = user_out_jlo; out_jhi = user_out_jhi;
+  in_ilo = user_in_ilo;
+  in_ihi = user_in_ihi;
+  in_jlo = user_in_jlo;
+  in_jhi = user_in_jhi;
+  out_ilo = user_out_ilo;
+  out_ihi = user_out_ihi;
+  out_jlo = user_out_jlo;
+  out_jhi = user_out_jhi;
 
   permute = user_permute;
 
@@ -248,32 +249,40 @@ void FFT2d::setup(int user_nfast, int user_nslow,
   if (nfast < 2 || nslow < 2)
     error->all("Each FFT dimension must be >= 2");
 
-  if (!prime_factorable(nfast)) error->all("Invalid nfast");
-  if (!prime_factorable(nslow)) error->all("Invalid nslow");
+  if (!prime_factorable(nfast))
+    error->all("Invalid nfast");
+  if (!prime_factorable(nslow))
+    error->all("Invalid nslow");
 
   // error checks in indices and tiling
 
   flag = 0;
-  if (in_ilo > in_ihi+1 || in_jlo > in_jhi+1) flag = 1;
-  if (in_ilo < 0 || in_jlo < 0) flag = 1;
-  if (in_ihi >= nfast || in_jhi >= nslow) flag = 1;
+  if (in_ilo > in_ihi + 1 || in_jlo > in_jhi + 1)
+    flag = 1;
+  if (in_ilo < 0 || in_jlo < 0)
+    flag = 1;
+  if (in_ihi >= nfast || in_jhi >= nslow)
+    flag = 1;
 
-  MPI_Allreduce(&flag,&allflag,1,MPI_INT,MPI_MAX,world);
+  MPI_Allreduce(&flag, &allflag, 1, MPI_INT, MPI_MAX, world);
 
-  if (allflag) error->all("FFT setup in/out indices are invalid");
+  if (allflag)
+    error->all("FFT setup in/out indices are invalid");
 
-  bigint n = (bigint) (in_ihi-in_ilo+1) * (in_jhi-in_jlo+1);
+  bigint n = (bigint)(in_ihi - in_ilo + 1) * (in_jhi - in_jlo + 1);
   bigint nall;
-  MPI_Allreduce(&n,&nall,1,MPI_FFT_BIGINT,MPI_SUM,world);
+  MPI_Allreduce(&n, &nall, 1, MPI_FFT_BIGINT, MPI_SUM, world);
 
-  if (nall != ((bigint) nfast * nslow))
+  if (nall != ((bigint)nfast * nslow))
     error->all("FFT setup in/out indices do not tile grid");
 
   // set collective flags for different remap operations
   // bp = brick2pencil or pencil2brick, pp = pencel2pencil
 
-  if (collective == 0) collective_bp = collective_pp = 0;
-  else if (collective == 1) collective_bp = collective_pp = 1;
+  if (collective == 0)
+    collective_bp = collective_pp = 0;
+  else if (collective == 1)
+    collective_bp = collective_pp = 1;
   else {
     collective_bp = 0;
     collective_pp = 1;
@@ -283,12 +292,16 @@ void FFT2d::setup(int user_nfast, int user_nslow,
   // in/out indices are same on every proc and permute = 0
 
   flag = 0;
-  if (in_ilo != out_ilo || in_ihi != out_ihi ||
-      in_jlo != out_jlo || in_jhi != out_jhi) flag = 1;
-  if (permute) flag = 1;
-  MPI_Allreduce(&flag,&allflag,1,MPI_INT,MPI_MAX,world);
-  if (allflag) inout_layout_same = 0;
-  else inout_layout_same = 1;
+  if (in_ilo != out_ilo || in_ihi != out_ihi || in_jlo != out_jlo ||
+      in_jhi != out_jhi)
+    flag = 1;
+  if (permute)
+    flag = 1;
+  MPI_Allreduce(&flag, &allflag, 1, MPI_INT, MPI_MAX, world);
+  if (allflag)
+    inout_layout_same = 0;
+  else
+    inout_layout_same = 1;
 
   // compute partitioning of FFT grid across procs for each pencil layout
   // if exchange set, also partition in 2d for brick layout
@@ -296,7 +309,8 @@ void FFT2d::setup(int user_nfast, int user_nslow,
   // ip = my location in each dimension
 
   factor(nprocs);
-  if (nfactor > NFACTOR) error->all("Nprocs is too large to factor");
+  if (nfactor > NFACTOR)
+    error->all("Nprocs is too large to factor");
 
   npfast1 = 1;
   npfast2 = nprocs;
@@ -309,17 +323,20 @@ void FFT2d::setup(int user_nfast, int user_nslow,
   ipslow2 = 0;
 
   if (exchange)
-    procfactors(nfast,nslow,npbrick1,npbrick2,ipbrick1,ipbrick2);
-  else npbrick1 = npbrick2 = 0;
+    procfactors(nfast, nslow, npbrick1, npbrick2, ipbrick1, ipbrick2);
+  else
+    npbrick1 = npbrick2 = 0;
 
   // remap from initial layout to fast pencil layout
   // remap_preflag = 1 if remap is needed, else 0
   // not needed if all procs own entire fast dimension initially
   // fast indices = data layout before/after 1st set of FFTs
 
-  if (in_ilo == 0 && in_ihi == nfast-1) flag = 0;
-  else flag = 1;
-  MPI_Allreduce(&flag,&allflag,1,MPI_INT,MPI_MAX,world);
+  if (in_ilo == 0 && in_ihi == nfast - 1)
+    flag = 0;
+  else
+    flag = 1;
+  MPI_Allreduce(&flag, &allflag, 1, MPI_INT, MPI_MAX, world);
 
   if (allflag == 0) {
     remap_preflag = 0;
@@ -331,8 +348,8 @@ void FFT2d::setup(int user_nfast, int user_nslow,
     remap_preflag = 1;
     fast_ilo = 0;
     fast_ihi = nfast - 1;
-    fast_jlo = ipfast2*nslow/npfast2;
-    fast_jhi = (ipfast2+1)*nslow/npfast2 - 1;
+    fast_jlo = ipfast2 * nslow / npfast2;
+    fast_jhi = (ipfast2 + 1) * nslow / npfast2 - 1;
   }
 
   // remap from fast pencil layout to slow pencil layout
@@ -340,9 +357,11 @@ void FFT2d::setup(int user_nfast, int user_nslow,
   // slow indices = data layout before/after 2nd set of FFTs
   // if final layout is slow pencil with permute=1, set slow = out
 
-  if (permute == 1 && out_jlo == 0 && out_jhi == nslow-1) flag = 0;
-  else flag = 1;
-  MPI_Allreduce(&flag,&allflag,1,MPI_INT,MPI_MAX,world);
+  if (permute == 1 && out_jlo == 0 && out_jhi == nslow - 1)
+    flag = 0;
+  else
+    flag = 1;
+  MPI_Allreduce(&flag, &allflag, 1, MPI_INT, MPI_MAX, world);
 
   if (allflag == 0) {
     slow_ilo = out_ilo;
@@ -350,8 +369,8 @@ void FFT2d::setup(int user_nfast, int user_nslow,
     slow_jlo = out_jlo;
     slow_jhi = out_jhi;
   } else {
-    slow_ilo = ipslow1*nfast/npslow1;
-    slow_ihi = (ipslow1+1)*nfast/npslow1 - 1;
+    slow_ilo = ipslow1 * nfast / npslow1;
+    slow_ihi = (ipslow1 + 1) * nfast / npslow1 - 1;
     slow_jlo = 0;
     slow_jhi = nslow - 1;
   }
@@ -360,23 +379,26 @@ void FFT2d::setup(int user_nfast, int user_nslow,
   // remap_postflag = 1 if remap is needed, else 0
   // not needed if permute=1 and slow = out already
 
-  if (permute == 1 &&
-      out_ilo == slow_ilo && out_ihi == slow_ihi &&
-      out_jlo == slow_jlo && out_jhi == slow_jhi) flag = 0;
-  else flag = 1;
-  MPI_Allreduce(&flag,&allflag,1,MPI_INT,MPI_MAX,world);
+  if (permute == 1 && out_ilo == slow_ilo && out_ihi == slow_ihi &&
+      out_jlo == slow_jlo && out_jhi == slow_jhi)
+    flag = 0;
+  else
+    flag = 1;
+  MPI_Allreduce(&flag, &allflag, 1, MPI_INT, MPI_MAX, world);
 
-  if (allflag == 0) remap_postflag = 0;
-  else remap_postflag = 1;
+  if (allflag == 0)
+    remap_postflag = 0;
+  else
+    remap_postflag = 1;
 
   // if exchange is set, then remap for fast/slow
   // remap will be two stages, with brick layout and brick indices inbetween
 
   if (exchange) {
-    brick_ilo = ipbrick1*nfast/npbrick1;
-    brick_ihi = (ipbrick1+1)*nfast/npbrick1 - 1;
-    brick_jlo = ipbrick2*nslow/npbrick2;
-    brick_jhi = (ipbrick2+1)*nslow/npbrick2 - 1;
+    brick_ilo = ipbrick1 * nfast / npbrick1;
+    brick_ihi = (ipbrick1 + 1) * nfast / npbrick1 - 1;
+    brick_jlo = ipbrick2 * nslow / npbrick2;
+    brick_jhi = (ipbrick2 + 1) * nslow / npbrick2 - 1;
   }
 
   // create Remap instances for 3 forward remaps
@@ -384,25 +406,27 @@ void FFT2d::setup(int user_nfast, int user_nslow,
   // create calls return max size of send/recv buffers needed by remaps
 
   sendsize = recvsize = 0;
-  remap_forward_create(sendsize,recvsize);
-  if (!inout_layout_same) remap_inverse_create(sendsize,recvsize);
+  remap_forward_create(sendsize, recvsize);
+  if (!inout_layout_same)
+    remap_inverse_create(sendsize, recvsize);
 
   // insize/outsize = # of FFT data points in initial/final layout
   // fastsize/slowsize = # of data points in fast/slow layout
   // maxsize = max of all these sizes, returned to caller
 
-  insize = (in_ihi-in_ilo+1) * (in_jhi-in_jlo+1);
-  outsize = (out_ihi-out_ilo+1) * (out_jhi-out_jlo+1);
+  insize = (in_ihi - in_ilo + 1) * (in_jhi - in_jlo + 1);
+  outsize = (out_ihi - out_ilo + 1) * (out_jhi - out_jlo + 1);
 
-  fastsize = (fast_ihi-fast_ilo+1) * (fast_jhi-fast_jlo+1);
-  slowsize = (slow_ihi-slow_ilo+1) * (slow_jhi-slow_jlo+1);
+  fastsize = (fast_ihi - fast_ilo + 1) * (fast_jhi - fast_jlo + 1);
+  slowsize = (slow_ihi - slow_ilo + 1) * (slow_jhi - slow_jlo + 1);
   if (exchange)
-    bricksize = (brick_ihi-brick_ilo+1) * (brick_jhi-brick_jlo+1);
+    bricksize = (brick_ihi - brick_ilo + 1) * (brick_jhi - brick_jlo + 1);
 
-  fftsize = MAX(insize,outsize);
-  fftsize = MAX(fftsize,fastsize);
-  fftsize = MAX(fftsize,slowsize);
-  if (exchange) fftsize = MAX(fftsize,bricksize);
+  fftsize = MAX(insize, outsize);
+  fftsize = MAX(fftsize, fastsize);
+  fftsize = MAX(fftsize, slowsize);
+  if (exchange)
+    fftsize = MAX(fftsize, bricksize);
 
   // setup for 2 sets of 1d FFTs, also scaling normalization
   // outsize must be already set for setup_ffts() to use to setup scaling
@@ -412,16 +436,16 @@ void FFT2d::setup(int user_nfast, int user_nslow,
   fft_slow = new FFT1d;
 
   fft_fast->length = nfast;
-  fft_fast->n = (fast_jhi-fast_jlo+1);
+  fft_fast->n = (fast_jhi - fast_jlo + 1);
   fft_fast->total = fft_fast->n * fft_fast->length;
 
   fft_slow->length = nslow;
-  fft_slow->n = (slow_ihi-slow_ilo+1);
+  fft_slow->n = (slow_ihi - slow_ilo + 1);
   fft_slow->total = fft_slow->n * fft_slow->length;
 
   setup_ffts();
 
-  norm = 1.0/((bigint) nfast * nslow);
+  norm = 1.0 / ((bigint)nfast * nslow);
   normnum = outsize;
 
   // allocate sendbuf, recvbuf arrays to max sizes needed by any remap
@@ -429,12 +453,14 @@ void FFT2d::setup(int user_nfast, int user_nslow,
   if (memoryflag) {
     setup_memory_flag = 1;
     if (sendsize) {
-      sendbuf = (FFT_SCALAR *) memory->smalloc(sendsize*sizeof(FFT_SCALAR));
-      if (!sendbuf) error->one("Could not allocate sendbuf array");
+      sendbuf = (FFT_SCALAR *)memory->smalloc(sendsize * sizeof(FFT_SCALAR));
+      if (!sendbuf)
+        error->one("Could not allocate sendbuf array");
     }
     if (recvsize) {
-      recvbuf = (FFT_SCALAR *) memory->smalloc(recvsize*sizeof(FFT_SCALAR));
-      if (!recvbuf) error->one("Could not allocate recvbuf array");
+      recvbuf = (FFT_SCALAR *)memory->smalloc(recvsize * sizeof(FFT_SCALAR));
+      if (!recvbuf)
+        error->one("Could not allocate recvbuf array");
     }
   }
 
@@ -449,8 +475,8 @@ void FFT2d::setup(int user_nfast, int user_nslow,
   memusage = 0;
 
   if (memoryflag) {
-    memusage += (int64_t) sendsize * sizeof(FFT_SCALAR);
-    memusage += (int64_t) recvsize * sizeof(FFT_SCALAR);
+    memusage += (int64_t)sendsize * sizeof(FFT_SCALAR);
+    memusage += (int64_t)recvsize * sizeof(FFT_SCALAR);
   }
 
   memusage += remap_memory();
@@ -460,8 +486,7 @@ void FFT2d::setup(int user_nfast, int user_nslow,
    deallocate memory allocated by setup()
 ------------------------------------------------------------------------- */
 
-void FFT2d::deallocate_setup()
-{
+void FFT2d::deallocate_setup() {
   setupflag = 0;
 
   deallocate_remap(remap_prefast);
@@ -487,10 +512,11 @@ void FFT2d::deallocate_setup()
    user_recvbuf = send buffer of length user_recvsize
 ------------------------------------------------------------------------- */
 
-void FFT2d::setup_memory(FFT_SCALAR *user_sendbuf, FFT_SCALAR *user_recvbuf)
-{
-  if (!setupflag) error->all("Cannot setup FFT memory before setup");
-  if (memoryflag) error-> all("Cannot setup FFT memory with memoryflag set");
+void FFT2d::setup_memory(FFT_SCALAR *user_sendbuf, FFT_SCALAR *user_recvbuf) {
+  if (!setupflag)
+    error->all("Cannot setup FFT memory before setup");
+  if (memoryflag)
+    error->all("Cannot setup FFT memory with memoryflag set");
 
   setup_memory_flag = 1;
   sendbuf = user_sendbuf;
@@ -502,8 +528,7 @@ void FFT2d::setup_memory(FFT_SCALAR *user_sendbuf, FFT_SCALAR *user_recvbuf)
    only called if allocated internally
 ------------------------------------------------------------------------- */
 
-void FFT2d::deallocate_setup_memory()
-{
+void FFT2d::deallocate_setup_memory() {
   setup_memory_flag = 0;
   memory->sfree(sendbuf);
   memory->sfree(recvbuf);
@@ -517,44 +542,56 @@ void FFT2d::deallocate_setup_memory()
    flag         1 for forward FFT, -1 for inverse FFT
 ------------------------------------------------------------------------- */
 
-void FFT2d::compute(FFT_SCALAR *in, FFT_SCALAR *out, int flag)
-{
-  if (!setupflag) error->all("Cannot compute FFT before setup");
-  if (!setup_memory_flag) error->all("Cannot compute FFT before setup_memory");
+void FFT2d::compute(FFT_SCALAR *in, FFT_SCALAR *out, int flag) {
+  if (!setupflag)
+    error->all("Cannot compute FFT before setup");
+  if (!setup_memory_flag)
+    error->all("Cannot compute FFT before setup_memory");
 
   FFT_SCALAR *data = out;
 
   if (flag == 1 || inout_layout_same) {
 
-    if (remap_prefast) remap(in,out,remap_prefast);
-    else if (in != out) memcpy(out,in,insize*sizeof(FFT_SCALAR));
+    if (remap_prefast)
+      remap(in, out, remap_prefast);
+    else if (in != out)
+      memcpy(out, in, insize * sizeof(FFT_SCALAR));
 
     if (remaponly) {
-      if (remap_fastslow) remap(data,data,remap_fastslow);
+      if (remap_fastslow)
+        remap(data, data, remap_fastslow);
     } else {
-      perform_ffts((FFT_DATA *) data,flag,fft_fast);
-      if (remap_fastslow) remap(data,data,remap_fastslow);
-      perform_ffts((FFT_DATA *) data,flag,fft_slow);
+      perform_ffts((FFT_DATA *)data, flag, fft_fast);
+      if (remap_fastslow)
+        remap(data, data, remap_fastslow);
+      perform_ffts((FFT_DATA *)data, flag, fft_slow);
     }
 
-    if (remap_postslow) remap(data,data,remap_postslow);
+    if (remap_postslow)
+      remap(data, data, remap_postslow);
 
-    if (flag == 1 && scaled && !remaponly) scale_ffts((FFT_DATA *) data);
+    if (flag == 1 && scaled && !remaponly)
+      scale_ffts((FFT_DATA *)data);
 
   } else {
 
-    if (remap_preslow) remap(in,out,remap_preslow);
-    else if (in != out) memcpy(out,in,outsize*sizeof(FFT_SCALAR));
+    if (remap_preslow)
+      remap(in, out, remap_preslow);
+    else if (in != out)
+      memcpy(out, in, outsize * sizeof(FFT_SCALAR));
 
     if (remaponly) {
-      if (remap_slowfast) remap(data,data,remap_slowfast);
+      if (remap_slowfast)
+        remap(data, data, remap_slowfast);
     } else {
-      perform_ffts((FFT_DATA *) data,flag,fft_slow);
-      if (remap_slowfast) remap(data,data,remap_slowfast);
-      perform_ffts((FFT_DATA *) data,flag,fft_fast);
+      perform_ffts((FFT_DATA *)data, flag, fft_slow);
+      if (remap_slowfast)
+        remap(data, data, remap_slowfast);
+      perform_ffts((FFT_DATA *)data, flag, fft_fast);
     }
 
-    if (remap_postfast) remap(in,out,remap_postfast);
+    if (remap_postfast)
+      remap(in, out, remap_postfast);
   }
 }
 
@@ -565,13 +602,13 @@ void FFT2d::compute(FFT_SCALAR *in, FFT_SCALAR *out, int flag)
    flag         1 for forward FFT, -1 for inverse FFT
 ------------------------------------------------------------------------- */
 
-void FFT2d::only_1d_ffts(FFT_SCALAR *in, int flag)
-{
-  if (!setupflag) error->all("Cannot compute 1d FFTs before setup");
+void FFT2d::only_1d_ffts(FFT_SCALAR *in, int flag) {
+  if (!setupflag)
+    error->all("Cannot compute 1d FFTs before setup");
 
-  FFT_DATA *data = (FFT_DATA *) in;
-  perform_ffts((FFT_DATA *) data,flag,fft_fast);
-  perform_ffts((FFT_DATA *) data,flag,fft_slow);
+  FFT_DATA *data = (FFT_DATA *)in;
+  perform_ffts((FFT_DATA *)data, flag, fft_fast);
+  perform_ffts((FFT_DATA *)data, flag, fft_slow);
 }
 
 /* ----------------------------------------------------------------------
@@ -583,9 +620,9 @@ void FFT2d::only_1d_ffts(FFT_SCALAR *in, int flag)
    flag         1 for forward FFT, -1 for inverse FFT
 ------------------------------------------------------------------------- */
 
-void FFT2d::only_remaps(FFT_SCALAR *in, FFT_SCALAR *out, int flag)
-{
-  if (!setupflag) error->all("Cannot perform FFT remap before setup");
+void FFT2d::only_remaps(FFT_SCALAR *in, FFT_SCALAR *out, int flag) {
+  if (!setupflag)
+    error->all("Cannot perform FFT remap before setup");
   if (!setup_memory_flag)
     error->all("Cannot perform FFT remap before setup_memory");
 
@@ -593,21 +630,29 @@ void FFT2d::only_remaps(FFT_SCALAR *in, FFT_SCALAR *out, int flag)
 
   if (flag == 1 || inout_layout_same) {
 
-    if (remap_prefast) remap(in,out,remap_prefast);
-    else if (in != out) memcpy(out,in,insize*sizeof(FFT_SCALAR));
+    if (remap_prefast)
+      remap(in, out, remap_prefast);
+    else if (in != out)
+      memcpy(out, in, insize * sizeof(FFT_SCALAR));
 
-    if (remap_fastslow) remap(data,data,remap_fastslow);
+    if (remap_fastslow)
+      remap(data, data, remap_fastslow);
 
-    if (remap_postslow) remap(data,data,remap_postslow);
+    if (remap_postslow)
+      remap(data, data, remap_postslow);
 
   } else {
 
-    if (remap_preslow) remap(in,out,remap_preslow);
-    else if (in != out) memcpy(out,in,outsize*sizeof(FFT_SCALAR));
+    if (remap_preslow)
+      remap(in, out, remap_preslow);
+    else if (in != out)
+      memcpy(out, in, outsize * sizeof(FFT_SCALAR));
 
-    if (remap_slowfast) remap(data,data,remap_slowfast);
+    if (remap_slowfast)
+      remap(data, data, remap_slowfast);
 
-    if (remap_postfast) remap(data,data,remap_postfast);
+    if (remap_postfast)
+      remap(data, data, remap_postfast);
   }
 }
 
@@ -621,30 +666,39 @@ void FFT2d::only_remaps(FFT_SCALAR *in, FFT_SCALAR *out, int flag)
    which        which remap to perform = 1,2,3
 ------------------------------------------------------------------------- */
 
-void FFT2d::only_one_remap(FFT_SCALAR *in, FFT_SCALAR *out, int flag, int which)
-{
-  if (!setupflag) error->all("Cannot perform an FFT remap before setup");
+void FFT2d::only_one_remap(FFT_SCALAR *in, FFT_SCALAR *out, int flag,
+                           int which) {
+  if (!setupflag)
+    error->all("Cannot perform an FFT remap before setup");
   if (!setup_memory_flag)
     error->all("Cannot perform an FFT remap before setup_memory");
 
   if (flag == 1 || inout_layout_same) {
     if (which == 1) {
-      if (remap_prefast) remap(in,out,remap_prefast);
-      else if (in != out) memcpy(out,in,insize*sizeof(FFT_SCALAR));
+      if (remap_prefast)
+        remap(in, out, remap_prefast);
+      else if (in != out)
+        memcpy(out, in, insize * sizeof(FFT_SCALAR));
     } else if (which == 2) {
-      if (remap_fastslow) remap(in,out,remap_fastslow);
+      if (remap_fastslow)
+        remap(in, out, remap_fastslow);
     } else if (which == 3) {
-      if (remap_postslow) remap(in,out,remap_postslow);
+      if (remap_postslow)
+        remap(in, out, remap_postslow);
     }
 
   } else {
     if (which == 3) {
-      if (remap_preslow) remap(in,out,remap_preslow);
-      else if (in != out) memcpy(out,in,outsize*sizeof(FFT_SCALAR));
+      if (remap_preslow)
+        remap(in, out, remap_preslow);
+      else if (in != out)
+        memcpy(out, in, outsize * sizeof(FFT_SCALAR));
     } else if (which == 2) {
-      if (remap_slowfast) remap(in,out,remap_slowfast);
+      if (remap_slowfast)
+        remap(in, out, remap_slowfast);
     } else if (which == 1) {
-      if (remap_postfast) remap(in,out,remap_postfast);
+      if (remap_postfast)
+        remap(in, out, remap_postfast);
     }
   }
 }
@@ -675,20 +729,20 @@ void FFT2d::only_one_remap(FFT_SCALAR *in, FFT_SCALAR *out, int flag, int which)
        tremap123 = CPU time for one remap (1-3) for each trial
 ------------------------------------------------------------------------- */
 
-void FFT2d::tune(int user_nfast, int user_nslow,
-     int user_in_ilo, int user_in_ihi,
-     int user_in_jlo, int user_in_jhi,
-     int user_out_ilo, int user_out_ihi,
-     int user_out_jlo, int user_out_jhi,
-     int user_permute,
-     int &user_fftsize, int &user_sendsize, int &user_recvsize,
-     int flag, int niter, double tmax, int tflag)
-{
-  if (setupflag) error->all("FFT is already setup");
-  if (flag < -1 || flag > 1) error->all("Invalid flag arg for FFT tune");
+void FFT2d::tune(int user_nfast, int user_nslow, int user_in_ilo,
+                 int user_in_ihi, int user_in_jlo, int user_in_jhi,
+                 int user_out_ilo, int user_out_ihi, int user_out_jlo,
+                 int user_out_jhi, int user_permute, int &user_fftsize,
+                 int &user_sendsize, int &user_recvsize, int flag, int niter,
+                 double tmax, int tflag) {
+  if (setupflag)
+    error->all("FFT is already setup");
+  if (flag < -1 || flag > 1)
+    error->all("Invalid flag arg for FFT tune");
   if (niter <= 0 || tmax < 0.0)
     error->all("Invalid niter/tmax args for FFT tune");
-  if (tflag < 0 || tflag > 1) error->all("Invalid tflag arg for FFT tune");
+  if (tflag < 0 || tflag > 1)
+    error->all("Invalid tflag arg for FFT tune");
 
   // preserve user memoryflag setting since will override below
 
@@ -707,37 +761,38 @@ void FFT2d::tune(int user_nfast, int user_nslow,
   MPI_Barrier(world);
   double time1 = MPI_Wtime();
 
-  setup(user_nfast,user_nslow,
-        user_in_ilo,user_in_ihi,user_in_jlo,user_in_jhi,
-        user_out_ilo,user_out_ihi,user_out_jlo,user_out_jhi,
-        user_permute,user_fftsize,user_sendsize,user_recvsize);
+  setup(user_nfast, user_nslow, user_in_ilo, user_in_ihi, user_in_jlo,
+        user_in_jhi, user_out_ilo, user_out_ihi, user_out_jlo, user_out_jhi,
+        user_permute, user_fftsize, user_sendsize, user_recvsize);
 
   MPI_Barrier(world);
   double time2 = MPI_Wtime();
-  double timesetup = time2-time1;
+  double timesetup = time2 - time1;
 
   if (user_fftsize > maxfftsize) {
-    data = (FFT_SCALAR *)
-      memory->srealloc(data,user_fftsize*2*sizeof(FFT_SCALAR));
-    for (int i = 2*maxfftsize; i < 2*user_fftsize; i++) data[i] = 0.0;
+    data = (FFT_SCALAR *)memory->srealloc(data, user_fftsize * 2 *
+                                                    sizeof(FFT_SCALAR));
+    for (int i = 2 * maxfftsize; i < 2 * user_fftsize; i++)
+      data[i] = 0.0;
     maxfftsize = user_fftsize;
   }
 
   ntrial = 0;
-  tune_trial(data,1,flag,0,tfft[ntrial],t1d[ntrial],tremap[ntrial],
-             tremap1[ntrial],tremap2[ntrial],tremap3[ntrial]);
+  tune_trial(data, 1, flag, 0, tfft[ntrial], t1d[ntrial], tremap[ntrial],
+             tremap1[ntrial], tremap2[ntrial], tremap3[ntrial]);
   double timefft = tfft[ntrial];
   cflags[ntrial] = collective;
   eflags[ntrial] = exchange;
   pflags[ntrial] = packflag;
 
   deallocate_setup();
-  if (memoryflag) deallocate_setup_memory();
+  if (memoryflag)
+    deallocate_setup_memory();
 
   // insure all procs use exact same timesetup & timefft for setup
 
-  MPI_Bcast(&timesetup,1,MPI_DOUBLE,0,world);
-  MPI_Bcast(&timefft,1,MPI_DOUBLE,0,world);
+  MPI_Bcast(&timesetup, 1, MPI_DOUBLE, 0, world);
+  MPI_Bcast(&timefft, 1, MPI_DOUBLE, 0, world);
 
   // for tmax = time limit > 0.0
   // use single iteration timing to setup sequence of tuning runs
@@ -747,18 +802,22 @@ void FFT2d::tune(int user_nfast, int user_nslow,
 
   double timetotal;
   int nruns = 10;
-  if (tflag) timetotal = nruns * (timesetup + 3*niter*timefft);
-  else timetotal = nruns * (timesetup + niter*timefft);
+  if (tflag)
+    timetotal = nruns * (timesetup + 3 * niter * timefft);
+  else
+    timetotal = nruns * (timesetup + niter * timefft);
 
   if (tmax > 0.0 && timetotal > tmax) {
-    if (tflag) niter = static_cast<int> ((tmax/nruns-timesetup) / timefft/3);
-    else niter = static_cast<int> ((tmax/nruns-timesetup) / timefft);
+    if (tflag)
+      niter = static_cast<int>((tmax / nruns - timesetup) / timefft / 3);
+    else
+      niter = static_cast<int>((tmax / nruns - timesetup) / timefft);
     if (niter <= 0) {
       tflag = 0;
-      niter = static_cast<int> ((tmax/nruns-timesetup) / timefft);
+      niter = static_cast<int>((tmax / nruns - timesetup) / timefft);
       if (niter <= 0) {
         niter = 1;
-        nruns = static_cast<int> (tmax/(timesetup+timefft));
+        nruns = static_cast<int>(tmax / (timesetup + timefft));
       }
     }
   }
@@ -770,52 +829,52 @@ void FFT2d::tune(int user_nfast, int user_nslow,
   int pdefault = 2;
   ntrial = 0;
 
-  int cstart,cstop,estart,estop,pstart,pstop;
+  int cstart, cstop, estart, estop, pstart, pstop;
 
-  if (nruns-1 >= 9) {
+  if (nruns - 1 >= 9) {
     cstart = 0;
     cstop = 3;
     estart = 0;
     estop = 2;
     pstart = 0;
     pstop = 3;
-  } else if (nruns-1 >= 6) {
+  } else if (nruns - 1 >= 6) {
     cstart = 0;
     cstop = 3;
     estart = 0;
     estop = 2;
     pstart = -1;
     pbest = pdefault;
-  } else if (nruns-1 >= 3) {
+  } else if (nruns - 1 >= 3) {
     cstart = 0;
     cstop = 3;
     estart = edefault;
-    estop = edefault+1;
+    estop = edefault + 1;
     pstart = -1;
     pbest = pdefault;
-  } else if (nruns-1 == 2) {
+  } else if (nruns - 1 == 2) {
     cstart = 1;
     cstop = 3;
     estart = edefault;
-    estop = edefault+1;
+    estop = edefault + 1;
     pstart = -1;
     pbest = pdefault;
 
-  // if only time for one more run
-  //   and initial run was not with defaults:
-  // perform additional default run
+    // if only time for one more run
+    //   and initial run was not with defaults:
+    // perform additional default run
 
-  } else if (nruns-1 == 1 && (collective != cdefault ||
-                              exchange != edefault || packflag != pdefault)) {
+  } else if (nruns - 1 == 1 && (collective != cdefault ||
+                                exchange != edefault || packflag != pdefault)) {
     ntrial = 1;
     cstart = cdefault;
-    cstop = cdefault+1;
+    cstop = cdefault + 1;
     estart = edefault;
-    estop = edefault+1;
+    estop = edefault + 1;
     pstart = -1;
     pbest = pdefault;
 
-  // initial run is all there is time to perform
+    // initial run is all there is time to perform
 
   } else {
     ntrial = 1;
@@ -840,22 +899,25 @@ void FFT2d::tune(int user_nfast, int user_nslow,
         exchange = eflags[ntrial] = eflag;
         packflag = pflags[ntrial] = pdefault;
         memoryflag = 1;
-        setup(user_nfast,user_nslow,
-              user_in_ilo,user_in_ihi,user_in_jlo,user_in_jhi,
-              user_out_ilo,user_out_ihi,user_out_jlo,user_out_jhi,
-              user_permute,user_fftsize,user_sendsize,user_recvsize);
+        setup(user_nfast, user_nslow, user_in_ilo, user_in_ihi, user_in_jlo,
+              user_in_jhi, user_out_ilo, user_out_ihi, user_out_jlo,
+              user_out_jhi, user_permute, user_fftsize, user_sendsize,
+              user_recvsize);
         if (user_fftsize > maxfftsize) {
-          data = (FFT_SCALAR *)
-            memory->srealloc(data,user_fftsize*2*sizeof(FFT_SCALAR));
-          for (int i = 2*maxfftsize; i < 2*user_fftsize; i++) data[i] = 0.0;
+          data = (FFT_SCALAR *)memory->srealloc(data, user_fftsize * 2 *
+                                                          sizeof(FFT_SCALAR));
+          for (int i = 2 * maxfftsize; i < 2 * user_fftsize; i++)
+            data[i] = 0.0;
           maxfftsize = user_fftsize;
         }
 
-        tune_trial(data,niter,flag,tflag,tfft[ntrial],t1d[ntrial],tremap[ntrial],
-                   tremap1[ntrial],tremap2[ntrial],tremap3[ntrial]);
+        tune_trial(data, niter, flag, tflag, tfft[ntrial], t1d[ntrial],
+                   tremap[ntrial], tremap1[ntrial], tremap2[ntrial],
+                   tremap3[ntrial]);
 
         deallocate_setup();
-        if (memoryflag) deallocate_setup_memory();
+        if (memoryflag)
+          deallocate_setup_memory();
 
         if (tfft[ntrial] < besttime) {
           besttime = tfft[ntrial];
@@ -880,22 +942,24 @@ void FFT2d::tune(int user_nfast, int user_nslow,
       exchange = eflags[ntrial] = ebest;
       packflag = pflags[ntrial] = pflag;
       memoryflag = 1;
-      setup(user_nfast,user_nslow,
-            user_in_ilo,user_in_ihi,user_in_jlo,user_in_jhi,
-            user_out_ilo,user_out_ihi,user_out_jlo,user_out_jhi,
-            user_permute,user_fftsize,user_sendsize,user_recvsize);
+      setup(user_nfast, user_nslow, user_in_ilo, user_in_ihi, user_in_jlo,
+            user_in_jhi, user_out_ilo, user_out_ihi, user_out_jlo, user_out_jhi,
+            user_permute, user_fftsize, user_sendsize, user_recvsize);
       if (user_fftsize > maxfftsize) {
-        data = (FFT_SCALAR *)
-          memory->srealloc(data,user_fftsize*2*sizeof(FFT_SCALAR));
-        for (int i = 2*maxfftsize; i < 2*user_fftsize; i++) data[i] = 0.0;
+        data = (FFT_SCALAR *)memory->srealloc(data, user_fftsize * 2 *
+                                                        sizeof(FFT_SCALAR));
+        for (int i = 2 * maxfftsize; i < 2 * user_fftsize; i++)
+          data[i] = 0.0;
         maxfftsize = user_fftsize;
       }
 
-      tune_trial(data,niter,flag,tflag,tfft[ntrial],t1d[ntrial],tremap[ntrial],
-                 tremap1[ntrial],tremap2[ntrial],tremap3[ntrial]);
+      tune_trial(data, niter, flag, tflag, tfft[ntrial], t1d[ntrial],
+                 tremap[ntrial], tremap1[ntrial], tremap2[ntrial],
+                 tremap3[ntrial]);
 
       deallocate_setup();
-      if (memoryflag) deallocate_setup_memory();
+      if (memoryflag)
+        deallocate_setup_memory();
 
       if (tfft[ntrial] < besttime) {
         besttime = tfft[ntrial];
@@ -909,8 +973,9 @@ void FFT2d::tune(int user_nfast, int user_nslow,
   // scale all times for a single FFT
 
   npertrial = niter;
-  double scale = 1.0/npertrial;
-  if (flag == 0) scale *= 0.5;
+  double scale = 1.0 / npertrial;
+  if (flag == 0)
+    scale *= 0.5;
 
   besttime *= scale;
   for (int i = 0; i < ntrial; i++) {
@@ -938,14 +1003,13 @@ void FFT2d::tune(int user_nfast, int user_nslow,
   MPI_Barrier(world);
   time1 = MPI_Wtime();
 
-  setup(user_nfast,user_nslow,
-  user_in_ilo,user_in_ihi,user_in_jlo,user_in_jhi,
-  user_out_ilo,user_out_ihi,user_out_jlo,user_out_jhi,
-  user_permute,user_fftsize,user_sendsize,user_recvsize);
+  setup(user_nfast, user_nslow, user_in_ilo, user_in_ihi, user_in_jlo,
+        user_in_jhi, user_out_ilo, user_out_ihi, user_out_jlo, user_out_jhi,
+        user_permute, user_fftsize, user_sendsize, user_recvsize);
 
   MPI_Barrier(world);
   time2 = MPI_Wtime();
-  setuptime = time2-time1;
+  setuptime = time2 - time1;
 }
 
 /* ----------------------------------------------------------------------
@@ -961,76 +1025,80 @@ void FFT2d::tune(int user_nfast, int user_nslow,
 
 void FFT2d::tune_trial(FFT_SCALAR *data, int nper, int flag, int tflag,
                        double &time2d, double &time1d, double &timeremap,
-                       double &timeremap1, double &timeremap2, double &timeremap3)
-{
-  double time1,time2;
+                       double &timeremap1, double &timeremap2,
+                       double &timeremap3) {
+  double time1, time2;
 
   MPI_Barrier(world);
   time1 = MPI_Wtime();
 
   if (flag)
     for (int i = 0; i < nper; i++)
-      compute(data,data,flag);
+      compute(data, data, flag);
   else {
     for (int i = 0; i < nper; i++) {
-      compute(data,data,1);
-      compute(data,data,-1);
+      compute(data, data, 1);
+      compute(data, data, -1);
     }
   }
 
   MPI_Barrier(world);
   time2 = MPI_Wtime();
-  time2d = time2-time1;
+  time2d = time2 - time1;
 
   if (tflag) {
     if (flag)
       for (int i = 0; i < nper; i++)
-        only_1d_ffts(data,flag);
+        only_1d_ffts(data, flag);
     else {
       for (int i = 0; i < nper; i++) {
-        only_1d_ffts(data,1);
-        only_1d_ffts(data,-1);
+        only_1d_ffts(data, 1);
+        only_1d_ffts(data, -1);
       }
     }
 
     MPI_Barrier(world);
     time1 = MPI_Wtime();
-    time1d = time1-time2;
+    time1d = time1 - time2;
 
     if (flag)
       for (int i = 0; i < nper; i++)
-        only_remaps(data,data,flag);
+        only_remaps(data, data, flag);
     else {
       for (int i = 0; i < nper; i++) {
-        only_remaps(data,data,1);
-        only_remaps(data,data,-1);
+        only_remaps(data, data, 1);
+        only_remaps(data, data, -1);
       }
     }
 
     MPI_Barrier(world);
     time2 = MPI_Wtime();
-    timeremap = time2-time1;
+    timeremap = time2 - time1;
 
     for (int which = 1; which <= 3; which++) {
       if (flag)
         for (int i = 0; i < nper; i++)
-          only_one_remap(data,data,flag,which);
+          only_one_remap(data, data, flag, which);
       else {
         for (int i = 0; i < nper; i++) {
-          only_one_remap(data,data,1,which);
-          only_one_remap(data,data,-1,which);
+          only_one_remap(data, data, 1, which);
+          only_one_remap(data, data, -1, which);
         }
       }
 
       MPI_Barrier(world);
       time1 = MPI_Wtime();
-      if (which == 1) timeremap1 = time1-time2;
-      else if (which == 2) timeremap2 = time1-time2;
-      else if (which == 3) timeremap3 = time1-time2;
+      if (which == 1)
+        timeremap1 = time1 - time2;
+      else if (which == 2)
+        timeremap2 = time1 - time2;
+      else if (which == 3)
+        timeremap3 = time1 - time2;
       time2 = time1;
     }
 
-  } else time1d = timeremap = timeremap1 = timeremap2 = timeremap3 = 0.0;
+  } else
+    time1d = timeremap = timeremap1 = timeremap2 = timeremap3 = 0.0;
 }
 
 // -------------------------------------------------------------------
@@ -1046,20 +1114,19 @@ void FFT2d::tune_trial(FFT_SCALAR *data, int nper, int flag, int tflag,
    plan         plan for remap
 ------------------------------------------------------------------------- */
 
-void FFT2d::remap(FFT_SCALAR *in, FFT_SCALAR *out, Remap *remap)
-{
-  remap->remap2d->remap(in,out,sendbuf,recvbuf);
+void FFT2d::remap(FFT_SCALAR *in, FFT_SCALAR *out, Remap *remap) {
+  remap->remap2d->remap(in, out, sendbuf, recvbuf);
   if (remap->remap2d_extra)
-    remap->remap2d_extra->remap(in,out,sendbuf,recvbuf);
+    remap->remap2d_extra->remap(in, out, sendbuf, recvbuf);
 }
 
 /* ----------------------------------------------------------------------
    dellocate a Remap and its contents
 ------------------------------------------------------------------------- */
 
-void FFT2d::deallocate_remap(Remap *remap)
-{
-  if (remap == NULL) return;
+void FFT2d::deallocate_remap(Remap *remap) {
+  if (remap == NULL)
+    return;
   delete remap->remap2d;
   delete remap->remap2d_extra;
   delete remap;
@@ -1069,9 +1136,8 @@ void FFT2d::deallocate_remap(Remap *remap)
    create Remap2d instances for forward FFT
 ------------------------------------------------------------------------- */
 
-void FFT2d::remap_forward_create(int &sendsize, int &recvsize)
-{
-  int ssize,rsize;
+void FFT2d::remap_forward_create(int &sendsize, int &recvsize) {
+  int ssize, rsize;
 
   // remap uses I=fast, J=slow, b/c current permute=0
 
@@ -1080,12 +1146,11 @@ void FFT2d::remap_forward_create(int &sendsize, int &recvsize)
     remap_prefast->remap2d = new Remap2d(world);
     remap_prefast->remap2d->collective = collective_bp;
     remap_prefast->remap2d->packflag = packflag;
-    remap_prefast->remap2d->
-      setup(in_ilo,in_ihi,in_jlo,in_jhi,
-            fast_ilo,fast_ihi,fast_jlo,fast_jhi,
-            2,0,0,ssize,rsize);
-    sendsize = MAX(sendsize,ssize);
-    recvsize = MAX(recvsize,rsize);
+    remap_prefast->remap2d->setup(in_ilo, in_ihi, in_jlo, in_jhi, fast_ilo,
+                                  fast_ihi, fast_jlo, fast_jhi, 2, 0, 0, ssize,
+                                  rsize);
+    sendsize = MAX(sendsize, ssize);
+    recvsize = MAX(recvsize, rsize);
     remap_prefast->remap2d_extra = NULL;
   }
 
@@ -1098,33 +1163,30 @@ void FFT2d::remap_forward_create(int &sendsize, int &recvsize)
     remap_fastslow->remap2d = new Remap2d(world);
     remap_fastslow->remap2d->collective = collective_pp;
     remap_fastslow->remap2d->packflag = packflag;
-    remap_fastslow->remap2d->
-      setup(fast_ilo,fast_ihi,fast_jlo,fast_jhi,
-            slow_ilo,slow_ihi,slow_jlo,slow_jhi,
-            2,1,0,ssize,rsize);
-    sendsize = MAX(sendsize,ssize);
-    recvsize = MAX(recvsize,rsize);
+    remap_fastslow->remap2d->setup(fast_ilo, fast_ihi, fast_jlo, fast_jhi,
+                                   slow_ilo, slow_ihi, slow_jlo, slow_jhi, 2, 1,
+                                   0, ssize, rsize);
+    sendsize = MAX(sendsize, ssize);
+    recvsize = MAX(recvsize, rsize);
     remap_fastslow->remap2d_extra = NULL;
 
   } else {
     remap_fastslow->remap2d = new Remap2d(world);
     remap_fastslow->remap2d->collective = collective_bp;
     remap_fastslow->remap2d->packflag = packflag;
-    remap_fastslow->remap2d->
-      setup(fast_ilo,fast_ihi,fast_jlo,fast_jhi,
-            brick_ilo,brick_ihi,brick_jlo,brick_jhi,
-            2,0,0,ssize,rsize);
-    sendsize = MAX(sendsize,ssize);
-    recvsize = MAX(recvsize,rsize);
+    remap_fastslow->remap2d->setup(fast_ilo, fast_ihi, fast_jlo, fast_jhi,
+                                   brick_ilo, brick_ihi, brick_jlo, brick_jhi,
+                                   2, 0, 0, ssize, rsize);
+    sendsize = MAX(sendsize, ssize);
+    recvsize = MAX(recvsize, rsize);
     remap_fastslow->remap2d_extra = new Remap2d(world);
     remap_fastslow->remap2d_extra->collective = collective_bp;
     remap_fastslow->remap2d_extra->packflag = packflag;
-    remap_fastslow->remap2d_extra->
-      setup(brick_ilo,brick_ihi,brick_jlo,brick_jhi,
-            slow_ilo,slow_ihi,slow_jlo,slow_jhi,
-            2,1,0,ssize,rsize);
-    sendsize = MAX(sendsize,ssize);
-    recvsize = MAX(recvsize,rsize);
+    remap_fastslow->remap2d_extra->setup(
+        brick_ilo, brick_ihi, brick_jlo, brick_jhi, slow_ilo, slow_ihi,
+        slow_jlo, slow_jhi, 2, 1, 0, ssize, rsize);
+    sendsize = MAX(sendsize, ssize);
+    recvsize = MAX(recvsize, rsize);
   }
 
   // remap uses J=fast, I=slow, b/c current permute=1
@@ -1133,17 +1195,18 @@ void FFT2d::remap_forward_create(int &sendsize, int &recvsize)
   if (remap_postflag) {
     remap_postslow = new Remap;
     int newpermute;
-    if (permute == 0) newpermute = 1;
-    if (permute == 1) newpermute = 0;
+    if (permute == 0)
+      newpermute = 1;
+    if (permute == 1)
+      newpermute = 0;
     remap_postslow->remap2d = new Remap2d(world);
     remap_postslow->remap2d->collective = collective_bp;
     remap_postslow->remap2d->packflag = packflag;
-    remap_postslow->remap2d->
-      setup(slow_jlo,slow_jhi,slow_ilo,slow_ihi,
-            out_jlo,out_jhi,out_ilo,out_ihi,
-            2,newpermute,0,ssize,rsize);
-    sendsize = MAX(sendsize,ssize);
-    recvsize = MAX(recvsize,rsize);
+    remap_postslow->remap2d->setup(slow_jlo, slow_jhi, slow_ilo, slow_ihi,
+                                   out_jlo, out_jhi, out_ilo, out_ihi, 2,
+                                   newpermute, 0, ssize, rsize);
+    sendsize = MAX(sendsize, ssize);
+    recvsize = MAX(recvsize, rsize);
     remap_postslow->remap2d_extra = NULL;
   }
 }
@@ -1152,9 +1215,8 @@ void FFT2d::remap_forward_create(int &sendsize, int &recvsize)
    create inverted Remap2d instances for inverse FFT if needed
 ------------------------------------------------------------------------- */
 
-void FFT2d::remap_inverse_create(int &sendsize, int &recvsize)
-{
-  int ssize,rsize;
+void FFT2d::remap_inverse_create(int &sendsize, int &recvsize) {
+  int ssize, rsize;
 
   // if current permute=0. remap uses I=fast, J=slow
   // if current permute=1, remap uses J=fast, I=slow
@@ -1165,22 +1227,20 @@ void FFT2d::remap_inverse_create(int &sendsize, int &recvsize)
       remap_preslow->remap2d = new Remap2d(world);
       remap_preslow->remap2d->collective = collective_bp;
       remap_preslow->remap2d->packflag = packflag;
-      remap_preslow->remap2d->
-        setup(out_ilo,out_ihi,out_jlo,out_jhi,
-              slow_ilo,slow_ihi,slow_jlo,slow_jhi,
-              2,1,0,ssize,rsize);
-      sendsize = MAX(sendsize,ssize);
-      recvsize = MAX(recvsize,rsize);
+      remap_preslow->remap2d->setup(out_ilo, out_ihi, out_jlo, out_jhi,
+                                    slow_ilo, slow_ihi, slow_jlo, slow_jhi, 2,
+                                    1, 0, ssize, rsize);
+      sendsize = MAX(sendsize, ssize);
+      recvsize = MAX(recvsize, rsize);
     } else if (permute == 1) {
       remap_preslow->remap2d = new Remap2d(world);
       remap_preslow->remap2d->collective = collective_bp;
       remap_preslow->remap2d->packflag = packflag;
-      remap_preslow->remap2d->
-        setup(out_jlo,out_jhi,out_ilo,out_ihi,
-              slow_jlo,slow_jhi,slow_ilo,slow_ihi,
-              2,0,0,ssize,rsize);
-      sendsize = MAX(sendsize,ssize);
-      recvsize = MAX(recvsize,rsize);
+      remap_preslow->remap2d->setup(out_jlo, out_jhi, out_ilo, out_ihi,
+                                    slow_jlo, slow_jhi, slow_ilo, slow_ihi, 2,
+                                    0, 0, ssize, rsize);
+      sendsize = MAX(sendsize, ssize);
+      recvsize = MAX(recvsize, rsize);
     }
     remap_preslow->remap2d_extra = NULL;
   }
@@ -1194,33 +1254,30 @@ void FFT2d::remap_inverse_create(int &sendsize, int &recvsize)
     remap_slowfast->remap2d = new Remap2d(world);
     remap_slowfast->remap2d->collective = collective_pp;
     remap_slowfast->remap2d->packflag = packflag;
-    remap_slowfast->remap2d->
-      setup(slow_jlo,slow_jhi,slow_ilo,slow_ihi,
-            fast_jlo,fast_jhi,fast_ilo,fast_ihi,
-            2,1,0,ssize,rsize);
-    sendsize = MAX(sendsize,ssize);
-    recvsize = MAX(recvsize,rsize);
+    remap_slowfast->remap2d->setup(slow_jlo, slow_jhi, slow_ilo, slow_ihi,
+                                   fast_jlo, fast_jhi, fast_ilo, fast_ihi, 2, 1,
+                                   0, ssize, rsize);
+    sendsize = MAX(sendsize, ssize);
+    recvsize = MAX(recvsize, rsize);
     remap_slowfast->remap2d_extra = NULL;
 
   } else {
     remap_slowfast->remap2d = new Remap2d(world);
     remap_slowfast->remap2d->collective = collective_bp;
     remap_slowfast->remap2d->packflag = packflag;
-    remap_slowfast->remap2d->
-      setup(slow_jlo,slow_jhi,slow_ilo,slow_ihi,
-            brick_jlo,brick_jhi,brick_ilo,brick_ihi,
-            2,0,0,ssize,rsize);
-    sendsize = MAX(sendsize,ssize);
-    recvsize = MAX(recvsize,rsize);
+    remap_slowfast->remap2d->setup(slow_jlo, slow_jhi, slow_ilo, slow_ihi,
+                                   brick_jlo, brick_jhi, brick_ilo, brick_ihi,
+                                   2, 0, 0, ssize, rsize);
+    sendsize = MAX(sendsize, ssize);
+    recvsize = MAX(recvsize, rsize);
     remap_slowfast->remap2d_extra = new Remap2d(world);
     remap_slowfast->remap2d_extra->collective = collective_bp;
     remap_slowfast->remap2d_extra->packflag = packflag;
-    remap_slowfast->remap2d_extra->
-      setup(brick_jlo,brick_jhi,brick_ilo,brick_ihi,
-            fast_jlo,fast_jhi,fast_ilo,fast_ihi,
-            2,1,0,ssize,rsize);
-    sendsize = MAX(sendsize,ssize);
-    recvsize = MAX(recvsize,rsize);
+    remap_slowfast->remap2d_extra->setup(
+        brick_jlo, brick_jhi, brick_ilo, brick_ihi, fast_jlo, fast_jhi,
+        fast_ilo, fast_ihi, 2, 1, 0, ssize, rsize);
+    sendsize = MAX(sendsize, ssize);
+    recvsize = MAX(recvsize, rsize);
   }
 
   // remap uses I=fast, J=slow, b/c current permute=0
@@ -1230,12 +1287,11 @@ void FFT2d::remap_inverse_create(int &sendsize, int &recvsize)
     remap_postfast->remap2d = new Remap2d(world);
     remap_postfast->remap2d->collective = collective_bp;
     remap_postfast->remap2d->packflag = packflag;
-    remap_postfast->remap2d->
-      setup(fast_ilo,fast_ihi,fast_jlo,fast_jhi,
-            in_ilo,in_ihi,in_jlo,in_jhi,
-            2,0,0,ssize,rsize);
-    sendsize = MAX(sendsize,ssize);
-    recvsize = MAX(recvsize,rsize);
+    remap_postfast->remap2d->setup(fast_ilo, fast_ihi, fast_jlo, fast_jhi,
+                                   in_ilo, in_ihi, in_jlo, in_jhi, 2, 0, 0,
+                                   ssize, rsize);
+    sendsize = MAX(sendsize, ssize);
+    recvsize = MAX(recvsize, rsize);
     remap_postfast->remap2d_extra = NULL;
   }
 }
@@ -1244,8 +1300,7 @@ void FFT2d::remap_inverse_create(int &sendsize, int &recvsize)
    tally memory used by all Remap2d instances
 ------------------------------------------------------------------------- */
 
-int64_t FFT2d::remap_memory()
-{
+int64_t FFT2d::remap_memory() {
   int64_t memusage = 0;
 
   if (remap_prefast) {
@@ -1287,44 +1342,42 @@ int64_t FFT2d::remap_memory()
 // FFTW3 FFTs
 // -------------------------------------------------------------------
 
-void FFT2d::setup_ffts()
-{
+void FFT2d::setup_ffts() {
   fft1d = "FFTW3";
 
   int n = fft_fast->n;
   fft_fast->plan_forward =
-    FFTW_API(plan_many_dft)(1,&nfast,n,NULL,&nfast,1,nfast,NULL,&nfast,1,nfast,
-                            FFTW_FORWARD,FFTW_ESTIMATE);
+      FFTW_API(plan_many_dft)(1, &nfast, n, NULL, &nfast, 1, nfast, NULL,
+                              &nfast, 1, nfast, FFTW_FORWARD, FFTW_ESTIMATE);
   fft_fast->plan_backward =
-    FFTW_API(plan_many_dft)(1,&nfast,n,NULL,&nfast,1,nfast,NULL,&nfast,1,nfast,
-                            FFTW_BACKWARD,FFTW_ESTIMATE);
+      FFTW_API(plan_many_dft)(1, &nfast, n, NULL, &nfast, 1, nfast, NULL,
+                              &nfast, 1, nfast, FFTW_BACKWARD, FFTW_ESTIMATE);
   n = fft_slow->n;
   fft_slow->plan_forward =
-    FFTW_API(plan_many_dft)(1,&nslow,n,NULL,&nslow,1,nslow,NULL,&nslow,1,nslow,
-                            FFTW_FORWARD,FFTW_ESTIMATE);
+      FFTW_API(plan_many_dft)(1, &nslow, n, NULL, &nslow, 1, nslow, NULL,
+                              &nslow, 1, nslow, FFTW_FORWARD, FFTW_ESTIMATE);
   fft_slow->plan_backward =
-    FFTW_API(plan_many_dft)(1,&nslow,n,NULL,&nslow,1,nslow,NULL,&nslow,1,nslow,
-                            FFTW_BACKWARD,FFTW_ESTIMATE);
+      FFTW_API(plan_many_dft)(1, &nslow, n, NULL, &nslow, 1, nslow, NULL,
+                              &nslow, 1, nslow, FFTW_BACKWARD, FFTW_ESTIMATE);
 }
 
-void FFT2d::perform_ffts(FFT_DATA *data, int flag, FFT1d *plan)
-{
-  if (flag == -1) FFTW_API(execute_dft)(plan->plan_forward,data,data);
-  else FFTW_API(execute_dft)(plan->plan_backward,data,data);
+void FFT2d::perform_ffts(FFT_DATA *data, int flag, FFT1d *plan) {
+  if (flag == -1)
+    FFTW_API(execute_dft)(plan->plan_forward, data, data);
+  else
+    FFTW_API(execute_dft)(plan->plan_backward, data, data);
 }
 
-void FFT2d::scale_ffts(FFT_DATA *data)
-{
+void FFT2d::scale_ffts(FFT_DATA *data) {
   FFT_SCALAR fnorm = norm;
-  FFT_SCALAR *data_ptr = (FFT_SCALAR *) data;
+  FFT_SCALAR *data_ptr = (FFT_SCALAR *)data;
   for (int i = 0; i < normnum; i++) {
     *(data_ptr++) *= fnorm;
     *(data_ptr++) *= fnorm;
   }
 }
 
-void FFT2d::deallocate_ffts()
-{
+void FFT2d::deallocate_ffts() {
   FFTW_API(destroy_plan)(fft_fast->plan_forward);
   FFTW_API(destroy_plan)(fft_fast->plan_backward);
   FFTW_API(destroy_plan)(fft_slow->plan_forward);
@@ -1336,8 +1389,7 @@ void FFT2d::deallocate_ffts()
    return 1 if yes, 0 if no
 ------------------------------------------------------------------------- */
 
-int FFT2d::prime_factorable(int n)
-{
+int FFT2d::prime_factorable(int n) {
   int i;
 
   while (n > 1) {
@@ -1347,7 +1399,8 @@ int FFT2d::prime_factorable(int n)
         break;
       }
     }
-    if (i == nprime) return 0;
+    if (i == nprime)
+      return 0;
   }
 
   return 1;
@@ -1359,15 +1412,17 @@ int FFT2d::prime_factorable(int n)
    return nfactor
 ------------------------------------------------------------------------- */
 
-void FFT2d::factor(int n)
-{
-  int sqroot = (int) std::sqrt(n) + 1;
-  if (sqroot*sqroot > n) sqroot--;
+void FFT2d::factor(int n) {
+  int sqroot = (int)std::sqrt(n) + 1;
+  if (sqroot * sqroot > n)
+    sqroot--;
 
   nfactor = 0;
   for (int i = 1; i <= sqroot; i++) {
-    if (n % i) continue;
-    if (nfactor < NFACTOR) factors[nfactor++] = i;
+    if (n % i)
+      continue;
+    if (nfactor < NFACTOR)
+      factors[nfactor++] = i;
   }
 }
 
@@ -1378,15 +1433,16 @@ void FFT2d::factor(int n)
    return ipx,ipy = my location in proc grid
 ------------------------------------------------------------------------- */
 
-void FFT2d::procfactors(int nx, int ny, int &npx, int &npy, int &ipx, int &ipy)
-{
-  int i,j,ifac,jfac;
+void FFT2d::procfactors(int nx, int ny, int &npx, int &npy, int &ipx,
+                        int &ipy) {
+  int i, j, ifac, jfac;
   double newarea;
 
-  int sqroot = (int) std::sqrt(nprocs) + 1;
-  if (sqroot*sqroot > nprocs) sqroot--;
+  int sqroot = (int)std::sqrt(nprocs) + 1;
+  if (sqroot * sqroot > nprocs)
+    sqroot--;
 
-  double minarea = 2.0*nx*ny;
+  double minarea = 2.0 * nx * ny;
 
   // find 2d factorization of nprocs with min surface area for (Nx,Ny) grid
   // loop over all combinations of (ifac,jfac) where ifac <= jfac
@@ -1395,18 +1451,20 @@ void FFT2d::procfactors(int nx, int ny, int &npx, int &npy, int &ipx, int &ipy)
   for (i = 0; i < nfactor; i++) {
     ifac = factors[i];
     for (j = i; j < nfactor; j++) {
-      jfac = nprocs/ifac;
-      if (ifac*jfac != nprocs) continue;
-      if (ifac > jfac) continue;
+      jfac = nprocs / ifac;
+      if (ifac * jfac != nprocs)
+        continue;
+      if (ifac > jfac)
+        continue;
 
-      newarea = surfarea(ifac,jfac,nx,ny);
+      newarea = surfarea(ifac, jfac, nx, ny);
       if (newarea < minarea) {
         minarea = newarea;
         npx = ifac;
         npy = jfac;
       }
 
-      newarea = surfarea(jfac,ifac,nx,ny);
+      newarea = surfarea(jfac, ifac, nx, ny);
       if (newarea < minarea) {
         minarea = newarea;
         npx = jfac;
@@ -1426,12 +1484,13 @@ void FFT2d::procfactors(int nx, int ny, int &npx, int &npy, int &ipx, int &ipy)
    if Nx or Ny = 1, force corresponding I,J to be 1, else return BIG
 ------------------------------------------------------------------------- */
 
-double FFT2d::surfarea(int i, int j, int nx, int ny)
-{
-  if (nx == 1 && i != 1) return BIG;
-  if (ny == 1 && j != 1) return BIG;
+double FFT2d::surfarea(int i, int j, int nx, int ny) {
+  if (nx == 1 && i != 1)
+    return BIG;
+  if (ny == 1 && j != 1)
+    return BIG;
 
-  double dx = 1.0*nx/i;
-  double dy = 1.0*ny/j;
-  return dx*dy;
+  double dx = 1.0 * nx / i;
+  double dy = 1.0 * ny / j;
+  return dx * dy;
 }

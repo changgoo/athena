@@ -49,9 +49,9 @@ ox3_bc      = user      # outer-X3 boundary flag
 num_threads = 1         # maximum number of OMP threads
 
 <meshblock>
-nx1 = 8 
-nx2 = 32 
-nx3 = 24 
+nx1 = 8
+nx2 = 32
+nx3 = 24
 
 <hydro>
 gamma = 1.666666666666667    # gamma = C_p/C_v

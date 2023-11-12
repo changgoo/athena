@@ -17,27 +17,26 @@
 #ifndef FFT_REMAP3D_H
 #define FFT_REMAP3D_H
 
-#include <mpi.h>
 #include "fftdata.h"
+#include <mpi.h>
 
 namespace FFTMPI_NS {
 
 class Remap3d {
- public:
-  int collective;         // 0 = point-to-point MPI, 1 = collective all2all
-  int packflag;           // 0 = array, 1 = pointer, 2 = memcpy
-  int64_t memusage;       // memory usage in bytes
+public:
+  int collective;   // 0 = point-to-point MPI, 1 = collective all2all
+  int packflag;     // 0 = array, 1 = pointer, 2 = memcpy
+  int64_t memusage; // memory usage in bytes
 
   Remap3d(MPI_Comm);
   ~Remap3d();
-  void setup(int, int, int, int, int, int,
-             int, int, int, int, int, int,
-             int, int, int, int &, int &);
+  void setup(int, int, int, int, int, int, int, int, int, int, int, int, int,
+             int, int, int &, int &);
   void remap(FFT_SCALAR *, FFT_SCALAR *, FFT_SCALAR *, FFT_SCALAR *);
 
- private:
+private:
   MPI_Comm world;
-  int me,nprocs;
+  int me, nprocs;
   int setupflag;
 
   class Memory *memory;
@@ -45,33 +44,33 @@ class Remap3d {
 
   // details of how to perform a 3d remap
 
-  int permute;                      // permutation setting = 0,1,2
-  int memoryflag;                   // 0 = user-provided bufs, 1 = internal
+  int permute;    // permutation setting = 0,1,2
+  int memoryflag; // 0 = user-provided bufs, 1 = internal
 
   // point to point communication
 
-  int nrecv;                        // # of recvs from other procs
-  int nsend;                        // # of sends to other procs
-  int self;                         // whether I send/recv with myself
+  int nrecv; // # of recvs from other procs
+  int nsend; // # of sends to other procs
+  int self;  // whether I send/recv with myself
 
-  int *send_offset;                 // extraction loc for each send
-  int *send_size;                   // size of each send message
-  int *send_proc;                   // proc to send each message to
-  struct pack_plan_3d *packplan;    // pack plan for each send message
-  int *recv_offset;                 // insertion loc for each recv
-  int *recv_size;                   // size of each recv message
-  int *recv_proc;                   // proc to recv each message from
-  int *recv_bufloc;                 // offset in scratch buf for each recv
-  MPI_Request *request;             // MPI request for each posted recv
-  struct pack_plan_3d *unpackplan;  // unpack plan for each recv message
+  int *send_offset;                // extraction loc for each send
+  int *send_size;                  // size of each send message
+  int *send_proc;                  // proc to send each message to
+  struct pack_plan_3d *packplan;   // pack plan for each send message
+  int *recv_offset;                // insertion loc for each recv
+  int *recv_size;                  // size of each recv message
+  int *recv_proc;                  // proc to recv each message from
+  int *recv_bufloc;                // offset in scratch buf for each recv
+  MPI_Request *request;            // MPI request for each posted recv
+  struct pack_plan_3d *unpackplan; // unpack plan for each recv message
 
   // collective communication
 
-  int ngroup;                       // # of procs in my collective comm group
-  int *pgroup;                      // list of ranks in my comm group
-  MPI_Comm newcomm;                 // communicator for my comm group
+  int ngroup;       // # of procs in my collective comm group
+  int *pgroup;      // list of ranks in my comm group
+  MPI_Comm newcomm; // communicator for my comm group
 
-  int *sendcnts;                    // args for MPI_All2all()
+  int *sendcnts; // args for MPI_All2all()
   int *senddispls;
   int *sendmap;
   int *recvcnts;
@@ -81,8 +80,8 @@ class Remap3d {
   // memory for remap sends and recvs and All2all
   // either provided by caller or allocated internally
 
-  FFT_SCALAR *sendbuf;              // send buffer
-  FFT_SCALAR *recvbuf;              // recv buffer
+  FFT_SCALAR *sendbuf; // send buffer
+  FFT_SCALAR *recvbuf; // recv buffer
 
   // which pack & unpack functions to use
 
@@ -90,16 +89,16 @@ class Remap3d {
   void (*unpack)(FFT_SCALAR *, FFT_SCALAR *, struct pack_plan_3d *);
 
   // collision between 2 regions
-  
+
   struct extent_3d {
-    int ilo,ihi,isize;
-    int jlo,jhi,jsize;
-    int klo,khi,ksize;
+    int ilo, ihi, isize;
+    int jlo, jhi, jsize;
+    int klo, khi, ksize;
   };
 
   int collide(struct extent_3d *, struct extent_3d *, struct extent_3d *);
 };
 
-}
+} // namespace FFTMPI_NS
 
 #endif

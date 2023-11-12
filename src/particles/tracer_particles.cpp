@@ -1,13 +1,14 @@
 //======================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //======================================================================================
 //! \file tracer_particles.cpp
 //! \brief implements functions in the TracerParticles class
 
 // C++ headers
-#include <algorithm>  // min()
+#include <algorithm> // min()
 
 // Athena++ headers
 #include "../athena.hpp"
@@ -21,8 +22,8 @@
 //! \brief constructs a TracerParticles instance.
 
 TracerParticles::TracerParticles(MeshBlock *pmb, ParameterInput *pin,
-  ParticleParameters *pp)
-  : Particles(pmb, pin, pp) {
+                                 ParticleParameters *pp)
+    : Particles(pmb, pin, pp) {
   // Add working array at particles for gas velocity/particle momentum change.
   iwx = AddWorkingArray();
   iwy = AddWorkingArray();
@@ -57,7 +58,8 @@ void TracerParticles::AssignShorthandsForDerived() {
 //! \fn void TracerParticles::SourceTerms()
 //! \brief adds acceleration to particles.
 
-void TracerParticles::SourceTerms(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
+void TracerParticles::SourceTerms(Real t, Real dt,
+                                  const AthenaArray<Real> &meshsrc) {
   ppm->InterpolateMeshToParticles(meshsrc, IVX, work, iwx, 3);
 
   // Transform the gas velocity into Cartesian.
@@ -67,8 +69,8 @@ void TracerParticles::SourceTerms(Real t, Real dt, const AthenaArray<Real>& mesh
     //! \todo (ccyang):
     //! - using (xp0, yp0, zp0) is a temporary hack.
     pc->CartesianToMeshCoords(xp0(k), yp0(k), zp0(k), x1, x2, x3);
-    pc->MeshCoordsToCartesianVector(x1, x2, x3, wx(k), wy(k), wz(k),
-                                                wx(k), wy(k), wz(k));
+    pc->MeshCoordsToCartesianVector(x1, x2, x3, wx(k), wy(k), wz(k), wx(k),
+                                    wy(k), wz(k));
   }
 
   // Tracer particles
@@ -77,7 +79,9 @@ void TracerParticles::SourceTerms(Real t, Real dt, const AthenaArray<Real>& mesh
     vpx(k) = wx(k);
     vpy(k) = wy(k);
     vpz(k) = wz(k);
-    vpx0(k) = tmpx; vpy0(k) = tmpy; vpz0(k) = tmpz;
+    vpx0(k) = tmpx;
+    vpy0(k) = tmpy;
+    vpz0(k) = tmpz;
   }
 
   return;
@@ -88,16 +92,17 @@ void TracerParticles::SourceTerms(Real t, Real dt, const AthenaArray<Real>& mesh
 //!                                         const AthenaArray<Real>& meshsrc)
 //! \brief adds additional source terms to particles, overloaded by the user.
 
-void __attribute__((weak)) TracerParticles::UserSourceTerms(
-    Real t, Real dt, const AthenaArray<Real>& meshsrc) {
-}
+void __attribute__((weak))
+TracerParticles::UserSourceTerms(Real t, Real dt,
+                                 const AthenaArray<Real> &meshsrc) {}
 
 //--------------------------------------------------------------------------------------
 //! \fn void TracerParticles::ReactToMeshAux(
 //!              Real t, Real dt, const AthenaArray<Real>& meshsrc)
 //! \brief Reacts to meshaux before boundary communications.
 
-void TracerParticles::ReactToMeshAux(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
+void TracerParticles::ReactToMeshAux(Real t, Real dt,
+                                     const AthenaArray<Real> &meshsrc) {
   // Nothing to do for tracers
   return;
 }

@@ -1,14 +1,15 @@
 //======================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //======================================================================================
 //! \file one_particle.cpp
 //! \brief tests one particle.
 
 // C++ standard libraries
-#include <cmath>    // round()
-#include <sstream>  // stringstream
+#include <cmath>   // round()
+#include <sstream> // stringstream
 
 // Athena++ headers
 #include "../athena.hpp"
@@ -28,7 +29,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   // Sanity check.
   if (!pmy_mesh->particle) {
     std::stringstream msg;
-    msg << "### FATAL ERROR in function [MeshBlock::ProblemGenerator]" << std::endl
+    msg << "### FATAL ERROR in function [MeshBlock::ProblemGenerator]"
+        << std::endl
         << "Dust particles were not enabled at configuration. " << std::endl;
     ATHENA_ERROR(msg);
   }
@@ -36,19 +38,21 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   // This problem is for the dust particles and one container
   if (Particles::num_particles != 1) {
     std::stringstream msg;
-    msg << "### FATAL ERROR in function [MeshBlock::ProblemGenerator]" << std::endl
+    msg << "### FATAL ERROR in function [MeshBlock::ProblemGenerator]"
+        << std::endl
         << "Only one dust particle container is allowed. " << std::endl;
     ATHENA_ERROR(msg);
   }
 
   if (!(ppars[0]->partype.compare("dust") == 0)) {
     std::stringstream msg;
-    msg << "### FATAL ERROR in function [MeshBlock::ProblemGenerator]" << std::endl
+    msg << "### FATAL ERROR in function [MeshBlock::ProblemGenerator]"
+        << std::endl
         << "Only dust particle is allowed. " << std::endl;
     ATHENA_ERROR(msg);
   }
 
-  DustParticles *ppar = dynamic_cast<DustParticles*>(ppars[0]);
+  DustParticles *ppar = dynamic_cast<DustParticles *>(ppars[0]);
 
   // Get the (uniform) velocity of the gas.
   Real ux0, uy0, uz0;
@@ -60,10 +64,10 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   for (int k = ks; k <= ke; ++k) {
     for (int j = js; j <= je; ++j) {
       for (int i = is; i <= ie; ++i) {
-        phydro->u(IDN,k,j,i) = 1.0;
-        phydro->u(IM1,k,j,i) = ux0;
-        phydro->u(IM2,k,j,i) = uy0;
-        phydro->u(IM3,k,j,i) = uz0;
+        phydro->u(IDN, k, j, i) = 1.0;
+        phydro->u(IM1, k, j, i) = ux0;
+        phydro->u(IM2, k, j, i) = uy0;
+        phydro->u(IM3, k, j, i) = uz0;
       }
     }
   }
@@ -71,7 +75,7 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
     for (int k = ks; k <= ke; ++k)
       for (int j = js; j <= je; ++j)
         for (int i = is; i <= ie; ++i)
-          phydro->u(IEN,k,j,i) = 1.0 / (peos->GetGamma() - 1.0);
+          phydro->u(IEN, k, j, i) = 1.0 / (peos->GetGamma() - 1.0);
   }
 
   // Get the dust-to-gas ratio and the velocity of the particles.
@@ -82,18 +86,20 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
   vpz0 = pin->GetOrAddReal("problem", "vpz0", 0.0);
 
   // Find the total number of particles in each direction.
-  RegionSize& mesh_size = pmy_mesh->mesh_size;
-  int npx1 = (block_size.nx1 > 1) ?
-                  pin->GetOrAddInteger("problem", "npx1", mesh_size.nx1) : 1,
-      npx2 = (block_size.nx2 > 1) ?
-                  pin->GetOrAddInteger("problem", "npx2", mesh_size.nx2) : 1,
-      npx3 = (block_size.nx3 > 1) ?
-                  pin->GetOrAddInteger("problem", "npx3", mesh_size.nx3) : 1;
+  RegionSize &mesh_size = pmy_mesh->mesh_size;
+  int npx1 = (block_size.nx1 > 1)
+                 ? pin->GetOrAddInteger("problem", "npx1", mesh_size.nx1)
+                 : 1,
+      npx2 = (block_size.nx2 > 1)
+                 ? pin->GetOrAddInteger("problem", "npx2", mesh_size.nx2)
+                 : 1,
+      npx3 = (block_size.nx3 > 1)
+                 ? pin->GetOrAddInteger("problem", "npx3", mesh_size.nx3)
+                 : 1;
 
   // Find the mass of each particle and the distance between adjacent particles.
   Real vol = mesh_size.x1len * mesh_size.x2len * mesh_size.x3len;
-  Real dx1 = mesh_size.x1len / npx1,
-       dx2 = mesh_size.x2len / npx2,
+  Real dx1 = mesh_size.x1len / npx1, dx2 = mesh_size.x2len / npx2,
        dx3 = mesh_size.x3len / npx3;
   Real mpar = dtog * vol / (npx1 * npx2 * npx3);
 
@@ -112,7 +118,8 @@ void MeshBlock::ProblemGenerator(ParameterInput *pin) {
         int pid = ppar->AddOneParticle(mpar, xp1, yp1, zp1, vpx0, vpy0, vpz0);
         if (ppar->IsVariableTaus()) {
           Real taus0 = ppar->GetStoppingTime();
-          if (pid != -1) ppar->taus(pid) = taus0;
+          if (pid != -1)
+            ppar->taus(pid) = taus0;
         }
       }
     }

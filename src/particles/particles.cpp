@@ -1,7 +1,8 @@
 //======================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //======================================================================================
 //! \file particles.cpp
 //! \brief implements functions in particle classes
@@ -34,7 +35,7 @@ bool Particles::initialized = false;
 int Particles::num_particles = 0;
 int Particles::num_particles_grav = 0;
 int Particles::num_particles_output = 0;
-ParameterInput* Particles::pinput = NULL;
+ParameterInput *Particles::pinput = NULL;
 std::vector<int> Particles::idmax;
 #ifdef MPI_PARALLEL
 MPI_Comm Particles::my_comm = MPI_COMM_NULL;
@@ -44,15 +45,14 @@ MPI_Comm Particles::my_comm = MPI_COMM_NULL;
 //! \fn Particles::Particles(MeshBlock *pmb, ParameterInput *pin)
 //! \brief constructs a Particles instance.
 
-Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp) :
-  ipar(pp->ipar), input_block_name(pp->block_name), partype(pp->partype),
-  npar_(0), nparmax_(1),
-  nint(0), nreal(0), naux(0), nwork(0),
-  ipid(-1), ish(-1),
-  imass(-1), ixp(-1), iyp(-1), izp(-1), ivpx(-1), ivpy(-1), ivpz(-1),
-  ixp0(-1), iyp0(-1), izp0(-1), ivpx0(-1), ivpy0(-1), ivpz0(-1),
-  ixi1(-1), ixi2(-1), ixi3(-1), igx(-1), igy(-1), igz(-1),
-  parhstout_(false), isgravity_(pp->gravity) {
+Particles::Particles(MeshBlock *pmb, ParameterInput *pin,
+                     ParticleParameters *pp)
+    : ipar(pp->ipar), input_block_name(pp->block_name), partype(pp->partype),
+      npar_(0), nparmax_(1), nint(0), nreal(0), naux(0), nwork(0), ipid(-1),
+      ish(-1), imass(-1), ixp(-1), iyp(-1), izp(-1), ivpx(-1), ivpy(-1),
+      ivpz(-1), ixp0(-1), iyp0(-1), izp0(-1), ivpx0(-1), ivpy0(-1), ivpz0(-1),
+      ixi1(-1), ixi2(-1), ixi3(-1), igx(-1), igy(-1), igz(-1),
+      parhstout_(false), isgravity_(pp->gravity) {
   // integer properties
 
   // Add particle ID.
@@ -109,7 +109,6 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
   pmy_mesh_ = pmb->pmy_mesh;
   pbval_ = pmb->pbval;
 
-
   // Get the CFL number for particles.
   cfl_par_ = pin->GetOrAddReal(input_block_name, "cfl_par", 1);
 
@@ -120,16 +119,17 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
 
   // read shearing box parameters from input block
   if (pmy_mesh_->shear_periodic) {
-    bool orbital_advection_defined_
-           = (pin->GetOrAddInteger("orbital_advection","OAorder",0)!=0)?
-             true : false;
-    Omega_0_ = pin->GetOrAddReal("orbital_advection","Omega0",0.0);
-    qshear_  = pin->GetOrAddReal("orbital_advection","qshear",0.0);
-    ShBoxCoord_ = pin->GetOrAddInteger("orbital_advection","shboxcoord",1);
+    bool orbital_advection_defined_ =
+        (pin->GetOrAddInteger("orbital_advection", "OAorder", 0) != 0) ? true
+                                                                       : false;
+    Omega_0_ = pin->GetOrAddReal("orbital_advection", "Omega0", 0.0);
+    qshear_ = pin->GetOrAddReal("orbital_advection", "qshear", 0.0);
+    ShBoxCoord_ = pin->GetOrAddInteger("orbital_advection", "shboxcoord", 1);
     if (orbital_advection_defined_) { // orbital advection source terms
       std::stringstream msg;
       msg << "### FATAL ERROR in Particle constructor" << std::endl
-          << "OrbitalAdvection is not yet implemented for particles" << std::endl
+          << "OrbitalAdvection is not yet implemented for particles"
+          << std::endl
           << std::endl;
       ATHENA_ERROR(msg);
     }
@@ -144,16 +144,16 @@ Particles::Particles(MeshBlock *pmb, ParameterInput *pin, ParticleParameters *pp
     }
 
     // q*Omega*Lx
-    qomL_ = qshear_*Omega_0_*pmy_mesh_->mesh_size.x1len;
+    qomL_ = qshear_ * Omega_0_ * pmy_mesh_->mesh_size.x1len;
 
     // aux array for shear boundary flag
     ish = AddIntProperty();
     intpropname.push_back("ish");
   }
 
-  // Actual memory allocation and shorthand assignment will be done in the derived class
-  // Initialization of ParticleBuffer, ParticleGravity
-  // has moved to the derived class
+  // Actual memory allocation and shorthand assignment will be done in the
+  // derived class Initialization of ParticleBuffer, ParticleGravity has moved
+  // to the derived class
 }
 
 //--------------------------------------------------------------------------------------
@@ -176,7 +176,8 @@ Particles::~Particles() {
   }
 
   // Delete working arrays.
-  if (nwork > 0) work.DeleteAthenaArray();
+  if (nwork > 0)
+    work.DeleteAthenaArray();
 
   // Clear links to neighbors.
   ClearNeighbors();
@@ -185,24 +186,26 @@ Particles::~Particles() {
   delete ppm;
 
   // Delete particle gravity.
-  if (isgravity_) delete ppgrav;
+  if (isgravity_)
+    delete ppgrav;
 }
 
 //--------------------------------------------------------------------------------------
 //! \fn int Particles::AddOneParticle()
 //! \brief add one particle if position is within the mesh block
 
-int Particles::AddOneParticle(Real mp, Real x1, Real x2, Real x3,
-  Real v1, Real v2, Real v3) {
-  if (CheckInMeshBlock(x1,x2,x3)) {
-    if (npar_ == nparmax_) UpdateCapacity(npar_*2);
+int Particles::AddOneParticle(Real mp, Real x1, Real x2, Real x3, Real v1,
+                              Real v2, Real v3) {
+  if (CheckInMeshBlock(x1, x2, x3)) {
+    if (npar_ == nparmax_)
+      UpdateCapacity(npar_ * 2);
     // initialize all properties zero (just in case if there is gabage value)
     for (int j = 0; j < nint; ++j)
-      intprop(j,npar_) = 0;
+      intprop(j, npar_) = 0;
     for (int j = 0; j < nreal; ++j)
-      realprop(j,npar_) = 0.0;
+      realprop(j, npar_) = 0.0;
     for (int j = 0; j < naux; ++j)
-      auxprop(j,npar_) = 0.0;
+      auxprop(j, npar_) = 0.0;
 
     pid(npar_) = -1;
     mass(npar_) = mp;
@@ -229,11 +232,11 @@ void Particles::RemoveOneParticle(int k) {
     xi2_(k) = xi2_(npar_);
     xi3_(k) = xi3_(npar_);
     for (int j = 0; j < nint; ++j)
-      intprop(j,k) = intprop(j,npar_);
+      intprop(j, k) = intprop(j, npar_);
     for (int j = 0; j < nreal; ++j)
-      realprop(j,k) = realprop(j,npar_);
+      realprop(j, k) = realprop(j, npar_);
     for (int j = 0; j < naux; ++j)
-      auxprop(j,k) = auxprop(j,npar_);
+      auxprop(j, k) = auxprop(j, npar_);
   }
 }
 
@@ -271,9 +274,10 @@ void Particles::Integrate(int stage) {
 //! \brief returns the time step required by particles in the block.
 //!
 //! \note
-//! The default timestep for particle integration is the cell crossing time. Additional
-//! timestep restrictions can be imposed in NewDtForDerived, which can be overrided in
-//! child classes. Final timestep is further reduced by multiplying cfl_par_.
+//! The default timestep for particle integration is the cell crossing time.
+//! Additional timestep restrictions can be imposed in NewDtForDerived, which
+//! can be overrided in child classes. Final timestep is further reduced by
+//! multiplying cfl_par_.
 
 Real Particles::NewBlockTimeStep() {
   Coordinates *pc = pmy_block->pcoord;
@@ -284,19 +288,23 @@ Real Particles::NewBlockTimeStep() {
     Real dt_inv2 = 0.0, vpx1, vpx2, vpx3;
     pc->CartesianToMeshCoordsVector(xp(k), yp(k), zp(k), vpx(k), vpy(k), vpz(k),
                                     vpx1, vpx2, vpx3);
-    dt_inv2 += active1_ ? std::pow(vpx1 / pc->dx1f(static_cast<int>(xi1_(k))), 2) : 0;
-    dt_inv2 += active2_ ? std::pow(vpx2 / pc->dx2f(static_cast<int>(xi2_(k))), 2) : 0;
-    dt_inv2 += active3_ ? std::pow(vpx3 / pc->dx3f(static_cast<int>(xi3_(k))), 2) : 0;
+    dt_inv2 +=
+        active1_ ? std::pow(vpx1 / pc->dx1f(static_cast<int>(xi1_(k))), 2) : 0;
+    dt_inv2 +=
+        active2_ ? std::pow(vpx2 / pc->dx2f(static_cast<int>(xi2_(k))), 2) : 0;
+    dt_inv2 +=
+        active3_ ? std::pow(vpx3 / pc->dx3f(static_cast<int>(xi3_(k))), 2) : 0;
     dt_inv2_max = std::max(dt_inv2_max, dt_inv2);
   }
 
-  // Return the time step constrained by the coordinate speed (cell crossing time).
+  // Return the time step constrained by the coordinate speed (cell crossing
+  // time).
   Real dt = dt_inv2_max > 0.0 ? 1.0 / std::sqrt(dt_inv2_max)
                               : std::numeric_limits<Real>::max();
 
   // Additional time step constraints for derived Particles
   dt = std::min(dt, NewDtForDerived());
-  return cfl_par_*dt;
+  return cfl_par_ * dt;
 }
 
 //--------------------------------------------------------------------------------------
@@ -305,7 +313,8 @@ Real Particles::NewBlockTimeStep() {
 
 std::size_t Particles::GetSizeInBytes() const {
   std::size_t size = sizeof(npar_);
-  if (npar_ > 0) size += npar_ * (nint * sizeof(int) + nreal * sizeof(Real));
+  if (npar_ > 0)
+    size += npar_ * (nint * sizeof(int) + nreal * sizeof(Real));
   return size;
 }
 
@@ -324,14 +333,14 @@ void Particles::UnpackParticlesForRestart(char *mbdata, std::size_t &os) {
     // Read integer properties.
     std::size_t size = npar_ * sizeof(int);
     for (int k = 0; k < nint; ++k) {
-      std::memcpy(&(intprop(k,0)), &(mbdata[os]), size);
+      std::memcpy(&(intprop(k, 0)), &(mbdata[os]), size);
       os += size;
     }
 
     // Read real properties.
     size = npar_ * sizeof(Real);
     for (int k = 0; k < nreal; ++k) {
-      std::memcpy(&(realprop(k,0)), &(mbdata[os]), size);
+      std::memcpy(&(realprop(k, 0)), &(mbdata[os]), size);
       os += size;
     }
   }
@@ -350,13 +359,13 @@ void Particles::PackParticlesForRestart(char *&pdata) {
     // Write integer properties.
     std::size_t size = npar_ * sizeof(int);
     for (int k = 0; k < nint; ++k) {
-      std::memcpy(pdata, &(intprop(k,0)), size);
+      std::memcpy(pdata, &(intprop(k, 0)), size);
       pdata += size;
     }
     // Write real properties.
     size = npar_ * sizeof(Real);
     for (int k = 0; k < nreal; ++k) {
-      std::memcpy(pdata, &(realprop(k,0)), size);
+      std::memcpy(pdata, &(realprop(k, 0)), size);
       pdata += size;
     }
   }
@@ -364,7 +373,8 @@ void Particles::PackParticlesForRestart(char *&pdata) {
 
 //--------------------------------------------------------------------------------------
 //! \fn void Particles::AddHistoryOutput(Real data_sum[], int pos)
-//! \brief finds the data sums of history output from particles in my process and assign
+//! \brief finds the data sums of history output from particles in my process
+//! and assign
 //!   them to data_sum beginning at index pos.
 
 void Particles::AddHistoryOutput(Real data_sum[], int pos) {
@@ -378,8 +388,8 @@ void Particles::AddHistoryOutput(Real data_sum[], int pos) {
   np += npar_;
 
   for (int k = 0; k < npar_; ++k) {
-    pmy_block->pcoord->CartesianToMeshCoordsVector(xp(k), yp(k), zp(k),
-        vpx(k), vpy(k), vpz(k), vp1, vp2, vp3);
+    pmy_block->pcoord->CartesianToMeshCoordsVector(
+        xp(k), yp(k), zp(k), vpx(k), vpy(k), vpz(k), vp1, vp2, vp3);
     sum[0] += vp1;
     sum[1] += vp2;
     sum[2] += vp3;
@@ -392,7 +402,7 @@ void Particles::AddHistoryOutput(Real data_sum[], int pos) {
   // Assign the values to output variables.
   data_sum[pos] += static_cast<Real>(np);
   for (int i = 0; i < NSUM; ++i)
-    data_sum[pos+i+1] += sum[i];
+    data_sum[pos + i + 1] += sum[i];
 }
 
 //--------------------------------------------------------------------------------------
@@ -401,7 +411,7 @@ void Particles::AddHistoryOutput(Real data_sum[], int pos) {
 void Particles::OutputParticles(bool header) {
   std::stringstream fname, msg;
   std::ofstream os;
-  std::string file_basename = pinput->GetString("job","problem_id");
+  std::string file_basename = pinput->GetString("job", "problem_id");
 
   for (int k = 0; k < npar_; ++k) {
     // Create the filename.
@@ -415,7 +425,8 @@ void Particles::OutputParticles(bool header) {
 
     if (!os.is_open()) {
       msg << "### FATAL ERROR in function [Particles::OutputParticles]"
-          << std::endl << "Output file '" << fname.str() << "' could not be opened"
+          << std::endl
+          << "Output file '" << fname.str() << "' could not be opened"
           << std::endl;
       ATHENA_ERROR(msg);
     }
@@ -435,10 +446,11 @@ void Particles::OutputParticles(bool header) {
 void Particles::OutputParticles(bool header, int kid) {
   std::stringstream fname, msg;
   std::ofstream os;
-  std::string file_basename = pinput->GetString("job","problem_id");
+  std::string file_basename = pinput->GetString("job", "problem_id");
 
   for (int k = 0; k < npar_; ++k) {
-    if (pid(k) != kid) continue;
+    if (pid(k) != kid)
+      continue;
 
     // Create the filename.
     fname << file_basename << ".pid" << pid(k) << ".par" << ipar << ".csv";
@@ -451,7 +463,8 @@ void Particles::OutputParticles(bool header, int kid) {
 
     if (!os.is_open()) {
       msg << "### FATAL ERROR in function [Particles::OutputParticles]"
-          << std::endl << "Output file '" << fname.str() << "' could not be opened"
+          << std::endl
+          << "Output file '" << fname.str() << "' could not be opened"
           << std::endl;
       ATHENA_ERROR(msg);
     }
@@ -472,9 +485,10 @@ void Particles::ToggleParHstOutFlag() {
   if (npar_ < 100) {
     parhstout_ = true;
   } else {
-    std::cout << "Warning [Particles]: npar = " << npar_ << " is too large to output"
-      << "all individual particles' history automatically."
-      << " Particle history output is turned off." << std::endl;
+    std::cout << "Warning [Particles]: npar = " << npar_
+              << " is too large to output"
+              << "all individual particles' history automatically."
+              << " Particle history output is turned off." << std::endl;
     parhstout_ = false;
   }
 }
@@ -519,7 +533,8 @@ void Particles::AssignShorthands() {
 
 //--------------------------------------------------------------------------------------
 //! \fn void Particles::AllocateMemory()
-//! \brief memory allocation will be done at the end of derived class initialization
+//! \brief memory allocation will be done at the end of derived class
+//! initialization
 void Particles::AllocateMemory() {
   // Initiate ParticleBuffer class.
   nint_buf = nint;
@@ -539,53 +554,48 @@ void Particles::AllocateMemory() {
   }
 
   // Allocate integer properties.
-  intprop.NewAthenaArray(nint,nparmax_);
+  intprop.NewAthenaArray(nint, nparmax_);
 
   // Allocate integer properties.
-  realprop.NewAthenaArray(nreal,nparmax_);
+  realprop.NewAthenaArray(nreal, nparmax_);
 
   // Allocate auxiliary properties.
-  if (naux > 0) auxprop.NewAthenaArray(naux,nparmax_);
+  if (naux > 0)
+    auxprop.NewAthenaArray(naux, nparmax_);
 
   // Allocate working arrays.
-  if (nwork > 0) work.NewAthenaArray(nwork,nparmax_);
+  if (nwork > 0)
+    work.NewAthenaArray(nwork, nparmax_);
 }
 
 //--------------------------------------------------------------------------------------
 //! \fn int Particles::AddIntProperty()
 //! \brief adds one integer property to the particles and returns the index.
 
-int Particles::AddIntProperty() {
-  return nint++;
-}
+int Particles::AddIntProperty() { return nint++; }
 
 //--------------------------------------------------------------------------------------
 //! \fn int Particles::AddRealProperty()
 //! \brief adds one real property to the particles and returns the index.
 
-int Particles::AddRealProperty() {
-  return nreal++;
-}
+int Particles::AddRealProperty() { return nreal++; }
 
 //--------------------------------------------------------------------------------------
 //! \fn int Particles::AddAuxProperty()
 //! \brief adds one auxiliary property to the particles and returns the index.
 
-int Particles::AddAuxProperty() {
-  return naux++;
-}
+int Particles::AddAuxProperty() { return naux++; }
 
 //--------------------------------------------------------------------------------------
 //! \fn int Particles::AddWorkingArray()
 //! \brief adds one working array to the particles and returns the index.
 
-int Particles::AddWorkingArray() {
-  return nwork++;
-}
+int Particles::AddWorkingArray() { return nwork++; }
 
 //--------------------------------------------------------------------------------------
 //! \fn void Particles::UpdateCapacity(int new_nparmax)
-//! \brief changes the capacity of particle arrays while preserving existing data.
+//! \brief changes the capacity of particle arrays while preserving existing
+//! data.
 
 void Particles::UpdateCapacity(int new_nparmax) {
   // (changgoo) new_nparmax must be smaller than INT_MAX
@@ -593,8 +603,7 @@ void Particles::UpdateCapacity(int new_nparmax) {
     std::stringstream msg;
     msg << "### FATAL ERROR in function [Particles::UpdateCapacity]"
         << "Cannot update capacity for " << new_nparmax
-        << " that exceeds INT_MAX=" << INT_MAX
-        << std::endl;
+        << " that exceeds INT_MAX=" << INT_MAX << std::endl;
     ATHENA_ERROR(msg);
   }
 
@@ -602,8 +611,10 @@ void Particles::UpdateCapacity(int new_nparmax) {
   nparmax_ = new_nparmax;
   intprop.ResizeLastDimension(nparmax_);
   realprop.ResizeLastDimension(nparmax_);
-  if (naux > 0) auxprop.ResizeLastDimension(nparmax_);
-  if (nwork > 0) work.ResizeLastDimension(nparmax_);
+  if (naux > 0)
+    auxprop.ResizeLastDimension(nparmax_);
+  if (nwork > 0)
+    work.ResizeLastDimension(nparmax_);
 
   // Reassign the shorthands.
   AssignShorthands();
@@ -611,13 +622,13 @@ void Particles::UpdateCapacity(int new_nparmax) {
 
 //--------------------------------------------------------------------------------------
 //! \fn void Particles::CheckInMeshBlock()
-//! \brief check whether given position is within the meshblock assuming Cartesian
+//! \brief check whether given position is within the meshblock assuming
+//! Cartesian
 
 bool Particles::CheckInMeshBlock(Real x1, Real x2, Real x3) {
-  RegionSize& bsize = pmy_block->block_size;
-  if ((x1>=bsize.x1min) && (x1<bsize.x1max) &&
-      (x2>=bsize.x2min) && (x2<bsize.x2max) &&
-      (x3>=bsize.x3min) && (x3<bsize.x3max)) {
+  RegionSize &bsize = pmy_block->block_size;
+  if ((x1 >= bsize.x1min) && (x1 < bsize.x1max) && (x2 >= bsize.x2min) &&
+      (x2 < bsize.x2max) && (x3 >= bsize.x3min) && (x3 < bsize.x3max)) {
     return true;
   } else {
     return false;
@@ -658,19 +669,20 @@ void Particles::UpdatePositionIndices() {
 //!                                        AthenaArray<Real>& x1i,
 //!                                        AthenaArray<Real>& x2i,
 //!                                        AthenaArray<Real>& x3i)
-//! \brief finds the position indices of each particle with respect to the local grid.
+//! \brief finds the position indices of each particle with respect to the local
+//! grid.
 
-void Particles::UpdatePositionIndices(int npar,
-                                   const AthenaArray<Real>& x1p,
-                                   const AthenaArray<Real>& x2p,
-                                   const AthenaArray<Real>& x3p,
-                                   AthenaArray<Real>& x1i,
-                                   AthenaArray<Real>& x2i,
-                                   AthenaArray<Real>& x3i) {
+void Particles::UpdatePositionIndices(int npar, const AthenaArray<Real> &x1p,
+                                      const AthenaArray<Real> &x2p,
+                                      const AthenaArray<Real> &x3p,
+                                      AthenaArray<Real> &x1i,
+                                      AthenaArray<Real> &x2i,
+                                      AthenaArray<Real> &x3i) {
   for (int k = 0; k < npar; ++k) {
     // Convert to the Mesh coordinates.
     Real x1, x2, x3;
-    pmy_block->pcoord->CartesianToMeshCoords(x1p(k), x2p(k), x3p(k), x1, x2, x3);
+    pmy_block->pcoord->CartesianToMeshCoords(x1p(k), x2p(k), x3p(k), x1, x2,
+                                             x3);
 
     // Convert to the index space.
     pmy_block->pcoord->MeshCoordsToIndices(x1, x2, x3, x1i(k), x2i(k), x3i(k));
@@ -684,7 +696,8 @@ void Particles::UpdatePositionIndices(int npar,
 int Particles::CountNewParticles() const {
   int n = 0;
   for (int i = 0; i < npar_; ++i)
-    if (pid(i) <= 0) ++n;
+    if (pid(i) <= 0)
+      ++n;
   return n;
 }
 
@@ -694,14 +707,16 @@ int Particles::CountNewParticles() const {
 
 void Particles::SetNewParticleID(int id) {
   for (int i = 0; i < npar_; ++i)
-    if (pid(i) <= 0) pid(i) = ++id;
+    if (pid(i) <= 0)
+      pid(i) = ++id;
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void Particles::EulerStep(Real t, Real dt, const AthenaArray<Real>& meshsrc)
-//! \brief evolves the particle positions and velocities by one Euler step.
+//! \fn void Particles::EulerStep(Real t, Real dt, const AthenaArray<Real>&
+//! meshsrc) \brief evolves the particle positions and velocities by one Euler
+//! step.
 
-void Particles::EulerStep(Real t, Real dt, const AthenaArray<Real>& meshsrc) {
+void Particles::EulerStep(Real t, Real dt, const AthenaArray<Real> &meshsrc) {
   // Update positions.
   for (int k = 0; k < npar_; ++k) {
     //! \todo (ccyang):
@@ -741,21 +756,23 @@ void Particles::OutputOneParticle(std::ostream &os, int k, bool header) {
 
   // Write the particle data in the meshblock.
   for (int ip = 0; ip < nint; ++ip)
-    os << "," << intprop(ip,k);
+    os << "," << intprop(ip, k);
   for (int ip = 0; ip < nreal; ++ip)
-    os << "," << realprop(ip,k);
+    os << "," << realprop(ip, k);
   for (int ip = 0; ip < naux; ++ip)
-    os << "," << auxprop(ip,k);
+    os << "," << auxprop(ip, k);
   os << std::endl;
 }
 
 //--------------------------------------------------------------------------------------
-//! \fn void Particles::ComputePMDensityAndCommunicate(Mesh *pm, bool include_momentum)
-//! \brief finds particle mesh densities for all particle containers.
+//! \fn void Particles::ComputePMDensityAndCommunicate(Mesh *pm, bool
+//! include_momentum) \brief finds particle mesh densities for all particle
+//! containers.
 //!
 //! If include_momentum is true, the momentum density field is also computed.
 
-void Particles::ComputePMDensityAndCommunicate(Mesh *pm, bool include_momentum) {
+void Particles::ComputePMDensityAndCommunicate(Mesh *pm,
+                                               bool include_momentum) {
   // Assign particle properties to mesh and send boundary.
   int nblocks(pm->nblocal);
 
@@ -795,7 +812,8 @@ void Particles::ComputePMDensityAndCommunicate(Mesh *pm, bool include_momentum) 
     MeshBlock *pmb(pm->my_blocks(b));
     pmb->pbval->ClearBoundarySubset(BoundaryCommSubset::pm,
                                     pmb->pbval->bvars_pm);
-    for (Particles *ppar : pmb->ppars) ppar->ppm->updated=false;
+    for (Particles *ppar : pmb->ppars)
+      ppar->ppm->updated = false;
   }
 }
 
@@ -804,33 +822,39 @@ void Particles::ComputePMDensityAndCommunicate(Mesh *pm, bool include_momentum) 
 //! \brief initializes the class.
 
 void Particles::Initialize(Mesh *pm, ParameterInput *pin) {
-  if (initialized) return;
+  if (initialized)
+    return;
 
   InputBlock *pib = pin->pfirst_block;
   // pm->particle_params.reserve(1);
-  // loop over input block names.  Find those that start with "particle", read parameters,
-  // and construct singly linked list of ParticleTypes.
+  // loop over input block names.  Find those that start with "particle", read
+  // parameters, and construct singly linked list of ParticleTypes.
   while (pib != nullptr) {
     if (pib->block_name.compare(0, 8, "particle") == 0) {
-      ParticleParameters pp;  // define temporary ParticleParameters struct
+      ParticleParameters pp; // define temporary ParticleParameters struct
 
       // extract integer number of particle block.  Save name and number
-      std::string parn = pib->block_name.substr(8); // 7 because counting starts at 0!
+      std::string parn =
+          pib->block_name.substr(8); // 7 because counting starts at 0!
       pp.block_number = atoi(parn.c_str());
       pp.block_name.assign(pib->block_name);
 
       // set particle type = [tracer, star, dust, none]
       pp.partype = pin->GetString(pp.block_name, "type");
-      if (pp.partype.compare("none") != 0) { // skip input block if the type is none
+      if (pp.partype.compare("none") !=
+          0) { // skip input block if the type is none
         if ((pp.partype.compare("dust") == 0) ||
             (pp.partype.compare("tracer") == 0) ||
             (pp.partype.compare("star") == 0)) {
           pp.ipar = num_particles++;
           idmax.push_back(0); // initialize idmax with 0
-          pp.table_output = pin->GetOrAddBoolean(pp.block_name,"output",false);
-          pp.gravity = pin->GetOrAddBoolean(pp.block_name,"gravity",false);
-          if (pp.table_output) num_particles_output++;
-          if (pp.gravity) num_particles_grav++;
+          pp.table_output =
+              pin->GetOrAddBoolean(pp.block_name, "output", false);
+          pp.gravity = pin->GetOrAddBoolean(pp.block_name, "gravity", false);
+          if (pp.table_output)
+            num_particles_output++;
+          if (pp.gravity)
+            num_particles_grav++;
           pm->particle_params.push_back(pp);
         } else { // unsupported particle type
           std::stringstream msg;
@@ -841,7 +865,7 @@ void Particles::Initialize(Mesh *pm, ParameterInput *pin) {
         }
       }
     }
-    pib = pib->pnext;  // move to next input block name
+    pib = pib->pnext; // move to next input block name
   }
 
   if (num_particles > 0) {
@@ -857,8 +881,7 @@ void Particles::Initialize(Mesh *pm, ParameterInput *pin) {
         std::cout << "  ipar = " << ppnew.ipar
                   << "  partype = " << ppnew.partype
                   << "  output = " << ppnew.table_output
-                  << "  block_name = " << ppnew.block_name
-                  << std::endl;
+                  << "  block_name = " << ppnew.block_name << std::endl;
     }
     // Remember the pointer to input parameters.
     pinput = pin;
@@ -874,7 +897,8 @@ void Particles::Initialize(Mesh *pm, ParameterInput *pin) {
 
 //--------------------------------------------------------------------------------------
 //! \fn Particles::PostInitialize(Mesh *pm, ParameterInput *pin)
-//! \brief preprocesses the class after problem generator and before the main loop.
+//! \brief preprocesses the class after problem generator and before the main
+//! loop.
 
 void Particles::PostInitialize(Mesh *pm, ParameterInput *pin) {
   // Set particle IDs.
@@ -889,7 +913,8 @@ void Particles::PostInitialize(Mesh *pm, ParameterInput *pin) {
   // Print particle csv
   for (int b = 0; b < pm->nblocal; ++b)
     for (Particles *ppar : pm->my_blocks(b)->ppars)
-      if (ppar->parhstout_) ppar->OutputParticles(true);
+      if (ppar->parhstout_)
+        ppar->OutputParticles(true);
 }
 
 //--------------------------------------------------------------------------------------
@@ -901,7 +926,7 @@ void Particles::FormattedTableOutput(Mesh *pm, OutputParameters op) {
   std::ofstream os;
 
   // Loop over Particle containers
-  for (int ipar = 0; ipar < num_particles ; ++ipar) {
+  for (int ipar = 0; ipar < num_particles; ++ipar) {
     if (pm->particle_params[ipar].table_output) {
       // Loop over MeshBlocks
       for (int b = 0; b < pm->nblocal; ++b) {
@@ -909,16 +934,16 @@ void Particles::FormattedTableOutput(Mesh *pm, OutputParameters op) {
         const Particles *ppar(pmb->ppars[ipar]);
 
         // Create the filename.
-        fname << op.file_basename
-              << ".block" << pmb->gid << '.' << op.file_id
-              << '.' << std::setw(5) << std::right << std::setfill('0') << op.file_number
-              << '.' << "par" << ipar << ".tab";
+        fname << op.file_basename << ".block" << pmb->gid << '.' << op.file_id
+              << '.' << std::setw(5) << std::right << std::setfill('0')
+              << op.file_number << '.' << "par" << ipar << ".tab";
 
         // Open the file for write.
         os.open(fname.str().data());
         if (!os.is_open()) {
           msg << "### FATAL ERROR in function [Particles::FormattedTableOutput]"
-              << std::endl << "Output file '" << fname.str() << "' could not be opened"
+              << std::endl
+              << "Output file '" << fname.str() << "' could not be opened"
               << std::endl;
           ATHENA_ERROR(msg);
         }
@@ -938,9 +963,9 @@ void Particles::FormattedTableOutput(Mesh *pm, OutputParameters op) {
         // Write the particle data in the meshblock.
         for (int k = 0; k < ppar->npar_; ++k) {
           for (int ip = 0; ip < ppar->nint; ++ip)
-            os << ppar->intprop(ip,k) << "  ";
+            os << ppar->intprop(ip, k) << "  ";
           for (int ip = 0; ip < ppar->nreal; ++ip)
-            os << ppar->realprop(ip,k) << "  ";
+            os << ppar->realprop(ip, k) << "  ";
           os << std::endl;
         }
 
@@ -954,11 +979,13 @@ void Particles::FormattedTableOutput(Mesh *pm, OutputParameters op) {
 
 //--------------------------------------------------------------------------------------
 //! \fn void Particles::GetHistoryOutputNames(std::string output_names[])
-//! \brief gets the names of the history output variables in history_output_names[].
+//! \brief gets the names of the history output variables in
+//! history_output_names[].
 
 void Particles::GetHistoryOutputNames(std::string output_names[], int ipar) {
   std::string head = "p";
-  head.append(std::to_string(ipar)); // TODO(SMOON) how about partype instead of ipar?
+  head.append(
+      std::to_string(ipar)); // TODO(SMOON) how about partype instead of ipar?
   output_names[0] = head + "-n";
   output_names[1] = head + "-v1";
   output_names[2] = head + "-v2";
@@ -1002,7 +1029,7 @@ void Particles::ProcessNewParticles(Mesh *pmesh, int ipar) {
 
   // Make the counts cumulative.
   for (int i = 1; i < nbtotal; ++i)
-    nnewpar[i] += nnewpar[i-1];
+    nnewpar[i] += nnewpar[i - 1];
 
   // Set particle IDs.
   for (int b = 0; b < nblocks; ++b) {

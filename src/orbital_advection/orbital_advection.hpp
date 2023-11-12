@@ -2,8 +2,9 @@
 #define ORBITAL_ADVECTION_ORBITAL_ADVECTION_HPP_
 //========================================================================================
 // Athena++ astrophysical MHD code
-// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code contributors
-// Licensed under the 3-clause BSD License, see LICENSE file for details
+// Copyright(C) 2014 James M. Stone <jmstone@princeton.edu> and other code
+// contributors Licensed under the 3-clause BSD License, see LICENSE file for
+// details
 //========================================================================================
 //! \file  orbital_advection.hpp
 //! \brief definitions of the OrbitalAdvection class and related functions
@@ -36,24 +37,27 @@ Real SphOrbitalVelocity_t(OrbitalAdvection *porb, Real x_, Real y_, Real z_);
 Real ZeroOrbitalVelocity(OrbitalAdvection *porb, Real x_, Real y_, Real z_);
 
 // idntifiers for variable to be transformed in ConvertOrbitalSystem
-enum class OrbitalTransform {none=0, prim=1, cons=2, all=3};
+enum class OrbitalTransform { none = 0, prim = 1, cons = 2, all = 3 };
 
 //! \class OrbitalAdvection
 //! \brief data and functions for orbital advection
-class OrbitalAdvection{
+class OrbitalAdvection {
   friend class OrbitalBoundaryCommunication;
- public:
+
+public:
   // functions
   OrbitalAdvection(MeshBlock *pmb, ParameterInput *pin);
   ~OrbitalAdvection();
 
   void InitializeOrbitalAdvection();
-  void SetOrbitalAdvectionCC(const AthenaArray<Real> &u, const AthenaArray<Real> &s);
+  void SetOrbitalAdvectionCC(const AthenaArray<Real> &u,
+                             const AthenaArray<Real> &s);
   void SetOrbitalAdvectionFC(const FaceField &b);
   void CalculateOrbitalAdvectionCC(const Real dt, AthenaArray<Real> &u,
                                    AthenaArray<Real> &s);
   void CalculateOrbitalAdvectionFC(const Real dt, EdgeField &e);
-  void ConvertOrbitalSystem(const AthenaArray<Real> &w0, const AthenaArray<Real> &u0,
+  void ConvertOrbitalSystem(const AthenaArray<Real> &w0,
+                            const AthenaArray<Real> &u0,
                             const OrbitalTransform trans);
   void ResetOrbitalSystemConversionFlag();
   Real NewOrbitalAdvectionDt();
@@ -69,15 +73,15 @@ class OrbitalAdvection{
 
   // flag
   int orbital_direction; //!> the direction of orbital motion x2(=1), x3 (=2)
-  int orbital_splitting_order; //!> order of the orbital splitting method
+  int orbital_splitting_order;    //!> order of the orbital splitting method
   bool orbital_advection_defined; //!> flag for the orbital advection system
-  bool orbital_advection_active; //!> flag for solving orbital advection
-  bool orbital_refinement; //!> flag for refinement in the orbital direction
+  bool orbital_advection_active;  //!> flag for solving orbital advection
+  bool orbital_refinement;   //!> flag for refinement in the orbital direction
   bool orbital_uniform_mesh; //!> true: uniform grid, false: un-uniform grid
 
-  AthenaArray<Real> vKc, vKf[2]; // Orbital Velocity (cell-centered and face)
+  AthenaArray<Real> vKc, vKf[2];  // Orbital Velocity (cell-centered and face)
   AthenaArray<Real> dvKc1, dvKc2; // Derivatives of vKc
-  Real Omega0, qshear; // parameters for shearing box in cartesian
+  Real Omega0, qshear;            // parameters for shearing box in cartesian
   int shboxcoord;
   Real gm; // central gravity in cylindrical/spherical_polar
 
@@ -86,7 +90,7 @@ class OrbitalAdvection{
 
   OrbitalBoundaryCommunication *orb_bc;
 
- private:
+private:
   // Private Functions
   void SetVKc();
   void SetVKf();
@@ -117,7 +121,7 @@ class OrbitalAdvection{
 
   // grids
   AthenaArray<Real> orc, orf[2]; // orbital residual of cell-centered values
-  AthenaArray<int>  ofc, off[2]; // orbital offset of cell-centered values
+  AthenaArray<int> ofc, off[2];  // orbital offset of cell-centered values
 
   // uniform mesh
   Real dx;
@@ -130,7 +134,7 @@ class OrbitalAdvection{
   // Orbital Velocity in coarse meshblock (cell-centered and face)
   AthenaArray<Real> vKc_coarse, vKf_coarse[2];
   // orbital offset of cell-centered values
-  AthenaArray<int>  ofc_coarse, off_coarse[2];
+  AthenaArray<int> ofc_coarse, off_coarse[2];
 
   AthenaArray<Real> u_coarse_send, u_coarse_recv, u_temp;
   AthenaArray<Real> s_coarse_send, s_coarse_recv, s_temp;
@@ -140,11 +144,13 @@ class OrbitalAdvection{
   int max_off_coarse, min_off_coarse;
 
   // pencil(1D) buffer
-  AthenaArray<Real> hbuf;  // pencil buffer for shallow copy for hydro calculation
+  AthenaArray<Real>
+      hbuf; // pencil buffer for shallow copy for hydro calculation
   AthenaArray<Real> pflux; // pencil buffer for flux
 
   // buffer for ppm
-  AthenaArray<Real> s_src[5], d_src[13]; // s_src for deep copy, d_src for shallow copy
+  AthenaArray<Real> s_src[5],
+      d_src[13]; // s_src for deep copy, d_src for shallow copy
 
   // flag for orbital system conversion
   int orbital_system_conversion_done; //

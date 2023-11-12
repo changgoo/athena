@@ -26,6 +26,6 @@
 // data types for double-precision complex
 #include "fftw3.h"
 typedef fftw_complex FFT_DATA;
-#define FFTW_API(function)  fftw_ ## function
+#define FFTW_API(function) fftw_##function
 
 #endif
